@@ -1,12 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 
-const CURL_TYPES = ["4a", "4b", "4c"] as const;
+const CURL_TYPES = [
+  { value: "4a", label: "4a" },
+  { value: "4b", label: "4b" },
+  { value: "4c", label: "4c" },
+  { value: "not_sure", label: "Not sure" },
+];
 const POROSITY_OPTIONS = ["low", "medium", "high", "not sure"] as const;
-const THICKNESS_OPTIONS = ["fine", "medium", "coarse"] as const;
+const THICKNESS_OPTIONS = [
+  { value: "fine", label: "Fine" },
+  { value: "medium", label: "Medium" },
+  { value: "coarse", label: "Coarse" },
+  { value: "not_sure", label: "Not sure" },
+];
 const SCALP_OPTIONS = [
   { value: "normal", label: "Normal" },
   { value: "dry", label: "Dry" },
@@ -141,24 +152,34 @@ export default function ProfilePage() {
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-8">
           <fieldset>
-            <legend className="font-serif text-lg text-bronze2">
+            <legend className="flex items-center gap-2 font-serif text-lg text-bronze2">
               Curl Type
+              <InfoTooltip
+                label="Curl Type"
+                illustrationSrc="/illustrations/curl_type_guide.svg"
+                description="Look at your natural hair when dry with no products. Match your pattern to the image above."
+              />
             </legend>
-            <div className="mt-3 grid grid-cols-3 gap-3">
+            <div className="mt-3 grid grid-cols-2 gap-3">
               {CURL_TYPES.map((type) => (
                 <SelectButton
-                  key={type}
-                  label={type}
-                  selected={curlType === type}
-                  onClick={() => setCurlType(type)}
+                  key={type.value}
+                  label={type.label}
+                  selected={curlType === type.value}
+                  onClick={() => setCurlType(type.value)}
                 />
               ))}
             </div>
           </fieldset>
 
           <fieldset>
-            <legend className="font-serif text-lg text-bronze2">
+            <legend className="flex items-center gap-2 font-serif text-lg text-bronze2">
               Porosity
+              <InfoTooltip
+                label="Porosity"
+                illustrationSrc="/illustrations/porosity_guide.svg"
+                description="Do the float test — drop a clean strand in water. Floats = low porosity. Sinks slowly = medium. Sinks fast = high porosity."
+              />
             </legend>
             <div className="mt-3 grid grid-cols-2 gap-3">
               {POROSITY_OPTIONS.map((option) => (
@@ -175,9 +196,14 @@ export default function ProfilePage() {
           <fieldset>
             <label
               htmlFor="scalp-condition"
-              className="font-serif text-lg text-bronze2"
+              className="flex items-center gap-2 font-serif text-lg text-bronze2"
             >
               Scalp Condition
+              <InfoTooltip
+                label="Scalp Condition"
+                illustrationSrc="/illustrations/scalp_condition_guide.svg"
+                description="Think about how your scalp behaves between wash days without any products."
+              />
             </label>
             <select
               id="scalp-condition"
@@ -201,24 +227,36 @@ export default function ProfilePage() {
           </fieldset>
 
           <fieldset>
-            <legend className="font-serif text-lg text-bronze2">
+            <legend className="flex items-center gap-2 font-serif text-lg text-bronze2">
               Strand Thickness
+              <InfoTooltip
+                label="Strand Thickness"
+                illustrationSrc="/illustrations/strand_thickness_guide.svg"
+                description="Pull out one strand and hold it between your fingers. Compare it to a piece of thread — thinner, same, or thicker?"
+              />
             </legend>
-            <div className="mt-3 grid grid-cols-3 gap-3">
+            <div className="mt-3 grid grid-cols-2 gap-3">
               {THICKNESS_OPTIONS.map((option) => (
                 <SelectButton
-                  key={option}
-                  label={option}
-                  selected={strandThickness === option}
-                  onClick={() => setStrandThickness(option)}
+                  key={option.value}
+                  label={option.label}
+                  selected={strandThickness === option.value}
+                  onClick={() => setStrandThickness(option.value)}
                 />
               ))}
             </div>
           </fieldset>
 
           <fieldset>
-            <label htmlFor="zip-code" className="font-serif text-lg text-bronze2">
+            <label
+              htmlFor="zip-code"
+              className="flex items-center gap-2 font-serif text-lg text-bronze2"
+            >
               Zip Code
+              <InfoTooltip
+                label="Zip Code"
+                description="We use this to determine your local climate and water hardness, which changes which ingredients work best for your hair."
+              />
             </label>
             <input
               id="zip-code"
@@ -232,8 +270,12 @@ export default function ProfilePage() {
           </fieldset>
 
           <fieldset>
-            <legend className="font-serif text-lg text-bronze2">
+            <legend className="flex items-center gap-2 font-serif text-lg text-bronze2">
               Hair Concerns
+              <InfoTooltip
+                label="Hair Concerns"
+                description="Select everything that applies — the more you tell us, the more specific your evaluations will be."
+              />
             </legend>
             <div className="mt-3 grid grid-cols-2 gap-3">
               {CONCERN_OPTIONS.map((option) => (
