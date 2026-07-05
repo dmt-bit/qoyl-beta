@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import CompatibilitySection from "@/components/CompatibilitySection";
@@ -32,11 +33,15 @@ export default async function PostPage({
         </h1>
 
         {post.hero_image_url && (
-          <img
-            src={post.hero_image_url}
-            alt={post.title}
-            className="mt-6 w-full rounded-xl object-cover"
-          />
+          <div className="relative mt-6 aspect-[16/9] w-full overflow-hidden rounded-xl">
+            <Image
+              src={post.hero_image_url}
+              alt={post.title}
+              fill
+              sizes="(min-width: 768px) 672px, 100vw"
+              className="object-cover"
+            />
+          </div>
         )}
 
         <div className="prose-invert mt-8 space-y-4 text-cream/90 [&_h2]:mt-6 [&_h2]:font-serif [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-cream [&_li]:ml-4 [&_ol]:list-decimal [&_ol]:space-y-2 [&_p]:leading-relaxed [&_strong]:text-cream [&_ul]:list-disc [&_ul]:space-y-2">

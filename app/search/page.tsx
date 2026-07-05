@@ -11,6 +11,14 @@ type Product = {
   ingredientsText: string;
 };
 
+type OpenBeautyFactsProduct = {
+  code?: string;
+  _id?: string;
+  product_name?: string;
+  brands?: string;
+  ingredients_text?: string;
+};
+
 export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
@@ -52,10 +60,15 @@ export default function SearchPage() {
           )}&json=true&page_size=20`,
           { signal: controller.signal }
         );
-        const data = await res.json();
+        const data: { products?: OpenBeautyFactsProduct[] } = await res.json();
         const products: Product[] = (data.products ?? [])
-          .filter((p: any) => p.product_name && p.ingredients_text)
-          .map((p: any) => ({
+          .filter(
+            (p): p is OpenBeautyFactsProduct & {
+              product_name: string;
+              ingredients_text: string;
+            } => Boolean(p.product_name && p.ingredients_text)
+          )
+          .map((p) => ({
             code: p.code ?? p._id ?? p.product_name,
             name: p.product_name,
             brand: p.brands ?? "Unknown brand",
@@ -63,8 +76,8 @@ export default function SearchPage() {
           }));
         setResults(products);
         setHasSearched(true);
-      } catch (err: any) {
-        if (err.name !== "AbortError") {
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") {
           setSearchError("Couldn't reach the product search. Try again.");
           setHasSearched(true);
         }

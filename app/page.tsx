@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
@@ -27,11 +28,15 @@ function PostCard({ post }: { post: Post }) {
       className="flex flex-col overflow-hidden rounded-xl border border-bronze/30 transition-colors hover:border-bronze"
     >
       {post.hero_image_url ? (
-        <img
-          src={post.hero_image_url}
-          alt={post.title}
-          className="h-40 w-full object-cover"
-        />
+        <div className="relative h-40 w-full">
+          <Image
+            src={post.hero_image_url}
+            alt={post.title}
+            fill
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover"
+          />
+        </div>
       ) : (
         <div className="h-40 w-full bg-gradient-to-br from-bronze/30 via-warm/10 to-dark" />
       )}
