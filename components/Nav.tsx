@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 
 const LINKS = [
   { href: "/", label: "Home" },
@@ -11,6 +13,13 @@ const LINKS = [
 
 export default function Nav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, loading } = useAuth();
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.push("/");
+  }
 
   return (
     <nav className="border-b border-bronze/20 bg-dark px-4 py-4 font-sans sm:px-6">
@@ -35,6 +44,29 @@ export default function Nav() {
             </li>
           );
         })}
+        <li className="ml-auto flex items-center gap-3 text-sm">
+          {loading ? null : user ? (
+            <>
+              <span className="hidden text-cream/60 sm:inline">
+                {user.email}
+              </span>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="font-medium text-bronze2 transition-colors hover:text-cream"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/auth"
+              className="font-medium text-bronze2 transition-colors hover:text-cream"
+            >
+              Sign in
+            </Link>
+          )}
+        </li>
       </ul>
     </nav>
   );

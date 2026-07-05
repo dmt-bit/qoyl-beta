@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 
 const CURL_TYPES = ["4a", "4b", "4c"] as const;
@@ -47,6 +48,9 @@ function SelectButton({
 }
 
 export default function ProfilePage() {
+  const { user, hairProfile, hairProfileLoading, refreshHairProfile } =
+    useAuth();
+
   const [curlType, setCurlType] = useState<string | null>(null);
   const [porosity, setPorosity] = useState<string | null>(null);
   const [scalpCondition, setScalpCondition] = useState("");
@@ -56,6 +60,20 @@ export default function ProfilePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [hydratedFromProfileId, setHydratedFromProfileId] = useState<
+    string | null
+  >(null);
+
+  useEffect(() => {
+    if (!hairProfile || hydratedFromProfileId === hairProfile.id) return;
+    setCurlType(hairProfile.curl_type);
+    setPorosity(hairProfile.porosity);
+    setScalpCondition(hairProfile.scalp_condition ?? "");
+    setStrandThickness(hairProfile.strand_thickness);
+    setZipCode(hairProfile.zip_code ?? "");
+    setHairConcerns(hairProfile.hair_concerns ?? []);
+    setHydratedFromProfileId(hairProfile.id);
+  }, [hairProfile, hydratedFromProfileId]);
 
   function toggleConcern(value: string) {
     setHairConcerns((prev) =>
@@ -70,29 +88,38 @@ export default function ProfilePage() {
     setError(null);
     setSubmitting(true);
 
-    const { data, error: insertError } = await supabase
-      .from("hair_profiles")
-      .insert({
-        curl_type: curlType,
-        porosity,
-        scalp_condition: scalpCondition,
-        strand_thickness: strandThickness,
-        zip_code: zipCode,
-        hair_concerns: hairConcerns,
-      })
-      .select("id")
-      .single();
+    const payload = {
+      curl_type: curlType,
+      porosity,
+      scalp_condition: scalpCondition,
+      strand_thickness: strandThickness,
+      zip_code: zipCode,
+      hair_concerns: hairConcerns,
+    };
+
+    const { data, error: saveError } = user
+      ? await supabase
+          .from("hair_profiles")
+          .upsert({ ...payload, user_id: user.id }, { onConflict: "user_id" })
+          .select("id")
+          .single()
+      : await supabase
+          .from("hair_profiles")
+          .insert(payload)
+          .select("id")
+          .single();
 
     setSubmitting(false);
 
-    if (insertError) {
-      setError(insertError.message);
+    if (saveError) {
+      setError(saveError.message);
       return;
     }
 
     if (data?.id) {
       localStorage.setItem("hair_profile_id", data.id);
       setSuccess(true);
+      if (user) await refreshHairProfile();
     }
   }
 
@@ -105,6 +132,12 @@ export default function ProfilePage() {
         <p className="mt-2 text-sm text-cream/70">
           Tell us about your hair so we can personalize your routine.
         </p>
+
+        {user && hairProfileLoading && (
+          <p className="mt-4 text-sm text-cream/50">
+            Loading your saved profile...
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-8">
           <fieldset>

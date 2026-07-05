@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ScoreResultView } from "@/components/CompatibilityScore";
+import { useAuth } from "@/lib/auth-context";
 import { ScoreResult, scoreIngredientsText } from "@/lib/compatibility";
 
 type Product = {
@@ -20,6 +22,20 @@ type OpenBeautyFactsProduct = {
 };
 
 export default function SearchPage() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const [checkedAccess, setCheckedAccess] = useState(false);
+
+  useEffect(() => {
+    if (authLoading) return;
+    const hasLocalProfile = Boolean(localStorage.getItem("hair_profile_id"));
+    if (!user && !hasLocalProfile) {
+      router.replace("/auth");
+      return;
+    }
+    setCheckedAccess(true);
+  }, [user, authLoading, router]);
+
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -120,6 +136,14 @@ export default function SearchPage() {
 
   const showManualFallback =
     !loading && hasSearched && results.length === 0 && !searchError;
+
+  if (!checkedAccess) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
+        <p className="text-sm text-cream/60">Loading...</p>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
