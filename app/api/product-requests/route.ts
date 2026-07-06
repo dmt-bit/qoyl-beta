@@ -30,18 +30,14 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data, error: insertError } = await supabase
-    .from("product_requests")
-    .insert({
-      user_id: userId ?? null,
-      product_name: productName,
-      brand_name: brandName,
-      where_purchased: wherePurchased || null,
-      ingredient_list: ingredientList || null,
-      email,
-    })
-    .select("id")
-    .single();
+  const { error: insertError } = await supabase.from("product_requests").insert({
+    user_id: userId ?? null,
+    product_name: productName,
+    brand_name: brandName,
+    where_purchased: wherePurchased || null,
+    ingredient_list: ingredientList || null,
+    email,
+  });
 
   if (insertError) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
@@ -92,5 +88,5 @@ ${ingredientList || "Not provided"}`,
     );
   }
 
-  return NextResponse.json({ id: data.id });
+  return NextResponse.json({ ok: true });
 }
