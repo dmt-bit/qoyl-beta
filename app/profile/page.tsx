@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Collapse from "@/components/Collapse";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
@@ -32,6 +33,38 @@ const CONCERN_OPTIONS = [
   { value: "scalp", label: "Scalp" },
   { value: "frizz", label: "Frizz" },
   { value: "growth", label: "Growth" },
+];
+const YES_NO_OPTIONS = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+];
+const SHOWER_FILTER_OPTIONS = [
+  { value: "yes", label: "Yes" },
+  { value: "no", label: "No" },
+  { value: "not_sure", label: "Not sure" },
+];
+const COLOR_TYPE_OPTIONS = [
+  { value: "permanent", label: "Permanent color" },
+  { value: "semi_permanent", label: "Semi-permanent" },
+  { value: "highlights_or_bleach", label: "Highlights or bleach" },
+  { value: "henna", label: "Henna" },
+  { value: "other", label: "Other" },
+];
+const EXTENSION_TYPE_OPTIONS = [
+  { value: "braids", label: "Braids" },
+  { value: "box_braids", label: "Box braids" },
+  { value: "weave", label: "Weave" },
+  { value: "tape_in", label: "Tape-in" },
+  { value: "clip_in", label: "Clip-in" },
+  { value: "loc_extensions", label: "Loc extensions" },
+  { value: "wigs", label: "Wigs" },
+  { value: "other", label: "Other" },
+];
+const BUDGET_OPTIONS = [
+  { value: "under_30", label: "Under $30/month" },
+  { value: "30_60", label: "$30-60/month" },
+  { value: "60_100", label: "$60-100/month" },
+  { value: "100_plus", label: "$100+/month" },
 ];
 
 function SelectButton({
@@ -68,6 +101,17 @@ export default function ProfilePage() {
   const [strandThickness, setStrandThickness] = useState<string | null>(null);
   const [zipCode, setZipCode] = useState("");
   const [hairConcerns, setHairConcerns] = useState<string[]>([]);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [showerFilter, setShowerFilter] = useState<string | null>(null);
+  const [colorTreated, setColorTreated] = useState<string | null>(null);
+  const [colorType, setColorType] = useState("");
+  const [extensions, setExtensions] = useState<string | null>(null);
+  const [extensionType, setExtensionType] = useState<string[]>([]);
+  const [extensionCare, setExtensionCare] = useState("");
+  const [budget, setBudget] = useState<string | null>(null);
+  const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -83,13 +127,37 @@ export default function ProfilePage() {
     setStrandThickness(hairProfile.strand_thickness);
     setZipCode(hairProfile.zip_code ?? "");
     setHairConcerns(hairProfile.hair_concerns ?? []);
+    setFirstName(hairProfile.first_name ?? "");
+    setLastName(hairProfile.last_name ?? "");
+    setEmail(hairProfile.email ?? "");
+    setShowerFilter(hairProfile.shower_filter);
+    setColorTreated(hairProfile.color_treated);
+    setColorType(hairProfile.color_type ?? "");
+    setExtensions(hairProfile.extensions);
+    setExtensionType(hairProfile.extension_type ?? []);
+    setExtensionCare(hairProfile.extension_care ?? "");
+    setBudget(hairProfile.budget);
+    setNotes(hairProfile.notes ?? "");
     setHydratedFromProfileId(hairProfile.id);
   }, [hairProfile, hydratedFromProfileId]);
+
+  useEffect(() => {
+    if (!user || hairProfile || hairProfileLoading) return;
+    setEmail((prev) => prev || user.email || "");
+  }, [user, hairProfile, hairProfileLoading]);
 
   function toggleConcern(value: string) {
     setHairConcerns((prev) =>
       prev.includes(value)
         ? prev.filter((c) => c !== value)
+        : [...prev, value]
+    );
+  }
+
+  function toggleExtensionType(value: string) {
+    setExtensionType((prev) =>
+      prev.includes(value)
+        ? prev.filter((t) => t !== value)
         : [...prev, value]
     );
   }
@@ -106,6 +174,17 @@ export default function ProfilePage() {
       strand_thickness: strandThickness,
       zip_code: zipCode,
       hair_concerns: hairConcerns,
+      first_name: firstName,
+      last_name: lastName,
+      email,
+      shower_filter: showerFilter,
+      color_treated: colorTreated,
+      color_type: colorTreated === "yes" ? colorType : null,
+      extensions,
+      extension_type: extensions === "yes" ? extensionType : [],
+      extension_care: extensions === "yes" ? extensionCare : "",
+      budget,
+      notes,
     };
 
     const { data, error: saveError } = user
@@ -310,6 +389,203 @@ export default function ProfilePage() {
               ))}
             </div>
           </div>
+
+          <div>
+            <p className="font-serif text-lg text-bronze2">Name</p>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <input
+                type="text"
+                aria-label="First name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="First name"
+                className="w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              />
+              <input
+                type="text"
+                aria-label="Last name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Last name"
+                className="w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              />
+            </div>
+          </div>
+
+          <fieldset>
+            <label htmlFor="email" className="font-serif text-lg text-bronze2">
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+            />
+          </fieldset>
+
+          <div role="group" aria-labelledby="shower-filter-label">
+            <p
+              id="shower-filter-label"
+              className="flex items-center gap-2 font-serif text-lg text-bronze2"
+            >
+              Do you use a shower filter?
+              <InfoTooltip
+                label="Shower Filter"
+                description="Shower filters remove chlorine and minerals that can dry out type 4 hair. This affects which cleansing ingredients we recommend."
+              />
+            </p>
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              {SHOWER_FILTER_OPTIONS.map((option) => (
+                <SelectButton
+                  key={option.value}
+                  label={option.label}
+                  selected={showerFilter === option.value}
+                  onClick={() => setShowerFilter(option.value)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div role="group" aria-labelledby="color-treated-label">
+            <p
+              id="color-treated-label"
+              className="font-serif text-lg text-bronze2"
+            >
+              Is your hair color treated?
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {YES_NO_OPTIONS.map((option) => (
+                <SelectButton
+                  key={option.value}
+                  label={option.label}
+                  selected={colorTreated === option.value}
+                  onClick={() => setColorTreated(option.value)}
+                />
+              ))}
+            </div>
+
+            <Collapse show={colorTreated === "yes"}>
+              <div>
+                <label
+                  htmlFor="color-type"
+                  className="font-serif text-lg text-bronze2"
+                >
+                  What type of color treatment?
+                </label>
+                <select
+                  id="color-type"
+                  value={colorType}
+                  onChange={(e) => setColorType(e.target.value)}
+                  className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream focus:border-bronze focus:outline-none"
+                >
+                  <option value="" disabled className="text-dark">
+                    Select an option
+                  </option>
+                  {COLOR_TYPE_OPTIONS.map((option) => (
+                    <option
+                      key={option.value}
+                      value={option.value}
+                      className="text-dark"
+                    >
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </Collapse>
+          </div>
+
+          <div role="group" aria-labelledby="extensions-label">
+            <p
+              id="extensions-label"
+              className="font-serif text-lg text-bronze2"
+            >
+              Do you wear extensions or protective styles?
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {YES_NO_OPTIONS.map((option) => (
+                <SelectButton
+                  key={option.value}
+                  label={option.label}
+                  selected={extensions === option.value}
+                  onClick={() => setExtensions(option.value)}
+                />
+              ))}
+            </div>
+
+            <Collapse show={extensions === "yes"}>
+              <div>
+                <p className="font-serif text-lg text-bronze2">What type?</p>
+                <div className="mt-3 grid grid-cols-2 gap-3">
+                  {EXTENSION_TYPE_OPTIONS.map((option) => (
+                    <SelectButton
+                      key={option.value}
+                      label={option.label}
+                      selected={extensionType.includes(option.value)}
+                      onClick={() => toggleExtensionType(option.value)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="extension-care"
+                  className="font-serif text-lg text-bronze2"
+                >
+                  How do you care for your hair while in extensions?
+                </label>
+                <textarea
+                  id="extension-care"
+                  value={extensionCare}
+                  onChange={(e) => setExtensionCare(e.target.value)}
+                  placeholder="e.g. I moisturize my scalp weekly and wash every 2-3 weeks."
+                  rows={4}
+                  className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+                />
+              </div>
+            </Collapse>
+          </div>
+
+          <div role="group" aria-labelledby="budget-label">
+            <p
+              id="budget-label"
+              className="flex items-center gap-2 font-serif text-lg text-bronze2"
+            >
+              Monthly hair care budget.
+              <InfoTooltip
+                label="Budget"
+                description="We use this to prioritize affordable product recommendations within your range."
+              />
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {BUDGET_OPTIONS.map((option) => (
+                <SelectButton
+                  key={option.value}
+                  label={option.label}
+                  selected={budget === option.value}
+                  onClick={() => setBudget(option.value)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <fieldset>
+            <label htmlFor="notes" className="font-serif text-lg text-bronze2">
+              Anything else we should know about your hair?
+            </label>
+            <textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Tell us anything that might help us understand your hair better."
+              rows={4}
+              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+            />
+          </fieldset>
 
           {error && <p className="text-sm text-red">{error}</p>}
           {success && (
