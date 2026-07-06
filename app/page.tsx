@@ -58,24 +58,45 @@ export default async function Home() {
     .order("published_at", { ascending: false });
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
-      <div className="mx-auto max-w-5xl">
-        <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
-          Qoyl
-        </h1>
-        <p className="mt-2 text-sm text-cream/70">
-          Ingredient breakdowns and product evaluations for type 4 hair.
-        </p>
+    <main className="min-h-screen bg-dark font-sans text-cream">
+      <section className="bg-warm px-4 py-12 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
+            Know what&apos;s in your products.
+          </h2>
+          <p className="mt-3 max-w-xl text-sm text-dark/70">
+            Search any hair care product and get a personalized
+            compatibility score for your curl type, porosity, and scalp —
+            free.
+          </p>
+          <Link
+            href="/search"
+            className="mt-6 flex w-full items-center justify-center rounded-lg bg-dark px-6 py-4 text-center text-sm font-semibold text-cream transition-colors hover:bg-dark/90 sm:inline-flex sm:w-auto"
+          >
+            Get a score for a product on your shelf →
+          </Link>
+        </div>
+      </section>
 
-        {posts && posts.length > 0 ? (
-          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post) => (
-              <PostCard key={post.slug} post={post} />
-            ))}
-          </div>
-        ) : (
-          <p className="mt-8 text-sm text-cream/50">No posts yet.</p>
-        )}
+      <div className="px-4 py-10 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+            Qoyl
+          </h1>
+          <p className="mt-2 text-sm text-cream/70">
+            Ingredient breakdowns and product evaluations for type 4 hair.
+          </p>
+
+          {posts && posts.length > 0 ? (
+            <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {posts.map((post) => (
+                <PostCard key={post.slug} post={post} />
+              ))}
+            </div>
+          ) : (
+            <p className="mt-8 text-sm text-cream/50">No posts yet.</p>
+          )}
+        </div>
       </div>
     </main>
   );

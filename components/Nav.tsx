@@ -7,7 +7,6 @@ import { supabase } from "@/lib/supabase";
 
 const LINKS = [
   { href: "/", label: "Home" },
-  { href: "/search", label: "Search" },
   { href: "/profile", label: "My Profile" },
 ];
 
@@ -44,6 +43,14 @@ export default function Nav() {
             </li>
           );
         })}
+        <li>
+          <Link
+            href="/search"
+            className="rounded-lg bg-bronze px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
+          >
+            Product Search
+          </Link>
+        </li>
         <li className="ml-auto flex items-center gap-3 text-sm">
           {loading ? null : user ? (
             <>
