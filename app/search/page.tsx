@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ScoreResultView } from "@/components/CompatibilityScore";
 import { useAuth } from "@/lib/auth-context";
@@ -172,53 +173,77 @@ export default function SearchPage() {
         )}
 
         {!loading && results.length > 0 && (
-          <ul className="mt-6 space-y-2">
-            {results.map((product) => (
-              <li key={product.code}>
-                <button
-                  type="button"
-                  onClick={() => selectProduct(product)}
-                  className={`w-full rounded-lg border px-4 py-3 text-left transition-colors ${
-                    selectedProduct?.code === product.code
-                      ? "border-bronze bg-bronze/10"
-                      : "border-bronze/30 hover:border-bronze"
-                  }`}
-                >
-                  <p className="font-serif text-base text-cream">
-                    {product.name}
-                  </p>
-                  <p className="text-xs text-bronze2">{product.brand}</p>
-                  <p className="mt-1 line-clamp-2 text-xs text-cream/50">
-                    {product.ingredientsText}
-                  </p>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="mt-6 space-y-2">
+              {results.map((product) => (
+                <li key={product.code}>
+                  <button
+                    type="button"
+                    onClick={() => selectProduct(product)}
+                    className={`w-full rounded-lg border px-4 py-3 text-left transition-colors ${
+                      selectedProduct?.code === product.code
+                        ? "border-bronze bg-bronze/10"
+                        : "border-bronze/30 hover:border-bronze"
+                    }`}
+                  >
+                    <p className="font-serif text-base text-cream">
+                      {product.name}
+                    </p>
+                    <p className="text-xs text-bronze2">{product.brand}</p>
+                    <p className="mt-1 line-clamp-2 text-xs text-cream/50">
+                      {product.ingredientsText}
+                    </p>
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            <Link
+              href={`/request?product=${encodeURIComponent(query)}`}
+              className="mt-4 inline-block text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70"
+            >
+              Don&apos;t see what you&apos;re looking for? Request a product
+              evaluation →
+            </Link>
+          </>
         )}
 
         {showManualFallback && (
-          <div className="mt-6">
-            <p className="text-sm text-cream/70">
-              No products found for &quot;{query}&quot;. Paste an ingredient
-              list to check compatibility instead.
-            </p>
-            <form onSubmit={handleManualSubmit} className="mt-3 space-y-3">
-              <textarea
-                value={manualIngredients}
-                onChange={(e) => setManualIngredients(e.target.value)}
-                placeholder="Aqua, Cetyl Alcohol, Glycerin, ..."
-                rows={5}
-                className="w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
-              />
-              <button
-                type="submit"
-                disabled={!manualIngredients.trim() || scoring}
-                className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+          <div className="mt-6 space-y-6">
+            <div className="rounded-lg border border-bronze/30 p-4">
+              <p className="text-sm text-cream/80">
+                Don&apos;t see your product? Submit it and we&apos;ll
+                evaluate it personally.
+              </p>
+              <Link
+                href={`/request?product=${encodeURIComponent(query)}`}
+                className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
               >
-                Check Compatibility
-              </button>
-            </form>
+                Request an evaluation
+              </Link>
+            </div>
+
+            <div>
+              <p className="text-sm text-cream/70">
+                Or paste an ingredient list to check compatibility instead.
+              </p>
+              <form onSubmit={handleManualSubmit} className="mt-3 space-y-3">
+                <textarea
+                  value={manualIngredients}
+                  onChange={(e) => setManualIngredients(e.target.value)}
+                  placeholder="Aqua, Cetyl Alcohol, Glycerin, ..."
+                  rows={5}
+                  className="w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={!manualIngredients.trim() || scoring}
+                  className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+                >
+                  Check Compatibility
+                </button>
+              </form>
+            </div>
           </div>
         )}
 
