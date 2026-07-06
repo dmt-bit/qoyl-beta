@@ -67,9 +67,9 @@ function RequestForm() {
             Request received
           </h1>
           <p className="mt-4 text-sm text-cream/70">
-            Thanks — we&apos;ll email you a personalized evaluation for{" "}
-            <span className="text-cream">{productName}</span> within 48
-            hours.
+            Got it — we&apos;ll evaluate{" "}
+            <span className="text-cream">{productName}</span> and email you
+            the results within 48 hours.
           </p>
         </div>
       </main>
