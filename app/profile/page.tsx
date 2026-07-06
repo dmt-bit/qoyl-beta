@@ -151,15 +151,18 @@ export default function ProfilePage() {
         )}
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-8">
-          <fieldset>
-            <legend className="flex items-center gap-2 font-serif text-lg text-bronze2">
+          <div role="group" aria-labelledby="curl-type-label">
+            <p
+              id="curl-type-label"
+              className="flex items-center gap-2 font-serif text-lg text-bronze2"
+            >
               Curl Type
               <InfoTooltip
                 label="Curl Type"
                 illustrationSrc="/illustrations/curl_type_guide.svg"
                 description="Look at your natural hair when dry with no products. Match your pattern to the image above."
               />
-            </legend>
+            </p>
             <div className="mt-3 grid grid-cols-2 gap-3">
               {CURL_TYPES.map((type) => (
                 <SelectButton
@@ -170,17 +173,20 @@ export default function ProfilePage() {
                 />
               ))}
             </div>
-          </fieldset>
+          </div>
 
-          <fieldset>
-            <legend className="flex items-center gap-2 font-serif text-lg text-bronze2">
+          <div role="group" aria-labelledby="porosity-label">
+            <p
+              id="porosity-label"
+              className="flex items-center gap-2 font-serif text-lg text-bronze2"
+            >
               Porosity
               <InfoTooltip
                 label="Porosity"
                 illustrationSrc="/illustrations/porosity_guide.svg"
                 description="Do the float test — drop a clean strand in water. Floats = low porosity. Sinks slowly = medium. Sinks fast = high porosity."
               />
-            </legend>
+            </p>
             <div className="mt-3 grid grid-cols-2 gap-3">
               {POROSITY_OPTIONS.map((option) => (
                 <SelectButton
@@ -191,7 +197,7 @@ export default function ProfilePage() {
                 />
               ))}
             </div>
-          </fieldset>
+          </div>
 
           <fieldset>
             <label
@@ -226,15 +232,18 @@ export default function ProfilePage() {
             </select>
           </fieldset>
 
-          <fieldset>
-            <legend className="flex items-center gap-2 font-serif text-lg text-bronze2">
+          <div role="group" aria-labelledby="strand-thickness-label">
+            <p
+              id="strand-thickness-label"
+              className="flex items-center gap-2 font-serif text-lg text-bronze2"
+            >
               Strand Thickness
               <InfoTooltip
                 label="Strand Thickness"
                 illustrationSrc="/illustrations/strand_thickness_guide.svg"
                 description="Pull out one strand and hold it between your fingers. Compare it to a piece of thread — thinner, same, or thicker?"
               />
-            </legend>
+            </p>
             <div className="mt-3 grid grid-cols-2 gap-3">
               {THICKNESS_OPTIONS.map((option) => (
                 <SelectButton
@@ -245,7 +254,7 @@ export default function ProfilePage() {
                 />
               ))}
             </div>
-          </fieldset>
+          </div>
 
           <fieldset>
             <label
@@ -269,14 +278,17 @@ export default function ProfilePage() {
             />
           </fieldset>
 
-          <fieldset>
-            <legend className="flex items-center gap-2 font-serif text-lg text-bronze2">
+          <div role="group" aria-labelledby="hair-concerns-label">
+            <p
+              id="hair-concerns-label"
+              className="flex items-center gap-2 font-serif text-lg text-bronze2"
+            >
               Hair Concerns
               <InfoTooltip
                 label="Hair Concerns"
                 description="Select everything that applies — the more you tell us, the more specific your evaluations will be."
               />
-            </legend>
+            </p>
             <div className="mt-3 grid grid-cols-2 gap-3">
               {CONCERN_OPTIONS.map((option) => (
                 <label
@@ -297,7 +309,7 @@ export default function ProfilePage() {
                 </label>
               ))}
             </div>
-          </fieldset>
+          </div>
 
           {error && <p className="text-sm text-red">{error}</p>}
           {success && (

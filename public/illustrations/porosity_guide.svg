@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="380" height="300" viewBox="0 0 380 300">
+<rect width="380" height="300" fill="#F5F0EA"/>
+<rect x="10" y="10" width="360" height="280" rx="12" fill="white" stroke="#EDE5D8" stroke-width="0.5"/>
+<text x="190" y="36" font-family="Arial" font-size="10" font-weight="600" letter-spacing="2" fill="#9C7B5A" text-anchor="middle">POROSITY</text>
+<text x="190" y="52" font-family="Arial" font-size="10" fill="#7A6A5A" text-anchor="middle">cross-section of your hair strand</text>
+<text x="82" y="72" font-family="Georgia" font-size="13" font-weight="600" fill="#1C1612" text-anchor="middle">low</text>
+<rect x="44" y="80" width="76" height="160" rx="38" fill="#EDE5D8" stroke="#D4C4AD" stroke-width="0.5"/>
+<rect x="44" y="98" width="76" height="5" rx="2" fill="#C4A882" opacity="0.8"/>
+<rect x="44" y="113" width="76" height="5" rx="2" fill="#C4A882" opacity="0.8"/>
+<rect x="44" y="128" width="76" height="5" rx="2" fill="#C4A882" opacity="0.8"/>
+<rect x="44" y="143" width="76" height="5" rx="2" fill="#C4A882" opacity="0.8"/>
+<rect x="44" y="158" width="76" height="5" rx="2" fill="#C4A882" opacity="0.8"/>
+<rect x="44" y="173" width="76" height="5" rx="2" fill="#C4A882" opacity="0.8"/>
+<rect x="44" y="188" width="76" height="5" rx="2" fill="#C4A882" opacity="0.8"/>
+<text x="82" y="256" font-family="Arial" font-size="13" font-weight="500" fill="#1C1612" text-anchor="middle">sealed</text>
+<text x="82" y="272" font-family="Arial" font-size="10" fill="#7A6A5A" text-anchor="middle">water beads up</text>
+<line x1="138" y1="62" x2="138" y2="278" stroke="#EDE5D8" stroke-width="0.5"/>
+<text x="190" y="72" font-family="Georgia" font-size="13" font-weight="600" fill="#1C1612" text-anchor="middle">medium</text>
+<rect x="152" y="80" width="76" height="160" rx="38" fill="#EDE5D8" stroke="#D4C4AD" stroke-width="0.5"/>
+<rect x="150" y="96" width="80" height="6" rx="3" fill="#C4A882" opacity="0.7"/>
+<rect x="154" y="114" width="76" height="6" rx="3" fill="#C4A882" opacity="0.7"/>
+<rect x="150" y="132" width="80" height="6" rx="3" fill="#C4A882" opacity="0.7"/>
+<rect x="154" y="150" width="76" height="6" rx="3" fill="#C4A882" opacity="0.7"/>
+<rect x="150" y="168" width="80" height="6" rx="3" fill="#C4A882" opacity="0.7"/>
+<rect x="154" y="186" width="76" height="6" rx="3" fill="#C4A882" opacity="0.7"/>
+<text x="190" y="256" font-family="Arial" font-size="13" font-weight="500" fill="#1C1612" text-anchor="middle">balanced</text>
+<text x="190" y="272" font-family="Arial" font-size="10" fill="#7A6A5A" text-anchor="middle">absorbs normally</text>
+<line x1="248" y1="62" x2="248" y2="278" stroke="#EDE5D8" stroke-width="0.5"/>
+<text x="300" y="72" font-family="Georgia" font-size="13" font-weight="600" fill="#1C1612" text-anchor="middle">high</text>
+<rect x="262" y="80" width="76" height="160" rx="38" fill="#EDE5D8" stroke="#D4C4AD" stroke-width="0.5"/>
+<path d="M262,100 L338,92" fill="none" stroke="#C4A882" stroke-width="5" stroke-linecap="round"/>
+<path d="M262,118 L338,110" fill="none" stroke="#C4A882" stroke-width="5" stroke-linecap="round"/>
+<path d="M262,136 L338,128" fill="none" stroke="#C4A882" stroke-width="5" stroke-linecap="round"/>
+<path d="M262,154 L338,146" fill="none" stroke="#C4A882" stroke-width="5" stroke-linecap="round"/>
+<path d="M262,172 L338,164" fill="none" stroke="#C4A882" stroke-width="5" stroke-linecap="round"/>
+<path d="M262,190 L338,182" fill="none" stroke="#C4A882" stroke-width="5" stroke-linecap="round"/>
+<text x="300" y="256" font-family="Arial" font-size="13" font-weight="500" fill="#1C1612" text-anchor="middle">open</text>
+<text x="300" y="272" font-family="Arial" font-size="10" fill="#7A6A5A" text-anchor="middle">absorbs quickly</text>
+</svg>

@@ -72,10 +72,13 @@ export async function scoreIngredientsText(
     "match_compatibility_scores",
     {
       p_ingredient_names: ingredientNames,
-      p_hair_type: profile.curl_type,
+      p_hair_type: profile.curl_type === "not_sure" ? null : profile.curl_type,
       p_porosity: profile.porosity === "not sure" ? null : profile.porosity,
       p_scalp_condition: normalizeScalpCondition(profile.scalp_condition),
-      p_thickness: profile.strand_thickness,
+      p_thickness:
+        profile.strand_thickness === "not_sure"
+          ? null
+          : profile.strand_thickness,
     }
   );
 

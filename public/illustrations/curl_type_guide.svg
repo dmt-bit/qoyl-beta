@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="380" height="360" viewBox="0 0 380 360">
+<rect width="380" height="360" fill="#F5F0EA"/>
+<rect x="10" y="10" width="360" height="340" rx="12" fill="white" stroke="#EDE5D8" stroke-width="0.5"/>
+<text x="190" y="36" font-family="Arial" font-size="10" font-weight="600" letter-spacing="2" fill="#9C7B5A" text-anchor="middle">CURL TYPE</text>
+<text x="82" y="58" font-family="Georgia" font-size="13" font-weight="600" fill="#1C1612" text-anchor="middle">4a</text>
+<text x="82" y="72" font-family="Arial" font-size="10" fill="#7A6A5A" text-anchor="middle">defined S-coils</text>
+<path d="M62,88 Q74,96 62,108 Q50,120 62,132 Q74,144 62,156 Q50,168 62,180 Q74,192 62,204 Q50,216 62,228 Q74,240 62,252 Q50,264 62,276 Q74,288 62,300" fill="none" stroke="#9C7B5A" stroke-width="3.5" stroke-linecap="round"/>
+<path d="M80,88 Q92,100 80,112 Q68,124 80,136 Q92,148 80,160 Q68,172 80,184 Q92,196 80,208 Q68,220 80,232 Q92,244 80,256 Q68,268 80,280 Q92,292 80,304" fill="none" stroke="#C4A882" stroke-width="3.5" stroke-linecap="round"/>
+<path d="M98,88 Q110,98 98,110 Q86,122 98,134 Q110,146 98,158 Q86,170 98,182 Q110,194 98,206 Q86,218 98,230 Q110,242 98,254 Q86,266 98,278 Q110,290 98,302" fill="none" stroke="#7A6050" stroke-width="3.5" stroke-linecap="round"/>
+<text x="82" y="322" font-family="Arial" font-size="13" font-weight="500" fill="#1C1612" text-anchor="middle">4a</text>
+<line x1="138" y1="46" x2="138" y2="330" stroke="#EDE5D8" stroke-width="0.5"/>
+<text x="190" y="58" font-family="Georgia" font-size="13" font-weight="600" fill="#1C1612" text-anchor="middle">4b</text>
+<text x="190" y="72" font-family="Arial" font-size="10" fill="#7A6A5A" text-anchor="middle">Z-pattern angles</text>
+<path d="M170,88 L182,102 L158,116 L182,130 L158,144 L182,158 L158,172 L182,186 L158,200 L182,214 L158,228 L182,242 L158,256 L182,270 L158,284 L170,298" fill="none" stroke="#9C7B5A" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M192,88 L204,104 L180,118 L204,132 L180,146 L204,160 L180,174 L204,188 L180,202 L204,216 L180,230 L204,244 L180,258 L204,272 L180,286 L192,300" fill="none" stroke="#C4A882" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="190" y="322" font-family="Arial" font-size="13" font-weight="500" fill="#1C1612" text-anchor="middle">4b</text>
+<line x1="248" y1="46" x2="248" y2="330" stroke="#EDE5D8" stroke-width="0.5"/>
+<text x="300" y="58" font-family="Georgia" font-size="13" font-weight="600" fill="#1C1612" text-anchor="middle">4c</text>
+<text x="300" y="72" font-family="Arial" font-size="10" fill="#7A6A5A" text-anchor="middle">tight coils</text>
+<path d="M280,88 Q288,94 280,102 Q272,110 280,118 Q288,126 280,134 Q272,142 280,150 Q288,158 280,166 Q272,174 280,182 Q288,190 280,198 Q272,206 280,214 Q288,222 280,230 Q272,238 280,246 Q288,254 280,262 Q272,270 280,278 Q288,286 280,294 Q272,302 280,306" fill="none" stroke="#9C7B5A" stroke-width="3" stroke-linecap="round"/>
+<path d="M293,88 Q301,94 293,102 Q285,110 293,118 Q301,126 293,134 Q285,142 293,150 Q301,158 293,166 Q285,174 293,182 Q301,190 293,198 Q285,206 293,214 Q301,222 293,230 Q285,238 293,246 Q301,254 293,262 Q285,270 293,278 Q301,286 293,294 Q285,302 293,306" fill="none" stroke="#C4A882" stroke-width="3" stroke-linecap="round"/>
+<path d="M306,88 Q314,95 306,103 Q298,111 306,119 Q314,127 306,135 Q298,143 306,151 Q314,159 306,167 Q298,175 306,183 Q314,191 306,199 Q298,207 306,215 Q314,223 306,231 Q298,239 306,247 Q314,255 306,263 Q298,271 306,279 Q314,287 306,295 Q298,303 306,307" fill="none" stroke="#7A6050" stroke-width="3" stroke-linecap="round"/>
+<text x="300" y="322" font-family="Arial" font-size="13" font-weight="500" fill="#1C1612" text-anchor="middle">4c</text>
+</svg>

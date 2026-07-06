@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 export default function InfoTooltip({
   label,
@@ -12,6 +13,9 @@ export default function InfoTooltip({
   description: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   useEffect(() => {
     if (!open) return;
@@ -42,47 +46,50 @@ export default function InfoTooltip({
         ℹ
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-dark/70 sm:items-center sm:p-4"
-          onClick={() => setOpen(false)}
-        >
+      {open &&
+        mounted &&
+        createPortal(
           <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={label}
-            onClick={(e) => e.stopPropagation()}
-            className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-bronze/30 bg-dark p-6 sm:rounded-2xl"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-dark/70 sm:items-center sm:p-4"
+            onClick={() => setOpen(false)}
           >
-            <div className="flex items-start justify-between gap-4">
-              <h3 className="font-serif text-xl font-semibold text-cream">
-                {label}
-              </h3>
-              <button
-                type="button"
-                aria-label="Close"
-                onClick={() => setOpen(false)}
-                className="text-lg leading-none text-cream/50 transition-colors hover:text-cream"
-              >
-                ✕
-              </button>
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={label}
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-bronze/30 bg-dark p-6 sm:rounded-2xl"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <h3 className="font-serif text-xl font-semibold text-cream">
+                  {label}
+                </h3>
+                <button
+                  type="button"
+                  aria-label="Close"
+                  onClick={() => setOpen(false)}
+                  className="text-lg leading-none text-cream/50 transition-colors hover:text-cream"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {illustrationSrc && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={illustrationSrc}
+                  alt={`${label} illustration`}
+                  className="mt-4 w-full rounded-lg"
+                />
+              )}
+
+              <p className="mt-4 text-sm leading-relaxed text-cream/80">
+                {description}
+              </p>
             </div>
-
-            {illustrationSrc && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={illustrationSrc}
-                alt={`${label} illustration`}
-                className="mt-4 w-full rounded-lg"
-              />
-            )}
-
-            <p className="mt-4 text-sm leading-relaxed text-cream/80">
-              {description}
-            </p>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 }

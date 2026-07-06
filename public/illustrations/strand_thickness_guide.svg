@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="380" height="220" viewBox="0 0 380 220">
+<rect width="380" height="220" fill="#F5F0EA"/>
+<rect x="10" y="10" width="360" height="200" rx="12" fill="white" stroke="#EDE5D8" stroke-width="0.5"/>
+<text x="190" y="36" font-family="Arial" font-size="10" font-weight="600" letter-spacing="2" fill="#9C7B5A" text-anchor="middle">STRAND THICKNESS</text>
+<text x="190" y="52" font-family="Arial" font-size="10" fill="#7A6A5A" text-anchor="middle">size of one strand</text>
+<text x="82" y="74" font-family="Georgia" font-size="13" font-weight="600" fill="#1C1612" text-anchor="middle">fine</text>
+<line x1="82" y1="86" x2="82" y2="156" stroke="#9C7B5A" stroke-width="1.5" stroke-linecap="round"/>
+<text x="82" y="174" font-family="Arial" font-size="13" font-weight="500" fill="#1C1612" text-anchor="middle">fine</text>
+<text x="82" y="190" font-family="Arial" font-size="10" fill="#7A6A5A" text-anchor="middle">thin, light</text>
+<line x1="138" y1="62" x2="138" y2="196" stroke="#EDE5D8" stroke-width="0.5"/>
+<text x="190" y="74" font-family="Georgia" font-size="13" font-weight="600" fill="#1C1612" text-anchor="middle">medium</text>
+<line x1="190" y1="86" x2="190" y2="156" stroke="#9C7B5A" stroke-width="3.5" stroke-linecap="round"/>
+<text x="190" y="174" font-family="Arial" font-size="13" font-weight="500" fill="#1C1612" text-anchor="middle">medium</text>
+<text x="190" y="190" font-family="Arial" font-size="10" fill="#7A6A5A" text-anchor="middle">average</text>
+<line x1="248" y1="62" x2="248" y2="196" stroke="#EDE5D8" stroke-width="0.5"/>
+<text x="300" y="74" font-family="Georgia" font-size="13" font-weight="600" fill="#1C1612" text-anchor="middle">coarse</text>
+<line x1="300" y1="86" x2="300" y2="156" stroke="#9C7B5A" stroke-width="7" stroke-linecap="round"/>
+<text x="300" y="174" font-family="Arial" font-size="13" font-weight="500" fill="#1C1612" text-anchor="middle">coarse</text>
+<text x="300" y="190" font-family="Arial" font-size="10" fill="#7A6A5A" text-anchor="middle">thick, strong</text>
+</svg>
