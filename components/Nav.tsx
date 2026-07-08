@@ -5,10 +5,15 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 
-const LINKS = [
-  { href: "/", label: "Home" },
+const PLAIN_LINKS = [{ href: "/", label: "Home" }];
+const TAIL_LINKS = [
+  { href: "/travel", label: "Travel Kit" },
   { href: "/profile", label: "My Profile" },
 ];
+
+function isLinkActive(pathname: string, href: string) {
+  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+}
 
 export default function Nav() {
   const pathname = usePathname();
@@ -21,28 +26,23 @@ export default function Nav() {
   }
 
   return (
-    <nav className="border-b border-bronze/20 bg-dark px-4 py-4 font-sans sm:px-6">
+    <nav className="print-hide border-b border-bronze/20 bg-dark px-4 py-4 font-sans sm:px-6">
       <ul className="mx-auto flex max-w-3xl items-center gap-6">
-        {LINKS.map((link) => {
-          const isActive =
-            link.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(link.href);
-          return (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                className={`text-sm font-medium transition-colors ${
-                  isActive
-                    ? "text-bronze2"
-                    : "text-cream/70 hover:text-cream"
-                }`}
-              >
-                {link.label}
-              </Link>
-            </li>
-          );
-        })}
+        {PLAIN_LINKS.map((link) => (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className={`text-sm font-medium transition-colors ${
+                isLinkActive(pathname, link.href)
+                  ? "text-bronze2"
+                  : "text-cream/70 hover:text-cream"
+              }`}
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+
         <li>
           <Link
             href="/search"
@@ -51,6 +51,22 @@ export default function Nav() {
             Product Search
           </Link>
         </li>
+
+        {TAIL_LINKS.map((link) => (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className={`text-sm font-medium transition-colors ${
+                isLinkActive(pathname, link.href)
+                  ? "text-bronze2"
+                  : "text-cream/70 hover:text-cream"
+              }`}
+            >
+              {link.label}
+            </Link>
+          </li>
+        ))}
+
         <li className="ml-auto flex items-center gap-3 text-sm">
           {loading ? null : user ? (
             <>

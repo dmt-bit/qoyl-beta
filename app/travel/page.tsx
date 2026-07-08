@@ -1,0 +1,163 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import UpgradePrompt from "@/components/UpgradePrompt";
+import { useAuth } from "@/lib/auth-context";
+import {
+  getTravelKit,
+  TRAVEL_CLIMATES,
+  TravelClimate,
+  TravelKitItem,
+} from "@/lib/travelKit";
+
+export default function TravelPage() {
+  const router = useRouter();
+  const { user, loading: authLoading, hairProfile } = useAuth();
+
+  const [checkedAccess, setCheckedAccess] = useState(false);
+  const [hasTravelKit, setHasTravelKit] = useState(false);
+  const [entitlementLoading, setEntitlementLoading] = useState(true);
+
+  const [climate, setClimate] = useState<TravelClimate | null>(null);
+  const [kit, setKit] = useState<TravelKitItem[]>([]);
+  const [kitLoading, setKitLoading] = useState(false);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.replace("/auth");
+      return;
+    }
+    setCheckedAccess(true);
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    async function loadEntitlement() {
+      setEntitlementLoading(true);
+      try {
+        const res = await fetch(`/api/purchases?user_id=${user!.id}`);
+        const data = await res.json();
+        if (!cancelled) setHasTravelKit(Boolean(data.hasTravelKit));
+      } catch {
+        // Fail closed -- treat as not purchased.
+      } finally {
+        if (!cancelled) setEntitlementLoading(false);
+      }
+    }
+
+    loadEntitlement();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  async function handleSelectClimate(value: TravelClimate) {
+    setClimate(value);
+    setKitLoading(true);
+    const result = await getTravelKit(hairProfile?.porosity ?? null, value);
+    setKit(result);
+    setKitLoading(false);
+  }
+
+  if (!checkedAccess) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
+        <p className="text-sm text-cream/60">Loading...</p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+      <div className="mx-auto max-w-md">
+        <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+          Travel Kit
+        </h1>
+        <p className="mt-2 text-sm text-cream/70">
+          5 products matched to your hair and your destination climate — so
+          your hair survives the trip.
+        </p>
+
+        {!entitlementLoading && !hasTravelKit && (
+          <div className="mt-8">
+            <UpgradePrompt
+              feature="travel_kit"
+              price="$4.99 one-time"
+              title="Travel Kit"
+              description="5 products matched to your hair and your destination climate — so your hair survives the trip"
+            />
+          </div>
+        )}
+
+        {!entitlementLoading && hasTravelKit && (
+          <div className="mt-8">
+            <p className="font-serif text-lg text-bronze2">
+              Where are you headed?
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {TRAVEL_CLIMATES.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => handleSelectClimate(option.value)}
+                  className={`rounded-lg border px-4 py-3 text-sm font-medium transition-colors ${
+                    climate === option.value
+                      ? "border-bronze bg-bronze text-dark"
+                      : "border-bronze/40 text-cream hover:border-bronze"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
+            {kitLoading && (
+              <p className="mt-6 text-sm text-cream/50">
+                Building your kit...
+              </p>
+            )}
+
+            {!kitLoading && kit.length > 0 && (
+              <ul className="mt-6 space-y-3">
+                {kit.map((item) => (
+                  <li
+                    key={item.category}
+                    className="rounded-lg border border-bronze/30 p-4"
+                  >
+                    <p className="text-xs uppercase tracking-wide text-bronze2">
+                      {item.categoryLabel}
+                    </p>
+                    {item.ingredientName ? (
+                      <>
+                        <p className="mt-1 font-serif text-lg text-cream">
+                          {item.ingredientName}
+                        </p>
+                        <p className="mt-1 text-xs text-cream/60">
+                          Score: {item.score}/10 · {item.rating}
+                        </p>
+                        <a
+                          href={item.affiliateLink}
+                          className="mt-2 inline-block text-xs text-bronze2 underline"
+                        >
+                          Shop this pick →
+                        </a>
+                      </>
+                    ) : (
+                      <p className="mt-1 text-sm text-cream/50">
+                        No match found yet for this category.
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}

@@ -6,6 +6,119 @@ import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 
+type Purchase = {
+  id: string;
+  product_type: "routine_subscription" | "travel_kit";
+  stripe_subscription_id: string | null;
+  status: string;
+  created_at: string;
+};
+
+function MyPurchases({ userId }: { userId: string }) {
+  const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  async function loadPurchases() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/purchases?user_id=${userId}`);
+      const data = await res.json();
+      setPurchases(data.purchases ?? []);
+    } catch {
+      setPurchases([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadPurchases();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
+
+  const routineSubscription = purchases.find(
+    (p) => p.product_type === "routine_subscription"
+  );
+  const travelKit = purchases.find((p) => p.product_type === "travel_kit");
+
+  async function handleCancel() {
+    if (!routineSubscription?.stripe_subscription_id) return;
+    setCancelError(null);
+    setCancelling(true);
+
+    try {
+      const res = await fetch("/api/stripe/cancel-subscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subscriptionId: routineSubscription.stripe_subscription_id,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setCancelError(data.error ?? "Something went wrong. Please try again.");
+        return;
+      }
+
+      await loadPurchases();
+    } catch {
+      setCancelError("Couldn't reach the server. Please try again.");
+    } finally {
+      setCancelling(false);
+    }
+  }
+
+  return (
+    <div className="mx-auto mt-12 max-w-md">
+      <h2 className="font-serif text-2xl font-semibold text-cream">
+        My Purchases
+      </h2>
+
+      {loading ? (
+        <p className="mt-3 text-sm text-cream/50">Loading...</p>
+      ) : !routineSubscription && !travelKit ? (
+        <p className="mt-3 text-sm text-cream/70">No active purchases yet.</p>
+      ) : (
+        <div className="mt-4 space-y-3">
+          {routineSubscription && (
+            <div className="rounded-lg border border-bronze/30 p-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-cream">Monthly Routine</p>
+                <span className="text-xs uppercase tracking-wide text-green">
+                  {routineSubscription.status}
+                </span>
+              </div>
+              {cancelError && (
+                <p className="mt-2 text-sm text-red">{cancelError}</p>
+              )}
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={cancelling}
+                className="mt-3 text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70 disabled:opacity-50"
+              >
+                {cancelling ? "Cancelling..." : "Cancel subscription"}
+              </button>
+            </div>
+          )}
+
+          {travelKit && (
+            <div className="flex items-center justify-between rounded-lg border border-bronze/30 p-4">
+              <p className="text-sm text-cream">Travel Kit</p>
+              <span className="text-xs uppercase tracking-wide text-green">
+                {travelKit.status}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const CURL_TYPES = [
   { value: "4a", label: "4a" },
   { value: "4b", label: "4b" },
@@ -603,6 +716,8 @@ export default function ProfilePage() {
           </button>
         </form>
       </div>
+
+      {user && <MyPurchases userId={user.id} />}
     </main>
   );
 }

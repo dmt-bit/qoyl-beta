@@ -25,3 +25,20 @@ body {
     text-wrap: balance;
   }
 }
+
+@media print {
+  .print-hide {
+    display: none !important;
+  }
+
+  main {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  main * {
+    background: transparent !important;
+    color: #000 !important;
+    border-color: #999 !important;
+  }
+}

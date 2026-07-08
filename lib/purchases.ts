@@ -15,18 +15,23 @@ export type UserPurchase = {
 export async function getUserPurchases(
   userId: string
 ): Promise<UserPurchase[]> {
-  const { data, error } = await getSupabaseAdmin()
-    .from("user_purchases")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("status", "active");
+  try {
+    const { data, error } = await getSupabaseAdmin()
+      .from("user_purchases")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("status", "active");
 
-  if (error) {
-    console.error("Failed to fetch user purchases:", error);
+    if (error) {
+      console.error("Failed to fetch user purchases:", error);
+      return [];
+    }
+
+    return data ?? [];
+  } catch (err) {
+    console.error("Failed to fetch user purchases:", err);
     return [];
   }
-
-  return data ?? [];
 }
 
 export async function hasRoutineSubscription(userId: string): Promise<boolean> {
