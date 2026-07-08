@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Collapse from "@/components/Collapse";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
@@ -204,9 +205,23 @@ function SelectButton({
   );
 }
 
-export default function ProfilePage() {
+function ProfileForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isEditMode = searchParams.get("edit") === "true";
   const { user, hairProfile, hairProfileLoading, refreshHairProfile } =
     useAuth();
+
+  const [redirectChecked, setRedirectChecked] = useState(false);
+
+  useEffect(() => {
+    if (hairProfileLoading) return;
+    if (hairProfile && !isEditMode) {
+      router.replace("/dashboard");
+      return;
+    }
+    setRedirectChecked(true);
+  }, [hairProfile, hairProfileLoading, isEditMode, router]);
 
   const [curlType, setCurlType] = useState<string | null>(null);
   const [porosity, setPorosity] = useState<string | null>(null);
@@ -323,7 +338,16 @@ export default function ProfilePage() {
       localStorage.setItem("hair_profile_id", data.id);
       setSuccess(true);
       if (user) await refreshHairProfile();
+      router.push("/dashboard");
     }
+  }
+
+  if (!redirectChecked) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
+        <p className="text-sm text-cream/60">Loading...</p>
+      </main>
+    );
   }
 
   return (
@@ -719,5 +743,13 @@ export default function ProfilePage() {
 
       {user && <MyPurchases userId={user.id} />}
     </main>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={null}>
+      <ProfileForm />
+    </Suspense>
   );
 }
