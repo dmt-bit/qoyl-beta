@@ -20,7 +20,36 @@ type OpenBeautyFactsProduct = {
   product_name?: string;
   brands?: string;
   ingredients_text?: string;
+  categories_tags?: string[];
 };
+
+// Categories that can slip through the hair-care tag filter (e.g. a
+// hair-care-tagged product that's really a body wash or a perfume) and
+// should never show up as a hair-compatibility result.
+const EXCLUDED_CATEGORIES = [
+  "en:deodorants",
+  "en:skin-care",
+  "en:face-care",
+  "en:body-care",
+  "en:makeup",
+  "en:perfumes",
+  "en:nail-care",
+];
+
+async function fetchObfHairCareProducts(
+  query: string,
+  categoryTag: string,
+  signal: AbortSignal
+): Promise<OpenBeautyFactsProduct[]> {
+  const res = await fetch(
+    `https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(
+      query
+    )}&tagtype_0=categories&tag_contains_0=contains&tag_0=${categoryTag}&json=true&page_size=20`,
+    { signal }
+  );
+  const data: { products?: OpenBeautyFactsProduct[] } = await res.json();
+  return data.products ?? [];
+}
 
 export default function SearchPage() {
   const router = useRouter();
@@ -71,14 +100,38 @@ export default function SearchPage() {
       setSearchError(null);
 
       try {
-        const res = await fetch(
-          `https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(
-            query
-          )}&json=true&page_size=20`,
-          { signal: controller.signal }
+        const obfProducts = await fetchObfHairCareProducts(
+          query,
+          "hair-care",
+          controller.signal
         );
-        const data: { products?: OpenBeautyFactsProduct[] } = await res.json();
-        const products: Product[] = (data.products ?? [])
+
+        if (obfProducts.length < 3) {
+          // Open Beauty Facts' contributors use both spellings inconsistently.
+          const fallbackProducts = await fetchObfHairCareProducts(
+            query,
+            "haircare",
+            controller.signal
+          );
+          const seenNames = new Set(
+            obfProducts.map((p) => p.product_name).filter(Boolean)
+          );
+          for (const p of fallbackProducts) {
+            if (p.product_name && !seenNames.has(p.product_name)) {
+              obfProducts.push(p);
+              seenNames.add(p.product_name);
+            }
+          }
+        }
+
+        const withoutExcludedCategories = obfProducts.filter(
+          (p) =>
+            !(p.categories_tags ?? []).some((tag) =>
+              EXCLUDED_CATEGORIES.includes(tag)
+            )
+        );
+
+        const products: Product[] = withoutExcludedCategories
           .filter(
             (p): p is OpenBeautyFactsProduct & {
               product_name: string;
