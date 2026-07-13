@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 
-type Mode = "sign-in" | "sign-up";
+type Mode = "sign-in" | "sign-up" | "forgot-password";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -17,6 +17,11 @@ export default function AuthPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
+  const [resetEmail, setResetEmail] = useState("");
+  const [resetSubmitting, setResetSubmitting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
     if (loading || hairProfileLoading || !user) return;
@@ -60,10 +65,105 @@ export default function AuthPage() {
     }
   }
 
+  async function handleResetSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setResetError(null);
+    setResetSubmitting(true);
+
+    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(
+      resetEmail,
+      { redirectTo: "https://qoyl-beta-alpha.vercel.app/auth/reset" }
+    );
+
+    setResetSubmitting(false);
+
+    if (resetErr) {
+      setResetError(resetErr.message);
+      return;
+    }
+    setResetSent(true);
+  }
+
   function toggleMode() {
     setMode((prev) => (prev === "sign-in" ? "sign-up" : "sign-in"));
     setError(null);
     setInfoMessage(null);
+  }
+
+  function showForgotPassword() {
+    setMode("forgot-password");
+    setError(null);
+    setInfoMessage(null);
+    setResetError(null);
+    setResetSent(false);
+    setResetEmail(email);
+  }
+
+  function backToSignIn() {
+    setMode("sign-in");
+    setResetError(null);
+    setResetSent(false);
+  }
+
+  if (mode === "forgot-password") {
+    return (
+      <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+        <div className="mx-auto max-w-sm">
+          <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+            Reset Password
+          </h1>
+          <p className="mt-2 text-sm text-cream/70">
+            Enter your email and we&apos;ll send you a link to reset your
+            password.
+          </p>
+
+          {resetSent ? (
+            <p className="mt-8 text-sm text-green">
+              Check your email — we sent you a password reset link.
+            </p>
+          ) : (
+            <form onSubmit={handleResetSubmit} className="mt-8 space-y-5">
+              <div>
+                <label
+                  htmlFor="reset-email"
+                  className="font-serif text-lg text-bronze2"
+                >
+                  Email
+                </label>
+                <input
+                  id="reset-email"
+                  type="email"
+                  required
+                  autoComplete="email"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+                />
+              </div>
+
+              {resetError && <p className="text-sm text-red">{resetError}</p>}
+
+              <button
+                type="submit"
+                disabled={resetSubmitting}
+                className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+              >
+                {resetSubmitting ? "Sending..." : "Send Reset Link"}
+              </button>
+            </form>
+          )}
+
+          <button
+            type="button"
+            onClick={backToSignIn}
+            className="mt-6 text-sm text-bronze2 underline underline-offset-2"
+          >
+            Back to sign in
+          </button>
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -115,6 +215,15 @@ export default function AuthPage() {
               placeholder="••••••••"
               className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
             />
+            {mode === "sign-in" && (
+              <button
+                type="button"
+                onClick={showForgotPassword}
+                className="mt-3 text-sm text-bronze2 underline underline-offset-2"
+              >
+                Forgot password?
+              </button>
+            )}
           </div>
 
           {error && <p className="text-sm text-red">{error}</p>}
