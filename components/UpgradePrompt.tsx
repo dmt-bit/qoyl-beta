@@ -8,11 +8,13 @@ export default function UpgradePrompt({
   price,
   title,
   description,
+  ctaLabel = "Unlock",
 }: {
   feature: "routine_subscription" | "travel_kit";
   price: string;
   title: string;
   description: string;
+  ctaLabel?: string;
 }) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -87,7 +89,7 @@ export default function UpgradePrompt({
         disabled={loading}
         className="mt-5 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
       >
-        {loading ? "Redirecting..." : "Unlock"}
+        {loading ? "Redirecting..." : ctaLabel}
       </button>
     </div>
   );
