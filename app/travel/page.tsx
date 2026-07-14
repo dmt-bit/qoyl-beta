@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { useAuth } from "@/lib/auth-context";
@@ -74,7 +75,18 @@ export default function TravelPage() {
   return (
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
       <div className="mx-auto max-w-md">
-        <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+        <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl">
+          <Image
+            src="/travel/hero.webp"
+            alt="Don't let vacation ruin your hair progress"
+            fill
+            sizes="(min-width: 768px) 448px, 100vw"
+            className="object-cover"
+            priority
+          />
+        </div>
+
+        <h1 className="mt-6 font-serif text-3xl font-semibold text-cream sm:text-4xl">
           Travel Kit
         </h1>
         <p className="mt-2 text-sm text-cream/70">

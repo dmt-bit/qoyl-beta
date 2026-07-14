@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 
 const PLAIN_LINKS = [{ href: "/", label: "Home" }];
 const TAIL_LINKS = [
-  { href: "/travel", label: "Travel Kit" },
+  { href: "/travel", label: "Traveling?" },
   { href: "/profile", label: "My Profile" },
 ];
 
