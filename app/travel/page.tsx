@@ -102,6 +102,16 @@ export default function TravelPage() {
               title="Travel Kit"
               description="5 products matched to your hair and your destination climate — so your hair survives the trip"
             />
+
+            <div className="relative mt-6 aspect-[4/5] w-full overflow-hidden rounded-xl">
+              <Image
+                src="/travel/kit-products.webp"
+                alt="5 products, your hair, your destination climate"
+                fill
+                sizes="(min-width: 768px) 448px, 100vw"
+                className="object-cover"
+              />
+            </div>
           </div>
         )}
 
