@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { sendRoutineEmail } from "@/lib/sendRoutineEmail";
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -66,6 +67,31 @@ export async function POST(request: Request) {
 
         if (error) {
           console.error("Failed to insert user_purchases row:", error);
+        }
+
+        if (productType === "routine_subscription") {
+          const recipientEmail =
+            session.customer_email ?? session.customer_details?.email ?? null;
+
+          if (!recipientEmail) {
+            console.error(
+              "checkout.session.completed missing customer email for routine email:",
+              session.id
+            );
+          } else {
+            // Never let an email failure fail the webhook -- the purchase
+            // row above is already recorded, and Stripe would otherwise
+            // retry this event and re-run everything.
+            try {
+              await sendRoutineEmail(userId, recipientEmail);
+            } catch (emailError) {
+              console.error(
+                "Failed to send routine email:",
+                userId,
+                emailError
+              );
+            }
+          }
         }
         break;
       }
