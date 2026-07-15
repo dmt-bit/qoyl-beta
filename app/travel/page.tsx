@@ -13,6 +13,17 @@ import {
   TravelKitItem,
 } from "@/lib/travelKit";
 
+// No real product/brand catalog exists yet (Phase 1) -- these render as
+// guidance ("look for a cleanser with X") rather than a specific product
+// name, so nothing implies a real shoppable item that doesn't exist.
+const CATEGORY_NOUN: Record<string, string> = {
+  shampoo: "cleanser",
+  conditioner: "conditioner",
+  leave_in: "leave-in conditioner",
+  gel: "styler",
+  curl_refresher: "curl refresher",
+};
+
 export default function TravelPage() {
   const router = useRouter();
   const { user, loading: authLoading, hairProfile } = useAuth();
@@ -165,8 +176,13 @@ export default function TravelPage() {
                       {item.ingredientName ? (
                         <>
                           <div className="mt-1 flex items-center justify-between gap-3">
-                            <p className="font-serif text-lg text-cream">
-                              {item.ingredientName}
+                            <p className="text-sm text-cream">
+                              Look for a{" "}
+                              {CATEGORY_NOUN[item.category] ?? "product"} with{" "}
+                              <span className="font-serif text-lg">
+                                {item.ingredientName}
+                              </span>{" "}
+                              as a primary ingredient.
                             </p>
                             {item.score !== null && (
                               <span

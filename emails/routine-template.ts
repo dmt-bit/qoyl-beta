@@ -82,6 +82,18 @@ function scoreFillClass(score: number): string {
   return "score-fill-r";
 }
 
+// No real product/brand catalog exists yet (Phase 1) -- these read as
+// guidance ("look for a cleanser with X") rather than a specific product
+// name, so nothing implies a real shoppable item that doesn't exist.
+const CATEGORY_NOUN: Record<string, string> = {
+  chelating_shampoo: "chelating shampoo",
+  regular_shampoo: "cleanser",
+  deep_conditioner: "deep conditioner",
+  leave_in: "leave-in conditioner",
+  styler: "styler",
+  sealing_oil: "sealing oil",
+};
+
 function renderProducts(products: RoutineProduct[]): string {
   return products
     .map((product) => {
@@ -93,10 +105,12 @@ function renderProducts(products: RoutineProduct[]): string {
   </div>`;
       }
 
+      const noun = CATEGORY_NOUN[product.category] ?? "product";
+
       return `
   <div class="product-card">
     <div class="product-cat">${escapeHtml(product.categoryLabel)}</div>
-    <div class="product-name">${escapeHtml(product.ingredientName)}</div>
+    <div class="product-guidance">Look for a ${escapeHtml(noun)} with <strong>${escapeHtml(product.ingredientName)}</strong> as a primary ingredient.</div>
     ${product.reason ? `<div class="product-why">${escapeHtml(product.reason)}</div>` : ""}
     <div class="score-row">
       <div class="score-bar"><div class="${scoreFillClass(product.score)}" style="width:${product.score}%"></div></div>
@@ -184,8 +198,8 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
 .step-why{font-size:11px;color:#9C7B5A;background:#F5F0EA;padding:2px 8px;border-radius:4px;display:inline-block;margin-top:4px}
 .product-card{background:#FDFAF8;border:1px solid #EDE5D8;border-radius:8px;padding:12px;margin-bottom:8px}
 .product-cat{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9C7B5A;margin-bottom:4px}
-.product-name{font-size:13px;font-weight:600;color:#1C1612;margin-bottom:2px}
-.product-brand{font-size:11px;color:#9C8070;margin-bottom:6px}
+.product-guidance{font-size:13px;color:#1C1612;line-height:1.5;margin-bottom:6px}
+.product-guidance strong{font-weight:600}
 .product-why{font-size:11px;color:#5A4A3A;line-height:1.55;margin-bottom:6px}
 .score-row{display:flex;align-items:center;gap:8px}
 .score-bar{width:80px;height:4px;background:#EDE5D8;border-radius:2px;overflow:hidden}
