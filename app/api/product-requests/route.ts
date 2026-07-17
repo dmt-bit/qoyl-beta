@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { sendAdminNotification } from "@/lib/adminNotify";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -38,6 +39,14 @@ export async function POST(request: Request) {
   if (insertError) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
+
+  await sendAdminNotification(
+    `New product evaluation request — ${productName}`,
+    `product_name: ${productName}\n` +
+      `brand_name: ${brandName}\n` +
+      `ingredient_list: ${ingredientList || "Not provided"}\n` +
+      `requester_email: ${email}`
+  );
 
   return NextResponse.json({ ok: true });
 }

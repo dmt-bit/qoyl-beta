@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendRoutineEmail } from "@/lib/sendRoutineEmail";
+import { sendAdminNotification } from "@/lib/adminNotify";
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -45,7 +46,7 @@ export async function POST(request: Request) {
           break;
         }
 
-        const { error } = await getSupabaseAdmin()
+        const { data: purchaseRow, error } = await getSupabaseAdmin()
           .from("user_purchases")
           .insert({
             user_id: userId,
@@ -63,10 +64,20 @@ export async function POST(request: Request) {
                 ? session.payment_intent
                 : session.payment_intent?.id ?? null,
             status: "active",
-          });
+          })
+          .select()
+          .single();
 
         if (error) {
           console.error("Failed to insert user_purchases row:", error);
+        } else {
+          await sendAdminNotification(
+            `New Qoyl purchase — ${purchaseRow.product_type}`,
+            `product_type: ${purchaseRow.product_type}\n` +
+              `user_id: ${purchaseRow.user_id}\n` +
+              `stripe_customer_id: ${purchaseRow.stripe_customer_id ?? "none"}\n` +
+              `created_at: ${purchaseRow.created_at}`
+          );
         }
 
         if (productType === "routine_subscription") {
