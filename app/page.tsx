@@ -37,7 +37,8 @@ export default async function Home() {
             Qoyl
           </h1>
           <p className="mt-2 text-sm text-cream/70">
-            Ingredient breakdowns and product evaluations for type 4 hair.
+            Ingredient breakdowns and product evaluations for every hair
+            texture — built first for the community that needed it most.
           </p>
 
           {posts && posts.length > 0 ? (

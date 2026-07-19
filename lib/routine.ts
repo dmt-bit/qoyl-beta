@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { curlFamily } from "@/lib/compatibility";
 
 export type HairProfileForRoutine = {
   curl_type: string | null;
@@ -13,12 +14,93 @@ export type RoutineStep = {
   description: string;
 };
 
+const STRAIGHT_ROUTINE: RoutineStep[] = [
+  {
+    title: "1. Cleanse",
+    description:
+      "Clarify regularly -- straight hair's flat cuticle lets oil travel down the shaft fast, so buildup shows up sooner than on other textures.",
+  },
+  {
+    title: "2. Condition",
+    description:
+      "Apply a lightweight conditioner from mid-length to ends only -- conditioner at the root just adds weight and can flatten volume.",
+  },
+  {
+    title: "3. Moisturize & Seal",
+    description:
+      "Avoid heavy products at the roots -- anything rich enough to seal moisture on other textures will usually look greasy and limp on straight hair.",
+  },
+  {
+    title: "4. Style",
+    description:
+      "Air dry or diffuse on low heat to preserve whatever natural body and movement your hair has.",
+  },
+];
+
+const WAVY_ROUTINE: RoutineStep[] = [
+  {
+    title: "1. Cleanse",
+    description:
+      "A sulfate-free shampoo cleans without stripping the light oils that help your wave pattern hold together.",
+  },
+  {
+    title: "2. Condition",
+    description:
+      "A lightweight conditioner adds slip and softness without weighing down the wave.",
+  },
+  {
+    title: "3. Moisturize & Seal",
+    description:
+      "Scrunch in a curl cream or mousse while hair is soaking wet -- this is what actually shapes and holds the wave pattern as it dries.",
+  },
+  {
+    title: "4. Style",
+    description:
+      "Diffuse or air dry without touching -- disturbing wavy hair as it dries is one of the most common causes of frizz.",
+  },
+];
+
+const CURLY_ROUTINE: RoutineStep[] = [
+  {
+    title: "1. Cleanse",
+    description:
+      "Co-wash or use a gentle, sulfate-free shampoo -- curly hair is naturally drier than straighter textures and tolerates less stripping.",
+  },
+  {
+    title: "2. Condition",
+    description:
+      "Deep condition weekly to keep curls elastic and reduce breakage at the point of detangling.",
+  },
+  {
+    title: "3. Moisturize & Seal",
+    description:
+      "Apply your styler on soaking wet hair -- curls hold definition best when product goes on before any water evaporates.",
+  },
+  {
+    title: "4. Style",
+    description:
+      "Diffuse or air dry -- minimal disturbance while drying keeps the curl pattern intact and reduces frizz.",
+  },
+];
+
 // A simple rules-based routine generator -- a first-pass placeholder
 // algorithm, not a curated content system. Easy to swap out for
 // something more sophisticated later without touching callers.
+//
+// Straight/wavy/curly (types 1-3) get their own fixed routines, since
+// what matters most for those textures is the overall approach, not
+// porosity-driven variation. Coily (type 4) and unset/"not sure" curl
+// types keep the original porosity-driven logic below completely
+// unchanged -- that's the well-calibrated, original behavior this
+// function was built around.
 export function getBasicRoutineSteps(
   profile: HairProfileForRoutine
 ): RoutineStep[] {
+  const family = curlFamily(profile.curl_type);
+  if (family === "straight") return STRAIGHT_ROUTINE;
+  if (family === "wavy") return WAVY_ROUTINE;
+  if (family === "curly") return CURLY_ROUTINE;
+
   const porosity = profile.porosity ?? "medium";
   const concerns = profile.hair_concerns ?? [];
 

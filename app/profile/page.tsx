@@ -120,11 +120,26 @@ function MyPurchases({ userId }: { userId: string }) {
   );
 }
 
-const CURL_TYPES = [
-  { value: "4a", label: "4a" },
-  { value: "4b", label: "4b" },
-  { value: "4c", label: "4c" },
-  { value: "not_sure", label: "Not sure" },
+type CurlTypeOption = {
+  value: string;
+  label: string;
+  group: string;
+  descriptor: string;
+};
+
+const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
+  { value: "1a", label: "1a", group: "Straight", descriptor: "Very straight, fine" },
+  { value: "1b", label: "1b", group: "Straight", descriptor: "Straight with slight bend" },
+  { value: "1c", label: "1c", group: "Straight", descriptor: "Straight but coarse" },
+  { value: "2a", label: "2a", group: "Wavy", descriptor: "Loose S-wave, fine" },
+  { value: "2b", label: "2b", group: "Wavy", descriptor: "Defined S-wave, medium" },
+  { value: "2c", label: "2c", group: "Wavy", descriptor: "Strong wave, coarse" },
+  { value: "3a", label: "3a", group: "Curly", descriptor: "Loose spiral curls" },
+  { value: "3b", label: "3b", group: "Curly", descriptor: "Springy ringlets" },
+  { value: "3c", label: "3c", group: "Curly", descriptor: "Tight corkscrew curls" },
+  { value: "4a", label: "4a", group: "Coily", descriptor: "Defined S-coils" },
+  { value: "4b", label: "4b", group: "Coily", descriptor: "Z-pattern angles" },
+  { value: "4c", label: "4c", group: "Coily", descriptor: "Tight coils, less definition" },
 ];
 const POROSITY_OPTIONS = ["low", "medium", "high", "not sure"] as const;
 const THICKNESS_OPTIONS = [
@@ -185,8 +200,34 @@ function SelectButton({
   label,
   selected,
   onClick,
+  fullWidth = false,
 }: {
   label: string;
+  selected: boolean;
+  onClick: () => void;
+  fullWidth?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`${fullWidth ? "w-full" : ""} rounded-lg border px-4 py-3 text-sm font-medium capitalize transition-colors ${
+        selected
+          ? "border-bronze bg-bronze text-dark"
+          : "border-bronze/40 bg-transparent text-cream hover:border-bronze"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function CurlTypeCard({
+  option,
+  selected,
+  onClick,
+}: {
+  option: CurlTypeOption;
   selected: boolean;
   onClick: () => void;
 }) {
@@ -194,13 +235,21 @@ function SelectButton({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-lg border px-4 py-3 text-sm font-medium capitalize transition-colors ${
+      className={`rounded-lg border px-3 py-3 text-left transition-colors ${
         selected
-          ? "border-bronze bg-bronze text-dark"
-          : "border-bronze/40 bg-transparent text-cream hover:border-bronze"
+          ? "border-bronze bg-bronze/20"
+          : "border-bronze/40 bg-transparent hover:border-bronze"
       }`}
     >
-      {label}
+      <span className="block text-[10px] font-semibold uppercase tracking-wide text-bronze2">
+        {option.group}
+      </span>
+      <span className="mt-1 block font-serif text-lg text-cream">
+        {option.label}
+      </span>
+      <span className="mt-0.5 block text-xs leading-snug text-cream/60">
+        {option.descriptor}
+      </span>
     </button>
   );
 }
@@ -379,15 +428,23 @@ function ProfileForm() {
                 description="Look at your natural hair when dry with no products. Match your pattern to the image above."
               />
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {CURL_TYPES.map((type) => (
-                <SelectButton
-                  key={type.value}
-                  label={type.label}
-                  selected={curlType === type.value}
-                  onClick={() => setCurlType(type.value)}
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {CURL_TYPE_OPTIONS.map((option) => (
+                <CurlTypeCard
+                  key={option.value}
+                  option={option}
+                  selected={curlType === option.value}
+                  onClick={() => setCurlType(option.value)}
                 />
               ))}
+            </div>
+            <div className="mt-3">
+              <SelectButton
+                label="Not sure"
+                selected={curlType === "not_sure"}
+                onClick={() => setCurlType("not_sure")}
+                fullWidth
+              />
             </div>
           </div>
 
@@ -400,7 +457,7 @@ function ProfileForm() {
               <InfoTooltip
                 label="Porosity"
                 illustrationSrc="/illustrations/porosity_guide.svg"
-                description="Do the float test — drop a clean strand in water. Floats = low porosity. Sinks slowly = medium. Sinks fast = high porosity."
+                description="Do the float test — drop a clean strand in water. Floats = low porosity. Sinks slowly = medium. Sinks fast = high porosity. For straight hair, porosity affects how well your hair holds color and responds to treatments — not just moisture."
               />
             </p>
             <div className="mt-3 grid grid-cols-2 gap-3">
