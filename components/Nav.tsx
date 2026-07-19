@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 const PLAIN_LINKS = [{ href: "/", label: "Home" }];
 const TAIL_LINKS = [
   { href: "/travel", label: "Traveling?" },
-  { href: "/profile", label: "My Profile" },
+  { href: "/profile", label: "My Profile", badge: "Start here" },
 ];
 
 function isLinkActive(pathname: string, href: string) {
@@ -56,13 +56,18 @@ export default function Nav() {
           <li key={link.href}>
             <Link
               href={link.href}
-              className={`text-sm font-medium transition-colors ${
+              className={`inline-flex items-center gap-1.5 text-sm font-medium transition-colors ${
                 isLinkActive(pathname, link.href)
                   ? "text-bronze2"
                   : "text-cream/70 hover:text-cream"
               }`}
             >
               {link.label}
+              {link.badge && (
+                <span className="hidden whitespace-nowrap rounded-full bg-bronze px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-dark sm:inline-block">
+                  {link.badge}
+                </span>
+              )}
             </Link>
           </li>
         ))}
