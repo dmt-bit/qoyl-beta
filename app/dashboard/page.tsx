@@ -278,10 +278,10 @@ function DashboardContent() {
             {greeting}
           </h1>
           <Link
-            href="/profile?edit=true"
+            href="/profile"
             className="print-hide mt-2 shrink-0 text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70"
           >
-            Edit profile
+            View my profile
           </Link>
         </div>
 

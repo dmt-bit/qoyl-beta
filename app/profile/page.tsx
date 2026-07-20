@@ -1,11 +1,98 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Collapse from "@/components/Collapse";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
+
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function labelFor(
+  options: { value: string; label: string }[],
+  value: string | null
+): string {
+  if (!value) return "Not set";
+  return options.find((o) => o.value === value)?.label ?? value;
+}
+
+function Chip({ label }: { label: string }) {
+  return (
+    <span className="inline-block rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium capitalize text-bronze2">
+      {label}
+    </span>
+  );
+}
+
+function ReadOnlyField({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <p className="font-serif text-lg text-bronze2">{label}</p>
+      <div className="mt-3 flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
+function ConfirmUpdateModal({
+  onConfirm,
+  onCancel,
+}: {
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-dark/70 sm:items-center sm:p-4"
+      onClick={onCancel}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Confirm profile update"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-t-2xl border border-bronze/30 bg-dark p-6 sm:rounded-2xl"
+      >
+        <p className="text-sm leading-relaxed text-cream/90">
+          Are you sure you want to update your hair profile? Updating will
+          recalculate all your compatibility scores and may change your
+          routine recommendations. You can update your profile once every 30
+          days.
+        </p>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row-reverse">
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+          >
+            Yes, update my profile
+          </button>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="w-full rounded-lg border border-bronze/40 py-3 text-sm font-medium text-cream transition-colors hover:border-bronze"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type Purchase = {
   id: string;
@@ -256,21 +343,47 @@ function CurlTypeCard({
 
 function ProfileForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isEditMode = searchParams.get("edit") === "true";
   const { user, hairProfile, hairProfileLoading, refreshHairProfile } =
     useAuth();
 
-  const [redirectChecked, setRedirectChecked] = useState(false);
+  // A saved profile (hairProfile is only ever populated for signed-in
+  // users -- see auth-context.tsx) opens in a read-only view. "unlocked"
+  // flips to true only after the 30-day check in handleConfirmUpdate
+  // passes, which is what actually reveals the editable form below.
+  const [unlocked, setUnlocked] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [lockMessage, setLockMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (hairProfileLoading) return;
-    if (hairProfile && !isEditMode) {
-      router.replace("/dashboard");
+  const showForm = !hairProfile || unlocked;
+
+  function handleUpdateClick() {
+    setLockMessage(null);
+    setShowConfirmModal(true);
+  }
+
+  function handleConfirmUpdate() {
+    setShowConfirmModal(false);
+
+    if (!hairProfile?.updated_at) {
+      setUnlocked(true);
       return;
     }
-    setRedirectChecked(true);
-  }, [hairProfile, hairProfileLoading, isEditMode, router]);
+
+    const updatedAt = new Date(hairProfile.updated_at);
+    const elapsedMs = Date.now() - updatedAt.getTime();
+
+    if (elapsedMs < THIRTY_DAYS_MS) {
+      const nextEligible = new Date(updatedAt.getTime() + THIRTY_DAYS_MS);
+      setLockMessage(
+        `You recently updated your profile. You can make changes again on ${formatDate(
+          nextEligible
+        )}.`
+      );
+      return;
+    }
+
+    setUnlocked(true);
+  }
 
   const [curlType, setCurlType] = useState<string | null>(null);
   const [porosity, setPorosity] = useState<string | null>(null);
@@ -362,6 +475,7 @@ function ProfileForm() {
       extension_care: extensions === "yes" ? extensionCare : "",
       budget,
       notes,
+      updated_at: new Date().toISOString(),
     };
 
     const { data, error: saveError } = user
@@ -391,7 +505,7 @@ function ProfileForm() {
     }
   }
 
-  if (!redirectChecked) {
+  if (user && hairProfileLoading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
         <p className="text-sm text-cream/60">Loading...</p>
@@ -403,18 +517,133 @@ function ProfileForm() {
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
       <div className="mx-auto max-w-md">
         <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
-          Hair Profile
+          {showForm ? "Hair Profile" : "Your Hair Profile"}
         </h1>
         <p className="mt-2 text-sm text-cream/70">
-          Tell us about your hair so we can personalize your routine.
+          {showForm
+            ? "Tell us about your hair so we can personalize your routine."
+            : "This is what we're using to personalize your scores and routine."}
         </p>
 
-        {user && hairProfileLoading && (
-          <p className="mt-4 text-sm text-cream/50">
-            Loading your saved profile...
-          </p>
+        {!showForm && hairProfile && (
+          <div className="mt-8 space-y-8">
+            <ReadOnlyField label="Curl Type">
+              <Chip
+                label={
+                  hairProfile.curl_type === "not_sure" || !hairProfile.curl_type
+                    ? "Not sure"
+                    : hairProfile.curl_type
+                }
+              />
+            </ReadOnlyField>
+
+            <ReadOnlyField label="Porosity">
+              <Chip label={hairProfile.porosity ?? "Not sure"} />
+            </ReadOnlyField>
+
+            <ReadOnlyField label="Scalp Condition">
+              <Chip label={hairProfile.scalp_condition ?? "Not set"} />
+            </ReadOnlyField>
+
+            <ReadOnlyField label="Strand Thickness">
+              <Chip
+                label={labelFor(THICKNESS_OPTIONS, hairProfile.strand_thickness)}
+              />
+            </ReadOnlyField>
+
+            <ReadOnlyField label="Zip Code">
+              <Chip label={hairProfile.zip_code || "Not set"} />
+            </ReadOnlyField>
+
+            <ReadOnlyField label="Hair Concerns">
+              {hairProfile.hair_concerns && hairProfile.hair_concerns.length > 0 ? (
+                hairProfile.hair_concerns.map((c) => <Chip key={c} label={c} />)
+              ) : (
+                <Chip label="None selected" />
+              )}
+            </ReadOnlyField>
+
+            <ReadOnlyField label="Name">
+              <Chip
+                label={
+                  [hairProfile.first_name, hairProfile.last_name]
+                    .filter(Boolean)
+                    .join(" ") || "Not set"
+                }
+              />
+            </ReadOnlyField>
+
+            <ReadOnlyField label="Email">
+              <Chip label={hairProfile.email || "Not set"} />
+            </ReadOnlyField>
+
+            <ReadOnlyField label="Shower Filter">
+              <Chip
+                label={labelFor(SHOWER_FILTER_OPTIONS, hairProfile.shower_filter)}
+              />
+            </ReadOnlyField>
+
+            <ReadOnlyField label="Color Treated">
+              <Chip label={hairProfile.color_treated === "yes" ? "Yes" : "No"} />
+              {hairProfile.color_treated === "yes" && hairProfile.color_type && (
+                <Chip label={labelFor(COLOR_TYPE_OPTIONS, hairProfile.color_type)} />
+              )}
+            </ReadOnlyField>
+
+            <ReadOnlyField label="Extensions / Protective Styles">
+              <Chip label={hairProfile.extensions === "yes" ? "Yes" : "No"} />
+              {hairProfile.extensions === "yes" &&
+                hairProfile.extension_type?.map((t) => (
+                  <Chip key={t} label={labelFor(EXTENSION_TYPE_OPTIONS, t)} />
+                ))}
+            </ReadOnlyField>
+
+            {hairProfile.extensions === "yes" && hairProfile.extension_care && (
+              <div>
+                <p className="font-serif text-lg text-bronze2">
+                  Extension Care
+                </p>
+                <p className="mt-3 text-sm text-cream/80">
+                  {hairProfile.extension_care}
+                </p>
+              </div>
+            )}
+
+            <ReadOnlyField label="Monthly Budget">
+              <Chip label={labelFor(BUDGET_OPTIONS, hairProfile.budget)} />
+            </ReadOnlyField>
+
+            {hairProfile.notes && (
+              <div>
+                <p className="font-serif text-lg text-bronze2">Notes</p>
+                <p className="mt-3 text-sm text-cream/80">
+                  {hairProfile.notes}
+                </p>
+              </div>
+            )}
+
+            {lockMessage && (
+              <p className="text-sm text-amber">{lockMessage}</p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleUpdateClick}
+              className="w-full rounded-lg border border-bronze/40 py-3 text-sm font-semibold text-cream transition-colors hover:border-bronze"
+            >
+              Update my profile
+            </button>
+          </div>
         )}
 
+        {showConfirmModal && (
+          <ConfirmUpdateModal
+            onConfirm={handleConfirmUpdate}
+            onCancel={() => setShowConfirmModal(false)}
+          />
+        )}
+
+        {showForm && (
         <form onSubmit={handleSubmit} className="mt-8 space-y-8">
           <div role="group" aria-labelledby="curl-type-label">
             <p
@@ -796,6 +1025,7 @@ function ProfileForm() {
             {submitting ? "Saving..." : "Save Profile"}
           </button>
         </form>
+        )}
       </div>
 
       {user && <MyPurchases userId={user.id} />}
