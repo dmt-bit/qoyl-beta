@@ -23,40 +23,46 @@ type OpenBeautyFactsProduct = {
   categories_tags?: string[];
 };
 
-// Categories that can slip through the hair-care tag filter (e.g. a
-// hair-care-tagged product that's really a body wash or a perfume) and
-// should never show up as a hair-compatibility result.
+// Unambiguously non-hair-care categories, safe to exclude outright even
+// though the rest of this filtering is deliberately permissive.
 const EXCLUDED_CATEGORIES = [
   "en:deodorants",
-  "en:skin-care",
   "en:face-care",
-  "en:body-care",
   "en:makeup",
-  "en:perfumes",
   "en:nail-care",
+  "en:perfumes",
 ];
 
-async function fetchObfHairCareProducts(
-  query: string,
-  categoryTag: string,
-  signal: AbortSignal
-): Promise<OpenBeautyFactsProduct[]> {
-  const res = await fetch(
-    `https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(
-      query
-    )}&tagtype_0=categories&tag_contains_0=contains&tag_0=${categoryTag}&json=true&page_size=20`,
-    { signal }
-  );
-  const data: { products?: OpenBeautyFactsProduct[] } = await res.json();
-  return data.products ?? [];
+// Open Beauty Facts' category tagging is too inconsistent to filter the
+// search itself on -- real hair products (Camille Rose's whole catalog,
+// among others) often carry no hair-related category tag at all. Rather
+// than requiring a category match, a result is only excluded if it has
+// BOTH no ingredient list AND no hair-related word in its name --
+// permissive by design, so real products don't get hidden over a
+// tagging gap in OBF's own data.
+const HAIR_KEYWORDS = [
+  "hair", "curl", "shampoo", "conditioner", "leave-in", "styler", "scalp",
+  "moisturize", "moisture", "oil", "butter", "wash", "rinse", "gel",
+  "mousse", "serum", "treatment", "natural", "frizz", "wave", "coil",
+  "braid", "loc", "weave", "growth", "strand", "porosity", "texture",
+];
+
+function isLikelyIrrelevant(product: OpenBeautyFactsProduct): boolean {
+  const hasIngredients = Boolean(product.ingredients_text?.trim());
+  if (hasIngredients) return false;
+
+  const name = (product.product_name ?? "").toLowerCase();
+  const hasHairKeyword = HAIR_KEYWORDS.some((word) => name.includes(word));
+  return !hasHairKeyword;
 }
 
-// Last resort for products that were never properly tagged into Open
-// Beauty Facts' category taxonomy at all (free-text categories like
-// "Styling gel" or "Mousse" instead of "en:hair-care"/"en:hair") -- an
-// unfiltered search, still run through EXCLUDED_CATEGORIES so obviously
-// wrong results (skin-care, makeup, etc.) don't reappear through this door.
-async function fetchObfProductsUnfiltered(
+function isExcludedCategory(product: OpenBeautyFactsProduct): boolean {
+  return (product.categories_tags ?? []).some((tag) =>
+    EXCLUDED_CATEGORIES.includes(tag)
+  );
+}
+
+async function fetchObfProducts(
   query: string,
   signal: AbortSignal
 ): Promise<OpenBeautyFactsProduct[]> {
@@ -68,6 +74,16 @@ async function fetchObfProductsUnfiltered(
   );
   const data: { products?: OpenBeautyFactsProduct[] } = await res.json();
   return data.products ?? [];
+}
+
+function toProduct(p: OpenBeautyFactsProduct): Product | null {
+  if (!p.product_name || !p.ingredients_text) return null;
+  return {
+    code: p.code ?? p._id ?? p.product_name,
+    name: p.product_name,
+    brand: p.brands ?? "Unknown brand",
+    ingredientsText: p.ingredients_text,
+  };
 }
 
 export default function SearchPage() {
@@ -119,72 +135,23 @@ export default function SearchPage() {
       setSearchError(null);
 
       try {
-        // Open Beauty Facts' contributors tag hair products inconsistently --
-        // "hair-care" and "haircare" are both used, and a lot of real hair
-        // products only carry the much looser "hair" category. Fall through
-        // progressively broader tags until we have a reasonable number of
-        // results, merging and deduplicating by product name as we go.
-        const obfProducts = await fetchObfHairCareProducts(
-          query,
-          "hair-care",
-          controller.signal
+        const obfProducts = await fetchObfProducts(query, controller.signal);
+
+        const relevant = obfProducts.filter(
+          (p) => !isLikelyIrrelevant(p) && !isExcludedCategory(p)
         );
-        const seenNames = new Set(
-          obfProducts.map((p) => p.product_name).filter(Boolean)
-        );
+        const relevantProducts = relevant
+          .map(toProduct)
+          .filter((p): p is Product => p !== null);
 
-        for (const categoryTag of ["haircare", "hair"]) {
-          if (obfProducts.length >= 3) break;
-          const fallbackProducts = await fetchObfHairCareProducts(
-            query,
-            categoryTag,
-            controller.signal
-          );
-          for (const p of fallbackProducts) {
-            if (p.product_name && !seenNames.has(p.product_name)) {
-              obfProducts.push(p);
-              seenNames.add(p.product_name);
-            }
-          }
-        }
+        // Fewer than 3 usable results after filtering -- the filter is
+        // doing more harm than good here, so show everything rather than
+        // leave the user with an empty or near-empty list.
+        const products =
+          relevantProducts.length >= 3
+            ? relevantProducts
+            : obfProducts.map(toProduct).filter((p): p is Product => p !== null);
 
-        // Some real products (Camille Rose's catalog among them) were never
-        // tagged into OBF's category taxonomy at all -- no hair-care/haircare/
-        // hair tag will ever match them. Last resort: an unfiltered search,
-        // still screened by EXCLUDED_CATEGORIES below.
-        if (obfProducts.length < 3) {
-          const unfilteredProducts = await fetchObfProductsUnfiltered(
-            query,
-            controller.signal
-          );
-          for (const p of unfilteredProducts) {
-            if (p.product_name && !seenNames.has(p.product_name)) {
-              obfProducts.push(p);
-              seenNames.add(p.product_name);
-            }
-          }
-        }
-
-        const withoutExcludedCategories = obfProducts.filter(
-          (p) =>
-            !(p.categories_tags ?? []).some((tag) =>
-              EXCLUDED_CATEGORIES.includes(tag)
-            )
-        );
-
-        const products: Product[] = withoutExcludedCategories
-          .filter(
-            (p): p is OpenBeautyFactsProduct & {
-              product_name: string;
-              ingredients_text: string;
-            } => Boolean(p.product_name && p.ingredients_text)
-          )
-          .map((p) => ({
-            code: p.code ?? p._id ?? p.product_name,
-            name: p.product_name,
-            brand: p.brands ?? "Unknown brand",
-            ingredientsText: p.ingredients_text,
-          }));
         setResults(products);
         setHasSearched(true);
       } catch (err) {
