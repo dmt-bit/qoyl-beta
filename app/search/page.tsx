@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ScoreResultView } from "@/components/CompatibilityScore";
 import FeedbackSurveyModal from "@/components/FeedbackSurveyModal";
 import { useAuth } from "@/lib/auth-context";
 import { ScoreResult, scoreIngredientsText } from "@/lib/compatibility";
+import { supabase } from "@/lib/supabase";
 
 type Product = {
   code: string;
@@ -87,9 +88,10 @@ function toProduct(p: OpenBeautyFactsProduct): Product | null {
   };
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const searchParams = useSearchParams();
+  const { user, loading: authLoading, hairProfile } = useAuth();
   const [checkedAccess, setCheckedAccess] = useState(false);
 
   useEffect(() => {
@@ -102,7 +104,7 @@ export default function SearchPage() {
     setCheckedAccess(true);
   }, [user, authLoading, router]);
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [results, setResults] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -185,7 +187,46 @@ export default function SearchPage() {
     return () => clearTimeout(timeoutId);
   }, [query]);
 
-  async function runScoring(ingredientsText: string) {
+  // Best-effort analytics logging -- a failure here must never surface to
+  // the user or interrupt the actual search/scoring flow.
+  async function logProductSearch(product: Product, score: number) {
+    try {
+      let porosity: string | null = null;
+      let curlType: string | null = null;
+
+      if (user && hairProfile) {
+        porosity = hairProfile.porosity;
+        curlType = hairProfile.curl_type;
+      } else {
+        const profileId = localStorage.getItem("hair_profile_id");
+        if (profileId) {
+          const { data } = await supabase
+            .from("hair_profiles")
+            .select("porosity, curl_type")
+            .eq("id", profileId)
+            .single();
+          if (data) {
+            porosity = data.porosity;
+            curlType = data.curl_type;
+          }
+        }
+      }
+
+      await supabase.from("product_searches").insert({
+        user_id: user?.id ?? null,
+        product_name: product.name,
+        brand_name: product.brand,
+        barcode: product.code,
+        compatibility_score: score,
+        hair_profile_porosity: porosity,
+        hair_profile_curl_type: curlType,
+      });
+    } catch (err) {
+      console.error("Failed to log product search:", err);
+    }
+  }
+
+  async function runScoring(ingredientsText: string, product?: Product) {
     setScoring(true);
     setScoreError(null);
     setScoreResult(null);
@@ -201,12 +242,16 @@ export default function SearchPage() {
 
     setScoreResult(outcome.result);
     recordSearchCompletion();
+
+    if (product) {
+      logProductSearch(product, outcome.result.normalizedScore);
+    }
   }
 
   function selectProduct(product: Product) {
     setSelectedProduct(product);
     setManualIngredients("");
-    runScoring(product.ingredientsText);
+    runScoring(product.ingredientsText, product);
   }
 
   function handleManualSubmit(e: React.FormEvent) {
@@ -342,5 +387,13 @@ export default function SearchPage() {
         <FeedbackSurveyModal onClose={() => setShowSurvey(false)} />
       )}
     </main>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={null}>
+      <SearchPageContent />
+    </Suspense>
   );
 }

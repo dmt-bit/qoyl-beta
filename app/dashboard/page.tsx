@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PostCard, { Post } from "@/components/PostCard";
 import { useAuth } from "@/lib/auth-context";
+import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import {
   CalendarDay,
   generateCalendar,
@@ -14,6 +15,13 @@ import {
   RoutineStep,
 } from "@/lib/routine";
 import { supabase } from "@/lib/supabase";
+
+type RecentSearch = {
+  id: string;
+  product_name: string | null;
+  compatibility_score: number | null;
+  searched_at: string;
+};
 
 const SCALP_LABELS: Record<string, string> = {
   normal: "Normal scalp",
@@ -224,6 +232,28 @@ function DashboardContent() {
     };
   }, []);
 
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    async function loadRecentSearches() {
+      const { data } = await supabase
+        .from("product_searches")
+        .select("id, product_name, compatibility_score, searched_at")
+        .eq("user_id", user!.id)
+        .order("searched_at", { ascending: false })
+        .limit(5);
+      if (!cancelled) setRecentSearches(data ?? []);
+    }
+
+    loadRecentSearches();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   function handleDownloadPdf() {
     window.print();
   }
@@ -418,6 +448,48 @@ function DashboardContent() {
                 )
               )}
             </div>
+          </section>
+        )}
+
+        {recentSearches.length > 0 && (
+          <section className="print-hide mt-10">
+            <h2 className="font-serif text-2xl font-semibold text-cream">
+              Recently searched
+            </h2>
+            <ul className="mt-4 space-y-2">
+              {recentSearches.map((search) => {
+                const score = search.compatibility_score;
+                return (
+                  <li
+                    key={search.id}
+                    className="flex items-center justify-between gap-4 rounded-lg border border-bronze/30 px-4 py-3"
+                  >
+                    <span className="text-sm text-cream">
+                      {search.product_name || "Unknown product"}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-3">
+                      {score !== null && (
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            TIER_CLASSES[scoreTier(score)]
+                          }`}
+                        >
+                          {score}
+                        </span>
+                      )}
+                      <Link
+                        href={`/search?q=${encodeURIComponent(
+                          search.product_name ?? ""
+                        )}`}
+                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                      >
+                        Search again →
+                      </Link>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         )}
 
