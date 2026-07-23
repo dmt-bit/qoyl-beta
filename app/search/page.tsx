@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ScoreResultView } from "@/components/CompatibilityScore";
+import FeedbackSurveyModal from "@/components/FeedbackSurveyModal";
 import { useAuth } from "@/lib/auth-context";
 import { ScoreResult, scoreIngredientsText } from "@/lib/compatibility";
 
@@ -115,8 +116,25 @@ export default function SearchPage() {
   const [scoring, setScoring] = useState(false);
   const [scoreError, setScoreError] = useState<string | null>(null);
   const [scoreResult, setScoreResult] = useState<ScoreResult | null>(null);
+  const [showSurvey, setShowSurvey] = useState(false);
 
   const abortRef = useRef<AbortController | null>(null);
+
+  // Only counts completed searches for signed-in users, and only until
+  // the survey has been submitted or dismissed once -- after that
+  // localStorage flag is set, this is a no-op forever.
+  function recordSearchCompletion() {
+    if (!user) return;
+    if (localStorage.getItem("feedback_submitted") === "true") return;
+
+    const count =
+      parseInt(localStorage.getItem("product_search_count") ?? "0", 10) + 1;
+    localStorage.setItem("product_search_count", String(count));
+
+    if (count === 2) {
+      setShowSurvey(true);
+    }
+  }
 
   useEffect(() => {
     if (query.trim() === "") {
@@ -182,6 +200,7 @@ export default function SearchPage() {
     }
 
     setScoreResult(outcome.result);
+    recordSearchCompletion();
   }
 
   function selectProduct(product: Product) {
@@ -318,6 +337,10 @@ export default function SearchPage() {
 
         {scoreResult && <ScoreResultView result={scoreResult} />}
       </div>
+
+      {showSurvey && (
+        <FeedbackSurveyModal onClose={() => setShowSurvey(false)} />
+      )}
     </main>
   );
 }
