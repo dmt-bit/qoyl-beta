@@ -1,3 +1,5 @@
+import { curlFamily } from "@/lib/compatibility";
+
 export type RoutineStep = {
   title: string;
   body: string;
@@ -103,7 +105,11 @@ const POROSITY_SEAL_OIL: Record<Porosity, string> = {
   high: "castor oil or shea butter",
 };
 
-export function generateRoutineSteps(
+// Coily (4a/4b/4c) routine -- the original porosity + curl-type + water-
+// hardness driven generator this file was built around. Kept exactly as
+// it was; only the entry point below now routes to it by curl family
+// instead of always running it.
+function generateCoilySteps(
   curlType: string | null,
   porosity: string | null,
   waterHardness: string | null
@@ -138,4 +144,169 @@ export function generateRoutineSteps(
       why: "Why: ends are the oldest, driest part of your hair. Nightly sealing is the difference between retaining length and constantly trimming.",
     },
   ];
+}
+
+// Straight/wavy/curly (types 1-3) and the "not sure" fallback are fixed
+// step lists rather than porosity/water-hardness driven -- unlike coily,
+// no per-porosity or per-water-hardness copy was specified for these, so
+// each family gets one routine. Every step in a family shares that
+// family's single key-principle "why," since that's the only rationale
+// given for these lists (coily's per-step "why" copy doesn't apply here).
+
+const STRAIGHT_WHY =
+  "Why: straight hair is prone to looking flat and greasy -- everything should be lightweight and applied away from the scalp.";
+
+const STRAIGHT_STEPS: RoutineStep[] = [
+  {
+    title: "Clarify -- every 1-2 weeks",
+    body: "Clarifying shampoo every 1-2 weeks to prevent buildup.",
+    why: STRAIGHT_WHY,
+  },
+  {
+    title: "Condition -- mid-length to ends only",
+    body: "Lightweight conditioner from mid-length to ends only -- avoid the roots.",
+    why: STRAIGHT_WHY,
+  },
+  {
+    title: "Deep condition -- only if needed",
+    body: "Skip deep conditioning unless your hair is heat-damaged or color-treated.",
+    why: STRAIGHT_WHY,
+  },
+  {
+    title: "Dry & style",
+    body: "Air dry, or blow dry on low heat with a round brush for volume.",
+    why: STRAIGHT_WHY,
+  },
+  {
+    title: "Refresh -- dry shampoo at the roots",
+    body: "Use dry shampoo at the roots between washes to extend your style.",
+    why: STRAIGHT_WHY,
+  },
+  {
+    title: "Finish -- shine serum on ends",
+    body: "Finish with a lightweight shine serum on ends only.",
+    why: STRAIGHT_WHY,
+  },
+];
+
+const WAVY_WHY =
+  "Why: wavy hair needs moisture to form its pattern but goes limp with heavy products -- lightweight is everything, and technique matters as much as products.";
+
+const WAVY_STEPS: RoutineStep[] = [
+  {
+    title: "Cleanse -- co-wash or gentle shampoo",
+    body: "Co-wash or use a gentle, sulfate-free shampoo.",
+    why: WAVY_WHY,
+  },
+  {
+    title: "Condition -- scrunched in soaking wet",
+    body: "Apply a lightweight conditioner, scrunching it in while hair is soaking wet.",
+    why: WAVY_WHY,
+  },
+  {
+    title: "Style -- curl cream or mousse, soaking wet",
+    body: "Apply a curl cream or mousse while hair is soaking wet -- not just damp, soaking.",
+    why: WAVY_WHY,
+  },
+  {
+    title: "Scrunch out excess water",
+    body: "Scrunch out excess water with a microfiber towel.",
+    why: WAVY_WHY,
+  },
+  {
+    title: "Dry -- diffuse or air dry",
+    body: "Diffuse on low heat, or air dry without touching your hair.",
+    why: WAVY_WHY,
+  },
+  {
+    title: "Scrunch out the cast",
+    body: "Once fully dry, scrunch out the cast.",
+    why: WAVY_WHY,
+  },
+];
+
+const CURLY_WHY =
+  "Why: curly hair needs consistent moisture and definition -- the wash day technique determines how curls clump and how long the style lasts.";
+
+const CURLY_STEPS: RoutineStep[] = [
+  {
+    title: "Cleanse -- sulfate-free or co-wash",
+    body: "Sulfate-free shampoo or co-wash to cleanse.",
+    why: CURLY_WHY,
+  },
+  {
+    title: "Condition & detangle in the shower",
+    body: "Apply a generous conditioner and finger-detangle in the shower.",
+    why: CURLY_WHY,
+  },
+  {
+    title: "Deep condition -- weekly",
+    body: "Deep condition weekly.",
+    why: CURLY_WHY,
+  },
+  {
+    title: "Style -- leave-in and curl cream, soaking wet",
+    body: "Apply leave-in and curl cream on soaking wet hair, working in sections.",
+    why: CURLY_WHY,
+  },
+  {
+    title: "Smooth with the praying hands method",
+    body: "Use the praying hands method to smooth products through each section.",
+    why: CURLY_WHY,
+  },
+  {
+    title: "Dry -- diffuse or air dry",
+    body: "Diffuse or air dry.",
+    why: CURLY_WHY,
+  },
+  {
+    title: "Refresh -- day 2-3",
+    body: "Refresh with water and a small amount of leave-in on day 2-3.",
+    why: CURLY_WHY,
+  },
+];
+
+// Used when curl_type is "not sure"/"not_sure", unset, or unrecognized --
+// curlFamily() returns null in all of those cases. Medium-porosity,
+// texture-agnostic guidance rather than a full 5-7 step routine, since
+// there's no curl-type or porosity signal to personalize further.
+const GENERIC_FALLBACK_WHY =
+  "Why: without a known curl type, this keeps your routine safe and balanced for any hair texture.";
+
+const GENERIC_FALLBACK_STEPS: RoutineStep[] = [
+  {
+    title: "Cleanse",
+    body: "Focus on moisture and gentle cleansing.",
+    why: GENERIC_FALLBACK_WHY,
+  },
+  {
+    title: "Deep condition -- weekly",
+    body: "Deep condition weekly.",
+    why: GENERIC_FALLBACK_WHY,
+  },
+  {
+    title: "Apply products on wet hair",
+    body: "Apply products on wet hair.",
+    why: GENERIC_FALLBACK_WHY,
+  },
+  {
+    title: "Seal ends -- nightly",
+    body: "Seal ends nightly.",
+    why: GENERIC_FALLBACK_WHY,
+  },
+];
+
+export function generateRoutineSteps(
+  curlType: string | null,
+  porosity: string | null,
+  waterHardness: string | null
+): RoutineStep[] {
+  const family = curlFamily(curlType);
+
+  if (family === "straight") return STRAIGHT_STEPS;
+  if (family === "wavy") return WAVY_STEPS;
+  if (family === "curly") return CURLY_STEPS;
+  if (family === "coily") return generateCoilySteps(curlType, porosity, waterHardness);
+
+  return GENERIC_FALLBACK_STEPS;
 }
