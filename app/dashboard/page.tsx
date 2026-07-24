@@ -6,14 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import PostCard, { Post } from "@/components/PostCard";
 import { useAuth } from "@/lib/auth-context";
 import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
-import {
-  CalendarDay,
-  generateCalendar,
-  getBasicRoutineSteps,
-  getRecommendedIngredients,
-  RecommendedIngredient,
-  RoutineStep,
-} from "@/lib/routine";
+import { getBasicRoutineSteps, RoutineStep } from "@/lib/routine";
 import { supabase } from "@/lib/supabase";
 
 type RecentSearch = {
@@ -185,32 +178,11 @@ function DashboardContent() {
   }, [user]);
 
   const [steps, setSteps] = useState<RoutineStep[]>([]);
-  const [calendar30, setCalendar30] = useState<CalendarDay[]>([]);
-  const [ingredients, setIngredients] = useState<RecommendedIngredient[]>([]);
-  const [ingredientsLoading, setIngredientsLoading] = useState(false);
 
   useEffect(() => {
     if (!hairProfile) return;
     setSteps(getBasicRoutineSteps(hairProfile));
-    setCalendar30(generateCalendar(hairProfile, 30));
   }, [hairProfile]);
-
-  useEffect(() => {
-    if (!hairProfile || !hasRoutineSubscription) return;
-    let cancelled = false;
-    setIngredientsLoading(true);
-
-    getRecommendedIngredients(hairProfile).then((result) => {
-      if (!cancelled) {
-        setIngredients(result);
-        setIngredientsLoading(false);
-      }
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [hairProfile, hasRoutineSubscription]);
 
   const [recentPosts, setRecentPosts] = useState<Post[]>([]);
 
@@ -253,10 +225,6 @@ function DashboardContent() {
       cancelled = true;
     };
   }, [user]);
-
-  function handleDownloadPdf() {
-    window.print();
-  }
 
   async function handleUnlockClick() {
     if (!user) return;
@@ -371,62 +339,20 @@ function DashboardContent() {
 
               {hasRoutineSubscription ? (
                 <div className="mt-6 border-t border-bronze/20 pt-6">
-                  <h3 className="font-serif text-xl font-semibold text-cream">
-                    30-Day Wash Day Calendar
-                  </h3>
-                  <div className="mt-4 grid grid-cols-7 gap-2">
-                    {calendar30.map((day) => (
-                      <div
-                        key={day.day}
-                        className={`rounded-lg border p-2 text-center text-xs ${
-                          day.isWashDay
-                            ? "border-bronze bg-bronze/20 text-cream"
-                            : "border-bronze/20 text-cream/50"
-                        }`}
-                        title={day.note}
-                      >
-                        <p className="font-semibold">Day {day.day}</p>
-                        <p className="mt-1">
-                          {day.isWashDay ? "Wash" : "Refresh"}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <h3 className="mt-6 font-serif text-xl font-semibold text-cream">
-                    Recommended Ingredients
-                  </h3>
-                  <p className="mt-1 text-sm text-cream/60">
-                    Ingredients that score well for your porosity — look for
-                    these on labels.
-                  </p>
-                  {ingredientsLoading ? (
-                    <p className="mt-4 text-sm text-cream/50">Loading...</p>
-                  ) : (
-                    <ul className="mt-4 space-y-2">
-                      {ingredients.map((ing, i) => (
-                        <li
-                          key={`${ing.name}-${i}`}
-                          className="flex items-center justify-between rounded-lg border border-bronze/30 px-4 py-3"
-                        >
-                          <span className="text-sm text-cream">
-                            {ing.name}
-                          </span>
-                          <span className="text-xs text-green">
-                            {ing.score}/10
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handleDownloadPdf}
-                    className="print-hide mt-6 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+                  <Link
+                    href="/routine"
+                    className="print-hide flex items-center justify-between rounded-xl border border-bronze/40 bg-bronze/10 px-5 py-4 transition-colors hover:border-bronze"
                   >
-                    Download PDF
-                  </button>
+                    <div>
+                      <p className="font-serif text-lg text-cream">
+                        Your routine is ready →
+                      </p>
+                      <p className="mt-1 text-sm text-cream/60">
+                        Full wash calendar, personalized steps, and curated
+                        products for this month.
+                      </p>
+                    </div>
+                  </Link>
                 </div>
               ) : (
                 !entitlementLoading && (

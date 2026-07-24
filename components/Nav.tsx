@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
@@ -19,6 +20,28 @@ export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const [hasRoutineSubscription, setHasRoutineSubscription] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setHasRoutineSubscription(false);
+      return;
+    }
+    let cancelled = false;
+
+    fetch(`/api/purchases?user_id=${user.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setHasRoutineSubscription(Boolean(data.hasRoutineSubscription));
+      })
+      .catch(() => {
+        if (!cancelled) setHasRoutineSubscription(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -71,6 +94,21 @@ export default function Nav() {
             </Link>
           </li>
         ))}
+
+        {hasRoutineSubscription && (
+          <li>
+            <Link
+              href="/routine"
+              className={`text-sm font-medium transition-colors ${
+                isLinkActive(pathname, "/routine")
+                  ? "text-bronze2"
+                  : "text-cream/70 hover:text-cream"
+              }`}
+            >
+              My Routine
+            </Link>
+          </li>
+        )}
 
         <li className="ml-auto flex items-center gap-3 text-sm">
           {loading ? null : user ? (

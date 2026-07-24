@@ -31,6 +31,10 @@ body {
     display: none !important;
   }
 
+  .print-page-break {
+    break-before: page;
+  }
+
   main {
     background: #fff !important;
     color: #000 !important;

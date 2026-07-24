@@ -35,12 +35,20 @@ export async function POST(request: Request) {
 
   const origin = request.headers.get("origin") ?? new URL(request.url).origin;
 
+  // routine_subscription lands the user on their new routine directly;
+  // other purchases (e.g. travel_kit) have no dedicated page yet, so they
+  // still land back on the dashboard.
+  const successUrl =
+    product_type === "routine_subscription"
+      ? `${origin}/routine?welcome=true`
+      : `${origin}/dashboard?payment=success`;
+
   try {
     const session = await getStripe().checkout.sessions.create({
       mode: product.mode,
       customer_email: email,
       line_items: [{ price: product.priceId, quantity: 1 }],
-      success_url: `${origin}/dashboard?payment=success`,
+      success_url: successUrl,
       cancel_url: `${origin}/dashboard?payment=cancelled`,
       metadata: { user_id, product_type },
       ...(product.mode === "subscription"
