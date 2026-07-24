@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
 import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import { WashDayType } from "@/lib/routineCalendar";
@@ -31,7 +32,6 @@ type ProductPick = {
   categoryLabel: string;
   primary: ProductCandidate | null;
   alternate: ProductCandidate | null;
-  affiliateLink: string;
 };
 
 type AvoidIngredient = {
@@ -145,12 +145,10 @@ function ProductCard({ pick }: { pick: ProductPick }) {
           {primary.reason && (
             <p className="mt-1 text-sm text-cream/70">{primary.reason}</p>
           )}
-          <a
-            href={pick.affiliateLink}
+          <ShopButton
+            productName={primary.ingredientName}
             className="print-hide mt-3 inline-block text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
-          >
-            Shop this →
-          </a>
+          />
 
           {alternate?.ingredientName && (
             <div className="mt-4 border-t border-bronze/20 pt-3">

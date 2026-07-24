@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ScoreResultView } from "@/components/CompatibilityScore";
 import FeedbackSurveyModal from "@/components/FeedbackSurveyModal";
+import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
 import { ScoreResult, scoreIngredientsText } from "@/lib/compatibility";
 import { supabase } from "@/lib/supabase";
@@ -381,6 +382,16 @@ function SearchPageContent() {
         {scoreError && <p className="mt-6 text-sm text-red">{scoreError}</p>}
 
         {scoreResult && <ScoreResultView result={scoreResult} />}
+
+        {scoreResult && selectedProduct && (
+          <div className="mt-4 text-center">
+            <ShopButton
+              productName={selectedProduct.name}
+              brandName={selectedProduct.brand}
+              className="inline-block rounded-lg bg-bronze px-6 py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+            />
+          </div>
+        )}
       </div>
 
       {showSurvey && (

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
 import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import {
@@ -429,12 +430,7 @@ export default function TravelPage() {
                                 {item.reason}
                               </p>
                             )}
-                            <a
-                              href={item.affiliateLink}
-                              className="mt-2 inline-block text-xs text-bronze2 underline"
-                            >
-                              Shop this product →
-                            </a>
+                            <ShopButton productName={item.ingredientName} />
                           </>
                         ) : (
                           <p className="mt-1 text-sm text-cream/50">

@@ -79,8 +79,6 @@ export type TravelKitItem = {
   score: number | null;
   rating: string | null;
   reason: string | null;
-  // Placeholder -- fill in with real affiliate URLs later.
-  affiliateLink: string;
 };
 
 function climateAdjustedScore(
@@ -143,7 +141,6 @@ export async function getTravelKit(
         score: null,
         rating: null,
         reason: null,
-        affiliateLink: "#",
       });
       continue;
     }
@@ -173,7 +170,6 @@ export async function getTravelKit(
       score: best.adjustedScore,
       rating: best.rating,
       reason: best.reason,
-      affiliateLink: "#",
     });
   }
 

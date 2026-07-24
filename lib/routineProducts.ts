@@ -141,7 +141,6 @@ export type RoutineProductPick = {
   categoryLabel: string;
   primary: CategoryCandidate | null;
   alternate: CategoryCandidate | null;
-  affiliateLink: string;
 };
 
 // Same category/candidate logic as getRoutineProducts, but surfaces the
@@ -161,7 +160,6 @@ export async function getRoutineProductPicks(
       categoryLabel: category.label,
       primary: candidates[0] ?? null,
       alternate: candidates[1] ?? null,
-      affiliateLink: "#",
     });
   }
 
