@@ -8,6 +8,7 @@ export type Post = {
   hero_image_url: string | null;
   excerpt: string;
   published_at: string;
+  hair_type?: string | null;
 };
 
 function CategoryLabel({ category }: { category: string }) {

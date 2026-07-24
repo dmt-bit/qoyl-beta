@@ -1,5 +1,5 @@
 import Link from "next/link";
-import PostCard from "@/components/PostCard";
+import HomePostFilter from "@/components/HomePostFilter";
 import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -79,10 +79,18 @@ const HOW_IT_WORKS_STEPS = [
   },
 ];
 
+const SCORE_EXAMPLE_ROWS = [
+  { name: "Behentrimonium Methosulfate", rating: "Good", dotClass: "bg-green", textClass: "text-green" },
+  { name: "Shea Butter", rating: "Good", dotClass: "bg-green", textClass: "text-green" },
+  { name: "Glycerin", rating: "Caution for dry climates", dotClass: "bg-amber", textClass: "text-amber" },
+];
+
 export default async function Home() {
   const { data: posts } = await supabase
     .from("posts")
-    .select("slug, title, category, hero_image_url, excerpt, published_at")
+    .select(
+      "slug, title, category, hero_image_url, excerpt, published_at, hair_type"
+    )
     .order("published_at", { ascending: false });
 
   return (
@@ -162,17 +170,66 @@ export default async function Home() {
             every texture.
           </p>
 
-          {posts && posts.length > 0 ? (
-            <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {posts.map((post) => (
-                <PostCard key={post.slug} post={post} />
-              ))}
-            </div>
-          ) : (
-            <p className="mt-8 text-sm text-cream/50">No posts yet.</p>
-          )}
+          <div className="mt-6">
+            <HomePostFilter posts={posts ?? []} />
+          </div>
         </div>
       </div>
+
+      <section className="bg-dark px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
+              Free ingredient evaluation
+            </p>
+            <h2 className="mt-3 font-serif text-3xl font-semibold text-cream sm:text-4xl">
+              Is that product actually right for your hair?
+            </h2>
+            <p className="mt-4 text-sm text-cream/70 sm:text-base">
+              Search any shampoo, conditioner, leave-in, or styler. Get a
+              personalized compatibility score built from your curl type,
+              porosity, scalp condition, and climate. Takes 10 seconds.
+            </p>
+            <Link
+              href="/search"
+              className="mt-6 flex w-full items-center justify-center rounded-lg bg-bronze px-6 py-4 text-center text-sm font-semibold text-dark transition-colors hover:bg-bronze2 sm:inline-flex sm:w-auto"
+            >
+              Search a product now →
+            </Link>
+          </div>
+
+          <div className="rounded-xl border border-bronze/30 bg-warm/[0.03] p-6">
+            <p className="text-xs uppercase tracking-wide text-cream/50">
+              Curl Defining Cream
+            </p>
+            <div className="mt-3 flex items-center gap-3">
+              <span className="rounded-full bg-green px-3 py-1 text-sm font-semibold text-dark">
+                87 / 100
+              </span>
+              <span className="text-xs text-cream/50">
+                Compatibility score
+              </span>
+            </div>
+            <div className="mt-5 space-y-2">
+              {SCORE_EXAMPLE_ROWS.map((row) => (
+                <div key={row.name} className="flex items-center gap-2 text-sm">
+                  <span
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${row.dotClass}`}
+                  />
+                  <span className="text-cream/80">{row.name}</span>
+                  <span className="text-cream/30">·</span>
+                  <span className={`font-medium ${row.textClass}`}>
+                    {row.rating}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-xs text-cream/40">
+              Example score — yours will be personalized to your hair.
+            </p>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
