@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PostCard, { Post } from "@/components/PostCard";
 
-type TabKey = "all" | "ingredients" | "straight" | "wavy" | "curly" | "coily";
+type TabKey =
+  | "all"
+  | "ingredients"
+  | "straight"
+  | "wavy"
+  | "curly"
+  | "coily"
+  | "extensions";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "all", label: "All" },
@@ -13,6 +20,7 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "wavy", label: "Wavy" },
   { key: "curly", label: "Curly" },
   { key: "coily", label: "Coily" },
+  { key: "extensions", label: "Extensions & Wigs" },
 ];
 
 function matchesTab(post: Post, tab: TabKey): boolean {

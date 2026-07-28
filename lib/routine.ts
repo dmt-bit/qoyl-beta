@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { curlFamily } from "@/lib/compatibility";
+import { getExtensionCareGuidance } from "@/lib/extensionCare";
 
 export type HairProfileForRoutine = {
   curl_type: string | null;
@@ -7,6 +8,9 @@ export type HairProfileForRoutine = {
   scalp_condition: string | null;
   strand_thickness: string | null;
   hair_concerns: string[] | null;
+  extensions?: string | null;
+  extension_type?: string[] | null;
+  extension_care?: string | null;
 };
 
 export type RoutineStep = {
@@ -93,13 +97,32 @@ const CURLY_ROUTINE: RoutineStep[] = [
 // types keep the original porosity-driven logic below completely
 // unchanged -- that's the well-calibrated, original behavior this
 // function was built around.
+function withExtensionCare(
+  steps: RoutineStep[],
+  profile: HairProfileForRoutine
+): RoutineStep[] {
+  if (profile.extensions !== "yes") return steps;
+
+  const guidance = getExtensionCareGuidance(
+    profile.extension_type ?? null,
+    profile.extension_care ?? null
+  );
+  return [
+    ...steps,
+    {
+      title: `${steps.length + 1}. ${guidance.title}`,
+      description: `${guidance.body} ${guidance.why}`,
+    },
+  ];
+}
+
 export function getBasicRoutineSteps(
   profile: HairProfileForRoutine
 ): RoutineStep[] {
   const family = curlFamily(profile.curl_type);
-  if (family === "straight") return STRAIGHT_ROUTINE;
-  if (family === "wavy") return WAVY_ROUTINE;
-  if (family === "curly") return CURLY_ROUTINE;
+  if (family === "straight") return withExtensionCare(STRAIGHT_ROUTINE, profile);
+  if (family === "wavy") return withExtensionCare(WAVY_ROUTINE, profile);
+  if (family === "curly") return withExtensionCare(CURLY_ROUTINE, profile);
 
   const porosity = profile.porosity ?? "medium";
   const concerns = profile.hair_concerns ?? [];
@@ -131,12 +154,15 @@ export function getBasicRoutineSteps(
     ? "Stretch your style (banding, braid-outs, or a diffuser on low heat) to manage shrinkage."
     : "Apply your styler on soaking wet hair and let it air dry or diffuse on low heat.";
 
-  return [
-    { title: "1. Cleanse", description: cleanse },
-    { title: "2. Condition", description: condition },
-    { title: "3. Moisturize & Seal", description: moisturize },
-    { title: "4. Style", description: style },
-  ];
+  return withExtensionCare(
+    [
+      { title: "1. Cleanse", description: cleanse },
+      { title: "2. Condition", description: condition },
+      { title: "3. Moisturize & Seal", description: moisturize },
+      { title: "4. Style", description: style },
+    ],
+    profile
+  );
 }
 
 export type CalendarDay = {

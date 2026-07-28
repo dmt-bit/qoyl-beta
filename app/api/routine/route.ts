@@ -38,7 +38,7 @@ export async function GET(request: Request) {
   const { data: profile } = await getSupabaseAdmin()
     .from("hair_profiles")
     .select(
-      "first_name, curl_type, porosity, scalp_condition, zip_code, water_hardness"
+      "first_name, curl_type, porosity, scalp_condition, zip_code, water_hardness, extensions, extension_type, extension_care"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -54,7 +54,14 @@ export async function GET(request: Request) {
   const [calendarDays, steps, products, avoidIngredients] = await Promise.all([
     Promise.resolve(generateWashCalendar(year, month, porosity)),
     Promise.resolve(
-      generateRoutineSteps(curlType, porosity, profile?.water_hardness ?? null)
+      generateRoutineSteps(
+        curlType,
+        porosity,
+        profile?.water_hardness ?? null,
+        profile?.extensions ?? null,
+        profile?.extension_type ?? null,
+        profile?.extension_care ?? null
+      )
     ),
     getRoutineProductPicks(porosity),
     getIngredientsToAvoid(porosity),

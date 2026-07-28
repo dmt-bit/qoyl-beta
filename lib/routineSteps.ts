@@ -1,4 +1,5 @@
 import { curlFamily } from "@/lib/compatibility";
+import { getExtensionCareGuidance } from "@/lib/extensionCare";
 
 export type RoutineStep = {
   title: string;
@@ -299,14 +300,23 @@ const GENERIC_FALLBACK_STEPS: RoutineStep[] = [
 export function generateRoutineSteps(
   curlType: string | null,
   porosity: string | null,
-  waterHardness: string | null
+  waterHardness: string | null,
+  extensions: string | null = null,
+  extensionType: string[] | null = null,
+  extensionCare: string | null = null
 ): RoutineStep[] {
   const family = curlFamily(curlType);
 
-  if (family === "straight") return STRAIGHT_STEPS;
-  if (family === "wavy") return WAVY_STEPS;
-  if (family === "curly") return CURLY_STEPS;
-  if (family === "coily") return generateCoilySteps(curlType, porosity, waterHardness);
+  let steps: RoutineStep[];
+  if (family === "straight") steps = STRAIGHT_STEPS;
+  else if (family === "wavy") steps = WAVY_STEPS;
+  else if (family === "curly") steps = CURLY_STEPS;
+  else if (family === "coily") steps = generateCoilySteps(curlType, porosity, waterHardness);
+  else steps = GENERIC_FALLBACK_STEPS;
 
-  return GENERIC_FALLBACK_STEPS;
+  if (extensions === "yes") {
+    steps = [...steps, getExtensionCareGuidance(extensionType, extensionCare)];
+  }
+
+  return steps;
 }
