@@ -1,10 +1,90 @@
 import Image from "next/image";
+import Script from "next/script";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import CompatibilitySection from "@/components/CompatibilitySection";
 import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
+
+const PLATFORM_LABEL: Record<string, string> = {
+  tiktok: "TikTok",
+  instagram: "Instagram",
+  youtube: "YouTube",
+  twitter: "Twitter",
+};
+
+function getYouTubeId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes("youtu.be")) return u.pathname.slice(1) || null;
+    if (u.hostname.includes("youtube.com")) {
+      if (u.pathname.startsWith("/embed/")) {
+        return u.pathname.split("/embed/")[1] || null;
+      }
+      return u.searchParams.get("v");
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function VideoEmbed({
+  videoUrl,
+  platform,
+  title,
+}: {
+  videoUrl: string;
+  platform: string | null;
+  title: string;
+}) {
+  if (platform === "youtube") {
+    const id = getYouTubeId(videoUrl);
+    if (!id) return null;
+    return (
+      <div className="relative mt-6 aspect-video w-full overflow-hidden rounded-xl">
+        <iframe
+          src={`https://www.youtube.com/embed/${id}`}
+          title={title}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+          className="absolute inset-0 h-full w-full"
+        />
+      </div>
+    );
+  }
+
+  if (platform === "tiktok") {
+    return (
+      <>
+        <div className="mt-6 flex justify-center">
+          <blockquote
+            className="tiktok-embed"
+            cite={videoUrl}
+            style={{ maxWidth: "605px", minWidth: "325px", width: "100%" }}
+          >
+            <section />
+          </blockquote>
+        </div>
+        <Script src="https://www.tiktok.com/embed.js" strategy="lazyOnload" />
+      </>
+    );
+  }
+
+  // No embed support yet for other platforms (instagram/twitter) -- link
+  // out rather than show a broken embed.
+  return (
+    <a
+      href={videoUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-6 flex aspect-video w-full items-center justify-center rounded-xl border border-bronze/30 bg-warm/[0.03] text-sm text-bronze2 underline underline-offset-2"
+    >
+      Watch the original video →
+    </a>
+  );
+}
 
 export default async function PostPage({
   params,
@@ -21,6 +101,12 @@ export default async function PostPage({
     notFound();
   }
 
+  const isVideoContent =
+    post.content_type === "original-video" || post.content_type === "repost";
+  const platformLabel = post.source_platform
+    ? PLATFORM_LABEL[post.source_platform] ?? post.source_platform
+    : null;
+
   return (
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
       <article className="mx-auto max-w-2xl">
@@ -32,15 +118,46 @@ export default async function PostPage({
           {post.title}
         </h1>
 
-        {post.hero_image_url && (
-          <div className="relative mt-6 aspect-[16/9] w-full overflow-hidden rounded-xl">
-            <Image
-              src={post.hero_image_url}
-              alt={post.title}
-              fill
-              sizes="(min-width: 768px) 672px, 100vw"
-              className="object-cover"
-            />
+        {isVideoContent && post.video_url ? (
+          <VideoEmbed
+            videoUrl={post.video_url}
+            platform={post.source_platform}
+            title={post.title}
+          />
+        ) : (
+          post.hero_image_url && (
+            <div className="relative mt-6 aspect-[16/9] w-full overflow-hidden rounded-xl">
+              <Image
+                src={post.hero_image_url}
+                alt={post.title}
+                fill
+                sizes="(min-width: 768px) 672px, 100vw"
+                className="object-cover"
+              />
+            </div>
+          )
+        )}
+
+        {post.content_type === "repost" && post.source_creator && (
+          <div className="mt-6 rounded-lg border border-bronze/30 bg-bronze/5 p-4 text-sm text-cream/70">
+            This content was originally created by{" "}
+            {post.source_creator_url ? (
+              <a
+                href={post.source_creator_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+              >
+                @{post.source_creator}
+              </a>
+            ) : (
+              <span className="font-medium text-bronze2">
+                @{post.source_creator}
+              </span>
+            )}
+            {platformLabel ? ` on ${platformLabel}` : ""}. We&apos;re sharing
+            it because it&apos;s relevant to your hair care journey. All
+            credit to the original creator.
           </div>
         )}
 

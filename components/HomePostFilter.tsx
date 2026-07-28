@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PostCard, { Post } from "@/components/PostCard";
 
@@ -22,17 +22,83 @@ function matchesTab(post: Post, tab: TabKey): boolean {
   return post.hair_type === tab;
 }
 
+function matchesSearch(post: Post, term: string): boolean {
+  const t = term.toLowerCase();
+  return (
+    post.title.toLowerCase().includes(t) ||
+    post.excerpt.toLowerCase().includes(t) ||
+    (post.body ?? "").toLowerCase().includes(t) ||
+    (post.hair_type ?? "").toLowerCase().includes(t) ||
+    post.category.toLowerCase().includes(t)
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      className="h-4 w-4 text-bronze"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+      />
+    </svg>
+  );
+}
+
 export default function HomePostFilter({ posts }: { posts: Post[] }) {
   const [activeTab, setActiveTab] = useState<TabKey>("all");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 300);
+    return () => clearTimeout(id);
+  }, [searchInput]);
 
   const filteredPosts = useMemo(
-    () => posts.filter((post) => matchesTab(post, activeTab)),
-    [posts, activeTab]
+    () =>
+      posts.filter(
+        (post) =>
+          matchesTab(post, activeTab) &&
+          (!debouncedSearch || matchesSearch(post, debouncedSearch))
+      ),
+    [posts, activeTab, debouncedSearch]
   );
 
   return (
     <div>
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+      <div className="relative">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+          <SearchIcon />
+        </span>
+        <input
+          type="text"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Search the feed — try 'glycerin' or 'porosity'"
+          className="w-full rounded-lg border border-bronze/40 bg-dark py-3 pl-10 pr-10 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+        />
+        {searchInput && (
+          <button
+            type="button"
+            onClick={() => setSearchInput("")}
+            aria-label="Clear search"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-cream/40 transition-colors hover:text-cream"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
         {TABS.map((tab) => {
           const isActive = tab.key === activeTab;
           return (
@@ -58,6 +124,11 @@ export default function HomePostFilter({ posts }: { posts: Post[] }) {
             <PostCard key={post.slug} post={post} />
           ))}
         </div>
+      ) : debouncedSearch ? (
+        <p className="mt-8 text-sm text-cream/50">
+          No posts found for &apos;{debouncedSearch}&apos; — try a different
+          search or browse all posts above.
+        </p>
       ) : (
         <p className="mt-8 text-sm text-cream/50">
           No posts yet for this hair type — check back soon. In the

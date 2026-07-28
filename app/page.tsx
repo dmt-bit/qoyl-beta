@@ -89,7 +89,7 @@ export default async function Home() {
   const { data: posts } = await supabase
     .from("posts")
     .select(
-      "slug, title, category, hero_image_url, excerpt, published_at, hair_type"
+      "slug, title, category, hero_image_url, excerpt, published_at, hair_type, body, content_type, source_creator, source_creator_url, source_platform, video_url"
     )
     .order("published_at", { ascending: false });
 
