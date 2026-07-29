@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import Nav from "@/components/Nav";
+import Footer from "@/components/Footer";
 import { AuthProvider } from "@/lib/auth-context";
 import "./globals.css";
 
@@ -33,6 +34,7 @@ export default function RootLayout({
         <AuthProvider>
           <Nav />
           {children}
+          <Footer />
         </AuthProvider>
       </body>
     </html>

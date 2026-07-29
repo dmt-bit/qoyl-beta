@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
@@ -240,6 +241,19 @@ export default function AuthPage() {
               ? "Sign In"
               : "Sign Up"}
           </button>
+
+          {mode === "sign-up" && (
+            <p className="text-center text-xs text-cream/50">
+              By creating an account you agree to our{" "}
+              <Link
+                href="/privacy"
+                className="text-bronze2 underline underline-offset-2 hover:text-cream"
+              >
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          )}
         </form>
 
         <button
