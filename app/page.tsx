@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PostFilterGrid from "@/components/PostFilterGrid";
+import Testimonials from "@/components/Testimonials";
 import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -80,48 +81,16 @@ const HOW_IT_WORKS_STEPS = [
 ];
 
 const SCORE_EXAMPLE_ROWS = [
-  { name: "Behentrimonium Methosulfate", rating: "Good", dotClass: "bg-green", textClass: "text-green" },
-  { name: "Shea Butter", rating: "Good", dotClass: "bg-green", textClass: "text-green" },
-  { name: "Glycerin", rating: "Caution for dry climates", dotClass: "bg-amber", textClass: "text-amber" },
+  { name: "Behentrimonium Methosulfate", rating: "Good", borderClass: "border-green", textClass: "text-green" },
+  { name: "Shea Butter", rating: "Good", borderClass: "border-green", textClass: "text-green" },
+  { name: "Glycerin", rating: "Caution for dry climates", borderClass: "border-amber", textClass: "text-amber" },
 ];
 
-function StarIcon() {
-  return (
-    <svg className="h-4 w-4 text-bronze" fill="currentColor" viewBox="0 0 20 20">
-      <path d="M10 1.5l2.59 5.25 5.79.84-4.19 4.08.99 5.77L10 14.77l-5.18 2.67.99-5.77-4.19-4.08 5.79-.84L10 1.5z" />
-    </svg>
-  );
-}
-
-const TESTIMONIALS = [
-  {
-    stars: 5,
-    review:
-      "I've been natural for 6 years and never understood why products would work for a few weeks and then stop. Qoyl told me it was the glycerin in my leave-in — I live in Chicago and it was pulling moisture out during winter. Game changer.",
-    name: "Amara T.",
-    hairType: "4b, high porosity · Chicago",
-  },
-  {
-    stars: 5,
-    review:
-      "As a 2c wavy, most natural hair content isn't for me. Qoyl actually evaluated products for MY hair type and told me which silicones were fine vs which ones would weigh my waves down. Finally.",
-    name: "Jordan K.",
-    hairType: "2c wavy, low porosity · Seattle",
-  },
-  {
-    stars: 5,
-    review:
-      "I searched my holy grail conditioner and got a 91/100. Then I searched the one that's been making my hair feel like straw — 34/100. I literally screamed. This is exactly what we needed.",
-    name: "Nadia R.",
-    hairType: "4a, medium porosity · Atlanta",
-  },
-  {
-    stars: 5,
-    review:
-      "My daughter has 3c curls and I've been guessing at products for years. Qoyl built her a profile and now I know exactly what to look for on ingredient labels. Worth every second.",
-    name: "Keisha M.",
-    hairType: "3c curly (child) · Houston",
-  },
+const MISSION_PILLS = [
+  "Free forever",
+  "No brand partnerships",
+  "No paid placements",
+  "Just the science",
 ];
 
 export default async function Home() {
@@ -134,12 +103,12 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-dark font-sans text-cream">
-      <section className="bg-warm px-4 py-12 sm:px-6">
+      <section className="bg-warm px-4 py-14 sm:px-6 sm:py-12">
         <div className="mx-auto max-w-5xl">
           <p className="text-xs font-medium uppercase tracking-wide text-dark/60">
             Free · No brand bias · Built on real hair science
           </p>
-          <h2 className="mt-3 font-serif text-3xl font-semibold text-dark sm:text-4xl">
+          <h2 className="mt-3 font-serif text-4xl font-semibold text-dark sm:text-5xl">
             Finally know what your hair actually needs.
           </h2>
           <p className="mt-3 max-w-xl text-sm text-dark/70">
@@ -154,10 +123,10 @@ export default async function Home() {
           >
             Build my hair profile — it&apos;s free →
           </Link>
-          <div>
+          <div className="mt-5 text-center sm:mt-3 sm:text-left">
             <Link
               href="/search"
-              className="mt-3 inline-block text-sm font-medium text-bronze transition-colors hover:text-dark"
+              className="inline-block text-sm font-medium text-bronze transition-colors hover:text-dark"
             >
               Already have a profile? Search a product →
             </Link>
@@ -165,7 +134,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <div className="border-b border-bronze/20 px-4 py-10 sm:px-6">
+      <div className="border-b border-bronze/20 px-4 pb-10 pt-14 sm:px-6 sm:pt-10">
         <div className="mx-auto max-w-5xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
             From the Qoyl feed
@@ -181,9 +150,24 @@ export default async function Home() {
         </div>
       </div>
 
-      <section className="border-b border-bronze/20 bg-dark px-4 py-12 sm:px-6">
+      <section className="border-b border-bronze/20 bg-warm px-4 py-14 sm:bg-dark sm:px-6 sm:py-12">
         <div className="mx-auto max-w-5xl">
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-6">
+          {/* Mobile: vertical timeline */}
+          <div className="relative space-y-10 pl-8 sm:hidden">
+            <div className="absolute bottom-2 left-[7px] top-2 w-px bg-bronze/40" />
+            {HOW_IT_WORKS_STEPS.map((step) => (
+              <div key={step.title} className="relative">
+                <span className="absolute -left-8 top-1 h-3.5 w-3.5 rounded-full border-2 border-warm bg-bronze" />
+                <h3 className="font-serif text-2xl font-semibold text-dark">
+                  {step.title}
+                </h3>
+                <p className="mt-2 text-sm text-dark/70">{step.description}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: original 3-column layout */}
+          <div className="hidden grid-cols-3 gap-6 sm:grid">
             {HOW_IT_WORKS_STEPS.map((step, i) => (
               <div key={step.title} className="flex flex-col items-start">
                 <step.icon />
@@ -202,22 +186,34 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="border-b border-bronze/20 bg-dark px-4 py-16 text-center sm:px-6">
-        <div className="mx-auto max-w-2xl">
-          <p className="font-serif text-2xl font-medium leading-snug text-cream sm:text-3xl">
+      <section className="relative overflow-hidden border-b border-bronze/20 bg-dark px-4 py-16 text-center sm:px-6">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -left-4 -top-16 z-0 select-none font-serif text-[12rem] leading-none text-bronze/10 sm:text-[16rem]"
+        >
+          &quot;
+        </span>
+        <div className="relative z-10 mx-auto max-w-2xl">
+          <p className="font-serif text-lg italic leading-snug text-cream sm:text-3xl sm:not-italic sm:font-medium">
             &quot;The hair science your curls — and waves, and coils — have
             always deserved.&quot;
           </p>
-          <p className="mt-5 text-xs font-semibold uppercase tracking-widest text-bronze2">
-            Free forever · No brand partnerships · No paid placements · Just
-            the science
-          </p>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {MISSION_PILLS.map((pill) => (
+              <span
+                key={pill}
+                className="rounded-full border border-bronze/40 bg-dark px-3 py-1 text-xs font-semibold uppercase tracking-wide text-bronze2"
+              >
+                {pill}
+              </span>
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="bg-dark px-4 py-16 sm:px-6 sm:py-20">
-        <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
-          <div>
+        <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-6 lg:grid-cols-2 lg:gap-16">
+          <div className="order-1 lg:col-start-1 lg:row-start-1">
             <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
               Free ingredient evaluation
             </p>
@@ -229,81 +225,50 @@ export default async function Home() {
               personalized compatibility score built from your curl type,
               porosity, scalp condition, and climate. Takes 10 seconds.
             </p>
-            <Link
-              href="/search"
-              className="mt-6 flex w-full items-center justify-center rounded-lg bg-bronze px-6 py-4 text-center text-sm font-semibold text-dark transition-colors hover:bg-bronze2 sm:inline-flex sm:w-auto"
-            >
-              Search a product now →
-            </Link>
           </div>
 
-          <div className="rounded-xl border border-bronze/30 bg-warm/[0.03] p-6">
-            <p className="text-xs uppercase tracking-wide text-cream/50">
-              Curl Defining Cream
-            </p>
-            <div className="mt-3 flex items-center gap-3">
-              <span className="rounded-full bg-green px-3 py-1 text-sm font-semibold text-dark">
-                87 / 100
-              </span>
-              <span className="text-xs text-cream/50">
-                Compatibility score
-              </span>
-            </div>
-            <div className="mt-5 space-y-2">
-              {SCORE_EXAMPLE_ROWS.map((row) => (
-                <div key={row.name} className="flex items-center gap-2 text-sm">
-                  <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${row.dotClass}`}
-                  />
-                  <span className="text-cream/80">{row.name}</span>
-                  <span className="text-cream/30">·</span>
-                  <span className={`font-medium ${row.textClass}`}>
-                    {row.rating}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <p className="mt-4 text-xs text-cream/40">
-              Example score — yours will be personalized to your hair.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-dark px-4 py-16 sm:px-6 sm:py-20">
-        <div className="mx-auto max-w-5xl">
-          <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
-            What the community is saying
-          </p>
-          <h2 className="mt-3 font-serif text-3xl font-semibold text-cream sm:text-4xl">
-            Real hair. Real results.
-          </h2>
-
-          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {TESTIMONIALS.map((t) => (
-              <div key={t.name} className="rounded-xl bg-[#2C2420] p-6">
-                <div className="flex gap-1">
-                  {Array.from({ length: t.stars }).map((_, i) => (
-                    <StarIcon key={i} />
-                  ))}
-                </div>
-                <p className="mt-4 text-sm text-cream">&quot;{t.review}&quot;</p>
-                <p className="mt-4 text-sm font-medium text-muted">{t.name}</p>
-                <p className="text-xs text-muted">{t.hairType}</p>
+          <div className="order-2 rounded-xl bg-gradient-to-br from-bronze/50 via-bronze2/20 to-transparent p-[1px] shadow-[0_0_40px_-12px_rgba(156,123,90,0.6)] lg:col-start-2 lg:row-start-1 lg:row-span-2">
+            <div className="rounded-xl bg-dark p-6">
+              <p className="text-xs uppercase tracking-wide text-cream/50">
+                Curl Defining Cream
+              </p>
+              <div className="mt-3 flex items-center gap-3">
+                <span className="rounded-full bg-green px-3 py-1 text-sm font-semibold text-dark">
+                  87 / 100
+                </span>
+                <span className="text-xs text-cream/50">
+                  Compatibility score
+                </span>
               </div>
-            ))}
+              <div className="mt-5 space-y-2">
+                {SCORE_EXAMPLE_ROWS.map((row) => (
+                  <div
+                    key={row.name}
+                    className={`flex items-center justify-between gap-2 rounded-md border-l-4 bg-warm/[0.04] py-2 pl-3 pr-3 text-sm ${row.borderClass}`}
+                  >
+                    <span className="text-cream/80">{row.name}</span>
+                    <span className={`font-medium ${row.textClass}`}>
+                      {row.rating}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-xs text-cream/40">
+                Example score — yours will be personalized to your hair.
+              </p>
+            </div>
           </div>
 
-          <div className="mt-10 text-center">
-            <Link
-              href="/profile"
-              className="inline-flex items-center justify-center rounded-lg bg-bronze px-6 py-4 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
-            >
-              Try Qoyl free — no credit card needed →
-            </Link>
-          </div>
+          <Link
+            href="/search"
+            className="order-3 flex w-full items-center justify-center rounded-lg bg-bronze px-6 py-4 text-center text-base font-semibold text-dark transition-colors hover:bg-bronze2 lg:order-none lg:col-start-1 lg:row-start-2 lg:inline-flex lg:w-auto"
+          >
+            Search a product now →
+          </Link>
         </div>
       </section>
+
+      <Testimonials />
     </main>
   );
 }

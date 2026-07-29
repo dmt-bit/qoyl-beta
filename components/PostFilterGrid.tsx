@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import PostCard, { Post } from "@/components/PostCard";
 import { TABS, TabKey } from "@/lib/postTabs";
@@ -71,6 +71,8 @@ export default function PostFilterGrid({
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [hasScrolledTabs, setHasScrolledTabs] = useState(false);
+  const tabScrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -133,24 +135,38 @@ export default function PostFilterGrid({
         )}
       </div>
 
-      <div className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-        {TABS.map((tab) => {
-          const isActive = tab.key === activeTab;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setActiveTab(tab.key)}
-              className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? "border-bronze2 bg-dark text-cream"
-                  : "border-bronze bg-transparent text-bronze hover:text-bronze2"
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
+      <div className="relative -mx-4 mt-4 px-4 sm:mx-0 sm:px-0">
+        <div
+          ref={tabScrollRef}
+          onScroll={() => setHasScrolledTabs(true)}
+          style={{ WebkitOverflowScrolling: "touch" }}
+          className="no-scrollbar flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible"
+        >
+          {TABS.map((tab) => {
+            const isActive = tab.key === activeTab;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "border-bronze2 bg-dark text-cream"
+                    : "border-bronze bg-transparent text-bronze hover:text-bronze2"
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex w-10 items-center justify-end bg-gradient-to-r from-transparent to-dark pb-1 sm:hidden">
+          {!hasScrolledTabs && (
+            <span className="tab-scroll-hint pr-0.5 text-lg leading-none text-bronze">
+              ›
+            </span>
+          )}
+        </div>
       </div>
 
       {filteredPosts.length > 0 ? (

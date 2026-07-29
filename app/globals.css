@@ -24,6 +24,29 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@keyframes tab-scroll-hint {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: translateX(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(3px);
+  }
+}
+.tab-scroll-hint {
+  animation: tab-scroll-hint 1s ease-in-out 3;
 }
 
 @media print {

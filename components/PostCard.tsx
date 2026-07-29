@@ -48,7 +48,9 @@ export default function PostCard({
   return (
     <Link
       href={`/posts/${post.slug}`}
-      className="flex flex-col overflow-hidden rounded-xl border border-bronze/30 transition-colors hover:border-bronze"
+      className={`flex flex-col overflow-hidden rounded-xl border border-bronze/30 transition-colors hover:border-bronze ${
+        compact ? "" : "min-h-[280px]"
+      }`}
     >
       <div className={`relative w-full ${compact ? "h-28" : "h-40"}`}>
         {post.hero_image_url ? (
