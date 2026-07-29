@@ -69,10 +69,9 @@ export default function Nav() {
         <li>
           <Link
             href="/search"
-            className="whitespace-nowrap rounded-lg bg-bronze px-3 py-1.5 text-xs font-semibold text-cream transition-colors hover:bg-bronze2 sm:px-4 sm:py-2 sm:text-sm"
+            className="whitespace-nowrap rounded-lg bg-bronze px-2.5 py-1.5 text-xs font-semibold text-cream transition-colors hover:bg-bronze2 sm:px-4 sm:py-2 sm:text-sm"
           >
-            <span className="max-[480px]:hidden">Product Search</span>
-            <span className="hidden max-[480px]:inline">Search</span>
+            Search a Product
           </Link>
         </li>
 

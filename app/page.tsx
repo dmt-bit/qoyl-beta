@@ -134,6 +134,63 @@ export default async function Home() {
         </div>
       </section>
 
+      <section className="border-b border-bronze/20 bg-dark px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-6 lg:grid-cols-2 lg:gap-16">
+          <div className="order-1 lg:col-start-1 lg:row-start-1">
+            <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
+              Free ingredient evaluation
+            </p>
+            <h2 className="mt-3 font-serif text-3xl font-semibold text-cream sm:text-4xl">
+              Is that product actually right for your hair?
+            </h2>
+            <p className="mt-4 text-sm text-cream/70 sm:text-base">
+              Search any shampoo, conditioner, leave-in, or styler. Get a
+              personalized compatibility score built from your curl type,
+              porosity, scalp condition, and climate. Takes 10 seconds.
+            </p>
+          </div>
+
+          <div className="order-2 rounded-xl bg-gradient-to-br from-bronze/50 via-bronze2/20 to-transparent p-[1px] shadow-[0_0_40px_-12px_rgba(156,123,90,0.6)] lg:col-start-2 lg:row-start-1 lg:row-span-2">
+            <div className="rounded-xl bg-dark p-6">
+              <p className="text-xs uppercase tracking-wide text-cream/50">
+                Curl Defining Cream
+              </p>
+              <div className="mt-3 flex items-center gap-3">
+                <span className="rounded-full bg-green px-3 py-1 text-sm font-semibold text-dark">
+                  87 / 100
+                </span>
+                <span className="text-xs text-cream/50">
+                  Compatibility score
+                </span>
+              </div>
+              <div className="mt-5 space-y-2">
+                {SCORE_EXAMPLE_ROWS.map((row) => (
+                  <div
+                    key={row.name}
+                    className={`flex items-center justify-between gap-2 rounded-md border-l-4 bg-warm/[0.04] py-2 pl-3 pr-3 text-sm ${row.borderClass}`}
+                  >
+                    <span className="text-cream/80">{row.name}</span>
+                    <span className={`font-medium ${row.textClass}`}>
+                      {row.rating}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-xs text-cream/40">
+                Example score — yours will be personalized to your hair.
+              </p>
+            </div>
+          </div>
+
+          <Link
+            href="/search"
+            className="order-3 flex w-full items-center justify-center rounded-lg bg-bronze px-6 py-4 text-center text-base font-semibold text-dark transition-colors hover:bg-bronze2 lg:order-none lg:col-start-1 lg:row-start-2 lg:inline-flex lg:w-auto"
+          >
+            Search a product now →
+          </Link>
+        </div>
+      </section>
+
       <div className="border-b border-bronze/20 px-4 pb-10 pt-14 sm:px-6 sm:pt-10">
         <div className="mx-auto max-w-5xl">
           <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
@@ -208,63 +265,6 @@ export default async function Home() {
               </span>
             ))}
           </div>
-        </div>
-      </section>
-
-      <section className="bg-dark px-4 py-16 sm:px-6 sm:py-20">
-        <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-6 lg:grid-cols-2 lg:gap-16">
-          <div className="order-1 lg:col-start-1 lg:row-start-1">
-            <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
-              Free ingredient evaluation
-            </p>
-            <h2 className="mt-3 font-serif text-3xl font-semibold text-cream sm:text-4xl">
-              Is that product actually right for your hair?
-            </h2>
-            <p className="mt-4 text-sm text-cream/70 sm:text-base">
-              Search any shampoo, conditioner, leave-in, or styler. Get a
-              personalized compatibility score built from your curl type,
-              porosity, scalp condition, and climate. Takes 10 seconds.
-            </p>
-          </div>
-
-          <div className="order-2 rounded-xl bg-gradient-to-br from-bronze/50 via-bronze2/20 to-transparent p-[1px] shadow-[0_0_40px_-12px_rgba(156,123,90,0.6)] lg:col-start-2 lg:row-start-1 lg:row-span-2">
-            <div className="rounded-xl bg-dark p-6">
-              <p className="text-xs uppercase tracking-wide text-cream/50">
-                Curl Defining Cream
-              </p>
-              <div className="mt-3 flex items-center gap-3">
-                <span className="rounded-full bg-green px-3 py-1 text-sm font-semibold text-dark">
-                  87 / 100
-                </span>
-                <span className="text-xs text-cream/50">
-                  Compatibility score
-                </span>
-              </div>
-              <div className="mt-5 space-y-2">
-                {SCORE_EXAMPLE_ROWS.map((row) => (
-                  <div
-                    key={row.name}
-                    className={`flex items-center justify-between gap-2 rounded-md border-l-4 bg-warm/[0.04] py-2 pl-3 pr-3 text-sm ${row.borderClass}`}
-                  >
-                    <span className="text-cream/80">{row.name}</span>
-                    <span className={`font-medium ${row.textClass}`}>
-                      {row.rating}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-4 text-xs text-cream/40">
-                Example score — yours will be personalized to your hair.
-              </p>
-            </div>
-          </div>
-
-          <Link
-            href="/search"
-            className="order-3 flex w-full items-center justify-center rounded-lg bg-bronze px-6 py-4 text-center text-base font-semibold text-dark transition-colors hover:bg-bronze2 lg:order-none lg:col-start-1 lg:row-start-2 lg:inline-flex lg:w-auto"
-          >
-            Search a product now →
-          </Link>
         </div>
       </section>
 

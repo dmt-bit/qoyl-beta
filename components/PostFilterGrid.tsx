@@ -139,7 +139,10 @@ export default function PostFilterGrid({
         <div
           ref={tabScrollRef}
           onScroll={() => setHasScrolledTabs(true)}
-          style={{ WebkitOverflowScrolling: "touch" }}
+          style={{
+            WebkitOverflowScrolling: "touch",
+            scrollSnapType: "x mandatory",
+          }}
           className="no-scrollbar flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible"
         >
           {TABS.map((tab) => {
@@ -149,6 +152,7 @@ export default function PostFilterGrid({
                 key={tab.key}
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
+                style={{ scrollSnapAlign: "start" }}
                 className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                   isActive
                     ? "border-bronze2 bg-dark text-cream"
@@ -160,9 +164,9 @@ export default function PostFilterGrid({
             );
           })}
         </div>
-        <div className="pointer-events-none absolute inset-y-0 right-0 flex w-10 items-center justify-end bg-gradient-to-r from-transparent to-dark pb-1 sm:hidden">
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex w-12 items-center justify-end bg-gradient-to-r from-transparent to-dark pb-1 sm:hidden">
           {!hasScrolledTabs && (
-            <span className="tab-scroll-hint pr-0.5 text-lg leading-none text-bronze">
+            <span className="tab-scroll-hint pr-1 text-xl leading-none text-bronze">
               ›
             </span>
           )}
