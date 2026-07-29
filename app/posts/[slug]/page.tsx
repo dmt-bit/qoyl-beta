@@ -14,6 +14,17 @@ const PLATFORM_LABEL: Record<string, string> = {
   twitter: "Twitter",
 };
 
+// source_platform is meant for repost attribution ("originally on TikTok")
+// and is often left blank for original-video posts -- there's no "source"
+// to attribute when the video is Qoyl's own. Detecting the embed platform
+// from the video_url itself means the embed still renders correctly even
+// when source_platform isn't set.
+function detectEmbedPlatform(url: string): "youtube" | "tiktok" | null {
+  if (/youtube\.com|youtu\.be/i.test(url)) return "youtube";
+  if (/tiktok\.com/i.test(url)) return "tiktok";
+  return null;
+}
+
 function getYouTubeId(url: string): string | null {
   try {
     const u = new URL(url);
@@ -103,6 +114,9 @@ export default async function PostPage({
 
   const isVideoContent =
     post.content_type === "original-video" || post.content_type === "repost";
+  const embedPlatform = post.video_url
+    ? detectEmbedPlatform(post.video_url) ?? post.source_platform
+    : null;
   const platformLabel = post.source_platform
     ? PLATFORM_LABEL[post.source_platform] ?? post.source_platform
     : null;
@@ -121,7 +135,7 @@ export default async function PostPage({
         {isVideoContent && post.video_url ? (
           <VideoEmbed
             videoUrl={post.video_url}
-            platform={post.source_platform}
+            platform={embedPlatform}
             title={post.title}
           />
         ) : (
