@@ -1,5 +1,5 @@
 import Link from "next/link";
-import HomePostFilter from "@/components/HomePostFilter";
+import PostFilterGrid from "@/components/PostFilterGrid";
 import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -176,7 +176,7 @@ export default async function Home() {
           </p>
 
           <div className="mt-6">
-            <HomePostFilter posts={posts ?? []} />
+            <PostFilterGrid posts={posts ?? []} />
           </div>
         </div>
       </div>

@@ -3,29 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import PostCard, { Post } from "@/components/PostCard";
-
-type TabKey =
-  | "all"
-  | "ingredients"
-  | "straight"
-  | "wavy"
-  | "curly"
-  | "coily"
-  | "extensions"
-  | "mens"
-  | "baby";
-
-const TABS: { key: TabKey; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "ingredients", label: "Ingredients" },
-  { key: "straight", label: "Straight" },
-  { key: "wavy", label: "Wavy" },
-  { key: "curly", label: "Curly" },
-  { key: "coily", label: "Coily" },
-  { key: "extensions", label: "Extensions & Wigs" },
-  { key: "mens", label: "Men's Hair" },
-  { key: "baby", label: "Baby & Kids" },
-];
+import { TABS, TabKey } from "@/lib/postTabs";
 
 // Tabs that filter on a specific hair_type value -- "coming soon" messaging
 // (below) only applies to these, not to "all" or "ingredients".
@@ -39,7 +17,7 @@ const HAIR_TYPE_TABS = new Set<TabKey>([
   "baby",
 ]);
 
-const MAX_POSTS = 9;
+const DEFAULT_LIMIT = 9;
 
 function matchesTab(post: Post, tab: TabKey): boolean {
   if (tab === "all") return true;
@@ -77,8 +55,20 @@ function SearchIcon() {
   );
 }
 
-export default function HomePostFilter({ posts }: { posts: Post[] }) {
-  const [activeTab, setActiveTab] = useState<TabKey>("all");
+export default function PostFilterGrid({
+  posts,
+  initialTab = "all",
+  // null means no cap (the /posts library page); the home page preview
+  // keeps the default 9.
+  limit = DEFAULT_LIMIT,
+  showSeeAllLinks = true,
+}: {
+  posts: Post[];
+  initialTab?: TabKey;
+  limit?: number | null;
+  showSeeAllLinks?: boolean;
+}) {
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
@@ -99,15 +89,24 @@ export default function HomePostFilter({ posts }: { posts: Post[] }) {
     [posts, activeTab, debouncedSearch]
   );
   // posts is already ordered by published_at descending, so this keeps the
-  // 9 newest -- overall for "All", or the 9 newest matching the active tab.
-  const filteredPosts = matchingPosts.slice(0, MAX_POSTS);
+  // newest -- overall for "All", or the newest matching the active tab.
+  const filteredPosts =
+    limit === null ? matchingPosts : matchingPosts.slice(0, limit);
 
   const activeTabLabel = TABS.find((tab) => tab.key === activeTab)?.label;
   const showComingSoon =
     !debouncedSearch &&
     HAIR_TYPE_TABS.has(activeTab) &&
+    limit !== null &&
     filteredPosts.length > 0 &&
-    filteredPosts.length < MAX_POSTS;
+    filteredPosts.length < limit;
+
+  const showSeeAllLink =
+    showSeeAllLinks &&
+    !debouncedSearch &&
+    limit !== null &&
+    ((activeTab === "all" && filteredPosts.length === limit) ||
+      (activeTab !== "all" && filteredPosts.length > 0));
 
   return (
     <div>
@@ -164,6 +163,18 @@ export default function HomePostFilter({ posts }: { posts: Post[] }) {
           {showComingSoon && (
             <p className="mt-6 text-sm text-cream/50">
               More {activeTabLabel} posts coming soon →
+            </p>
+          )}
+          {showSeeAllLink && (
+            <p className="mt-6 text-sm">
+              <Link
+                href={activeTab === "all" ? "/posts" : `/posts?type=${activeTab}`}
+                className="text-bronze2 underline underline-offset-2 hover:text-cream"
+              >
+                {activeTab === "all"
+                  ? "See all posts →"
+                  : `See all ${activeTabLabel} posts →`}
+              </Link>
             </p>
           )}
         </>
