@@ -11,7 +11,9 @@ type TabKey =
   | "wavy"
   | "curly"
   | "coily"
-  | "extensions";
+  | "extensions"
+  | "mens"
+  | "baby";
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: "all", label: "All" },
@@ -21,7 +23,23 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: "curly", label: "Curly" },
   { key: "coily", label: "Coily" },
   { key: "extensions", label: "Extensions & Wigs" },
+  { key: "mens", label: "Men's Hair" },
+  { key: "baby", label: "Baby & Kids" },
 ];
+
+// Tabs that filter on a specific hair_type value -- "coming soon" messaging
+// (below) only applies to these, not to "all" or "ingredients".
+const HAIR_TYPE_TABS = new Set<TabKey>([
+  "straight",
+  "wavy",
+  "curly",
+  "coily",
+  "extensions",
+  "mens",
+  "baby",
+]);
+
+const MAX_POSTS = 9;
 
 function matchesTab(post: Post, tab: TabKey): boolean {
   if (tab === "all") return true;
@@ -71,7 +89,7 @@ export default function HomePostFilter({ posts }: { posts: Post[] }) {
     return () => clearTimeout(id);
   }, [searchInput]);
 
-  const filteredPosts = useMemo(
+  const matchingPosts = useMemo(
     () =>
       posts.filter(
         (post) =>
@@ -80,6 +98,16 @@ export default function HomePostFilter({ posts }: { posts: Post[] }) {
       ),
     [posts, activeTab, debouncedSearch]
   );
+  // posts is already ordered by published_at descending, so this keeps the
+  // 9 newest -- overall for "All", or the 9 newest matching the active tab.
+  const filteredPosts = matchingPosts.slice(0, MAX_POSTS);
+
+  const activeTabLabel = TABS.find((tab) => tab.key === activeTab)?.label;
+  const showComingSoon =
+    !debouncedSearch &&
+    HAIR_TYPE_TABS.has(activeTab) &&
+    filteredPosts.length > 0 &&
+    filteredPosts.length < MAX_POSTS;
 
   return (
     <div>
@@ -127,11 +155,18 @@ export default function HomePostFilter({ posts }: { posts: Post[] }) {
       </div>
 
       {filteredPosts.length > 0 ? (
-        <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredPosts.map((post) => (
-            <PostCard key={post.slug} post={post} />
-          ))}
-        </div>
+        <>
+          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredPosts.map((post) => (
+              <PostCard key={post.slug} post={post} />
+            ))}
+          </div>
+          {showComingSoon && (
+            <p className="mt-6 text-sm text-cream/50">
+              More {activeTabLabel} posts coming soon →
+            </p>
+          )}
+        </>
       ) : debouncedSearch ? (
         <p className="mt-8 text-sm text-cream/50">
           No posts found for &apos;{debouncedSearch}&apos; — try a different

@@ -85,6 +85,45 @@ const SCORE_EXAMPLE_ROWS = [
   { name: "Glycerin", rating: "Caution for dry climates", dotClass: "bg-amber", textClass: "text-amber" },
 ];
 
+function StarIcon() {
+  return (
+    <svg className="h-4 w-4 text-bronze" fill="currentColor" viewBox="0 0 20 20">
+      <path d="M10 1.5l2.59 5.25 5.79.84-4.19 4.08.99 5.77L10 14.77l-5.18 2.67.99-5.77-4.19-4.08 5.79-.84L10 1.5z" />
+    </svg>
+  );
+}
+
+const TESTIMONIALS = [
+  {
+    stars: 5,
+    review:
+      "I've been natural for 6 years and never understood why products would work for a few weeks and then stop. Qoyl told me it was the glycerin in my leave-in — I live in Chicago and it was pulling moisture out during winter. Game changer.",
+    name: "Amara T.",
+    hairType: "4b, high porosity · Chicago",
+  },
+  {
+    stars: 5,
+    review:
+      "As a 2c wavy, most natural hair content isn't for me. Qoyl actually evaluated products for MY hair type and told me which silicones were fine vs which ones would weigh my waves down. Finally.",
+    name: "Jordan K.",
+    hairType: "2c wavy, low porosity · Seattle",
+  },
+  {
+    stars: 5,
+    review:
+      "I searched my holy grail conditioner and got a 91/100. Then I searched the one that's been making my hair feel like straw — 34/100. I literally screamed. This is exactly what we needed.",
+    name: "Nadia R.",
+    hairType: "4a, medium porosity · Atlanta",
+  },
+  {
+    stars: 5,
+    review:
+      "My daughter has 3c curls and I've been guessing at products for years. Qoyl built her a profile and now I know exactly what to look for on ingredient labels. Worth every second.",
+    name: "Keisha M.",
+    hairType: "3c curly (child) · Houston",
+  },
+];
+
 export default async function Home() {
   const { data: posts } = await supabase
     .from("posts")
@@ -126,6 +165,22 @@ export default async function Home() {
         </div>
       </section>
 
+      <div className="border-b border-bronze/20 px-4 py-10 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
+            From the Qoyl feed
+          </p>
+          <p className="mt-2 text-sm text-cream/70">
+            Ingredient breakdowns, product evaluations, and hair science for
+            every texture.
+          </p>
+
+          <div className="mt-6">
+            <HomePostFilter posts={posts ?? []} />
+          </div>
+        </div>
+      </div>
+
       <section className="border-b border-bronze/20 bg-dark px-4 py-12 sm:px-6">
         <div className="mx-auto max-w-5xl">
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-3 sm:gap-6">
@@ -159,22 +214,6 @@ export default async function Home() {
           </p>
         </div>
       </section>
-
-      <div className="px-4 py-10 sm:px-6">
-        <div className="mx-auto max-w-5xl">
-          <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
-            From the Qoyl feed
-          </h1>
-          <p className="mt-2 text-sm text-cream/70">
-            Ingredient breakdowns, product evaluations, and hair science for
-            every texture.
-          </p>
-
-          <div className="mt-6">
-            <HomePostFilter posts={posts ?? []} />
-          </div>
-        </div>
-      </div>
 
       <section className="bg-dark px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
@@ -227,6 +266,41 @@ export default async function Home() {
             <p className="mt-4 text-xs text-cream/40">
               Example score — yours will be personalized to your hair.
             </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-dark px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto max-w-5xl">
+          <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
+            What the community is saying
+          </p>
+          <h2 className="mt-3 font-serif text-3xl font-semibold text-cream sm:text-4xl">
+            Real hair. Real results.
+          </h2>
+
+          <div className="mt-10 grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {TESTIMONIALS.map((t) => (
+              <div key={t.name} className="rounded-xl bg-[#2C2420] p-6">
+                <div className="flex gap-1">
+                  {Array.from({ length: t.stars }).map((_, i) => (
+                    <StarIcon key={i} />
+                  ))}
+                </div>
+                <p className="mt-4 text-sm text-cream">&quot;{t.review}&quot;</p>
+                <p className="mt-4 text-sm font-medium text-muted">{t.name}</p>
+                <p className="text-xs text-muted">{t.hairType}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 text-center">
+            <Link
+              href="/profile"
+              className="inline-flex items-center justify-center rounded-lg bg-bronze px-6 py-4 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+            >
+              Try Qoyl free — no credit card needed →
+            </Link>
           </div>
         </div>
       </section>
