@@ -7,6 +7,7 @@ import {
   getRoutineProductPicks,
   getIngredientsToAvoid,
 } from "@/lib/routineProducts";
+import { getChildSafetyNote, isChildSafetyProfile } from "@/lib/childSafety";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -38,7 +39,7 @@ export async function GET(request: Request) {
   const { data: profile } = await getSupabaseAdmin()
     .from("hair_profiles")
     .select(
-      "first_name, curl_type, porosity, scalp_condition, zip_code, water_hardness, extensions, extension_type, extension_care"
+      "first_name, curl_type, porosity, scalp_condition, zip_code, water_hardness, extensions, extension_type, extension_care, profile_for"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -50,6 +51,10 @@ export async function GET(request: Request) {
 
   const curlType = profile?.curl_type ?? null;
   const porosity = profile?.porosity ?? null;
+  const profileFor = profile?.profile_for ?? null;
+  // Caution/avoid-rated ingredients matter more for a baby profile, so
+  // surface more of them rather than the usual top 5.
+  const avoidLimit = isChildSafetyProfile(profileFor) ? 10 : 5;
 
   const [calendarDays, steps, products, avoidIngredients] = await Promise.all([
     Promise.resolve(generateWashCalendar(year, month, porosity)),
@@ -60,11 +65,12 @@ export async function GET(request: Request) {
         profile?.water_hardness ?? null,
         profile?.extensions ?? null,
         profile?.extension_type ?? null,
-        profile?.extension_care ?? null
+        profile?.extension_care ?? null,
+        profileFor
       )
     ),
     getRoutineProductPicks(porosity),
-    getIngredientsToAvoid(porosity),
+    getIngredientsToAvoid(porosity, avoidLimit),
   ]);
 
   return NextResponse.json({
@@ -74,6 +80,8 @@ export async function GET(request: Request) {
     scalpCondition: profile?.scalp_condition ?? null,
     zipCode: profile?.zip_code ?? null,
     monthLabel,
+    profileFor,
+    childSafetyNote: getChildSafetyNote(profileFor),
     calendarDays,
     steps,
     products,

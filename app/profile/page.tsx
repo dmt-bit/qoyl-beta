@@ -282,6 +282,38 @@ const BUDGET_OPTIONS = [
   { value: "60_100", label: "$60-100/month" },
   { value: "100_plus", label: "$100+/month" },
 ];
+const PROFILE_FOR_OPTIONS = [
+  { value: "myself", label: "Myself", subtext: null },
+  {
+    value: "child",
+    label: "My child",
+    subtext: "We'll tailor recommendations for children's hair",
+  },
+  {
+    value: "baby",
+    label: "My baby",
+    subtext: "Safe, gentle recommendations for infants and toddlers",
+  },
+];
+const AGE_RANGE_OPTIONS = [
+  { value: "0-12 months", label: "0-12 months" },
+  { value: "1-3 years", label: "1-3 years" },
+  { value: "4-8 years", label: "4-8 years" },
+  { value: "9-12 years", label: "9-12 years" },
+  { value: "13+", label: "13+" },
+];
+const GENDER_OPTIONS = [
+  { value: "male", label: "Male" },
+  { value: "female", label: "Female" },
+  { value: "other", label: "Prefer not to say" },
+];
+const HAIR_GOALS_OPTIONS = [
+  { value: "scalp_health", label: "Scalp health" },
+  { value: "hair_growth", label: "Hair growth" },
+  { value: "moisture_definition", label: "Moisture and definition" },
+  { value: "beard_care", label: "Beard and facial hair care" },
+  { value: "all", label: "All of the above" },
+];
 
 function SelectButton({
   label,
@@ -305,6 +337,37 @@ function SelectButton({
       }`}
     >
       {label}
+    </button>
+  );
+}
+
+function ProfileForOption({
+  label,
+  subtext,
+  selected,
+  onClick,
+}: {
+  label: string;
+  subtext: string | null;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg border px-4 py-3 text-left transition-colors ${
+        selected
+          ? "border-bronze bg-bronze/20"
+          : "border-bronze/40 bg-transparent hover:border-bronze"
+      }`}
+    >
+      <span className="block text-sm font-medium text-cream">{label}</span>
+      {subtext && (
+        <span className="mt-1 block text-xs leading-snug text-cream/60">
+          {subtext}
+        </span>
+      )}
     </button>
   );
 }
@@ -385,6 +448,10 @@ function ProfileForm() {
     setUnlocked(true);
   }
 
+  const [profileFor, setProfileFor] = useState("myself");
+  const [ageRange, setAgeRange] = useState<string | null>(null);
+  const [gender, setGender] = useState<string | null>(null);
+  const [hairGoals, setHairGoals] = useState<string[]>([]);
   const [curlType, setCurlType] = useState<string | null>(null);
   const [porosity, setPorosity] = useState<string | null>(null);
   const [scalpCondition, setScalpCondition] = useState("");
@@ -411,6 +478,10 @@ function ProfileForm() {
 
   useEffect(() => {
     if (!hairProfile || hydratedFromProfileId === hairProfile.id) return;
+    setProfileFor(hairProfile.profile_for ?? "myself");
+    setAgeRange(hairProfile.age_range);
+    setGender(hairProfile.gender);
+    setHairGoals(hairProfile.hair_goals ?? []);
     setCurlType(hairProfile.curl_type);
     setPorosity(hairProfile.porosity);
     setScalpCondition(hairProfile.scalp_condition ?? "");
@@ -444,6 +515,12 @@ function ProfileForm() {
     );
   }
 
+  function toggleHairGoal(value: string) {
+    setHairGoals((prev) =>
+      prev.includes(value) ? prev.filter((g) => g !== value) : [...prev, value]
+    );
+  }
+
   function toggleExtensionType(value: string) {
     setExtensionType((prev) =>
       prev.includes(value)
@@ -457,7 +534,14 @@ function ProfileForm() {
     setError(null);
     setSubmitting(true);
 
+    const isChildOrBaby = profileFor === "child" || profileFor === "baby";
+    const showHairGoals = profileFor === "myself" && gender === "male";
+
     const payload = {
+      profile_for: profileFor,
+      age_range: isChildOrBaby ? ageRange : null,
+      gender,
+      hair_goals: showHairGoals ? hairGoals : [],
       curl_type: curlType,
       porosity,
       scalp_condition: scalpCondition,
@@ -527,6 +611,35 @@ function ProfileForm() {
 
         {!showForm && hairProfile && (
           <div className="mt-8 space-y-8">
+            <ReadOnlyField label="Who is this profile for?">
+              <Chip label={labelFor(PROFILE_FOR_OPTIONS, hairProfile.profile_for)} />
+            </ReadOnlyField>
+
+            {(hairProfile.profile_for === "child" ||
+              hairProfile.profile_for === "baby") &&
+              hairProfile.age_range && (
+                <ReadOnlyField label="Age Range">
+                  <Chip label={hairProfile.age_range} />
+                </ReadOnlyField>
+              )}
+
+            {hairProfile.gender && (
+              <ReadOnlyField label="Gender">
+                <Chip label={labelFor(GENDER_OPTIONS, hairProfile.gender)} />
+              </ReadOnlyField>
+            )}
+
+            {hairProfile.profile_for === "myself" &&
+              hairProfile.gender === "male" &&
+              hairProfile.hair_goals &&
+              hairProfile.hair_goals.length > 0 && (
+                <ReadOnlyField label="Hair Goals">
+                  {hairProfile.hair_goals.map((g) => (
+                    <Chip key={g} label={labelFor(HAIR_GOALS_OPTIONS, g)} />
+                  ))}
+                </ReadOnlyField>
+              )}
+
             <ReadOnlyField label="Curl Type">
               <Chip
                 label={
@@ -645,6 +758,89 @@ function ProfileForm() {
 
         {showForm && (
         <form onSubmit={handleSubmit} className="mt-8 space-y-8">
+          <div role="group" aria-labelledby="profile-for-label">
+            <p
+              id="profile-for-label"
+              className="font-serif text-lg text-bronze2"
+            >
+              Who is this profile for?
+            </p>
+            <div className="mt-3 grid grid-cols-1 gap-3">
+              {PROFILE_FOR_OPTIONS.map((option) => (
+                <ProfileForOption
+                  key={option.value}
+                  label={option.label}
+                  subtext={option.subtext}
+                  selected={profileFor === option.value}
+                  onClick={() => setProfileFor(option.value)}
+                />
+              ))}
+            </div>
+          </div>
+
+          {(profileFor === "child" || profileFor === "baby") && (
+            <div className="rounded-lg border border-bronze/40 bg-warm/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
+              You&apos;re building a profile for a child. We&apos;ll
+              prioritize gentle, age-appropriate ingredients and flag
+              anything that may be too harsh for young scalps.
+            </div>
+          )}
+
+          <div role="group" aria-labelledby="gender-label">
+            <p
+              id="gender-label"
+              className="flex items-center gap-2 font-serif text-lg text-bronze2"
+            >
+              Gender
+              <span className="text-xs font-normal normal-case text-cream/50">
+                (optional)
+              </span>
+            </p>
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              {GENDER_OPTIONS.map((option) => (
+                <SelectButton
+                  key={option.value}
+                  label={option.label}
+                  selected={gender === option.value}
+                  onClick={() =>
+                    setGender(gender === option.value ? null : option.value)
+                  }
+                />
+              ))}
+            </div>
+          </div>
+
+          <Collapse show={profileFor === "myself" && gender === "male"}>
+            <div role="group" aria-labelledby="hair-goals-label">
+              <p
+                id="hair-goals-label"
+                className="font-serif text-lg text-bronze2"
+              >
+                What best describes your hair goals?
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {HAIR_GOALS_OPTIONS.map((option) => (
+                  <label
+                    key={option.value}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-3 text-sm transition-colors ${
+                      hairGoals.includes(option.value)
+                        ? "border-bronze bg-bronze/20 text-cream"
+                        : "border-bronze/40 text-cream/80 hover:border-bronze"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={hairGoals.includes(option.value)}
+                      onChange={() => toggleHairGoal(option.value)}
+                      className="accent-bronze"
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </Collapse>
+
           <div role="group" aria-labelledby="curl-type-label">
             <p
               id="curl-type-label"
@@ -676,6 +872,27 @@ function ProfileForm() {
               />
             </div>
           </div>
+
+          <Collapse show={profileFor === "child" || profileFor === "baby"}>
+            <div role="group" aria-labelledby="age-range-label">
+              <p
+                id="age-range-label"
+                className="font-serif text-lg text-bronze2"
+              >
+                Age range
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                {AGE_RANGE_OPTIONS.map((option) => (
+                  <SelectButton
+                    key={option.value}
+                    label={option.label}
+                    selected={ageRange === option.value}
+                    onClick={() => setAgeRange(option.value)}
+                  />
+                ))}
+              </div>
+            </div>
+          </Collapse>
 
           <div role="group" aria-labelledby="porosity-label">
             <p

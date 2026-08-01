@@ -47,6 +47,8 @@ type RoutineData = {
   scalpCondition: string | null;
   zipCode: string | null;
   monthLabel: string;
+  profileFor: string | null;
+  childSafetyNote: string | null;
   calendarDays: CalendarDay[];
   steps: RoutineStep[];
   products: ProductPick[];
@@ -220,6 +222,10 @@ function RoutineContent() {
   }
 
   const firstName = data.firstName || "there";
+  const isChildOrBaby = data.profileFor === "child" || data.profileFor === "baby";
+  const headerText = isChildOrBaby
+    ? `Here's ${firstName}'s routine.`
+    : `Your ${data.monthLabel} routine, ${firstName}.`;
   const chips = [
     data.curlType && data.curlType !== "not_sure" ? `Curl type ${data.curlType}` : null,
     data.porosity && data.porosity !== "not sure" ? `${data.porosity} porosity` : null,
@@ -262,7 +268,7 @@ function RoutineContent() {
         <section>
           <div className="flex items-start justify-between gap-4">
             <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
-              Your {data.monthLabel} routine, {firstName}.
+              {headerText}
             </h1>
             <Link
               href="/profile"
@@ -289,6 +295,12 @@ function RoutineContent() {
             Updated monthly based on your hair profile and seasonal climate
             changes.
           </p>
+
+          {data.childSafetyNote && (
+            <p className="mt-4 rounded-lg border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-cream/90">
+              {data.childSafetyNote}
+            </p>
+          )}
         </section>
 
         {/* SECTION 2 -- 30-day wash day calendar */}
@@ -376,11 +388,21 @@ function RoutineContent() {
               <h3 className="font-serif text-xl font-semibold text-cream">
                 Ingredients to avoid for your profile
               </h3>
+              {data.profileFor === "baby" && (
+                <p className="mt-1 text-sm text-cream/70">
+                  Extra caution for an infant profile -- these are flagged
+                  more broadly than for an adult profile.
+                </p>
+              )}
               <ul className="mt-3 space-y-2">
                 {data.avoidIngredients.map((ing) => (
                   <li
                     key={ing.ingredientName}
-                    className="rounded-lg border border-red/30 bg-red/5 px-4 py-3"
+                    className={`rounded-lg border bg-red/5 px-4 py-3 ${
+                      data.profileFor === "baby"
+                        ? "border-red/60"
+                        : "border-red/30"
+                    }`}
                   >
                     <p className="text-sm font-medium text-red">
                       🚩 {ing.ingredientName}

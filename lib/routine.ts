@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { curlFamily } from "@/lib/compatibility";
 import { getExtensionCareGuidance } from "@/lib/extensionCare";
+import { getChildSafetyStep } from "@/lib/childSafety";
 
 export type HairProfileForRoutine = {
   curl_type: string | null;
@@ -11,6 +12,7 @@ export type HairProfileForRoutine = {
   extensions?: string | null;
   extension_type?: string[] | null;
   extension_care?: string | null;
+  profile_for?: string | null;
 };
 
 export type RoutineStep = {
@@ -116,13 +118,36 @@ function withExtensionCare(
   ];
 }
 
+function withChildSafety(
+  steps: RoutineStep[],
+  profile: HairProfileForRoutine
+): RoutineStep[] {
+  const step = getChildSafetyStep(profile.profile_for ?? null);
+  if (!step) return steps;
+
+  return [
+    ...steps,
+    {
+      title: `${steps.length + 1}. ${step.title}`,
+      description: `${step.body} ${step.why}`,
+    },
+  ];
+}
+
+function withAdditionalGuidance(
+  steps: RoutineStep[],
+  profile: HairProfileForRoutine
+): RoutineStep[] {
+  return withChildSafety(withExtensionCare(steps, profile), profile);
+}
+
 export function getBasicRoutineSteps(
   profile: HairProfileForRoutine
 ): RoutineStep[] {
   const family = curlFamily(profile.curl_type);
-  if (family === "straight") return withExtensionCare(STRAIGHT_ROUTINE, profile);
-  if (family === "wavy") return withExtensionCare(WAVY_ROUTINE, profile);
-  if (family === "curly") return withExtensionCare(CURLY_ROUTINE, profile);
+  if (family === "straight") return withAdditionalGuidance(STRAIGHT_ROUTINE, profile);
+  if (family === "wavy") return withAdditionalGuidance(WAVY_ROUTINE, profile);
+  if (family === "curly") return withAdditionalGuidance(CURLY_ROUTINE, profile);
 
   const porosity = profile.porosity ?? "medium";
   const concerns = profile.hair_concerns ?? [];
@@ -154,7 +179,7 @@ export function getBasicRoutineSteps(
     ? "Stretch your style (banding, braid-outs, or a diffuser on low heat) to manage shrinkage."
     : "Apply your styler on soaking wet hair and let it air dry or diffuse on low heat.";
 
-  return withExtensionCare(
+  return withAdditionalGuidance(
     [
       { title: "1. Cleanse", description: cleanse },
       { title: "2. Condition", description: condition },

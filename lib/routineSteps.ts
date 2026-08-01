@@ -1,5 +1,6 @@
 import { curlFamily } from "@/lib/compatibility";
 import { getExtensionCareGuidance } from "@/lib/extensionCare";
+import { getChildSafetyStep } from "@/lib/childSafety";
 
 export type RoutineStep = {
   title: string;
@@ -303,7 +304,8 @@ export function generateRoutineSteps(
   waterHardness: string | null,
   extensions: string | null = null,
   extensionType: string[] | null = null,
-  extensionCare: string | null = null
+  extensionCare: string | null = null,
+  profileFor: string | null = null
 ): RoutineStep[] {
   const family = curlFamily(curlType);
 
@@ -316,6 +318,11 @@ export function generateRoutineSteps(
 
   if (extensions === "yes") {
     steps = [...steps, getExtensionCareGuidance(extensionType, extensionCare)];
+  }
+
+  const childSafetyStep = getChildSafetyStep(profileFor);
+  if (childSafetyStep) {
+    steps = [...steps, childSafetyStep];
   }
 
   return steps;

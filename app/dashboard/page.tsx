@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PostCard, { Post } from "@/components/PostCard";
 import { useAuth } from "@/lib/auth-context";
+import { getChildSafetyNote } from "@/lib/childSafety";
 import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import { getBasicRoutineSteps, RoutineStep } from "@/lib/routine";
 import { supabase } from "@/lib/supabase";
@@ -134,6 +135,8 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const { user, loading: authLoading, hairProfile, hairProfileLoading } =
     useAuth();
+  const isChildOrBabyProfile =
+    hairProfile?.profile_for === "child" || hairProfile?.profile_for === "baby";
 
   const [checkedAccess, setCheckedAccess] = useState(false);
   const [hasRoutineSubscription, setHasRoutineSubscription] = useState(false);
@@ -187,12 +190,33 @@ function DashboardContent() {
   const [recentPosts, setRecentPosts] = useState<Post[]>([]);
 
   useEffect(() => {
+    if (hairProfileLoading) return;
     let cancelled = false;
 
     async function loadPosts() {
+      const columns =
+        "slug, title, category, hero_image_url, excerpt, published_at";
+
+      // Pre-select the "Baby & Kids" feed content for child/baby profiles
+      // (same hair_type tag the home page's filter tabs use). Falls back
+      // to the general feed if there aren't 3 matching posts yet, rather
+      // than showing a near-empty section.
+      if (isChildOrBabyProfile) {
+        const { data } = await supabase
+          .from("posts")
+          .select(columns)
+          .eq("hair_type", "baby")
+          .order("published_at", { ascending: false })
+          .limit(3);
+        if (data && data.length === 3) {
+          if (!cancelled) setRecentPosts(data);
+          return;
+        }
+      }
+
       const { data } = await supabase
         .from("posts")
-        .select("slug, title, category, hero_image_url, excerpt, published_at")
+        .select(columns)
         .order("published_at", { ascending: false })
         .limit(3);
       if (!cancelled) setRecentPosts(data ?? []);
@@ -202,7 +226,7 @@ function DashboardContent() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [hairProfileLoading, isChildOrBabyProfile]);
 
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
 
@@ -265,8 +289,11 @@ function DashboardContent() {
   }
 
   const greeting = hairProfile?.first_name
-    ? `Welcome back, ${hairProfile.first_name}`
+    ? isChildOrBabyProfile
+      ? `Here's ${hairProfile.first_name}'s routine`
+      : `Welcome back, ${hairProfile.first_name}`
     : "Welcome to Qoyl";
+  const childSafetyNote = getChildSafetyNote(hairProfile?.profile_for ?? null);
 
   return (
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
@@ -284,6 +311,12 @@ function DashboardContent() {
         </div>
 
         <ProfileChips />
+
+        {childSafetyNote && (
+          <p className="mt-4 rounded-lg border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-cream/90">
+            {childSafetyNote}
+          </p>
+        )}
 
         {paymentStatus === "success" && (
           <p className="mt-4 rounded-lg border border-green/40 bg-green/10 px-4 py-3 text-sm text-green">

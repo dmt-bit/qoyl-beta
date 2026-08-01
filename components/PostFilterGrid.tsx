@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import PostCard, { Post } from "@/components/PostCard";
+import { useAuth } from "@/lib/auth-context";
 import { TABS, TabKey } from "@/lib/postTabs";
 
 // Tabs that filter on a specific hair_type value -- "coming soon" messaging
@@ -73,6 +74,34 @@ export default function PostFilterGrid({
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [hasScrolledTabs, setHasScrolledTabs] = useState(false);
   const tabScrollRef = useRef<HTMLDivElement>(null);
+
+  // Pre-select "Baby & Kids" for child/baby profiles -- but only once, and
+  // only if the caller didn't already ask for a specific tab (an explicit
+  // initialTab, e.g. from /posts?type=, or a tab the user has since picked
+  // themselves) is left alone. Multi-profile support (a single account
+  // with more than one hair_profiles row) would need this to key off the
+  // currently-selected profile rather than the one-per-user hairProfile
+  // from useAuth() -- this is where that branch would go.
+  const { hairProfile } = useAuth();
+  const hasAutoSelectedTab = useRef(false);
+
+  useEffect(() => {
+    // Wait for a real (non-null) profile rather than gating on
+    // hairProfileLoading -- that flag starts false before the auth check
+    // even begins, so gating on it fired this effect (and permanently
+    // marked it done) before the actual fetch ever completed. Signed-out
+    // users / users with no saved profile never populate hairProfile, so
+    // this simply never fires for them, which is correct.
+    if (hasAutoSelectedTab.current || !hairProfile) return;
+    hasAutoSelectedTab.current = true;
+
+    if (
+      activeTab === "all" &&
+      (hairProfile.profile_for === "child" || hairProfile.profile_for === "baby")
+    ) {
+      setActiveTab("baby");
+    }
+  }, [hairProfile, activeTab]);
 
   useEffect(() => {
     const id = setTimeout(() => {
