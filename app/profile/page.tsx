@@ -778,6 +778,17 @@ function ProfileForm() {
             </div>
           </div>
 
+          <div className="rounded-lg border-l-2 border-bronze bg-warm/10 px-4 py-3 text-xs leading-relaxed text-cream/70">
+            Qoyl provides cosmetic hair care recommendations only. We do not
+            address medical conditions, serious scalp disorders, or hair
+            loss related to health conditions (such as alopecia,
+            trichotillomania, or scalp infections). If you are experiencing
+            significant hair loss, scalp pain, lesions, or other medical
+            symptoms, please consult a licensed dermatologist or healthcare
+            provider. Our recommendations are for general cosmetic hair
+            care only.
+          </div>
+
           {(profileFor === "child" || profileFor === "baby") && (
             <div className="rounded-lg border border-bronze/40 bg-warm/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
               You&apos;re building a profile for a child. We&apos;ll

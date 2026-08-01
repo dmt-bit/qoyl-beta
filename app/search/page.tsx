@@ -381,7 +381,17 @@ function SearchPageContent() {
 
         {scoreError && <p className="mt-6 text-sm text-red">{scoreError}</p>}
 
-        {scoreResult && <ScoreResultView result={scoreResult} />}
+        {scoreResult && (
+          <ScoreResultView
+            result={scoreResult}
+            footnote={
+              <p className="mt-2 text-[10px] text-bronze">
+                Scores reflect cosmetic ingredient compatibility only — not
+                medical advice.
+              </p>
+            }
+          />
+        )}
 
         {scoreResult && selectedProduct && (
           <div className="mt-4 text-center">

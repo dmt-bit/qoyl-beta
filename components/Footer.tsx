@@ -12,6 +12,10 @@ export default function Footer() {
           Privacy Policy
         </Link>
       </div>
+      <p className="mt-2 text-center text-[10px] text-cream/40">
+        Qoyl provides cosmetic hair care information only. Not a substitute
+        for professional medical advice.
+      </p>
     </footer>
   );
 }

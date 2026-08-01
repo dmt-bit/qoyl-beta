@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import Collapse from "@/components/Collapse";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
 import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
@@ -177,6 +178,7 @@ function RoutineContent() {
   const [data, setData] = useState<RoutineData | null>(null);
   const [status, setStatus] = useState<"loading" | "ready">("loading");
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
+  const [showDisclaimer, setShowDisclaimer] = useState(false);
 
   const showWelcome = searchParams.get("welcome") === "true" && !welcomeDismissed;
 
@@ -437,6 +439,35 @@ function RoutineContent() {
               day: "numeric",
             })}
           </p>
+        </div>
+
+        <div className="print-hide mt-12 border-t border-bronze/20 pt-6">
+          <button
+            type="button"
+            onClick={() => setShowDisclaimer((v) => !v)}
+            className="flex items-center gap-1.5 text-xs text-cream/50 transition-colors hover:text-cream/70"
+          >
+            About these recommendations
+            <span
+              className={`text-[10px] transition-transform ${
+                showDisclaimer ? "rotate-180" : ""
+              }`}
+            >
+              ▼
+            </span>
+          </button>
+          <Collapse show={showDisclaimer}>
+            <p className="text-xs leading-relaxed text-cream/50">
+              Qoyl provides cosmetic hair care recommendations only. We do
+              not address medical conditions, serious scalp disorders, or
+              hair loss related to health conditions (such as alopecia,
+              trichotillomania, or scalp infections). If you are
+              experiencing significant hair loss, scalp pain, lesions, or
+              other medical symptoms, please consult a licensed
+              dermatologist or healthcare provider. Our recommendations are
+              for general cosmetic hair care only.
+            </p>
+          </Collapse>
         </div>
       </div>
     </main>

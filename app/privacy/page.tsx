@@ -49,6 +49,7 @@ const PRIVACY_CONTENT = `
 
 <h2>1. Who we are</h2>
 <p>Qoyl is a free hair care intelligence platform operated by Qoyl LLC, based in Chicago, Illinois. Our consumer app is available at <a href="https://qoyl-beta-alpha.vercel.app">qoyl-beta-alpha.vercel.app</a> and our marketing site is at <a href="https://qoyl.live">qoyl.live</a>. Our brand intelligence platform is available at <a href="https://business.qoyl.live">business.qoyl.live</a>.</p>
+<p>Qoyl provides cosmetic hair care recommendations only and does not provide medical advice, diagnose conditions, or address health-related hair loss or scalp disorders.</p>
 <p>This Privacy Policy explains what personal information we collect, how we use it, and the choices you have. It applies to all Qoyl products and services.</p>
 
 <h2>2. What information we collect</h2>

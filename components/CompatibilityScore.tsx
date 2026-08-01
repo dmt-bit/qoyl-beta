@@ -19,7 +19,13 @@ export function ScoreBadge({ score }: { score: number }) {
   );
 }
 
-export function ScoreResultView({ result }: { result: ScoreResult }) {
+export function ScoreResultView({
+  result,
+  footnote,
+}: {
+  result: ScoreResult;
+  footnote?: React.ReactNode;
+}) {
   if (result.matches.length === 0) {
     return (
       <p className="mt-4 text-sm text-cream/70">
@@ -30,8 +36,9 @@ export function ScoreResultView({ result }: { result: ScoreResult }) {
 
   return (
     <div className="mt-6">
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center">
         <ScoreBadge score={result.normalizedScore} />
+        {footnote}
       </div>
       <ul className="mt-6 space-y-2">
         {result.matches.map((match, i) => (
