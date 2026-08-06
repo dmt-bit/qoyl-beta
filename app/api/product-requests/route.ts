@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { sendAdminNotification } from "@/lib/adminNotify";
+import { sendNotificationEmail } from "@/lib/notify";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -46,6 +47,25 @@ export async function POST(request: Request) {
       `brand_name: ${brandName}\n` +
       `ingredient_list: ${ingredientList || "Not provided"}\n` +
       `requester_email: ${email}`
+  );
+
+  const hasIngredientList = Boolean(ingredientList && ingredientList.trim());
+
+  await sendNotificationEmail(
+    `Product evaluation request — ${productName}`,
+    `Someone requested a product evaluation on Qoyl.
+
+Product: ${productName}
+Brand: ${brandName}
+Where purchased: ${wherePurchased || "Not provided"}
+Requester email: ${email}
+Ingredient list provided: ${hasIngredientList ? "Yes — see below" : "No"}
+
+${hasIngredientList ? ingredientList : ""}
+
+Submitted at: ${new Date().toISOString()}
+
+ACTION NEEDED: Evaluate this product and reply to ${email} within 48 hours with their compatibility score.`
   );
 
   return NextResponse.json({ ok: true });
