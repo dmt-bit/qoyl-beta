@@ -534,6 +534,12 @@ function ProfileForm() {
     setError(null);
     setSubmitting(true);
 
+    // Captured before the save below -- hairProfile reflects the profile
+    // as it existed prior to this submission, so this is only true for a
+    // genuine first-time save, not the 30-day-locked "update my profile"
+    // flow (which reuses this same handler via upsert).
+    const isNewProfile = !hairProfile;
+
     const isChildOrBaby = profileFor === "child" || profileFor === "baby";
     const showHairGoals = profileFor === "myself" && gender === "male";
 
@@ -584,6 +590,27 @@ function ProfileForm() {
     if (data?.id) {
       localStorage.setItem("hair_profile_id", data.id);
       setSuccess(true);
+
+      if (isNewProfile) {
+        // Fire-and-forget -- never awaited, never shown to the user, and
+        // must not delay the redirect below.
+        fetch("/api/notify/new-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            curl_type: curlType,
+            porosity,
+            scalp_condition: scalpCondition,
+            strand_thickness: strandThickness,
+            zip_code: zipCode,
+            profile_for: profileFor,
+            extensions,
+            color_treated: colorTreated,
+            budget,
+          }),
+        }).catch(() => {});
+      }
+
       if (user) await refreshHairProfile();
       router.push("/dashboard");
     }

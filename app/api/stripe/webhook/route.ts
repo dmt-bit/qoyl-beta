@@ -4,6 +4,7 @@ import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendRoutineEmail } from "@/lib/sendRoutineEmail";
 import { sendAdminNotification } from "@/lib/adminNotify";
+import { sendNotificationEmail } from "@/lib/notify";
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -80,7 +81,42 @@ export async function POST(request: Request) {
           );
         }
 
+        const stripeCustomerId =
+          typeof session.customer === "string"
+            ? session.customer
+            : session.customer?.id ?? "none";
+        const purchaseTimestamp = new Date().toISOString();
+
+        if (productType === "travel_kit") {
+          await sendNotificationEmail(
+            "New travel kit purchase — $4.99",
+            `Someone just purchased the Qoyl Travel Kit.
+
+User ID: ${userId}
+Stripe customer: ${stripeCustomerId}
+Amount: $4.99
+Purchased at: ${purchaseTimestamp}
+
+No manual action needed — dashboard unlocks automatically.
+Check Supabase user_purchases table for full details.`
+          );
+        }
+
         if (productType === "routine_subscription") {
+          await sendNotificationEmail(
+            "New routine subscriber — $7.99/month 🎉",
+            `Someone just subscribed to the Qoyl Monthly Routine.
+
+User ID: ${userId}
+Stripe customer: ${stripeCustomerId}
+Amount: $7.99/month recurring
+Subscribed at: ${purchaseTimestamp}
+
+ACTION NEEDED: Send their personalized routine email from support@qoyl.live within 24 hours.
+Pull their hair profile from Supabase using the user_id above.
+Check Supabase hair_profiles table for their curl type, porosity, and zip code.`
+          );
+
           const recipientEmail =
             session.customer_email ?? session.customer_details?.email ?? null;
 

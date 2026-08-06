@@ -3,6 +3,7 @@ import Script from "next/script";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import CompatibilitySection from "@/components/CompatibilitySection";
+import CommentSection from "@/components/CommentSection";
 import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -112,6 +113,13 @@ export default async function PostPage({
     notFound();
   }
 
+  const { data: comments } = await supabase
+    .from("post_comments")
+    .select("id, display_name, body, created_at")
+    .eq("post_slug", params.slug)
+    .eq("approved", true)
+    .order("created_at", { ascending: true });
+
   const isVideoContent =
     post.content_type === "original-video" || post.content_type === "repost";
   const embedPlatform = post.video_url
@@ -182,6 +190,12 @@ export default async function PostPage({
         {post.related_product_name && (
           <CompatibilitySection productName={post.related_product_name} />
         )}
+
+        <CommentSection
+          postSlug={post.slug}
+          postTitle={post.title}
+          initialComments={comments ?? []}
+        />
       </article>
     </main>
   );
