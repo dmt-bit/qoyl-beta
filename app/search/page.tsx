@@ -33,11 +33,17 @@ type QoylProductRow = {
   barcode: string | null;
   ingredient_list_raw: string | null;
   ingredient_list_normalized: string[] | null;
-  brands: { name: string } | null;
+  catalog_brands: { name: string } | null;
 };
 
+// catalog_products/catalog_brands/catalog_product_ingredients -- not
+// "products"/"brands" -- since this Supabase project is shared with
+// qoyl-business, which already has its own brands/products/
+// product_ingredients tables for its B2B dashboard with a completely
+// different schema. Keeping qoyl-beta's consumer catalog on separate
+// tables avoids colliding with that.
 const QOYL_PRODUCT_SELECT =
-  "id, name, barcode, ingredient_list_raw, ingredient_list_normalized, brands(name)";
+  "id, name, barcode, ingredient_list_raw, ingredient_list_normalized, catalog_brands(name)";
 
 function toQoylProduct(p: QoylProductRow): Product | null {
   const ingredientsText =
@@ -48,33 +54,34 @@ function toQoylProduct(p: QoylProductRow): Product | null {
   return {
     code: p.barcode ?? p.id,
     name: p.name,
-    brand: p.brands?.name ?? "Unknown brand",
+    brand: p.catalog_brands?.name ?? "Unknown brand",
     ingredientsText,
     verified: true,
   };
 }
 
-// Searches Qoyl's own curated products table first -- by product name and
-// by brand name via the brands join -- before ever touching Open Beauty
-// Facts. Two separate queries merged client-side rather than a single
-// .or() filter across the join, since PostgREST's embedded-resource
-// filter syntax is easy to get subtly wrong with arbitrary user input.
+// Searches Qoyl's own curated catalog_products table first -- by product
+// name and by brand name via the catalog_brands join -- before ever
+// touching Open Beauty Facts. Two separate queries merged client-side
+// rather than a single .or() filter across the join, since PostgREST's
+// embedded-resource filter syntax is easy to get subtly wrong with
+// arbitrary user input.
 async function fetchQoylProducts(query: string): Promise<Product[]> {
   const term = `%${query}%`;
 
   const [{ data: byName }, { data: matchingBrands }] = await Promise.all([
     supabase
-      .from("products")
+      .from("catalog_products")
       .select(QOYL_PRODUCT_SELECT)
       .ilike("name", term)
       .limit(20),
-    supabase.from("brands").select("id").ilike("name", term),
+    supabase.from("catalog_brands").select("id").ilike("name", term),
   ]);
 
   const brandIds = (matchingBrands ?? []).map((b) => b.id);
   const { data: byBrand } = brandIds.length
     ? await supabase
-        .from("products")
+        .from("catalog_products")
         .select(QOYL_PRODUCT_SELECT)
         .in("brand_id", brandIds)
         .limit(20)

@@ -1,4 +1,9 @@
-create table if not exists brands (
+-- Named catalog_brands, not "brands" -- this Supabase project is shared
+-- with qoyl-business, which already has its own brands table (a B2B
+-- partner/dashboard-access lookup: brand_name, tier, partner,
+-- dashboard_access, partner_since -- a different schema for a different
+-- purpose). This table is qoyl-beta's own consumer-catalog brand list.
+create table if not exists catalog_brands (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
   slug text unique,
@@ -10,13 +15,13 @@ create table if not exists brands (
   created_at timestamptz default now()
 );
 
-alter table brands enable row level security;
+alter table catalog_brands enable row level security;
 
 -- Public catalog data -- /search reads this table directly with the anon
 -- client, so anyone needs select access. Writes only happen through the
 -- /admin/products routes, which use the service role and therefore
 -- bypass RLS entirely -- no insert/update policy is needed.
-create policy "Anyone can read brands"
-  on brands for select
+create policy "Anyone can read catalog_brands"
+  on catalog_brands for select
   to anon, authenticated
   using (true);

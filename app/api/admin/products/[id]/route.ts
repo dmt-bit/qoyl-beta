@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAuthorizedAdmin } from "@/lib/adminAuth";
-import { matchIngredientNames, parseIngredientListRaw } from "@/app/api/admin/products/route";
+import { matchIngredientNames, parseIngredientListRaw } from "@/lib/adminProducts";
 
 export async function PATCH(
   request: Request,
@@ -55,14 +55,14 @@ export async function PATCH(
     updates.ingredient_list_raw = ingredient_list_raw?.trim() || null;
     updates.ingredient_list_normalized = normalizedNames;
 
-    await admin.from("product_ingredients").delete().eq("product_id", params.id);
+    await admin.from("catalog_product_ingredients").delete().eq("product_id", params.id);
 
     if (normalizedNames.length > 0) {
       const matchResult = await matchIngredientNames(normalizedNames);
       unmatched = matchResult.unmatched;
 
       if (matchResult.matchedRows.length > 0) {
-        await admin.from("product_ingredients").insert(
+        await admin.from("catalog_product_ingredients").insert(
           matchResult.matchedRows.map((row) => ({
             product_id: params.id,
             ingredient_id: row.ingredient_id,
@@ -74,7 +74,7 @@ export async function PATCH(
   }
 
   const { data: product, error } = await admin
-    .from("products")
+    .from("catalog_products")
     .update(updates)
     .eq("id", params.id)
     .select()

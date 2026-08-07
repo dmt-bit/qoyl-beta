@@ -1,4 +1,4 @@
-insert into brands (name, slug, is_black_owned, is_indie) values
+insert into catalog_brands (name, slug, is_black_owned, is_indie) values
   ('Camille Rose', 'camille-rose', true, false),
   ('Mielle Organics', 'mielle-organics', true, false),
   ('As I Am', 'as-i-am', true, false),
