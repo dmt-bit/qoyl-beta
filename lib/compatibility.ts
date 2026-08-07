@@ -315,9 +315,16 @@ function applyCurlTypeAdjustment(
   return { score: adjustedScore, rating: ratingForScore(adjustedScore) };
 }
 
-export async function scoreIngredientsText(
-  ingredientsText: string
-): Promise<{ error?: string; result?: ScoreResult }> {
+type ScoringProfile = {
+  climate: string | null;
+  porosity: string;
+  scalpCondition: string | null;
+  family: CurlFamily | null;
+};
+
+async function loadScoringProfile(): Promise<
+  { error: string } | { profile: ScoringProfile }
+> {
   const profileId = localStorage.getItem("hair_profile_id");
   if (!profileId) {
     return {
@@ -342,50 +349,47 @@ export async function scoreIngredientsText(
     profile.porosity === "not sure" || profile.porosity === "not_sure" || !profile.porosity
       ? "medium"
       : profile.porosity;
-  const scalpCondition = normalizeScalpCondition(profile.scalp_condition);
-  const family = curlFamily(profile.curl_type);
 
-  const ingredientNames = parseIngredients(ingredientsText);
+  return {
+    profile: {
+      climate: profile.climate,
+      porosity,
+      scalpCondition: normalizeScalpCondition(profile.scalp_condition),
+      family: curlFamily(profile.curl_type),
+    },
+  };
+}
 
-  const [{ data: allIngredients, error: ingredientsError }, { data: aliasRows }] =
-    await Promise.all([
-      supabase.from("ingredients").select("id, inci_name, common_name"),
-      supabase.from("aliases").select("alias, ingredient_id"),
-    ]);
+type PositionedIngredient = {
+  id: string;
+  inci_name: string;
+  common_name: string;
+  position: number;
+};
 
-  if (ingredientsError || !allIngredients) {
-    return { error: "Couldn't load ingredient data." };
-  }
-
-  const aliasMap = new Map<string, string>();
-  for (const row of aliasRows ?? []) {
-    aliasMap.set(row.alias.trim().toLowerCase(), row.ingredient_id);
-  }
-
-  // position is the 1-based index of the ingredient's first appearance in
-  // the (already deduped) parsed list -- labels list ingredients in
-  // descending concentration order, so this doubles as a concentration
-  // proxy for positionWeight below.
-  const matched = new Map<string, IngredientRow>();
-  const positionById = new Map<string, number>();
-  ingredientNames.forEach((name, index) => {
-    const match = findBestIngredientMatch(name, allIngredients, aliasMap);
-    if (match) {
-      matched.set(match.id, match);
-      if (!positionById.has(match.id)) {
-        positionById.set(match.id, index + 1);
-      }
-    }
-  });
-
-  if (matched.size === 0) {
+// Shared by both scoring entry points below -- everything from here down
+// (compatibility_scores lookup, specificity resolution, curl-type
+// adjustment, weighted scoring) is identical regardless of whether the
+// ingredient+position list came from parsing raw label text or reading
+// catalog_product_ingredients directly. Only how that list is gathered
+// differs between the two callers.
+async function scorePositionedIngredients(
+  ingredients: PositionedIngredient[],
+  profile: ScoringProfile
+): Promise<{ error?: string; result?: ScoreResult }> {
+  if (ingredients.length === 0) {
     return { result: { normalizedScore: 0, matches: [] } };
   }
+
+  const { porosity, scalpCondition, family, climate } = profile;
 
   const { data: scoreRows, error: scoreError } = await supabase
     .from("compatibility_scores")
     .select("ingredient_id, scalp_condition, hair_type, score, rating")
-    .in("ingredient_id", Array.from(matched.keys()))
+    .in(
+      "ingredient_id",
+      ingredients.map((i) => i.id)
+    )
     .eq("porosity", porosity);
 
   if (scoreError) {
@@ -435,40 +439,131 @@ export async function scoreIngredientsText(
   }
 
   const matchList: Match[] = [];
-  Array.from(matched.entries()).forEach(([id, ingredient]) => {
-    const scored = bestRowPerIngredient.get(id);
-    if (!scored) return;
+  for (const ingredient of ingredients) {
+    const scored = bestRowPerIngredient.get(ingredient.id);
+    if (!scored) continue;
 
-    const { score, rating } = hairTypeOverridden.has(id)
+    const { score, rating } = hairTypeOverridden.has(ingredient.id)
       ? scored
       : applyCurlTypeAdjustment(
           ingredient.inci_name,
           family,
           scored.score,
           scored.rating,
-          profile.climate
+          climate
         );
-
-    const position = positionById.get(id) ?? Number.MAX_SAFE_INTEGER;
 
     matchList.push({
       ingredient_name: ingredient.common_name || ingredient.inci_name,
       score,
       rating,
-      position,
-      weight: positionWeight(position),
+      position: ingredient.position,
+      weight: positionWeight(ingredient.position),
     });
-  });
+  }
 
   // Weighted mean instead of a simple mean -- an ingredient at position 2
   // (weight 1.3) counts for more of the final score than the same
   // ingredient would at position 22 (weight 0.6). Still lands on the same
   // 0-100 scale as before since both the numerator and denominator carry
-  // the weight.
+  // the weight. Capped defensively at 100 -- the weighted mean can't
+  // mathematically exceed it, but the cap makes that guarantee explicit.
   const weightedSum = matchList.reduce((acc, m) => acc + m.score * m.weight, 0);
   const weightTotal = matchList.reduce((acc, m) => acc + m.weight, 0);
   const normalizedScore =
-    weightTotal === 0 ? 0 : Math.round((weightedSum / (weightTotal * 10)) * 100);
+    weightTotal === 0
+      ? 0
+      : Math.min(100, Math.round((weightedSum / (weightTotal * 10)) * 100));
 
   return { result: { normalizedScore, matches: matchList } };
+}
+
+export async function scoreIngredientsText(
+  ingredientsText: string
+): Promise<{ error?: string; result?: ScoreResult }> {
+  const ctx = await loadScoringProfile();
+  if ("error" in ctx) return { error: ctx.error };
+  const { profile } = ctx;
+
+  const ingredientNames = parseIngredients(ingredientsText);
+
+  const [{ data: allIngredients, error: ingredientsError }, { data: aliasRows }] =
+    await Promise.all([
+      supabase.from("ingredients").select("id, inci_name, common_name"),
+      supabase.from("aliases").select("alias, ingredient_id"),
+    ]);
+
+  if (ingredientsError || !allIngredients) {
+    return { error: "Couldn't load ingredient data." };
+  }
+
+  const aliasMap = new Map<string, string>();
+  for (const row of aliasRows ?? []) {
+    aliasMap.set(row.alias.trim().toLowerCase(), row.ingredient_id);
+  }
+
+  // position is the 1-based index of the ingredient's first appearance in
+  // the (already deduped) parsed list -- labels list ingredients in
+  // descending concentration order, so this doubles as a concentration
+  // proxy for positionWeight below.
+  const matched = new Map<string, IngredientRow>();
+  const positionById = new Map<string, number>();
+  ingredientNames.forEach((name, index) => {
+    const match = findBestIngredientMatch(name, allIngredients, aliasMap);
+    if (match) {
+      matched.set(match.id, match);
+      if (!positionById.has(match.id)) {
+        positionById.set(match.id, index + 1);
+      }
+    }
+  });
+
+  const positioned: PositionedIngredient[] = Array.from(matched.entries()).map(
+    ([id, ingredient]) => ({
+      id,
+      inci_name: ingredient.inci_name,
+      common_name: ingredient.common_name,
+      position: positionById.get(id) ?? Number.MAX_SAFE_INTEGER,
+    })
+  );
+
+  return scorePositionedIngredients(positioned, profile);
+}
+
+// For products from Qoyl's own curated catalog -- reads
+// catalog_product_ingredients directly instead of re-parsing label text,
+// so scoring uses the exact ingredient links and positions set during
+// curation (via /admin/products) rather than re-deriving them at score
+// time. More accurate, and immune to any future drift in the text-based
+// matcher above.
+export async function scoreCatalogProduct(
+  productId: string
+): Promise<{ error?: string; result?: ScoreResult }> {
+  const ctx = await loadScoringProfile();
+  if ("error" in ctx) return { error: ctx.error };
+  const { profile } = ctx;
+
+  const { data: rows, error } = await supabase
+    .from("catalog_product_ingredients")
+    .select("position, ingredients(id, inci_name, common_name)")
+    .eq("product_id", productId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  const positioned: PositionedIngredient[] = (rows ?? [])
+    .map((row) => {
+      const ingredient = row.ingredients as unknown as IngredientRow | null;
+      if (!ingredient) return null;
+      return {
+        id: ingredient.id,
+        inci_name: ingredient.inci_name,
+        common_name: ingredient.common_name,
+        position: row.position,
+      };
+    })
+    .filter((i): i is PositionedIngredient => i !== null);
+
+  return scorePositionedIngredients(positioned, profile);
 }

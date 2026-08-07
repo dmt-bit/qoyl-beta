@@ -7,7 +7,11 @@ import { ScoreResultView } from "@/components/CompatibilityScore";
 import FeedbackSurveyModal from "@/components/FeedbackSurveyModal";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
-import { ScoreResult, scoreIngredientsText } from "@/lib/compatibility";
+import {
+  ScoreResult,
+  scoreCatalogProduct,
+  scoreIngredientsText,
+} from "@/lib/compatibility";
 import { supabase } from "@/lib/supabase";
 
 type Product = {
@@ -16,6 +20,10 @@ type Product = {
   brand: string;
   ingredientsText: string;
   verified: boolean;
+  // Set only for catalog_products rows -- when present, scoring reads
+  // catalog_product_ingredients directly (see scoreCatalogProduct)
+  // instead of re-parsing ingredientsText.
+  catalogProductId: string | null;
 };
 
 type OpenBeautyFactsProduct = {
@@ -57,6 +65,7 @@ function toQoylProduct(p: QoylProductRow): Product | null {
     brand: p.catalog_brands?.name ?? "Unknown brand",
     ingredientsText,
     verified: true,
+    catalogProductId: p.id,
   };
 }
 
@@ -158,6 +167,7 @@ function toProduct(p: OpenBeautyFactsProduct): Product | null {
     brand: p.brands ?? "Unknown brand",
     ingredientsText: p.ingredients_text,
     verified: false,
+    catalogProductId: null,
   };
 }
 
@@ -230,14 +240,15 @@ function SearchPageContent() {
       try {
         const qoylProducts = await fetchQoylProducts(query);
 
-        if (qoylProducts.length > 0) {
+        if (qoylProducts.length >= 3) {
           setResults(qoylProducts);
           setHasSearched(true);
           return;
         }
 
-        // Qoyl's own catalog has no match -- Open Beauty Facts is a
-        // secondary source, not the primary one anymore.
+        // Fewer than 3 curated matches -- Open Beauty Facts supplements
+        // the list rather than replacing it. Curated results always come
+        // first (and carry the verified badge); OBF fills out the rest.
         const obfProducts = await fetchObfProducts(query, controller.signal);
 
         const relevant = obfProducts.filter(
@@ -247,15 +258,15 @@ function SearchPageContent() {
           .map(toProduct)
           .filter((p): p is Product => p !== null);
 
-        // Fewer than 3 usable results after filtering -- the filter is
+        // Fewer than 3 usable OBF results after filtering -- the filter is
         // doing more harm than good here, so show everything rather than
         // leave the user with an empty or near-empty list.
-        const products =
+        const obfFallback =
           relevantProducts.length >= 3
             ? relevantProducts
             : obfProducts.map(toProduct).filter((p): p is Product => p !== null);
 
-        setResults(products);
+        setResults([...qoylProducts, ...obfFallback]);
         setHasSearched(true);
       } catch (err) {
         if (err instanceof Error && err.name !== "AbortError") {
@@ -309,12 +320,15 @@ function SearchPageContent() {
     }
   }
 
-  async function runScoring(ingredientsText: string, product?: Product) {
+  async function runScoring(
+    scorer: () => Promise<{ error?: string; result?: ScoreResult }>,
+    product?: Product
+  ) {
     setScoring(true);
     setScoreError(null);
     setScoreResult(null);
 
-    const outcome = await scoreIngredientsText(ingredientsText);
+    const outcome = await scorer();
 
     setScoring(false);
 
@@ -334,13 +348,21 @@ function SearchPageContent() {
   function selectProduct(product: Product) {
     setSelectedProduct(product);
     setManualIngredients("");
-    runScoring(product.ingredientsText, product);
+
+    // Catalog products score off catalog_product_ingredients directly
+    // (curated ingredient links + positions); everything else (OBF,
+    // manual paste) scores off the raw ingredient text.
+    const scorer = product.catalogProductId
+      ? () => scoreCatalogProduct(product.catalogProductId as string)
+      : () => scoreIngredientsText(product.ingredientsText);
+
+    runScoring(scorer, product);
   }
 
   function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSelectedProduct(null);
-    runScoring(manualIngredients);
+    runScoring(() => scoreIngredientsText(manualIngredients));
   }
 
   const showManualFallback =
@@ -400,7 +422,7 @@ function SearchPageContent() {
                       </p>
                       {product.verified && (
                         <span className="inline-block shrink-0 rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium text-bronze2">
-                          Verified by Qoyl
+                          Verified by Qoyl ✓
                         </span>
                       )}
                     </div>
