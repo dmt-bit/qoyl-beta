@@ -26,17 +26,35 @@ export function parseIngredientListRaw(raw: string): string[] {
     .filter(Boolean);
 }
 
+export type MatchIngredientNamesResult = {
+  // Number of entries on the label (positions), not deduped -- what "Y"
+  // means in the "X of Y ingredients matched" summary.
+  totalCount: number;
+  // Entries that resolved to an existing ingredients/aliases row.
+  matchedCount: number;
+  // Distinct names that matched nothing and got a brand-new ingredients
+  // row created for them.
+  createdCount: number;
+  createdNames: string[];
+  // Every row to insert into catalog_product_ingredients -- both the
+  // genuinely-matched ones and the newly-created ones, so nothing on the
+  // label is left unlinked.
+  linkRows: { ingredient_id: string; position: number }[];
+};
+
 // Matches each normalized ingredient name against the ingredients +
 // aliases tables (same tiered matcher used by the live scoring flow in
-// lib/compatibility.ts). Returns the rows to insert into
-// catalog_product_ingredients plus the list of names that matched
-// nothing, for the admin UI to flag as needing a new ingredients row.
+// lib/compatibility.ts). Anything that matches nothing gets a new,
+// minimal ingredients row (inci_name only, no chemistry data) created and
+// linked automatically -- flagged back to the caller as "created" rather
+// than left unlinked, since /admin/products' product library relies on
+// compatibility_scores presence (not link presence) to signal real
+// curation quality: a freshly auto-created ingredient has no
+// compatibility_scores row yet, so it naturally shows up as unscored on
+// the match-rate column until someone enriches it.
 export async function matchIngredientNames(
   names: string[]
-): Promise<{
-  matchedRows: { ingredient_id: string; position: number }[];
-  unmatched: string[];
-}> {
+): Promise<MatchIngredientNamesResult> {
   const admin = getSupabaseAdmin();
 
   const [{ data: allIngredients }, { data: aliasRows }] = await Promise.all([
@@ -50,7 +68,9 @@ export async function matchIngredientNames(
   }
 
   const positionById = new Map<string, number>();
-  const unmatched: string[] = [];
+  // Deduped by lowercased name -- a label that repeats an ingredient
+  // string should only create one new ingredients row for it.
+  const unmatchedByKey = new Map<string, { name: string; position: number }>();
 
   names.forEach((name, index) => {
     const match = findBestIngredientMatch(
@@ -63,13 +83,36 @@ export async function matchIngredientNames(
         positionById.set(match.id, index + 1);
       }
     } else {
-      unmatched.push(name);
+      const key = name.toLowerCase();
+      if (!unmatchedByKey.has(key)) {
+        unmatchedByKey.set(key, { name, position: index + 1 });
+      }
     }
   });
 
-  const matchedRows = Array.from(positionById.entries()).map(
+  const matchedCount = positionById.size;
+  const createdNames: string[] = [];
+
+  for (const { name, position } of Array.from(unmatchedByKey.values())) {
+    const { data: newIngredient, error } = await admin
+      .from("ingredients")
+      .insert({ inci_name: name, common_name: null })
+      .select("id")
+      .single();
+    if (error || !newIngredient) continue;
+    positionById.set(newIngredient.id, position);
+    createdNames.push(name);
+  }
+
+  const linkRows = Array.from(positionById.entries()).map(
     ([ingredient_id, position]) => ({ ingredient_id, position })
   );
 
-  return { matchedRows, unmatched };
+  return {
+    totalCount: names.length,
+    matchedCount,
+    createdCount: createdNames.length,
+    createdNames,
+    linkRows,
+  };
 }

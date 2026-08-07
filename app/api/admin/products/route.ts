@@ -131,15 +131,20 @@ export async function POST(request: Request) {
     );
   }
 
-  let unmatched: string[] = [];
+  let matchSummary = {
+    totalCount: 0,
+    matchedCount: 0,
+    createdCount: 0,
+    createdNames: [] as string[],
+  };
 
   if (normalizedNames.length > 0) {
-    const matchResult = await matchIngredientNames(normalizedNames);
-    unmatched = matchResult.unmatched;
+    const { linkRows, ...summary } = await matchIngredientNames(normalizedNames);
+    matchSummary = summary;
 
-    if (matchResult.matchedRows.length > 0) {
+    if (linkRows.length > 0) {
       await admin.from("catalog_product_ingredients").insert(
-        matchResult.matchedRows.map((row) => ({
+        linkRows.map((row) => ({
           product_id: product.id,
           ingredient_id: row.ingredient_id,
           position: row.position,
@@ -148,5 +153,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ product, unmatched });
+  return NextResponse.json({ product, ...matchSummary });
 }

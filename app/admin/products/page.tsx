@@ -19,7 +19,23 @@ type AdminProduct = {
   brand_name: string | null;
   category_name: string | null;
   match_rate: number | null;
+  created_at: string;
 };
+
+type MatchSummary = {
+  totalCount: number;
+  matchedCount: number;
+  createdCount: number;
+  createdNames: string[];
+};
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 type ProductFormValues = {
   name: string;
@@ -43,6 +59,34 @@ const EMPTY_FORM: ProductFormValues = {
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none";
+
+function MatchSummaryBox({
+  title,
+  summary,
+}: {
+  title: string;
+  summary: MatchSummary;
+}) {
+  return (
+    <div className="mt-4 rounded-lg border border-bronze/30 bg-bronze/5 p-3">
+      <p className="text-xs font-medium text-cream/80">
+        {title} {summary.matchedCount} of {summary.totalCount} ingredients
+        matched. {summary.createdCount} new ingredient
+        {summary.createdCount === 1 ? "" : "s"} created.
+      </p>
+      {summary.createdNames.length > 0 && (
+        <>
+          <p className="mt-2 text-xs font-medium text-amber">
+            Review these newly-created ingredients:
+          </p>
+          <p className="mt-1 text-xs text-cream/70">
+            {summary.createdNames.join(", ")}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
 
 function ProductForm({
   values,
@@ -177,13 +221,13 @@ export default function AdminProductsPage() {
   const [addForm, setAddForm] = useState<ProductFormValues>(EMPTY_FORM);
   const [addSubmitting, setAddSubmitting] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
-  const [addUnmatched, setAddUnmatched] = useState<string[]>([]);
+  const [addSummary, setAddSummary] = useState<MatchSummary | null>(null);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<ProductFormValues>(EMPTY_FORM);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-  const [editUnmatched, setEditUnmatched] = useState<string[]>([]);
+  const [editSummary, setEditSummary] = useState<MatchSummary | null>(null);
 
   async function loadProducts(pw: string): Promise<boolean> {
     setLoading(true);
@@ -255,7 +299,7 @@ export default function AdminProductsPage() {
     e.preventDefault();
     setAddSubmitting(true);
     setAddError(null);
-    setAddUnmatched([]);
+    setAddSummary(null);
 
     const res = await fetch("/api/admin/products", {
       method: "POST",
@@ -278,7 +322,12 @@ export default function AdminProductsPage() {
       { ...data.product, brand_name: null, category_name: null, match_rate: null },
       ...prev,
     ]);
-    setAddUnmatched(data.unmatched ?? []);
+    setAddSummary({
+      totalCount: data.totalCount ?? 0,
+      matchedCount: data.matchedCount ?? 0,
+      createdCount: data.createdCount ?? 0,
+      createdNames: data.createdNames ?? [],
+    });
     setAddForm(EMPTY_FORM);
     // Brand/category names on the new row aren't returned by POST --
     // refresh from the list endpoint so they render correctly.
@@ -288,7 +337,7 @@ export default function AdminProductsPage() {
   function startEdit(product: AdminProduct) {
     setEditingId(product.id);
     setEditError(null);
-    setEditUnmatched([]);
+    setEditSummary(null);
     setEditForm({
       name: product.name,
       brand_id: product.brand_id ?? "",
@@ -306,7 +355,7 @@ export default function AdminProductsPage() {
 
     setEditSubmitting(true);
     setEditError(null);
-    setEditUnmatched([]);
+    setEditSummary(null);
 
     const res = await fetch(`/api/admin/products/${editingId}`, {
       method: "PATCH",
@@ -325,12 +374,19 @@ export default function AdminProductsPage() {
       return;
     }
 
-    setEditUnmatched(data.unmatched ?? []);
-    setEditingId(null);
+    setEditSummary({
+      totalCount: data.totalCount ?? 0,
+      matchedCount: data.matchedCount ?? 0,
+      createdCount: data.createdCount ?? 0,
+      createdNames: data.createdNames ?? [],
+    });
+    // Stay open (rather than collapsing back to view mode) so the match
+    // summary below the form is visible -- same pattern as Add.
     loadProducts(password);
   }
 
-  async function markVerified(productId: string) {
+  async function markVerified(productId: string, e: React.MouseEvent) {
+    e.stopPropagation();
     await fetch(`/api/admin/products/${productId}`, {
       method: "PATCH",
       headers: {
@@ -406,16 +462,8 @@ export default function AdminProductsPage() {
             />
           </div>
           {addError && <p className="mt-3 text-sm text-red">{addError}</p>}
-          {addUnmatched.length > 0 && (
-            <div className="mt-4 rounded-lg border border-amber/40 bg-amber/10 p-3">
-              <p className="text-xs font-medium text-amber">
-                These ingredients didn&apos;t match anything in the
-                ingredients table and need to be added:
-              </p>
-              <p className="mt-1 text-xs text-cream/70">
-                {addUnmatched.join(", ")}
-              </p>
-            </div>
+          {addSummary && (
+            <MatchSummaryBox title="Product added." summary={addSummary} />
           )}
         </section>
 
@@ -429,86 +477,92 @@ export default function AdminProductsPage() {
           )}
 
           <ul className="mt-4 space-y-3">
-            {products.map((product) => (
-              <li
-                key={product.id}
-                className="rounded-lg border border-bronze/30 p-4"
-              >
-                {editingId === product.id ? (
-                  <>
-                    <ProductForm
-                      values={editForm}
-                      brands={brands}
-                      categories={categories}
-                      submitting={editSubmitting}
-                      submitLabel="Save changes"
-                      onChange={setEditForm}
-                      onSubmit={handleEditSubmit}
-                      onCancel={() => setEditingId(null)}
-                    />
-                    {editError && (
-                      <p className="mt-3 text-sm text-red">{editError}</p>
-                    )}
-                    {editUnmatched.length > 0 && (
-                      <div className="mt-4 rounded-lg border border-amber/40 bg-amber/10 p-3">
-                        <p className="text-xs font-medium text-amber">
-                          These ingredients didn&apos;t match anything and
-                          need to be added:
+            {products.map((product) => {
+              const isEditing = editingId === product.id;
+              const ingredientCount = product.ingredient_list_normalized?.length ?? 0;
+
+              return (
+                <li
+                  key={product.id}
+                  className="rounded-lg border border-bronze/30 p-4"
+                >
+                  {isEditing ? (
+                    <>
+                      <ProductForm
+                        values={editForm}
+                        brands={brands}
+                        categories={categories}
+                        submitting={editSubmitting}
+                        submitLabel="Save changes"
+                        onChange={setEditForm}
+                        onSubmit={handleEditSubmit}
+                        onCancel={() => setEditingId(null)}
+                      />
+                      {editError && (
+                        <p className="mt-3 text-sm text-red">{editError}</p>
+                      )}
+                      {editSummary && (
+                        <MatchSummaryBox
+                          title="Product updated."
+                          summary={editSummary}
+                        />
+                      )}
+                    </>
+                  ) : (
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => startEdit(product)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          startEdit(product);
+                        }
+                      }}
+                      className="flex cursor-pointer items-start justify-between gap-4"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-serif text-base text-cream">
+                            {product.name}
+                          </p>
+                          {product.is_verified && (
+                            <span className="inline-block rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium text-bronze2">
+                              Verified
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-bronze2">
+                          {product.brand_name ?? "No brand"}
+                          {product.category_name
+                            ? ` · ${product.category_name}`
+                            : ""}
                         </p>
-                        <p className="mt-1 text-xs text-cream/70">
-                          {editUnmatched.join(", ")}
+                        <p className="mt-1 text-xs text-cream/50">
+                          {ingredientCount} ingredient
+                          {ingredientCount === 1 ? "" : "s"} · Match rate:{" "}
+                          {product.match_rate === null
+                            ? "—"
+                            : `${product.match_rate}%`}{" "}
+                          · Added {formatDate(product.created_at)}
                         </p>
                       </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-serif text-base text-cream">
-                          {product.name}
-                        </p>
-                        {product.is_verified && (
-                          <span className="inline-block rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium text-bronze2">
-                            Verified
-                          </span>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        {!product.is_verified && (
+                          <button
+                            type="button"
+                            onClick={(e) => markVerified(product.id, e)}
+                            className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                          >
+                            Mark verified
+                          </button>
                         )}
                       </div>
-                      <p className="text-xs text-bronze2">
-                        {product.brand_name ?? "No brand"}
-                        {product.category_name
-                          ? ` · ${product.category_name}`
-                          : ""}
-                      </p>
-                      <p className="mt-1 text-xs text-cream/50">
-                        Match rate:{" "}
-                        {product.match_rate === null
-                          ? "—"
-                          : `${product.match_rate}%`}
-                      </p>
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                      <button
-                        type="button"
-                        onClick={() => startEdit(product)}
-                        className="text-xs text-cream/70 underline underline-offset-2 hover:text-cream"
-                      >
-                        Edit
-                      </button>
-                      {!product.is_verified && (
-                        <button
-                          type="button"
-                          onClick={() => markVerified(product.id)}
-                          className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
-                        >
-                          Mark verified
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </li>
-            ))}
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
       </div>

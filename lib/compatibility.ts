@@ -63,11 +63,18 @@ export const RATING_DOT_CLASSES: Record<string, string> = {
 export type IngredientRow = {
   id: string;
   inci_name: string;
-  common_name: string;
+  // Nullable in the DB -- ingredients auto-created from an unmatched
+  // label (see lib/adminProducts.ts's matchIngredientNames) only get an
+  // inci_name, not a curated common_name.
+  common_name: string | null;
 };
 
 function firstWord(s: string): string {
   return s.trim().split(/\s+/)[0] ?? "";
+}
+
+function normalized(s: string | null): string {
+  return s ? s.trim().toLowerCase() : "";
 }
 
 // Counts shared whitespace-separated tokens between two strings, used to
@@ -87,11 +94,11 @@ function bestByOverlap(
   return candidates.reduce((best, candidate) => {
     const candidateScore = Math.max(
       wordOverlapScore(name, candidate.inci_name),
-      wordOverlapScore(name, candidate.common_name)
+      wordOverlapScore(name, normalized(candidate.common_name))
     );
     const bestScore = Math.max(
       wordOverlapScore(name, best.inci_name),
-      wordOverlapScore(name, best.common_name)
+      wordOverlapScore(name, normalized(best.common_name))
     );
     return candidateScore > bestScore ? candidate : best;
   });
@@ -122,7 +129,7 @@ export function findBestIngredientMatch(
   const exact = allIngredients.find(
     (ing) =>
       ing.inci_name.trim().toLowerCase() === name ||
-      ing.common_name.trim().toLowerCase() === name
+      normalized(ing.common_name) === name
   );
   if (exact) return exact;
 
@@ -131,7 +138,7 @@ export function findBestIngredientMatch(
     const firstWordCandidates = allIngredients.filter(
       (ing) =>
         firstWord(ing.inci_name.toLowerCase()) === nameFirstWord ||
-        firstWord(ing.common_name.toLowerCase()) === nameFirstWord
+        firstWord(normalized(ing.common_name)) === nameFirstWord
     );
     if (firstWordCandidates.length === 1) return firstWordCandidates[0];
     if (firstWordCandidates.length > 1) {
@@ -146,7 +153,7 @@ export function findBestIngredientMatch(
   const MIN_SUBSTRING_LENGTH = 4;
   const containsCandidates = allIngredients.filter((ing) => {
     const inci = ing.inci_name.trim().toLowerCase();
-    const common = ing.common_name.trim().toLowerCase();
+    const common = normalized(ing.common_name);
     return (
       (inci.length >= MIN_SUBSTRING_LENGTH &&
         (name.includes(inci) || inci.includes(name))) ||
@@ -363,7 +370,7 @@ async function loadScoringProfile(): Promise<
 type PositionedIngredient = {
   id: string;
   inci_name: string;
-  common_name: string;
+  common_name: string | null;
   position: number;
 };
 

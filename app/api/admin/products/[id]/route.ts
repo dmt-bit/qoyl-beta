@@ -43,7 +43,12 @@ export async function PATCH(
   if (image_url !== undefined) updates.image_url = image_url?.trim() || null;
   if (is_verified !== undefined) updates.is_verified = is_verified;
 
-  let unmatched: string[] = [];
+  let matchSummary = {
+    totalCount: 0,
+    matchedCount: 0,
+    createdCount: 0,
+    createdNames: [] as string[],
+  };
 
   // Re-parsing the ingredient list replaces product_ingredients entirely
   // rather than merging -- positions shift whenever the list changes, so
@@ -58,12 +63,12 @@ export async function PATCH(
     await admin.from("catalog_product_ingredients").delete().eq("product_id", params.id);
 
     if (normalizedNames.length > 0) {
-      const matchResult = await matchIngredientNames(normalizedNames);
-      unmatched = matchResult.unmatched;
+      const { linkRows, ...summary } = await matchIngredientNames(normalizedNames);
+      matchSummary = summary;
 
-      if (matchResult.matchedRows.length > 0) {
+      if (linkRows.length > 0) {
         await admin.from("catalog_product_ingredients").insert(
-          matchResult.matchedRows.map((row) => ({
+          linkRows.map((row) => ({
             product_id: params.id,
             ingredient_id: row.ingredient_id,
             position: row.position,
@@ -87,5 +92,5 @@ export async function PATCH(
     );
   }
 
-  return NextResponse.json({ product, unmatched });
+  return NextResponse.json({ product, ...matchSummary });
 }
