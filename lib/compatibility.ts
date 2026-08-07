@@ -139,12 +139,19 @@ export function findBestIngredientMatch(
     }
   }
 
+  // Minimum length for either side of a containment check -- short
+  // strings (e.g. "TEA", a common_name for Triethanolamine) will
+  // coincidentally appear inside unrelated names (e.g. "CeTEAreth-25"),
+  // producing a confident-looking but wrong single-candidate match.
+  const MIN_SUBSTRING_LENGTH = 4;
   const containsCandidates = allIngredients.filter((ing) => {
     const inci = ing.inci_name.trim().toLowerCase();
     const common = ing.common_name.trim().toLowerCase();
     return (
-      (inci.length > 0 && (name.includes(inci) || inci.includes(name))) ||
-      (common.length > 0 && (name.includes(common) || common.includes(name)))
+      (inci.length >= MIN_SUBSTRING_LENGTH &&
+        (name.includes(inci) || inci.includes(name))) ||
+      (common.length >= MIN_SUBSTRING_LENGTH &&
+        (name.includes(common) || common.includes(name)))
     );
   });
   if (containsCandidates.length === 1) return containsCandidates[0];
