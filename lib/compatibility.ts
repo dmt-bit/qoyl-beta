@@ -4,6 +4,8 @@ export type Match = {
   ingredient_name: string;
   score: number;
   rating: "good" | "neutral" | "caution" | "avoid" | string;
+  position: number;
+  weight: number;
 };
 
 export type ScoreResult = {
@@ -34,6 +36,17 @@ export function scoreTier(score: number): "green" | "amber" | "red" {
   return "red";
 }
 
+// Ingredients are listed on a label in descending order of concentration,
+// so position is a proxy for how much of the product it actually makes
+// up -- an ingredient at position 2 matters far more than the same
+// ingredient at position 22. position is 1-based.
+export function positionWeight(position: number): number {
+  if (position <= 5) return 1.3;
+  if (position <= 10) return 1.0;
+  if (position <= 20) return 0.8;
+  return 0.6;
+}
+
 export const TIER_CLASSES: Record<"green" | "amber" | "red", string> = {
   green: "bg-green text-dark",
   amber: "bg-amber text-dark",
@@ -47,7 +60,7 @@ export const RATING_DOT_CLASSES: Record<string, string> = {
   avoid: "bg-red",
 };
 
-type IngredientRow = {
+export type IngredientRow = {
   id: string;
   inci_name: string;
   common_name: string;
@@ -92,10 +105,19 @@ function bestByOverlap(
 // this tries progressively looser tiers: exact -> first word -> substring.
 export function findBestIngredientMatch(
   productIngredientName: string,
-  allIngredients: IngredientRow[]
+  allIngredients: IngredientRow[],
+  aliasMap?: Map<string, string>
 ): IngredientRow | null {
   const name = productIngredientName.trim().toLowerCase();
   if (!name) return null;
+
+  if (aliasMap) {
+    const aliasedId = aliasMap.get(name);
+    if (aliasedId) {
+      const byAlias = allIngredients.find((ing) => ing.id === aliasedId);
+      if (byAlias) return byAlias;
+    }
+  }
 
   const exact = allIngredients.find(
     (ing) =>
@@ -318,19 +340,36 @@ export async function scoreIngredientsText(
 
   const ingredientNames = parseIngredients(ingredientsText);
 
-  const { data: allIngredients, error: ingredientsError } = await supabase
-    .from("ingredients")
-    .select("id, inci_name, common_name");
+  const [{ data: allIngredients, error: ingredientsError }, { data: aliasRows }] =
+    await Promise.all([
+      supabase.from("ingredients").select("id, inci_name, common_name"),
+      supabase.from("aliases").select("alias, ingredient_id"),
+    ]);
 
   if (ingredientsError || !allIngredients) {
     return { error: "Couldn't load ingredient data." };
   }
 
-  const matched = new Map<string, IngredientRow>();
-  for (const name of ingredientNames) {
-    const match = findBestIngredientMatch(name, allIngredients);
-    if (match) matched.set(match.id, match);
+  const aliasMap = new Map<string, string>();
+  for (const row of aliasRows ?? []) {
+    aliasMap.set(row.alias.trim().toLowerCase(), row.ingredient_id);
   }
+
+  // position is the 1-based index of the ingredient's first appearance in
+  // the (already deduped) parsed list -- labels list ingredients in
+  // descending concentration order, so this doubles as a concentration
+  // proxy for positionWeight below.
+  const matched = new Map<string, IngredientRow>();
+  const positionById = new Map<string, number>();
+  ingredientNames.forEach((name, index) => {
+    const match = findBestIngredientMatch(name, allIngredients, aliasMap);
+    if (match) {
+      matched.set(match.id, match);
+      if (!positionById.has(match.id)) {
+        positionById.set(match.id, index + 1);
+      }
+    }
+  });
 
   if (matched.size === 0) {
     return { result: { normalizedScore: 0, matches: [] } };
@@ -403,18 +442,26 @@ export async function scoreIngredientsText(
           profile.climate
         );
 
+    const position = positionById.get(id) ?? Number.MAX_SAFE_INTEGER;
+
     matchList.push({
       ingredient_name: ingredient.common_name || ingredient.inci_name,
       score,
       rating,
+      position,
+      weight: positionWeight(position),
     });
   });
 
-  const sum = matchList.reduce((acc, m) => acc + m.score, 0);
+  // Weighted mean instead of a simple mean -- an ingredient at position 2
+  // (weight 1.3) counts for more of the final score than the same
+  // ingredient would at position 22 (weight 0.6). Still lands on the same
+  // 0-100 scale as before since both the numerator and denominator carry
+  // the weight.
+  const weightedSum = matchList.reduce((acc, m) => acc + m.score * m.weight, 0);
+  const weightTotal = matchList.reduce((acc, m) => acc + m.weight, 0);
   const normalizedScore =
-    matchList.length === 0
-      ? 0
-      : Math.round((sum / (matchList.length * 10)) * 100);
+    weightTotal === 0 ? 0 : Math.round((weightedSum / (weightTotal * 10)) * 100);
 
   return { result: { normalizedScore, matches: matchList } };
 }

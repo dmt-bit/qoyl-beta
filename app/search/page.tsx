@@ -15,6 +15,7 @@ type Product = {
   name: string;
   brand: string;
   ingredientsText: string;
+  verified: boolean;
 };
 
 type OpenBeautyFactsProduct = {
@@ -25,6 +26,69 @@ type OpenBeautyFactsProduct = {
   ingredients_text?: string;
   categories_tags?: string[];
 };
+
+type QoylProductRow = {
+  id: string;
+  name: string;
+  barcode: string | null;
+  ingredient_list_raw: string | null;
+  ingredient_list_normalized: string[] | null;
+  brands: { name: string } | null;
+};
+
+const QOYL_PRODUCT_SELECT =
+  "id, name, barcode, ingredient_list_raw, ingredient_list_normalized, brands(name)";
+
+function toQoylProduct(p: QoylProductRow): Product | null {
+  const ingredientsText =
+    p.ingredient_list_raw?.trim() ||
+    (p.ingredient_list_normalized ?? []).join(", ");
+  if (!ingredientsText) return null;
+
+  return {
+    code: p.barcode ?? p.id,
+    name: p.name,
+    brand: p.brands?.name ?? "Unknown brand",
+    ingredientsText,
+    verified: true,
+  };
+}
+
+// Searches Qoyl's own curated products table first -- by product name and
+// by brand name via the brands join -- before ever touching Open Beauty
+// Facts. Two separate queries merged client-side rather than a single
+// .or() filter across the join, since PostgREST's embedded-resource
+// filter syntax is easy to get subtly wrong with arbitrary user input.
+async function fetchQoylProducts(query: string): Promise<Product[]> {
+  const term = `%${query}%`;
+
+  const [{ data: byName }, { data: matchingBrands }] = await Promise.all([
+    supabase
+      .from("products")
+      .select(QOYL_PRODUCT_SELECT)
+      .ilike("name", term)
+      .limit(20),
+    supabase.from("brands").select("id").ilike("name", term),
+  ]);
+
+  const brandIds = (matchingBrands ?? []).map((b) => b.id);
+  const { data: byBrand } = brandIds.length
+    ? await supabase
+        .from("products")
+        .select(QOYL_PRODUCT_SELECT)
+        .in("brand_id", brandIds)
+        .limit(20)
+    : { data: [] as QoylProductRow[] };
+
+  const merged = new Map<string, QoylProductRow>();
+  for (const row of [...(byName ?? []), ...(byBrand ?? [])]) {
+    merged.set(row.id, row as unknown as QoylProductRow);
+  }
+
+  return Array.from(merged.values())
+    .map(toQoylProduct)
+    .filter((p): p is Product => p !== null);
+}
 
 // Unambiguously non-hair-care categories, safe to exclude outright even
 // though the rest of this filtering is deliberately permissive.
@@ -86,6 +150,7 @@ function toProduct(p: OpenBeautyFactsProduct): Product | null {
     name: p.product_name,
     brand: p.brands ?? "Unknown brand",
     ingredientsText: p.ingredients_text,
+    verified: false,
   };
 }
 
@@ -156,6 +221,16 @@ function SearchPageContent() {
       setSearchError(null);
 
       try {
+        const qoylProducts = await fetchQoylProducts(query);
+
+        if (qoylProducts.length > 0) {
+          setResults(qoylProducts);
+          setHasSearched(true);
+          return;
+        }
+
+        // Qoyl's own catalog has no match -- Open Beauty Facts is a
+        // secondary source, not the primary one anymore.
         const obfProducts = await fetchObfProducts(query, controller.signal);
 
         const relevant = obfProducts.filter(
@@ -312,9 +387,16 @@ function SearchPageContent() {
                         : "border-bronze/30 hover:border-bronze"
                     }`}
                   >
-                    <p className="font-serif text-base text-cream">
-                      {product.name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-serif text-base text-cream">
+                        {product.name}
+                      </p>
+                      {product.verified && (
+                        <span className="inline-block shrink-0 rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium text-bronze2">
+                          Verified by Qoyl
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-bronze2">{product.brand}</p>
                     <p className="mt-1 line-clamp-2 text-xs text-cream/50">
                       {product.ingredientsText}

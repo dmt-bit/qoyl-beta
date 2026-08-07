@@ -1,0 +1,22 @@
+insert into brands (name, slug, is_black_owned, is_indie) values
+  ('Camille Rose', 'camille-rose', true, false),
+  ('Mielle Organics', 'mielle-organics', true, false),
+  ('As I Am', 'as-i-am', true, false),
+  ('Cantu', 'cantu', false, false),
+  ('SheaMoisture', 'sheamoisture', false, false),
+  ('TGIN', 'tgin', true, false),
+  ('Carol''s Daughter', 'carols-daughter', true, false),
+  ('Aunt Jackie''s', 'aunt-jackies', true, false),
+  ('Design Essentials', 'design-essentials', false, false),
+  ('Giovanni', 'giovanni', false, false),
+  ('Eco Style', 'eco-style', false, false),
+  ('Miss Jessie''s', 'miss-jessies', false, false),
+  ('Africa''s Best', 'africas-best', false, false),
+  ('Ecoslay', 'ecoslay', true, true),
+  ('Alikay Naturals', 'alikay-naturals', true, true),
+  ('Adwoa Beauty', 'adwoa-beauty', true, true),
+  ('Briogeo', 'briogeo', false, false),
+  ('Kinky-Curly', 'kinky-curly', true, false),
+  ('Malibu C', 'malibu-c', false, false),
+  ('Tropic Isle Living', 'tropic-isle-living', false, true)
+on conflict (name) do nothing;
