@@ -78,7 +78,7 @@ export default function Testimonials() {
   }
 
   return (
-    <section className="bg-dark px-4 py-16 sm:px-6 sm:py-20">
+    <section className="fade-up-block bg-dark px-4 py-16 sm:px-6 sm:py-20">
       <div className="mx-auto max-w-5xl">
         <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
           What the community is saying

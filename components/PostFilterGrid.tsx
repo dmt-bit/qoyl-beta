@@ -141,7 +141,11 @@ export default function PostFilterGrid({
 
   return (
     <div>
-      <div className="relative">
+      <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-bronze">
+        The feed
+      </p>
+
+      <div className="relative mt-4">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
           <SearchIcon />
         </span>
@@ -172,7 +176,7 @@ export default function PostFilterGrid({
             WebkitOverflowScrolling: "touch",
             scrollSnapType: "x mandatory",
           }}
-          className="no-scrollbar flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible"
+          className="no-scrollbar flex gap-5 overflow-x-auto pb-1 sm:flex-wrap sm:overflow-visible"
         >
           {TABS.map((tab) => {
             const isActive = tab.key === activeTab;
@@ -182,10 +186,10 @@ export default function PostFilterGrid({
                 type="button"
                 onClick={() => setActiveTab(tab.key)}
                 style={{ scrollSnapAlign: "start" }}
-                className={`shrink-0 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+                className={`shrink-0 whitespace-nowrap border-b-2 px-0.5 pb-2 font-sans text-[10px] font-medium uppercase tracking-wide transition-colors ${
                   isActive
-                    ? "border-bronze2 bg-dark text-cream"
-                    : "border-bronze bg-transparent text-bronze hover:text-bronze2"
+                    ? "border-bronze text-cream"
+                    : "border-transparent text-bronze/70 hover:text-bronze"
                 }`}
               >
                 {tab.label}
@@ -204,7 +208,7 @@ export default function PostFilterGrid({
 
       {filteredPosts.length > 0 ? (
         <>
-          <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="-mx-4 mt-8 grid grid-cols-2 gap-px bg-[#1C1612] sm:mx-0 sm:grid-cols-3">
             {filteredPosts.map((post) => (
               <PostCard key={post.slug} post={post} />
             ))}

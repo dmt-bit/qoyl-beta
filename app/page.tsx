@@ -81,9 +81,9 @@ const HOW_IT_WORKS_STEPS = [
 ];
 
 const SCORE_EXAMPLE_ROWS = [
-  { name: "Behentrimonium Methosulfate", rating: "Good", borderClass: "border-green", textClass: "text-green" },
-  { name: "Shea Butter", rating: "Good", borderClass: "border-green", textClass: "text-green" },
-  { name: "Glycerin", rating: "Caution for dry climates", borderClass: "border-amber", textClass: "text-amber" },
+  { name: "Behentrimonium Methosulfate", rating: "Good", borderClass: "border-green" },
+  { name: "Aloe Barbadensis", rating: "Good", borderClass: "border-green" },
+  { name: "Glycerin", rating: "Caution in dry climates", borderClass: "border-amber" },
 ];
 
 const MISSION_PILLS = [
@@ -92,6 +92,11 @@ const MISSION_PILLS = [
   "No paid placements",
   "Just the science",
 ];
+
+// Placeholder squares for the hero's hair-type strip -- real photography
+// per texture comes later. Six codes spanning straight through coily so
+// the strip reads as "every texture," not just a handful of curl types.
+const HAIR_TYPE_STRIP = ["1a", "2b", "3a", "3c", "4a", "4c"];
 
 export default async function Home() {
   const { data: posts } = await supabase
@@ -103,111 +108,99 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-dark font-sans text-cream">
-      <section className="bg-warm px-4 py-14 sm:px-6 sm:py-12">
-        <div className="mx-auto max-w-5xl">
-          <p className="text-xs font-medium uppercase tracking-wide text-dark/60">
-            Free · No brand bias · Built on real hair science
-          </p>
-          <h2 className="mt-3 font-serif text-4xl font-semibold text-dark sm:text-5xl">
-            Finally know what your hair actually needs.
-          </h2>
-          <p className="mt-3 max-w-xl text-sm text-dark/70">
-            Build your free hair profile in 90 seconds — tell us your
-            texture, porosity, scalp, and climate. Then search any product
-            and get a score built specifically for your hair. Not a general
-            rating. Yours.
-          </p>
-          <Link
-            href="/profile"
-            className="mt-6 flex w-full items-center justify-center rounded-lg bg-dark px-6 py-4 text-center text-sm font-semibold text-cream transition-colors hover:bg-dark/90 sm:inline-flex sm:w-auto"
-          >
-            Build my hair profile — it&apos;s free →
-          </Link>
-          <div className="mt-5 text-center sm:mt-3 sm:text-left">
-            <Link
-              href="/search"
-              className="inline-block text-sm font-medium text-bronze transition-colors hover:text-dark"
-            >
-              Already have a profile? Search a product →
-            </Link>
-          </div>
+      <section className="relative flex h-[85vh] flex-col items-center justify-center overflow-hidden bg-dark px-4 sm:h-[90vh]">
+        <div className="hero-anim-wordmark flex flex-col items-center">
+          <h1 className="text-center font-serif text-5xl italic text-cream sm:text-6xl">
+            Qoyl
+          </h1>
+          <div className="mt-3 h-px w-10 bg-bronze" />
         </div>
-      </section>
 
-      <section className="border-b border-bronze/20 bg-dark px-4 py-16 sm:px-6 sm:py-20">
-        <div className="mx-auto grid max-w-5xl grid-cols-1 items-center gap-6 lg:grid-cols-2 lg:gap-16">
-          <div className="order-1 lg:col-start-1 lg:row-start-1">
-            <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
-              Free ingredient evaluation
-            </p>
-            <h2 className="mt-3 font-serif text-3xl font-semibold text-cream sm:text-4xl">
-              Is that product actually right for your hair?
-            </h2>
-            <p className="mt-4 text-sm text-cream/70 sm:text-base">
-              Search any shampoo, conditioner, leave-in, or styler. Get a
-              personalized compatibility score built from your curl type,
-              porosity, scalp condition, and climate. Takes 10 seconds.
-            </p>
-          </div>
-
-          <div className="order-2 rounded-xl bg-gradient-to-br from-bronze/50 via-bronze2/20 to-transparent p-[1px] shadow-[0_0_40px_-12px_rgba(156,123,90,0.6)] lg:col-start-2 lg:row-start-1 lg:row-span-2">
-            <div className="rounded-xl bg-dark p-6">
-              <p className="text-xs uppercase tracking-wide text-cream/50">
-                Curl Defining Cream
-              </p>
-              <div className="mt-3 flex items-center gap-3">
-                <span className="rounded-full bg-green px-3 py-1 text-sm font-semibold text-dark">
-                  87 / 100
-                </span>
-                <span className="text-xs text-cream/50">
-                  Compatibility score
+        <div className="hero-anim-strip mt-12 w-full overflow-hidden sm:mt-16">
+          <div className="hair-type-strip-track flex w-max gap-4">
+            {[...HAIR_TYPE_STRIP, ...HAIR_TYPE_STRIP].map((code, i) => (
+              <div
+                key={`${code}-${i}`}
+                className="relative h-[160px] w-[160px] shrink-0 bg-[#2C2420]"
+              >
+                <span className="absolute bottom-2 left-2 font-sans text-[10px] text-bronze">
+                  {code}
                 </span>
               </div>
-              <div className="mt-5 space-y-2">
+            ))}
+          </div>
+        </div>
+
+        <h2 className="hero-anim-headline mt-12 max-w-xs text-center font-serif text-[28px] italic leading-[1.2] text-cream sm:mt-16 sm:max-w-md sm:text-4xl">
+          Finally know what your hair actually needs.
+        </h2>
+
+        <Link
+          href="/profile"
+          className="hero-anim-cta mx-4 mt-8 flex h-[52px] w-[calc(100%-32px)] items-center justify-center rounded-full bg-bronze px-6 text-center font-sans text-sm font-semibold text-cream transition-colors hover:bg-bronze2 sm:mt-10 sm:w-auto sm:px-10"
+        >
+          Build my free hair profile →
+        </Link>
+      </section>
+
+      <section className="fade-up-block bg-warm px-4 py-16 sm:px-6 sm:py-20">
+        <div className="mx-auto flex max-w-5xl flex-col items-center text-center lg:grid lg:grid-cols-2 lg:items-center lg:gap-16 lg:text-left">
+          <div className="lg:order-1">
+            <h2 className="max-w-sm font-serif text-[32px] leading-tight text-dark sm:text-4xl lg:max-w-none">
+              Is that product actually right for your hair?
+            </h2>
+            <p className="mx-auto mt-4 max-w-xs text-sm text-dark/70 sm:max-w-sm sm:text-base lg:mx-0">
+              Search any shampoo, conditioner, leave-in, or styler and get a
+              personalized compatibility score built from your curl type,
+              porosity, scalp condition, and climate.
+            </p>
+          </div>
+
+          <div className="order-first mb-10 w-full max-w-[280px] lg:order-2 lg:mb-0 lg:row-span-2">
+            <div className="rounded-2xl bg-dark p-6 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
+              <p className="font-serif text-[16px] text-cream">
+                Curl Defining Cream
+              </p>
+              <p className="mt-4 text-center font-serif text-[64px] leading-none text-cream">
+                87
+              </p>
+              <p className="text-center font-sans text-[9px] tracking-[0.15em] text-bronze">
+                COMPATIBILITY
+              </p>
+              <div className="mt-5">
                 {SCORE_EXAMPLE_ROWS.map((row) => (
                   <div
                     key={row.name}
-                    className={`flex items-center justify-between gap-2 rounded-md border-l-4 bg-warm/[0.04] py-2 pl-3 pr-3 text-sm ${row.borderClass}`}
+                    className={`border-b border-l-4 border-b-[#2C2420] py-3 pl-3 pr-1 font-sans text-[12px] text-cream ${row.borderClass}`}
                   >
-                    <span className="text-cream/80">{row.name}</span>
-                    <span className={`font-medium ${row.textClass}`}>
-                      {row.rating}
-                    </span>
+                    {row.name} · {row.rating}
                   </div>
                 ))}
               </div>
-              <p className="mt-4 text-xs text-cream/40">
-                Example score — yours will be personalized to your hair.
-              </p>
             </div>
           </div>
 
-          <Link
-            href="/search"
-            className="order-3 flex w-full items-center justify-center rounded-lg bg-bronze px-6 py-4 text-center text-base font-semibold text-dark transition-colors hover:bg-bronze2 lg:order-none lg:col-start-1 lg:row-start-2 lg:inline-flex lg:w-auto"
-          >
-            Search a product now →
-          </Link>
+          <div className="w-full max-w-xs lg:order-3 lg:max-w-none">
+            <Link
+              href="/search"
+              className="flex h-[52px] w-full items-center justify-center rounded-full bg-bronze px-6 text-center font-sans text-sm font-semibold text-dark transition-colors hover:bg-bronze2 lg:w-auto lg:px-10"
+            >
+              Score a product on your shelf →
+            </Link>
+            <p className="mt-3 text-center text-xs text-dark/50 lg:text-left">
+              Free · No account required to try
+            </p>
+          </div>
         </div>
       </section>
 
-      <div className="border-b border-bronze/20 px-4 pb-10 pt-14 sm:px-6 sm:pt-10">
+      <div className="fade-up-block border-b border-bronze/20 px-4 pb-10 pt-14 sm:px-6 sm:pt-10">
         <div className="mx-auto max-w-5xl">
-          <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
-            From the Qoyl feed
-          </p>
-          <p className="mt-2 text-sm text-cream/70">
-            Ingredient breakdowns, product evaluations, and hair science for
-            every texture.
-          </p>
-
-          <div className="mt-6">
-            <PostFilterGrid posts={posts ?? []} />
-          </div>
+          <PostFilterGrid posts={posts ?? []} />
         </div>
       </div>
 
-      <section className="border-b border-bronze/20 bg-warm px-4 py-14 sm:bg-dark sm:px-6 sm:py-12">
+      <section className="fade-up-block border-b border-bronze/20 bg-warm px-4 py-14 sm:bg-dark sm:px-6 sm:py-12">
         <div className="mx-auto max-w-5xl">
           {/* Mobile: vertical timeline */}
           <div className="relative space-y-10 pl-8 sm:hidden">
@@ -243,7 +236,7 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="relative overflow-hidden border-b border-bronze/20 bg-dark px-4 py-16 text-center sm:px-6">
+      <section className="fade-up-block relative overflow-hidden border-b border-bronze/20 bg-dark px-4 py-16 text-center sm:px-6">
         <span
           aria-hidden
           className="pointer-events-none absolute -left-4 -top-16 z-0 select-none font-serif text-[12rem] leading-none text-bronze/10 sm:text-[16rem]"

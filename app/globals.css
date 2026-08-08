@@ -56,6 +56,94 @@ body {
   animation: tab-scroll-hint 1.4s ease-in-out 1;
 }
 
+/* ---- Signature motion -------------------------------------------------
+   Hero load sequence (home page only): wordmark fades in, the hair-type
+   strip slides in from the right, then headline and CTA fade up in
+   sequence -- each stage timed via animation-delay so they read as one
+   continuous reveal, not four separate animations. */
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes hero-slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(48px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+@keyframes hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-anim-wordmark {
+  opacity: 0;
+  animation: hero-fade-in 800ms ease-out forwards;
+}
+.hero-anim-strip {
+  opacity: 0;
+  animation: hero-slide-in-right 600ms ease-out 800ms forwards;
+}
+.hero-anim-headline {
+  opacity: 0;
+  animation: hero-fade-up 400ms ease-out 1400ms forwards;
+}
+.hero-anim-cta {
+  opacity: 0;
+  animation: hero-fade-up 300ms ease-out 1800ms forwards;
+}
+
+/* Slow fade-up used on content blocks throughout the site as they enter
+   the viewport. Pure CSS via the scroll-driven animation-timeline API --
+   degrades gracefully (content simply renders visible, no animation) in
+   browsers that don't support it yet (e.g. Safari). */
+@keyframes fade-up-on-scroll {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@supports (animation-timeline: view()) {
+  .fade-up-block {
+    animation: fade-up-on-scroll 0.8s ease-out both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 35%;
+  }
+}
+
+/* Infinite horizontal scroll for the hero's hair-type strip. Duplicated
+   list in the markup (two copies back to back) + a 50% translate makes
+   the loop seamless. */
+@keyframes scroll-strip {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.hair-type-strip-track {
+  animation: scroll-strip 30s linear infinite;
+}
+
 @media print {
   .print-hide {
     display: none !important;

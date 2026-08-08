@@ -45,79 +45,92 @@ export default function PostCard({
   const isVideo = post.content_type === "original-video";
   const isRepost = post.content_type === "repost";
 
+  // Compact -- used by /dashboard's "recently viewed" style rows --
+  // keeps its original small-horizontal-card look, untouched.
+  if (compact) {
+    return (
+      <Link
+        href={`/posts/${post.slug}`}
+        className="flex flex-col overflow-hidden rounded-xl border border-bronze/30 transition-colors hover:border-bronze"
+      >
+        <div className="relative h-28 w-full">
+          {post.hero_image_url ? (
+            <Image
+              src={post.hero_image_url}
+              alt={post.title}
+              fill
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              className="object-cover"
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-bronze/30 via-warm/10 to-dark" />
+          )}
+          {isVideo && (
+            <span className="absolute left-2 top-2 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold text-dark">
+              ▶ Video
+            </span>
+          )}
+          {isRepost && (
+            <span className="absolute left-2 top-2 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold text-dark">
+              ↗ Repost
+            </span>
+          )}
+        </div>
+        <div className="flex flex-1 flex-col gap-2 p-4">
+          <CategoryLabel category={post.category} />
+          <h2 className="font-serif text-base font-semibold text-cream">
+            {post.title}
+          </h2>
+        </div>
+      </Link>
+    );
+  }
+
+  // Instagram-grid tile: perfect square, image dominant, title + hair-type
+  // pill overlaid on a bottom gradient, no excerpt (that only shows on the
+  // post detail page).
   return (
     <Link
       href={`/posts/${post.slug}`}
-      className={`flex flex-col overflow-hidden rounded-xl border border-bronze/30 transition-colors hover:border-bronze ${
-        compact ? "" : "min-h-[280px]"
-      }`}
+      className="group relative block aspect-square w-full overflow-hidden bg-[#1C1612]"
     >
-      <div className={`relative w-full ${compact ? "h-28" : "h-40"}`}>
-        {post.hero_image_url ? (
-          <Image
-            src={post.hero_image_url}
-            alt={post.title}
-            fill
-            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            className="object-cover"
-          />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-br from-bronze/30 via-warm/10 to-dark" />
-        )}
+      {post.hero_image_url ? (
+        <Image
+          src={post.hero_image_url}
+          alt={post.title}
+          fill
+          sizes="(min-width: 1024px) 33vw, 50vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
+        />
+      ) : (
+        <div className="h-full w-full bg-gradient-to-br from-[#1C1612] to-[#2C2420]" />
+      )}
 
-        {isVideo && (
-          <span className="absolute left-2 top-2 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold text-dark">
-            ▶ Video
-          </span>
-        )}
-        {isRepost && (
-          <span className="absolute left-2 top-2 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold text-dark">
-            ↗ Repost
-          </span>
-        )}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-black/75 to-transparent" />
 
-        {isVideo && post.video_url && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cream/90">
-              <PlayIcon />
-            </div>
+      {(isVideo || isRepost) && (
+        <span className="absolute left-2 top-2 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold text-dark">
+          {isVideo ? "▶ Video" : "↗ Repost"}
+        </span>
+      )}
+
+      {post.hair_type && (
+        <span className="absolute right-2 top-2 rounded-full bg-[#1C1612] px-2 py-1 text-[8px] font-medium uppercase tracking-wide text-bronze">
+          {post.hair_type}
+        </span>
+      )}
+
+      {isVideo && post.video_url && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cream/90">
+            <PlayIcon />
           </div>
-        )}
-      </div>
-      <div
-        className={`flex flex-1 flex-col gap-2 ${compact ? "p-4" : "gap-3 p-5"}`}
-      >
-        <CategoryLabel category={post.category} />
-        <h2
-          className={`font-serif font-semibold text-cream ${
-            compact ? "text-base" : "text-xl"
-          }`}
-        >
-          {post.title}
-        </h2>
-        {!compact && isRepost && post.source_creator && (
-          <p className="-mt-1 text-xs text-cream/50">
-            Originally by{" "}
-            {post.source_creator_url ? (
-              <span
-                role="link"
-                tabIndex={0}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  window.open(post.source_creator_url!, "_blank", "noopener,noreferrer");
-                }}
-                className="underline underline-offset-2 hover:text-cream/70"
-              >
-                @{post.source_creator}
-              </span>
-            ) : (
-              `@${post.source_creator}`
-            )}
-          </p>
-        )}
-        {!compact && <p className="text-sm text-cream/70">{post.excerpt}</p>}
-      </div>
+        </div>
+      )}
+
+      <h2 className="absolute bottom-0 left-0 right-0 line-clamp-2 p-[10px] font-serif text-sm leading-tight text-cream">
+        {post.title}
+      </h2>
     </Link>
   );
 }

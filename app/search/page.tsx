@@ -3,16 +3,26 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { ScoreResultView } from "@/components/CompatibilityScore";
 import FeedbackSurveyModal from "@/components/FeedbackSurveyModal";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
 import {
   ScoreResult,
+  TIER_CLASSES,
+  parseIngredients,
   scoreCatalogProduct,
   scoreIngredientsText,
+  scoreTier,
 } from "@/lib/compatibility";
 import { supabase } from "@/lib/supabase";
+
+const TIER_LABELS: Record<"green" | "amber" | "red", string> = {
+  green: "Good match",
+  amber: "Check ingredients",
+  red: "Not recommended",
+};
 
 type Product = {
   code: string;
@@ -20,6 +30,7 @@ type Product = {
   brand: string;
   ingredientsText: string;
   verified: boolean;
+  imageUrl: string | null;
   // Set only for catalog_products rows -- when present, scoring reads
   // catalog_product_ingredients directly (see scoreCatalogProduct)
   // instead of re-parsing ingredientsText.
@@ -33,12 +44,15 @@ type OpenBeautyFactsProduct = {
   brands?: string;
   ingredients_text?: string;
   categories_tags?: string[];
+  image_small_url?: string;
+  image_url?: string;
 };
 
 type QoylProductRow = {
   id: string;
   name: string;
   barcode: string | null;
+  image_url: string | null;
   ingredient_list_raw: string | null;
   ingredient_list_normalized: string[] | null;
   catalog_brands: { name: string } | null;
@@ -51,7 +65,7 @@ type QoylProductRow = {
 // different schema. Keeping qoyl-beta's consumer catalog on separate
 // tables avoids colliding with that.
 const QOYL_PRODUCT_SELECT =
-  "id, name, barcode, ingredient_list_raw, ingredient_list_normalized, catalog_brands(name)";
+  "id, name, barcode, image_url, ingredient_list_raw, ingredient_list_normalized, catalog_brands(name)";
 
 function toQoylProduct(p: QoylProductRow): Product | null {
   const ingredientsText =
@@ -65,6 +79,7 @@ function toQoylProduct(p: QoylProductRow): Product | null {
     brand: p.catalog_brands?.name ?? "Unknown brand",
     ingredientsText,
     verified: true,
+    imageUrl: p.image_url,
     catalogProductId: p.id,
   };
 }
@@ -167,6 +182,7 @@ function toProduct(p: OpenBeautyFactsProduct): Product | null {
     brand: p.brands ?? "Unknown brand",
     ingredientsText: p.ingredients_text,
     verified: false,
+    imageUrl: p.image_small_url ?? p.image_url ?? null,
     catalogProductId: null,
   };
 }
@@ -404,35 +420,100 @@ function SearchPageContent() {
 
         {!loading && results.length > 0 && (
           <>
-            <ul className="mt-6 space-y-2">
-              {results.map((product) => (
-                <li key={product.code}>
-                  <button
-                    type="button"
-                    onClick={() => selectProduct(product)}
-                    className={`w-full rounded-lg border px-4 py-3 text-left transition-colors ${
-                      selectedProduct?.code === product.code
-                        ? "border-bronze bg-bronze/10"
-                        : "border-bronze/30 hover:border-bronze"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <p className="font-serif text-base text-cream">
-                        {product.name}
-                      </p>
-                      {product.verified && (
-                        <span className="inline-block shrink-0 rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium text-bronze2">
-                          Verified by Qoyl ✓
-                        </span>
-                      )}
+            <ul className="mt-2">
+              {results.map((product) => {
+                const isSelected = selectedProduct?.code === product.code;
+                const totalIngredients = parseIngredients(
+                  product.ingredientsText
+                ).length;
+                const tier =
+                  isSelected && scoreResult
+                    ? scoreTier(scoreResult.normalizedScore)
+                    : null;
+
+                return (
+                  <li key={product.code} className="border-b border-[#2C2420]">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => selectProduct(product)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          selectProduct(product);
+                        }
+                      }}
+                      className={`flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors ${
+                        isSelected ? "bg-bronze/10" : "hover:bg-warm/5"
+                      }`}
+                    >
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#2C2420]">
+                        {product.imageUrl ? (
+                          <Image
+                            src={product.imageUrl}
+                            alt=""
+                            fill
+                            sizes="48px"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="h-full w-full bg-gradient-to-br from-bronze/30 to-dark" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline gap-1.5 overflow-hidden">
+                          <span className="truncate font-sans text-[13px] font-medium text-cream">
+                            {product.name}
+                          </span>
+                          <span className="shrink-0 font-sans text-[11px] text-muted">
+                            {product.brand}
+                          </span>
+                          {product.verified && (
+                            <span className="shrink-0 rounded-full border border-bronze/40 px-1.5 py-0.5 font-sans text-[8px] font-medium text-bronze2">
+                              Verified ✓
+                            </span>
+                          )}
+                        </div>
+
+                        {isSelected && scoring ? (
+                          <p className="mt-1 font-sans text-[10px] text-cream/50">
+                            Scoring...
+                          </p>
+                        ) : isSelected && scoreResult && tier ? (
+                          <div className="mt-1">
+                            <span
+                              className={`inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${TIER_CLASSES[tier]}`}
+                            >
+                              {scoreResult.normalizedScore} · {TIER_LABELS[tier]}
+                            </span>
+                            <div className="mt-1 flex items-center gap-2">
+                              <span className="truncate font-sans text-[10px] text-muted">
+                                {totalIngredients} ingredients ·{" "}
+                                {scoreResult.matches.length} matched
+                              </span>
+                              <span
+                                className="ml-auto shrink-0"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <ShopButton
+                                  productName={product.name}
+                                  brandName={product.brand}
+                                  className="font-sans text-[11px] text-bronze2 hover:text-cream"
+                                />
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="mt-1 font-sans text-[10px] text-muted">
+                            {totalIngredients} ingredients
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-xs text-bronze2">{product.brand}</p>
-                    <p className="mt-1 line-clamp-2 text-xs text-cream/50">
-                      {product.ingredientsText}
-                    </p>
-                  </button>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
 
             <Link
