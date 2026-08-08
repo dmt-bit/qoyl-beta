@@ -114,13 +114,17 @@ function IngredientRow({ match }: { match: Match }) {
 function ResultCard({
   product,
   scoreState,
-  expanded,
-  onToggleExpanded,
+  cardExpanded,
+  onToggleCard,
+  ingredientsExpanded,
+  onToggleIngredients,
 }: {
   product: Product;
   scoreState: ScoreState | undefined;
-  expanded: boolean;
-  onToggleExpanded: () => void;
+  cardExpanded: boolean;
+  onToggleCard: () => void;
+  ingredientsExpanded: boolean;
+  onToggleIngredients: (e: React.MouseEvent) => void;
 }) {
   const matches = scoreState?.status === "done" ? scoreState.result.matches : [];
   const preview = matches.slice(0, 4);
@@ -129,93 +133,112 @@ function ResultCard({
     scoreState?.status === "done" ? scoreTier(scoreState.result.normalizedScore) : null;
 
   return (
-    <li className="border-b border-[#2C2420] px-4 py-3">
-      <div className="flex items-center gap-3">
-        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#2C2420]">
-          {product.imageUrl ? (
-            <Image
-              src={product.imageUrl}
-              alt=""
-              fill
-              sizes="48px"
-              className="object-cover"
-            />
-          ) : (
-            <div className="h-full w-full bg-gradient-to-br from-bronze/30 to-dark" />
-          )}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-1.5 overflow-hidden">
-            <span className="truncate font-sans text-[13px] font-medium text-cream">
-              {product.name}
-            </span>
-            <span className="shrink-0 font-sans text-[11px] text-muted">
-              {product.brand}
-            </span>
-            <span className="shrink-0 rounded-full border border-bronze/40 px-1.5 py-0.5 font-sans text-[8px] font-medium text-bronze2">
-              Verified by Qoyl ✓
-            </span>
+    <li className="border-b border-[#2C2420]">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onToggleCard}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggleCard();
+          }
+        }}
+        className="cursor-pointer px-4 py-3"
+      >
+        <div className="flex items-start gap-3">
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#2C2420]">
+            {product.imageUrl ? (
+              <Image
+                src={product.imageUrl}
+                alt=""
+                fill
+                sizes="48px"
+                className="object-cover"
+              />
+            ) : (
+              <div className="h-full w-full bg-gradient-to-br from-bronze/30 to-dark" />
+            )}
           </div>
 
-          {scoreState?.status === "loading" && (
-            <p className="mt-1 font-sans text-[10px] text-cream/50">
-              Scoring...
-            </p>
-          )}
-          {scoreState?.status === "error" && (
-            <p className="mt-1 font-sans text-[10px] text-red">
-              Couldn&apos;t score this product.
-            </p>
-          )}
-          {tier && scoreState?.status === "done" && (
-            <span
-              className={`mt-1 inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${TIER_CLASSES[tier]}`}
-            >
-              {scoreState.result.normalizedScore} · {TIER_LABELS[tier]}
-            </span>
-          )}
-        </div>
-      </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+              <span className="font-sans text-[13px] font-medium text-cream">
+                {product.name}
+              </span>
+              <span className="font-sans text-[11px] text-muted">
+                {product.brand}
+              </span>
+              <span className="shrink-0 rounded-full border border-bronze/40 px-1.5 py-0.5 font-sans text-[8px] font-medium text-bronze2">
+                Verified by Qoyl ✓
+              </span>
+            </div>
 
-      {preview.length > 0 && (
-        <div className="mt-2 space-y-1.5">
-          {preview.map((m, i) => (
-            <IngredientRow key={`${m.ingredient_name}-${i}`} match={m} />
-          ))}
+            {!cardExpanded && (
+              <p className="mt-1 font-sans text-[11px] text-bronze">
+                Tap to see compatibility score →
+              </p>
+            )}
 
-          {rest.length > 0 && (
-            <>
-              <div
-                className={`space-y-1.5 overflow-hidden transition-[max-height] duration-500 ease-in-out ${
-                  expanded ? "max-h-[1000px]" : "max-h-0"
-                }`}
+            {cardExpanded && scoreState?.status === "loading" && (
+              <p className="mt-1 font-sans text-[10px] text-cream/50">
+                Scoring...
+              </p>
+            )}
+            {cardExpanded && scoreState?.status === "error" && (
+              <p className="mt-1 font-sans text-[10px] text-red">
+                Couldn&apos;t score this product.
+              </p>
+            )}
+            {cardExpanded && tier && scoreState?.status === "done" && (
+              <span
+                className={`mt-1 inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${TIER_CLASSES[tier]}`}
               >
-                {rest.map((m, i) => (
-                  <IngredientRow key={`${m.ingredient_name}-${i + 4}`} match={m} />
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={onToggleExpanded}
+                {scoreState.result.normalizedScore} · {TIER_LABELS[tier]}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {cardExpanded && preview.length > 0 && (
+          <div className="mt-2 space-y-1.5">
+            {preview.map((m, i) => (
+              <IngredientRow key={`${m.ingredient_name}-${i}`} match={m} />
+            ))}
+
+            {rest.length > 0 && (
+              <>
+                <div
+                  className={`space-y-1.5 overflow-hidden transition-[max-height] duration-500 ease-in-out ${
+                    ingredientsExpanded ? "max-h-[1000px]" : "max-h-0"
+                  }`}
+                >
+                  {rest.map((m, i) => (
+                    <IngredientRow key={`${m.ingredient_name}-${i + 4}`} match={m} />
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={onToggleIngredients}
+                  className="font-sans text-[11px] text-bronze2 hover:text-cream"
+                >
+                  {ingredientsExpanded
+                    ? "Hide ingredients ↑"
+                    : `See all ${matches.length} ingredients →`}
+                </button>
+              </>
+            )}
+
+            <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+              <ShopButton
+                productName={product.name}
+                brandName={product.brand}
                 className="font-sans text-[11px] text-bronze2 hover:text-cream"
-              >
-                {expanded
-                  ? "Hide ingredients ↑"
-                  : `See all ${matches.length} ingredients →`}
-              </button>
-            </>
-          )}
-
-          <div className="pt-1">
-            <ShopButton
-              productName={product.name}
-              brandName={product.brand}
-              className="font-sans text-[11px] text-bronze2 hover:text-cream"
-            />
+              />
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </li>
   );
 }
@@ -243,7 +266,13 @@ function SearchPageContent() {
   const [searchError, setSearchError] = useState<string | null>(null);
 
   const [scoresByCode, setScoresByCode] = useState<Record<string, ScoreState>>({});
-  const [expandedByCode, setExpandedByCode] = useState<Record<string, boolean>>({});
+  // Only one result card can be expanded at a time -- expandedCardCode is
+  // that product's code, or null if every card is collapsed.
+  // ingredientsExpanded is the "see all ingredients" sub-toggle inside
+  // whichever card is currently expanded; resets whenever the expanded
+  // card changes.
+  const [expandedCardCode, setExpandedCardCode] = useState<string | null>(null);
+  const [ingredientsExpanded, setIngredientsExpanded] = useState(false);
 
   const [manualIngredients, setManualIngredients] = useState("");
   const [manualScoring, setManualScoring] = useState(false);
@@ -354,7 +383,8 @@ function SearchPageContent() {
       setHasSearched(false);
       setSearchError(null);
       setScoresByCode({});
-      setExpandedByCode({});
+      setExpandedCardCode(null);
+      setIngredientsExpanded(false);
       return;
     }
 
@@ -371,7 +401,8 @@ function SearchPageContent() {
 
         setResults(qoylProducts);
         setHasSearched(true);
-        setExpandedByCode({});
+        setExpandedCardCode(null);
+        setIngredientsExpanded(false);
         setScoresByCode({});
 
         if (qoylProducts.length > 0) {
@@ -391,8 +422,14 @@ function SearchPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
-  function toggleExpanded(code: string) {
-    setExpandedByCode((prev) => ({ ...prev, [code]: !prev[code] }));
+  function toggleCard(code: string) {
+    setExpandedCardCode((prev) => (prev === code ? null : code));
+    setIngredientsExpanded(false);
+  }
+
+  function toggleIngredients(e: React.MouseEvent) {
+    e.stopPropagation();
+    setIngredientsExpanded((prev) => !prev);
   }
 
   async function handleManualSubmit(e: React.FormEvent) {
@@ -456,8 +493,10 @@ function SearchPageContent() {
                 key={product.code}
                 product={product}
                 scoreState={scoresByCode[product.code]}
-                expanded={Boolean(expandedByCode[product.code])}
-                onToggleExpanded={() => toggleExpanded(product.code)}
+                cardExpanded={expandedCardCode === product.code}
+                onToggleCard={() => toggleCard(product.code)}
+                ingredientsExpanded={ingredientsExpanded}
+                onToggleIngredients={toggleIngredients}
               />
             ))}
           </ul>
