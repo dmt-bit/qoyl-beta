@@ -16,16 +16,16 @@ function isLinkActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-function SearchIcon() {
+function SearchIcon({ size = 18 }: { size?: number }) {
   return (
     <svg
-      width="18"
-      height="18"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
       strokeWidth={1.75}
-      className="text-cream"
+      className="shrink-0 text-cream"
     >
       <path
         strokeLinecap="round"
@@ -90,17 +90,23 @@ export default function Nav() {
 
   return (
     <nav className="print-hide bg-dark font-sans">
-      {/* Mobile: wordmark left, search + person icons right. No text
-          labels, no borders -- everything else (Traveling?, My Routine,
-          etc) lives on /dashboard instead of the nav bar on small
-          screens. */}
+      {/* Mobile: wordmark left, search pill + person icon right. No
+          borders -- everything else (Traveling?, My Routine, etc) lives
+          on /dashboard instead of the nav bar on small screens. */}
       <div className="flex h-[52px] items-center justify-between px-4 sm:hidden">
         <Link href="/" className="font-serif text-xl italic text-cream">
           Qoyl
         </Link>
-        <div className="flex items-center gap-5">
-          <Link href="/search" aria-label="Search a product">
-            <SearchIcon />
+        <div className="flex items-center gap-3">
+          <Link
+            href="/search"
+            aria-label="Search a product"
+            className="flex items-center gap-1 whitespace-nowrap rounded-full bg-bronze px-2.5 py-1.5 text-cream"
+          >
+            <SearchIcon size={13} />
+            <span className="font-sans text-[11px] font-semibold">
+              Search a Product
+            </span>
           </Link>
           <Link
             href={loading ? "/auth" : user ? "/dashboard" : "/auth"}

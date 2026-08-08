@@ -4,15 +4,15 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { ScoreResultView } from "@/components/CompatibilityScore";
 import FeedbackSurveyModal from "@/components/FeedbackSurveyModal";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
 import {
+  Match,
+  RATING_BORDER_CLASSES,
   ScoreResult,
   TIER_CLASSES,
-  parseIngredients,
-  scoreCatalogProduct,
+  scoreCatalogProducts,
   scoreIngredientsText,
   scoreTier,
 } from "@/lib/compatibility";
@@ -28,24 +28,8 @@ type Product = {
   code: string;
   name: string;
   brand: string;
-  ingredientsText: string;
-  verified: boolean;
+  catalogProductId: string;
   imageUrl: string | null;
-  // Set only for catalog_products rows -- when present, scoring reads
-  // catalog_product_ingredients directly (see scoreCatalogProduct)
-  // instead of re-parsing ingredientsText.
-  catalogProductId: string | null;
-};
-
-type OpenBeautyFactsProduct = {
-  code?: string;
-  _id?: string;
-  product_name?: string;
-  brands?: string;
-  ingredients_text?: string;
-  categories_tags?: string[];
-  image_small_url?: string;
-  image_url?: string;
 };
 
 type QoylProductRow = {
@@ -53,43 +37,31 @@ type QoylProductRow = {
   name: string;
   barcode: string | null;
   image_url: string | null;
-  ingredient_list_raw: string | null;
-  ingredient_list_normalized: string[] | null;
   catalog_brands: { name: string } | null;
 };
 
-// catalog_products/catalog_brands/catalog_product_ingredients -- not
-// "products"/"brands" -- since this Supabase project is shared with
-// qoyl-business, which already has its own brands/products/
-// product_ingredients tables for its B2B dashboard with a completely
+// catalog_products/catalog_brands -- not "products"/"brands" -- since
+// this Supabase project is shared with qoyl-business, which already has
+// its own brands/products tables for its B2B dashboard with a completely
 // different schema. Keeping qoyl-beta's consumer catalog on separate
 // tables avoids colliding with that.
-const QOYL_PRODUCT_SELECT =
-  "id, name, barcode, image_url, ingredient_list_raw, ingredient_list_normalized, catalog_brands(name)";
+const QOYL_PRODUCT_SELECT = "id, name, barcode, image_url, catalog_brands(name)";
 
-function toQoylProduct(p: QoylProductRow): Product | null {
-  const ingredientsText =
-    p.ingredient_list_raw?.trim() ||
-    (p.ingredient_list_normalized ?? []).join(", ");
-  if (!ingredientsText) return null;
-
+function toQoylProduct(p: QoylProductRow): Product {
   return {
-    code: p.barcode ?? p.id,
+    code: p.id,
     name: p.name,
     brand: p.catalog_brands?.name ?? "Unknown brand",
-    ingredientsText,
-    verified: true,
-    imageUrl: p.image_url,
     catalogProductId: p.id,
+    imageUrl: p.image_url,
   };
 }
 
-// Searches Qoyl's own curated catalog_products table first -- by product
-// name and by brand name via the catalog_brands join -- before ever
-// touching Open Beauty Facts. Two separate queries merged client-side
-// rather than a single .or() filter across the join, since PostgREST's
-// embedded-resource filter syntax is easy to get subtly wrong with
-// arbitrary user input.
+// Searches Qoyl's own curated catalog_products table only -- by product
+// name and by brand name via the catalog_brands join. Two separate
+// queries merged client-side rather than a single .or() filter across
+// the join, since PostgREST's embedded-resource filter syntax is easy to
+// get subtly wrong with arbitrary user input.
 async function fetchQoylProducts(query: string): Promise<Product[]> {
   const term = `%${query}%`;
 
@@ -116,75 +88,136 @@ async function fetchQoylProducts(query: string): Promise<Product[]> {
     merged.set(row.id, row as unknown as QoylProductRow);
   }
 
-  return Array.from(merged.values())
-    .map(toQoylProduct)
-    .filter((p): p is Product => p !== null);
+  return Array.from(merged.values()).map(toQoylProduct);
 }
 
-// Unambiguously non-hair-care categories, safe to exclude outright even
-// though the rest of this filtering is deliberately permissive.
-const EXCLUDED_CATEGORIES = [
-  "en:deodorants",
-  "en:face-care",
-  "en:makeup",
-  "en:nail-care",
-  "en:perfumes",
-];
+type ScoreState =
+  | { status: "loading" }
+  | { status: "done"; result: ScoreResult }
+  | { status: "error"; error: string };
 
-// Open Beauty Facts' category tagging is too inconsistent to filter the
-// search itself on -- real hair products (Camille Rose's whole catalog,
-// among others) often carry no hair-related category tag at all. Rather
-// than requiring a category match, a result is only excluded if it has
-// BOTH no ingredient list AND no hair-related word in its name --
-// permissive by design, so real products don't get hidden over a
-// tagging gap in OBF's own data.
-const HAIR_KEYWORDS = [
-  "hair", "curl", "shampoo", "conditioner", "leave-in", "styler", "scalp",
-  "moisturize", "moisture", "oil", "butter", "wash", "rinse", "gel",
-  "mousse", "serum", "treatment", "natural", "frizz", "wave", "coil",
-  "braid", "loc", "weave", "growth", "strand", "porosity", "texture",
-];
+function IngredientRow({ match }: { match: Match }) {
+  const borderClass = RATING_BORDER_CLASSES[match.rating] ?? "border-muted";
+  const label =
+    match.rating.charAt(0).toUpperCase() + match.rating.slice(1);
 
-function isLikelyIrrelevant(product: OpenBeautyFactsProduct): boolean {
-  const hasIngredients = Boolean(product.ingredients_text?.trim());
-  if (hasIngredients) return false;
-
-  const name = (product.product_name ?? "").toLowerCase();
-  const hasHairKeyword = HAIR_KEYWORDS.some((word) => name.includes(word));
-  return !hasHairKeyword;
-}
-
-function isExcludedCategory(product: OpenBeautyFactsProduct): boolean {
-  return (product.categories_tags ?? []).some((tag) =>
-    EXCLUDED_CATEGORIES.includes(tag)
+  return (
+    <div className={`border-l-4 py-1.5 pl-2.5 ${borderClass}`}>
+      <span className="font-sans text-[12px] text-cream">
+        {match.ingredient_name}
+      </span>
+      <span className="ml-1.5 font-sans text-[10px] text-muted">{label}</span>
+    </div>
   );
 }
 
-async function fetchObfProducts(
-  query: string,
-  signal: AbortSignal
-): Promise<OpenBeautyFactsProduct[]> {
-  const res = await fetch(
-    `https://world.openbeautyfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(
-      query
-    )}&json=true&page_size=20`,
-    { signal }
-  );
-  const data: { products?: OpenBeautyFactsProduct[] } = await res.json();
-  return data.products ?? [];
-}
+function ResultCard({
+  product,
+  scoreState,
+  expanded,
+  onToggleExpanded,
+}: {
+  product: Product;
+  scoreState: ScoreState | undefined;
+  expanded: boolean;
+  onToggleExpanded: () => void;
+}) {
+  const matches = scoreState?.status === "done" ? scoreState.result.matches : [];
+  const preview = matches.slice(0, 4);
+  const rest = matches.slice(4);
+  const tier =
+    scoreState?.status === "done" ? scoreTier(scoreState.result.normalizedScore) : null;
 
-function toProduct(p: OpenBeautyFactsProduct): Product | null {
-  if (!p.product_name || !p.ingredients_text) return null;
-  return {
-    code: p.code ?? p._id ?? p.product_name,
-    name: p.product_name,
-    brand: p.brands ?? "Unknown brand",
-    ingredientsText: p.ingredients_text,
-    verified: false,
-    imageUrl: p.image_small_url ?? p.image_url ?? null,
-    catalogProductId: null,
-  };
+  return (
+    <li className="border-b border-[#2C2420] px-4 py-3">
+      <div className="flex items-center gap-3">
+        <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#2C2420]">
+          {product.imageUrl ? (
+            <Image
+              src={product.imageUrl}
+              alt=""
+              fill
+              sizes="48px"
+              className="object-cover"
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-bronze/30 to-dark" />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-1.5 overflow-hidden">
+            <span className="truncate font-sans text-[13px] font-medium text-cream">
+              {product.name}
+            </span>
+            <span className="shrink-0 font-sans text-[11px] text-muted">
+              {product.brand}
+            </span>
+            <span className="shrink-0 rounded-full border border-bronze/40 px-1.5 py-0.5 font-sans text-[8px] font-medium text-bronze2">
+              Verified by Qoyl ✓
+            </span>
+          </div>
+
+          {scoreState?.status === "loading" && (
+            <p className="mt-1 font-sans text-[10px] text-cream/50">
+              Scoring...
+            </p>
+          )}
+          {scoreState?.status === "error" && (
+            <p className="mt-1 font-sans text-[10px] text-red">
+              Couldn&apos;t score this product.
+            </p>
+          )}
+          {tier && scoreState?.status === "done" && (
+            <span
+              className={`mt-1 inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${TIER_CLASSES[tier]}`}
+            >
+              {scoreState.result.normalizedScore} · {TIER_LABELS[tier]}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {preview.length > 0 && (
+        <div className="mt-2 space-y-1.5">
+          {preview.map((m, i) => (
+            <IngredientRow key={`${m.ingredient_name}-${i}`} match={m} />
+          ))}
+
+          {rest.length > 0 && (
+            <>
+              <div
+                className={`space-y-1.5 overflow-hidden transition-[max-height] duration-500 ease-in-out ${
+                  expanded ? "max-h-[1000px]" : "max-h-0"
+                }`}
+              >
+                {rest.map((m, i) => (
+                  <IngredientRow key={`${m.ingredient_name}-${i + 4}`} match={m} />
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={onToggleExpanded}
+                className="font-sans text-[11px] text-bronze2 hover:text-cream"
+              >
+                {expanded
+                  ? "Hide ingredients ↑"
+                  : `See all ${matches.length} ingredients →`}
+              </button>
+            </>
+          )}
+
+          <div className="pt-1">
+            <ShopButton
+              productName={product.name}
+              brandName={product.brand}
+              className="font-sans text-[11px] text-bronze2 hover:text-cream"
+            />
+          </div>
+        </div>
+      )}
+    </li>
+  );
 }
 
 function SearchPageContent() {
@@ -209,17 +242,18 @@ function SearchPageContent() {
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(
+  const [scoresByCode, setScoresByCode] = useState<Record<string, ScoreState>>({});
+  const [expandedByCode, setExpandedByCode] = useState<Record<string, boolean>>({});
+
+  const [manualIngredients, setManualIngredients] = useState("");
+  const [manualScoring, setManualScoring] = useState(false);
+  const [manualScoreError, setManualScoreError] = useState<string | null>(null);
+  const [manualScoreResult, setManualScoreResult] = useState<ScoreResult | null>(
     null
   );
-  const [manualIngredients, setManualIngredients] = useState("");
-
-  const [scoring, setScoring] = useState(false);
-  const [scoreError, setScoreError] = useState<string | null>(null);
-  const [scoreResult, setScoreResult] = useState<ScoreResult | null>(null);
   const [showSurvey, setShowSurvey] = useState(false);
 
-  const abortRef = useRef<AbortController | null>(null);
+  const latestQueryRef = useRef("");
 
   // Only counts completed searches for signed-in users, and only until
   // the survey has been submitted or dismissed once -- after that
@@ -236,66 +270,6 @@ function SearchPageContent() {
       setShowSurvey(true);
     }
   }
-
-  useEffect(() => {
-    if (query.trim() === "") {
-      setResults([]);
-      setHasSearched(false);
-      setSearchError(null);
-      return;
-    }
-
-    const timeoutId = setTimeout(async () => {
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-
-      setLoading(true);
-      setSearchError(null);
-
-      try {
-        const qoylProducts = await fetchQoylProducts(query);
-
-        if (qoylProducts.length >= 3) {
-          setResults(qoylProducts);
-          setHasSearched(true);
-          return;
-        }
-
-        // Fewer than 3 curated matches -- Open Beauty Facts supplements
-        // the list rather than replacing it. Curated results always come
-        // first (and carry the verified badge); OBF fills out the rest.
-        const obfProducts = await fetchObfProducts(query, controller.signal);
-
-        const relevant = obfProducts.filter(
-          (p) => !isLikelyIrrelevant(p) && !isExcludedCategory(p)
-        );
-        const relevantProducts = relevant
-          .map(toProduct)
-          .filter((p): p is Product => p !== null);
-
-        // Fewer than 3 usable OBF results after filtering -- the filter is
-        // doing more harm than good here, so show everything rather than
-        // leave the user with an empty or near-empty list.
-        const obfFallback =
-          relevantProducts.length >= 3
-            ? relevantProducts
-            : obfProducts.map(toProduct).filter((p): p is Product => p !== null);
-
-        setResults([...qoylProducts, ...obfFallback]);
-        setHasSearched(true);
-      } catch (err) {
-        if (err instanceof Error && err.name !== "AbortError") {
-          setSearchError("Couldn't reach the product search. Try again.");
-          setHasSearched(true);
-        }
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [query]);
 
   // Best-effort analytics logging -- a failure here must never surface to
   // the user or interrupt the actual search/scoring flow.
@@ -336,53 +310,110 @@ function SearchPageContent() {
     }
   }
 
-  async function runScoring(
-    scorer: () => Promise<{ error?: string; result?: ScoreResult }>,
-    product?: Product
-  ) {
-    setScoring(true);
-    setScoreError(null);
-    setScoreResult(null);
+  async function scoreResults(products: Product[], forQuery: string) {
+    setScoresByCode((prev) => {
+      const next = { ...prev };
+      for (const p of products) next[p.code] = { status: "loading" };
+      return next;
+    });
 
-    const outcome = await scorer();
+    const idByCode = new Map(products.map((p) => [p.catalogProductId, p.code]));
+    const outcomes = await scoreCatalogProducts(
+      products.map((p) => p.catalogProductId)
+    );
 
-    setScoring(false);
+    if (latestQueryRef.current !== forQuery) return; // stale search, ignore
 
-    if (outcome.error || !outcome.result) {
-      setScoreError(outcome.error ?? "Something went wrong.");
+    setScoresByCode((prev) => {
+      const next = { ...prev };
+      for (const [productId, outcome] of Object.entries(outcomes)) {
+        const code = idByCode.get(productId);
+        if (!code) continue;
+        next[code] =
+          outcome.error || !outcome.result
+            ? { status: "error", error: outcome.error ?? "Something went wrong." }
+            : { status: "done", result: outcome.result };
+      }
+      return next;
+    });
+
+    for (const p of products) {
+      const outcome = outcomes[p.catalogProductId];
+      if (outcome?.result) {
+        logProductSearch(p, outcome.result.normalizedScore);
+      }
+    }
+
+    recordSearchCompletion();
+  }
+
+  useEffect(() => {
+    if (query.trim() === "") {
+      latestQueryRef.current = "";
+      setResults([]);
+      setHasSearched(false);
+      setSearchError(null);
+      setScoresByCode({});
+      setExpandedByCode({});
       return;
     }
 
-    setScoreResult(outcome.result);
-    recordSearchCompletion();
+    const timeoutId = setTimeout(async () => {
+      const thisQuery = query;
+      latestQueryRef.current = thisQuery;
 
-    if (product) {
-      logProductSearch(product, outcome.result.normalizedScore);
-    }
+      setLoading(true);
+      setSearchError(null);
+
+      try {
+        const qoylProducts = await fetchQoylProducts(thisQuery);
+        if (latestQueryRef.current !== thisQuery) return;
+
+        setResults(qoylProducts);
+        setHasSearched(true);
+        setExpandedByCode({});
+        setScoresByCode({});
+
+        if (qoylProducts.length > 0) {
+          scoreResults(qoylProducts, thisQuery);
+        }
+      } catch {
+        if (latestQueryRef.current === thisQuery) {
+          setSearchError("Couldn't reach the product search. Try again.");
+          setHasSearched(true);
+        }
+      } finally {
+        if (latestQueryRef.current === thisQuery) setLoading(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
+  function toggleExpanded(code: string) {
+    setExpandedByCode((prev) => ({ ...prev, [code]: !prev[code] }));
   }
 
-  function selectProduct(product: Product) {
-    setSelectedProduct(product);
-    setManualIngredients("");
-
-    // Catalog products score off catalog_product_ingredients directly
-    // (curated ingredient links + positions); everything else (OBF,
-    // manual paste) scores off the raw ingredient text.
-    const scorer = product.catalogProductId
-      ? () => scoreCatalogProduct(product.catalogProductId as string)
-      : () => scoreIngredientsText(product.ingredientsText);
-
-    runScoring(scorer, product);
-  }
-
-  function handleManualSubmit(e: React.FormEvent) {
+  async function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSelectedProduct(null);
-    runScoring(() => scoreIngredientsText(manualIngredients));
+    setManualScoring(true);
+    setManualScoreError(null);
+    setManualScoreResult(null);
+
+    const outcome = await scoreIngredientsText(manualIngredients);
+
+    setManualScoring(false);
+
+    if (outcome.error || !outcome.result) {
+      setManualScoreError(outcome.error ?? "Something went wrong.");
+      return;
+    }
+
+    setManualScoreResult(outcome.result);
   }
 
-  const showManualFallback =
-    !loading && hasSearched && results.length === 0 && !searchError;
+  const showNoResults = !loading && hasSearched && results.length === 0 && !searchError;
 
   if (!checkedAccess) {
     return (
@@ -419,119 +450,26 @@ function SearchPageContent() {
         )}
 
         {!loading && results.length > 0 && (
-          <>
-            <ul className="mt-2">
-              {results.map((product) => {
-                const isSelected = selectedProduct?.code === product.code;
-                const totalIngredients = parseIngredients(
-                  product.ingredientsText
-                ).length;
-                const tier =
-                  isSelected && scoreResult
-                    ? scoreTier(scoreResult.normalizedScore)
-                    : null;
-
-                return (
-                  <li key={product.code} className="border-b border-[#2C2420]">
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => selectProduct(product)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          selectProduct(product);
-                        }
-                      }}
-                      className={`flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors ${
-                        isSelected ? "bg-bronze/10" : "hover:bg-warm/5"
-                      }`}
-                    >
-                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#2C2420]">
-                        {product.imageUrl ? (
-                          <Image
-                            src={product.imageUrl}
-                            alt=""
-                            fill
-                            sizes="48px"
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="h-full w-full bg-gradient-to-br from-bronze/30 to-dark" />
-                        )}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-1.5 overflow-hidden">
-                          <span className="truncate font-sans text-[13px] font-medium text-cream">
-                            {product.name}
-                          </span>
-                          <span className="shrink-0 font-sans text-[11px] text-muted">
-                            {product.brand}
-                          </span>
-                          {product.verified && (
-                            <span className="shrink-0 rounded-full border border-bronze/40 px-1.5 py-0.5 font-sans text-[8px] font-medium text-bronze2">
-                              Verified ✓
-                            </span>
-                          )}
-                        </div>
-
-                        {isSelected && scoring ? (
-                          <p className="mt-1 font-sans text-[10px] text-cream/50">
-                            Scoring...
-                          </p>
-                        ) : isSelected && scoreResult && tier ? (
-                          <div className="mt-1">
-                            <span
-                              className={`inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${TIER_CLASSES[tier]}`}
-                            >
-                              {scoreResult.normalizedScore} · {TIER_LABELS[tier]}
-                            </span>
-                            <div className="mt-1 flex items-center gap-2">
-                              <span className="truncate font-sans text-[10px] text-muted">
-                                {totalIngredients} ingredients ·{" "}
-                                {scoreResult.matches.length} matched
-                              </span>
-                              <span
-                                className="ml-auto shrink-0"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <ShopButton
-                                  productName={product.name}
-                                  brandName={product.brand}
-                                  className="font-sans text-[11px] text-bronze2 hover:text-cream"
-                                />
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="mt-1 font-sans text-[10px] text-muted">
-                            {totalIngredients} ingredients
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-
-            <Link
-              href={`/request?product=${encodeURIComponent(query)}`}
-              className="mt-4 inline-block text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70"
-            >
-              Don&apos;t see what you&apos;re looking for? Request a product
-              evaluation →
-            </Link>
-          </>
+          <ul className="mt-2">
+            {results.map((product) => (
+              <ResultCard
+                key={product.code}
+                product={product}
+                scoreState={scoresByCode[product.code]}
+                expanded={Boolean(expandedByCode[product.code])}
+                onToggleExpanded={() => toggleExpanded(product.code)}
+              />
+            ))}
+          </ul>
         )}
 
-        {showManualFallback && (
+        {showNoResults && (
           <div className="mt-6 space-y-6">
             <div className="rounded-lg border border-bronze/30 p-4">
               <p className="text-sm text-cream/80">
-                Don&apos;t see your product? Submit it and we&apos;ll
-                evaluate it personally.
+                We don&apos;t have &quot;{query}&quot; in our database yet.
+                Request an evaluation and we&apos;ll score it for you within
+                48 hours.
               </p>
               <Link
                 href={`/request?product=${encodeURIComponent(query)}`}
@@ -555,43 +493,39 @@ function SearchPageContent() {
                 />
                 <button
                   type="submit"
-                  disabled={!manualIngredients.trim() || scoring}
+                  disabled={!manualIngredients.trim() || manualScoring}
                   className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
                 >
-                  Check Compatibility
+                  {manualScoring ? "Checking..." : "Check Compatibility"}
                 </button>
               </form>
+
+              {manualScoreError && (
+                <p className="mt-3 text-sm text-red">{manualScoreError}</p>
+              )}
+
+              {manualScoreResult && (
+                <div className="mt-4 space-y-1.5">
+                  <span
+                    className={`inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${
+                      TIER_CLASSES[scoreTier(manualScoreResult.normalizedScore)]
+                    }`}
+                  >
+                    {manualScoreResult.normalizedScore} ·{" "}
+                    {TIER_LABELS[scoreTier(manualScoreResult.normalizedScore)]}
+                  </span>
+                  <div className="mt-2 space-y-1.5">
+                    {manualScoreResult.matches.map((m, i) => (
+                      <IngredientRow key={`${m.ingredient_name}-${i}`} match={m} />
+                    ))}
+                  </div>
+                  <p className="pt-1 text-[10px] text-bronze">
+                    Scores reflect cosmetic ingredient compatibility only —
+                    not medical advice.
+                  </p>
+                </div>
+              )}
             </div>
-          </div>
-        )}
-
-        {scoring && (
-          <p className="mt-6 text-sm text-cream/50">
-            Checking compatibility...
-          </p>
-        )}
-
-        {scoreError && <p className="mt-6 text-sm text-red">{scoreError}</p>}
-
-        {scoreResult && (
-          <ScoreResultView
-            result={scoreResult}
-            footnote={
-              <p className="mt-2 text-[10px] text-bronze">
-                Scores reflect cosmetic ingredient compatibility only — not
-                medical advice.
-              </p>
-            }
-          />
-        )}
-
-        {scoreResult && selectedProduct && (
-          <div className="mt-4 text-center">
-            <ShopButton
-              productName={selectedProduct.name}
-              brandName={selectedProduct.brand}
-              className="inline-block rounded-lg bg-bronze px-6 py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
-            />
           </div>
         )}
       </div>

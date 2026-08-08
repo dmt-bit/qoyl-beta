@@ -60,6 +60,13 @@ export const RATING_DOT_CLASSES: Record<string, string> = {
   avoid: "bg-red",
 };
 
+export const RATING_BORDER_CLASSES: Record<string, string> = {
+  good: "border-green",
+  neutral: "border-muted",
+  caution: "border-amber",
+  avoid: "border-red",
+};
+
 export type IngredientRow = {
   id: string;
   inci_name: string;
@@ -374,33 +381,45 @@ type PositionedIngredient = {
   position: number;
 };
 
-// Shared by both scoring entry points below -- everything from here down
-// (compatibility_scores lookup, specificity resolution, curl-type
-// adjustment, weighted scoring) is identical regardless of whether the
-// ingredient+position list came from parsing raw label text or reading
-// catalog_product_ingredients directly. Only how that list is gathered
-// differs between the two callers.
-async function scorePositionedIngredients(
-  ingredients: PositionedIngredient[],
-  profile: ScoringProfile
-): Promise<{ error?: string; result?: ScoreResult }> {
-  if (ingredients.length === 0) {
-    return { result: { normalizedScore: 0, matches: [] } };
-  }
+type ScoreRow = {
+  ingredient_id: string;
+  scalp_condition: string | null;
+  hair_type: string | null;
+  score: number;
+  rating: string;
+};
 
-  const { porosity, scalpCondition, family, climate } = profile;
+async function fetchScoreRows(
+  ingredientIds: string[],
+  porosity: string
+): Promise<{ data?: ScoreRow[]; error?: string }> {
+  if (ingredientIds.length === 0) return { data: [] };
 
-  const { data: scoreRows, error: scoreError } = await supabase
+  const { data, error } = await supabase
     .from("compatibility_scores")
     .select("ingredient_id, scalp_condition, hair_type, score, rating")
-    .in(
-      "ingredient_id",
-      ingredients.map((i) => i.id)
-    )
+    .in("ingredient_id", ingredientIds)
     .eq("porosity", porosity);
 
-  if (scoreError) {
-    return { error: scoreError.message };
+  if (error) return { error: error.message };
+  return { data: data ?? [] };
+}
+
+// Pure -- given an already-fetched set of compatibility_scores rows
+// (which may cover more ingredients than just this product's, when
+// called from the batch path below), resolves the specificity tiers,
+// applies the curl-type adjustment, and computes the position-weighted
+// score. No I/O, so this is shared by every scoring entry point in this
+// file regardless of how the ingredient list or score rows were gathered.
+function resolveScoreResult(
+  ingredients: PositionedIngredient[],
+  scoreRows: ScoreRow[],
+  profile: ScoringProfile
+): ScoreResult {
+  const { scalpCondition, family, climate } = profile;
+
+  if (ingredients.length === 0) {
+    return { normalizedScore: 0, matches: [] };
   }
 
   // Generic (scalp_condition/hair_type both null) rows first, then a row
@@ -412,7 +431,7 @@ async function scorePositionedIngredients(
   const bestRowPerIngredient = new Map<string, { score: number; rating: string }>();
   const hairTypeOverridden = new Set<string>();
 
-  for (const row of scoreRows ?? []) {
+  for (const row of scoreRows) {
     if (row.scalp_condition === null && row.hair_type === null) {
       bestRowPerIngredient.set(row.ingredient_id, {
         score: row.score,
@@ -421,7 +440,7 @@ async function scorePositionedIngredients(
     }
   }
   if (scalpCondition) {
-    for (const row of scoreRows ?? []) {
+    for (const row of scoreRows) {
       if (row.scalp_condition === scalpCondition && row.hair_type === null) {
         bestRowPerIngredient.set(row.ingredient_id, {
           score: row.score,
@@ -431,7 +450,7 @@ async function scorePositionedIngredients(
     }
   }
   if (family) {
-    for (const row of scoreRows ?? []) {
+    for (const row of scoreRows) {
       if (
         row.hair_type === family &&
         (row.scalp_condition === null || row.scalp_condition === scalpCondition)
@@ -482,7 +501,26 @@ async function scorePositionedIngredients(
       ? 0
       : Math.min(100, Math.round((weightedSum / (weightTotal * 10)) * 100));
 
-  return { result: { normalizedScore, matches: matchList } };
+  return { normalizedScore, matches: matchList };
+}
+
+// Shared by the single-product scoring entry points below -- fetches
+// compatibility_scores for just this ingredient list, then resolves it.
+async function scorePositionedIngredients(
+  ingredients: PositionedIngredient[],
+  profile: ScoringProfile
+): Promise<{ error?: string; result?: ScoreResult }> {
+  if (ingredients.length === 0) {
+    return { result: { normalizedScore: 0, matches: [] } };
+  }
+
+  const { data: scoreRows, error } = await fetchScoreRows(
+    ingredients.map((i) => i.id),
+    profile.porosity
+  );
+  if (error) return { error };
+
+  return { result: resolveScoreResult(ingredients, scoreRows ?? [], profile) };
 }
 
 export async function scoreIngredientsText(
@@ -553,7 +591,8 @@ export async function scoreCatalogProduct(
   const { data: rows, error } = await supabase
     .from("catalog_product_ingredients")
     .select("position, ingredients(id, inci_name, common_name)")
-    .eq("product_id", productId);
+    .eq("product_id", productId)
+    .order("position");
 
   if (error) {
     return { error: error.message };
@@ -573,4 +612,71 @@ export async function scoreCatalogProduct(
     .filter((i): i is PositionedIngredient => i !== null);
 
   return scorePositionedIngredients(positioned, profile);
+}
+
+// Batch version of scoreCatalogProduct, for scoring an entire search
+// results list at once (e.g. every result on /search, shown inline
+// without a per-product tap). Loads the hair profile once and fetches
+// catalog_product_ingredients + compatibility_scores in two queries
+// covering every requested product, instead of N round trips each --
+// important now that scoring runs eagerly for a whole result list
+// rather than lazily for one selected product.
+export async function scoreCatalogProducts(
+  productIds: string[]
+): Promise<Record<string, { error?: string; result?: ScoreResult }>> {
+  if (productIds.length === 0) return {};
+
+  const ctx = await loadScoringProfile();
+  if ("error" in ctx) {
+    return Object.fromEntries(productIds.map((id) => [id, { error: ctx.error }]));
+  }
+  const { profile } = ctx;
+
+  const { data: rows, error: piError } = await supabase
+    .from("catalog_product_ingredients")
+    .select("product_id, position, ingredients(id, inci_name, common_name)")
+    .in("product_id", productIds)
+    .order("position");
+
+  if (piError) {
+    return Object.fromEntries(
+      productIds.map((id) => [id, { error: piError.message }])
+    );
+  }
+
+  const ingredientsByProduct = new Map<string, PositionedIngredient[]>();
+  const allIngredientIds = new Set<string>();
+  for (const row of rows ?? []) {
+    const ingredient = row.ingredients as unknown as IngredientRow | null;
+    if (!ingredient) continue;
+    const list = ingredientsByProduct.get(row.product_id) ?? [];
+    list.push({
+      id: ingredient.id,
+      inci_name: ingredient.inci_name,
+      common_name: ingredient.common_name,
+      position: row.position,
+    });
+    ingredientsByProduct.set(row.product_id, list);
+    allIngredientIds.add(ingredient.id);
+  }
+
+  const { data: scoreRows, error: scoreError } = await fetchScoreRows(
+    Array.from(allIngredientIds),
+    profile.porosity
+  );
+  if (scoreError) {
+    return Object.fromEntries(productIds.map((id) => [id, { error: scoreError }]));
+  }
+
+  const results: Record<string, { error?: string; result?: ScoreResult }> = {};
+  for (const id of productIds) {
+    results[id] = {
+      result: resolveScoreResult(
+        ingredientsByProduct.get(id) ?? [],
+        scoreRows ?? [],
+        profile
+      ),
+    };
+  }
+  return results;
 }
