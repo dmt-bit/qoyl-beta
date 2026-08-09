@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import PostFilterGrid from "@/components/PostFilterGrid";
 import Testimonials from "@/components/Testimonials";
@@ -93,10 +94,17 @@ const MISSION_PILLS = [
   "Just the science",
 ];
 
-// Placeholder squares for the hero's hair-type strip -- real photography
-// per texture comes later. Six codes spanning straight through coily so
-// the strip reads as "every texture," not just a handful of curl types.
-const HAIR_TYPE_STRIP = ["1a", "2b", "3a", "3c", "4a", "4c"];
+// Real hair photography for the hero's scrolling strip, spanning
+// straight through coily so it reads as "every texture," not just a
+// handful of curl types.
+const HAIR_TYPE_STRIP = [
+  "https://images.pexels.com/photos/4257489/pexels-photo-4257489.jpeg",
+  "https://images.pexels.com/photos/7956110/pexels-photo-7956110.jpeg",
+  "https://images.pexels.com/photos/4584409/pexels-photo-4584409.jpeg",
+  "https://images.pexels.com/photos/6101922/pexels-photo-6101922.jpeg",
+  "https://images.pexels.com/photos/6945691/pexels-photo-6945691.jpeg",
+  "https://images.pexels.com/photos/6616645/pexels-photo-6616645.jpeg",
+];
 
 export default async function Home() {
   const { data: posts } = await supabase
@@ -118,14 +126,19 @@ export default async function Home() {
 
         <div className="hero-anim-strip mt-12 w-full overflow-hidden sm:mt-16">
           <div className="hair-type-strip-track flex w-max gap-4">
-            {[...HAIR_TYPE_STRIP, ...HAIR_TYPE_STRIP].map((code, i) => (
+            {[...HAIR_TYPE_STRIP, ...HAIR_TYPE_STRIP].map((src, i) => (
               <div
-                key={`${code}-${i}`}
+                key={`${src}-${i}`}
                 className="relative h-[160px] w-[160px] shrink-0 bg-[#2C2420]"
               >
-                <span className="absolute bottom-2 left-2 font-sans text-[10px] text-bronze">
-                  {code}
-                </span>
+                <Image
+                  src={src}
+                  alt=""
+                  fill
+                  unoptimized={true}
+                  sizes="160px"
+                  className="object-cover object-top"
+                />
               </div>
             ))}
           </div>
