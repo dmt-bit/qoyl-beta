@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAuthorizedAdmin } from "@/lib/adminAuth";
-import { matchIngredientNames, parseIngredientListRaw } from "@/lib/adminProducts";
+import {
+  matchIngredientNames,
+  parseIngredientListRaw,
+  resolveBrandId,
+} from "@/lib/adminProducts";
 
 export async function PATCH(
   request: Request,
@@ -14,6 +18,7 @@ export async function PATCH(
   const body = await request.json();
   const {
     brand_id,
+    new_brand_name,
     category_id,
     name,
     barcode,
@@ -23,6 +28,7 @@ export async function PATCH(
     is_verified,
   }: {
     brand_id?: string | null;
+    new_brand_name?: string | null;
     category_id?: string | null;
     name?: string;
     barcode?: string | null;
@@ -35,7 +41,16 @@ export async function PATCH(
   const admin = getSupabaseAdmin();
 
   const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (brand_id !== undefined) updates.brand_id = brand_id || null;
+  if (brand_id !== undefined || new_brand_name) {
+    const { brandId, error: brandError } = await resolveBrandId(
+      brand_id ?? null,
+      new_brand_name ?? null
+    );
+    if (brandError) {
+      return NextResponse.json({ error: brandError }, { status: 500 });
+    }
+    updates.brand_id = brandId;
+  }
   if (category_id !== undefined) updates.category_id = category_id || null;
   if (name !== undefined) updates.name = name.trim();
   if (barcode !== undefined) updates.barcode = barcode?.trim() || null;

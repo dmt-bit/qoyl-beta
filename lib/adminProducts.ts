@@ -26,6 +26,59 @@ export function parseIngredientListRaw(raw: string): string[] {
     .filter(Boolean);
 }
 
+// Matches the slug convention already used by the seeded catalog_brands
+// rows (e.g. "Carol's Daughter" -> "carols-daughter", apostrophe dropped
+// rather than hyphenated) and, unlike a naive character-class strip,
+// transliterates accents instead of losing the character entirely
+// (e.g. "TRESemmé" -> "tresemme", not "tresemm").
+const COMBINING_DIACRITICS = new RegExp("[\\u0300-\\u036f]", "g");
+
+function slugify(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(COMBINING_DIACRITICS, "")
+    .replace(/'/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+// Resolves the "Other (type your own)" brand flow on the admin product
+// form: if a free-typed brand name was submitted, look it up
+// case-insensitively and reuse it if it already exists, otherwise create
+// it -- so the same brand typed twice (e.g. by two different admins)
+// never produces two rows. Falls back to the plain selected brand_id
+// when no new name was submitted.
+export async function resolveBrandId(
+  brandId: string | null,
+  newBrandName: string | null
+): Promise<{ brandId: string | null; error?: string }> {
+  const trimmed = newBrandName?.trim();
+  if (!trimmed) {
+    return { brandId: brandId || null };
+  }
+
+  const admin = getSupabaseAdmin();
+
+  const { data: existing, error: findError } = await admin
+    .from("catalog_brands")
+    .select("id")
+    .ilike("name", trimmed)
+    .maybeSingle();
+
+  if (findError) return { brandId: null, error: findError.message };
+  if (existing) return { brandId: existing.id };
+
+  const { data: created, error: insertError } = await admin
+    .from("catalog_brands")
+    .insert({ name: trimmed, slug: slugify(trimmed) })
+    .select("id")
+    .single();
+
+  if (insertError) return { brandId: null, error: insertError.message };
+  return { brandId: created.id };
+}
+
 export type MatchIngredientNamesResult = {
   // Number of entries on the label (positions), not deduped -- what "Y"
   // means in the "X of Y ingredients matched" summary.

@@ -40,6 +40,7 @@ function formatDate(iso: string): string {
 type ProductFormValues = {
   name: string;
   brand_id: string;
+  custom_brand_name: string;
   category_id: string;
   barcode: string;
   size: string;
@@ -50,12 +51,24 @@ type ProductFormValues = {
 const EMPTY_FORM: ProductFormValues = {
   name: "",
   brand_id: "",
+  custom_brand_name: "",
   category_id: "",
   barcode: "",
   size: "",
   image_url: "",
   ingredient_list_raw: "",
 };
+
+const OTHER_BRAND_VALUE = "__other__";
+
+// Blank means "no brand selected," which is allowed -- only "Other" with
+// nothing typed is a real validation error.
+function getBrandValidationError(values: ProductFormValues): string | null {
+  if (values.brand_id === OTHER_BRAND_VALUE && !values.custom_brand_name.trim()) {
+    return "Please enter a brand name.";
+  }
+  return null;
+}
 
 const INPUT_CLASS =
   "w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none";
@@ -107,6 +120,12 @@ function ProductForm({
   onSubmit: (e: React.FormEvent) => void;
   onCancel?: () => void;
 }) {
+  // Re-sort on every render rather than trusting callers/the API to
+  // hand back an already-sorted list -- cheap for a brand-count list
+  // this small, and guarantees newly-added brands slot in alphabetically
+  // instead of trailing at the end.
+  const sortedBrands = [...brands].sort((a, b) => a.name.localeCompare(b.name));
+
   return (
     <form onSubmit={onSubmit} className="space-y-3">
       <input
@@ -119,20 +138,39 @@ function ProductForm({
       />
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <select
-          value={values.brand_id}
-          onChange={(e) => onChange({ ...values, brand_id: e.target.value })}
-          className={INPUT_CLASS}
-        >
-          <option value="" className="text-dark">
-            Select brand
-          </option>
-          {brands.map((b) => (
-            <option key={b.id} value={b.id} className="text-dark">
-              {b.name}
+        <div>
+          <select
+            value={values.brand_id}
+            onChange={(e) =>
+              onChange({ ...values, brand_id: e.target.value })
+            }
+            className={INPUT_CLASS}
+          >
+            <option value="" className="text-dark">
+              Select brand
             </option>
-          ))}
-        </select>
+            {sortedBrands.map((b) => (
+              <option key={b.id} value={b.id} className="text-dark">
+                {b.name}
+              </option>
+            ))}
+            <option value={OTHER_BRAND_VALUE} className="text-dark">
+              Other (type your own)
+            </option>
+          </select>
+
+          {values.brand_id === OTHER_BRAND_VALUE && (
+            <input
+              type="text"
+              value={values.custom_brand_name}
+              onChange={(e) =>
+                onChange({ ...values, custom_brand_name: e.target.value })
+              }
+              placeholder="Brand name"
+              className={`mt-3 ${INPUT_CLASS}`}
+            />
+          )}
+        </div>
 
         <select
           value={values.category_id}
@@ -284,9 +322,11 @@ export default function AdminProductsPage() {
   }
 
   function toProductPayload(values: ProductFormValues) {
+    const isOtherBrand = values.brand_id === OTHER_BRAND_VALUE;
     return {
       name: values.name.trim(),
-      brand_id: values.brand_id || null,
+      brand_id: isOtherBrand ? null : values.brand_id || null,
+      new_brand_name: isOtherBrand ? values.custom_brand_name.trim() : null,
       category_id: values.category_id || null,
       barcode: values.barcode.trim() || null,
       size: values.size.trim() || null,
@@ -297,6 +337,13 @@ export default function AdminProductsPage() {
 
   async function handleAddSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    const brandError = getBrandValidationError(addForm);
+    if (brandError) {
+      setAddError(brandError);
+      return;
+    }
+
     setAddSubmitting(true);
     setAddError(null);
     setAddSummary(null);
@@ -341,6 +388,7 @@ export default function AdminProductsPage() {
     setEditForm({
       name: product.name,
       brand_id: product.brand_id ?? "",
+      custom_brand_name: "",
       category_id: product.category_id ?? "",
       barcode: product.barcode ?? "",
       size: product.size ?? "",
@@ -352,6 +400,12 @@ export default function AdminProductsPage() {
   async function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!editingId) return;
+
+    const brandError = getBrandValidationError(editForm);
+    if (brandError) {
+      setEditError(brandError);
+      return;
+    }
 
     setEditSubmitting(true);
     setEditError(null);

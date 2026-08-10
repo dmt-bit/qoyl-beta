@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAuthorizedAdmin } from "@/lib/adminAuth";
-import { matchIngredientNames, parseIngredientListRaw } from "@/lib/adminProducts";
+import {
+  matchIngredientNames,
+  parseIngredientListRaw,
+  resolveBrandId,
+} from "@/lib/adminProducts";
 
 export async function GET(request: Request) {
   if (!isAuthorizedAdmin(request)) {
@@ -79,6 +83,7 @@ export async function POST(request: Request) {
   const body = await request.json();
   const {
     brand_id,
+    new_brand_name,
     category_id,
     name,
     barcode,
@@ -87,6 +92,7 @@ export async function POST(request: Request) {
     ingredient_list_raw,
   }: {
     brand_id?: string | null;
+    new_brand_name?: string | null;
     category_id?: string | null;
     name?: string;
     barcode?: string | null;
@@ -102,6 +108,14 @@ export async function POST(request: Request) {
     );
   }
 
+  const { brandId, error: brandError } = await resolveBrandId(
+    brand_id ?? null,
+    new_brand_name ?? null
+  );
+  if (brandError) {
+    return NextResponse.json({ error: brandError }, { status: 500 });
+  }
+
   const normalizedNames = ingredient_list_raw
     ? parseIngredientListRaw(ingredient_list_raw)
     : [];
@@ -111,7 +125,7 @@ export async function POST(request: Request) {
   const { data: product, error: insertError } = await admin
     .from("catalog_products")
     .insert({
-      brand_id: brand_id || null,
+      brand_id: brandId,
       category_id: category_id || null,
       name: name.trim(),
       barcode: barcode?.trim() || null,
