@@ -90,28 +90,3 @@ export function stateFromZipCode(zip: string): string | null {
   );
   return match?.state ?? null;
 }
-
-// Regional approximation based on publicly published USGS/EPA water
-// hardness survey patterns (limestone/dolomite geology -> hard;
-// granite/volcanic bedrock + high rainfall -> soft). There is no simple,
-// free, zip-queryable USGS API that returns hardness directly -- USGS's
-// actual hardness data is county-level survey data, not a REST lookup --
-// so this is a static state-level bucket, not a live per-address
-// measurement. States not confidently one or the other default to
-// "moderate", which the scoring logic treats as a no-op (same as soft),
-// so an uncertain classification never wrongly boosts a score.
-const HARD_WATER_STATES = new Set([
-  "AZ", "TX", "OK", "KS", "NE", "IA", "IL", "IN", "OH", "MO",
-  "WI", "SD", "ND", "NM", "UT", "NV", "FL", "CO", "MI", "MN",
-]);
-const SOFT_WATER_STATES = new Set([
-  "WA", "OR", "ME", "NH", "VT", "MA", "CT", "RI", "GA", "NC",
-  "SC", "WV", "HI", "AK",
-]);
-
-export function waterHardnessFromState(state: string | null): WaterHardness {
-  if (!state) return "moderate";
-  if (HARD_WATER_STATES.has(state)) return "hard";
-  if (SOFT_WATER_STATES.has(state)) return "soft";
-  return "moderate";
-}

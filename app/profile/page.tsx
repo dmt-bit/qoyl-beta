@@ -6,12 +6,8 @@ import Collapse from "@/components/Collapse";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
 import { classifyClimateFromZip } from "@/lib/climateData";
-import {
-  CLIMATE_LABELS,
-  WATER_HARDNESS_LABELS,
-  stateFromZipCode,
-  waterHardnessFromState,
-} from "@/lib/locationFactors";
+import { CLIMATE_LABELS, WATER_HARDNESS_LABELS } from "@/lib/locationFactors";
+import { waterHardnessFromZip } from "@/lib/waterHardnessData";
 import { supabase } from "@/lib/supabase";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -524,7 +520,7 @@ function ProfileForm() {
     [isPlausibleZip, zipCode]
   );
   const waterHardness = useMemo(
-    () => (isPlausibleZip ? waterHardnessFromState(stateFromZipCode(zipCode)) : null),
+    () => (isPlausibleZip ? waterHardnessFromZip(zipCode) : null),
     [isPlausibleZip, zipCode]
   );
 
@@ -1072,8 +1068,9 @@ function ProfileForm() {
                   label={`Detected water hardness: ${WATER_HARDNESS_LABELS[waterHardness]}`}
                 />
                 <p className="mt-1.5 text-xs text-cream/50">
-                  We&apos;ll flag chelating ingredients more favorably for
-                  your area.
+                  Based on published municipal water quality data for
+                  your region. Actual hardness may vary by
+                  neighborhood.
                 </p>
               </div>
             )}
