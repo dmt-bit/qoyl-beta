@@ -17,6 +17,7 @@ import {
   scoreIngredientsText,
   scoreTier,
 } from "@/lib/compatibility";
+import { CATEGORY_LABEL_BY_SLUG, PRODUCT_CATEGORIES } from "@/lib/productCategories";
 import {
   DAILY_SEARCH_LIMIT,
   SearchLimitState,
@@ -39,6 +40,7 @@ type Product = {
   brand: string;
   catalogProductId: string;
   imageUrl: string | null;
+  categorySlug: string | null;
 };
 
 type QoylProductRow = {
@@ -47,6 +49,7 @@ type QoylProductRow = {
   barcode: string | null;
   image_url: string | null;
   catalog_brands: { name: string } | null;
+  categories: { slug: string } | null;
 };
 
 // catalog_products/catalog_brands -- not "products"/"brands" -- since
@@ -54,7 +57,8 @@ type QoylProductRow = {
 // its own brands/products tables for its B2B dashboard with a completely
 // different schema. Keeping qoyl-beta's consumer catalog on separate
 // tables avoids colliding with that.
-const QOYL_PRODUCT_SELECT = "id, name, barcode, image_url, catalog_brands(name)";
+const QOYL_PRODUCT_SELECT =
+  "id, name, barcode, image_url, catalog_brands(name), categories(slug)";
 
 function toQoylProduct(p: QoylProductRow): Product {
   return {
@@ -63,6 +67,7 @@ function toQoylProduct(p: QoylProductRow): Product {
     brand: p.catalog_brands?.name ?? "Unknown brand",
     catalogProductId: p.id,
     imageUrl: p.image_url,
+    categorySlug: p.categories?.slug ?? null,
   };
 }
 
@@ -70,34 +75,58 @@ function toQoylProduct(p: QoylProductRow): Product {
 // name and by brand name via the catalog_brands join. Two separate
 // queries merged client-side rather than a single .or() filter across
 // the join, since PostgREST's embedded-resource filter syntax is easy to
-// get subtly wrong with arbitrary user input.
-async function fetchQoylProducts(query: string): Promise<Product[]> {
+// get subtly wrong with arbitrary user input. categoryId, when given,
+// narrows both queries -- e.g. "Leave-In" selected + "Mielle" typed shows
+// only Mielle leave-ins, not every Mielle product.
+async function fetchQoylProducts(
+  query: string,
+  categoryId: string | null
+): Promise<Product[]> {
   const term = `%${query}%`;
 
+  let byNameQuery = supabase
+    .from("catalog_products")
+    .select(QOYL_PRODUCT_SELECT)
+    .ilike("name", term);
+  if (categoryId) byNameQuery = byNameQuery.eq("category_id", categoryId);
+
   const [{ data: byName }, { data: matchingBrands }] = await Promise.all([
-    supabase
-      .from("catalog_products")
-      .select(QOYL_PRODUCT_SELECT)
-      .ilike("name", term)
-      .limit(20),
+    byNameQuery.limit(20),
     supabase.from("catalog_brands").select("id").ilike("name", term),
   ]);
 
   const brandIds = (matchingBrands ?? []).map((b) => b.id);
-  const { data: byBrand } = brandIds.length
-    ? await supabase
-        .from("catalog_products")
-        .select(QOYL_PRODUCT_SELECT)
-        .in("brand_id", brandIds)
-        .limit(20)
-    : { data: [] as QoylProductRow[] };
+  let byBrand: QoylProductRow[] = [];
+  if (brandIds.length) {
+    let byBrandQuery = supabase
+      .from("catalog_products")
+      .select(QOYL_PRODUCT_SELECT)
+      .in("brand_id", brandIds);
+    if (categoryId) byBrandQuery = byBrandQuery.eq("category_id", categoryId);
+    const { data } = await byBrandQuery.limit(20);
+    byBrand = (data ?? []) as unknown as QoylProductRow[];
+  }
 
   const merged = new Map<string, QoylProductRow>();
-  for (const row of [...(byName ?? []), ...(byBrand ?? [])]) {
+  for (const row of [...(byName ?? []), ...byBrand]) {
     merged.set(row.id, row as unknown as QoylProductRow);
   }
 
   return Array.from(merged.values()).map(toQoylProduct);
+}
+
+// Category browse with no search term -- every product in the category,
+// ordered by brand then product name (not relevance, since there's no
+// search term to rank against).
+async function fetchProductsByCategory(categoryId: string): Promise<Product[]> {
+  const { data } = await supabase
+    .from("catalog_products")
+    .select(QOYL_PRODUCT_SELECT)
+    .eq("category_id", categoryId)
+    .order("name", { foreignTable: "catalog_brands" })
+    .order("name");
+
+  return ((data ?? []) as unknown as QoylProductRow[]).map(toQoylProduct);
 }
 
 type ScoreState =
@@ -181,6 +210,11 @@ function ResultCard({
               <span className="shrink-0 rounded-full border border-bronze/40 px-1.5 py-0.5 font-sans text-[8px] font-medium text-bronze2">
                 Verified by Qoyl ✓
               </span>
+              {product.categorySlug && (
+                <span className="shrink-0 rounded-full bg-dark px-2 py-1 font-sans text-[8px] font-medium uppercase tracking-wide text-bronze">
+                  {CATEGORY_LABEL_BY_SLUG[product.categorySlug] ?? product.categorySlug}
+                </span>
+              )}
             </div>
 
             {!cardExpanded && (
@@ -399,6 +433,36 @@ function SearchPageContent() {
   }
 
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
+  const [categorySlug, setCategorySlug] = useState(
+    () => searchParams.get("category") ?? null
+  );
+  // categories.id per slug, fetched once -- catalog_products only stores
+  // category_id (a FK), so the slug from the URL/pill has to be resolved
+  // to a real id before it can be used to filter a query.
+  const [categoryIdBySlug, setCategoryIdBySlug] = useState<Record<string, string>>({});
+  const categoryId = categorySlug ? categoryIdBySlug[categorySlug] ?? null : null;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.from("categories").select("id, slug");
+      if (cancelled || !data) return;
+      setCategoryIdBySlug(
+        Object.fromEntries(data.map((c) => [c.slug, c.id as string]))
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  function handleCategoryTap(slug: string) {
+    setCategorySlug((prev) => (prev === slug ? null : slug));
+    setQuery("");
+  }
+
+  const [hasScrolledCategories, setHasScrolledCategories] = useState(false);
+
   const [results, setResults] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -421,7 +485,7 @@ function SearchPageContent() {
   );
   const [showSurvey, setShowSurvey] = useState(false);
 
-  const latestQueryRef = useRef("");
+  const latestRequestRef = useRef("");
 
   // Only counts completed searches for signed-in users, and only until
   // the survey has been submitted or dismissed once -- after that
@@ -478,7 +542,7 @@ function SearchPageContent() {
     }
   }
 
-  async function scoreResults(products: Product[], forQuery: string) {
+  async function scoreResults(products: Product[], forRequest: string) {
     setScoresByCode((prev) => {
       const next = { ...prev };
       for (const p of products) next[p.code] = { status: "loading" };
@@ -490,7 +554,7 @@ function SearchPageContent() {
       products.map((p) => p.catalogProductId)
     );
 
-    if (latestQueryRef.current !== forQuery) return; // stale search, ignore
+    if (latestRequestRef.current !== forRequest) return; // stale search, ignore
 
     setScoresByCode((prev) => {
       const next = { ...prev };
@@ -515,9 +579,28 @@ function SearchPageContent() {
     recordSearchCompletion();
   }
 
+  // Keeps the URL in sync with category/query state (item 6) -- runs
+  // immediately, separately from the debounced fetch below, so the URL
+  // reflects what's typed/selected even before the fetch settles.
   useEffect(() => {
-    if (query.trim() === "") {
-      latestQueryRef.current = "";
+    const params = new URLSearchParams();
+    if (categorySlug) params.set("category", categorySlug);
+    if (query.trim()) params.set("q", query);
+    const qs = params.toString();
+    router.replace(qs ? `/search?${qs}` : "/search", { scroll: false });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, categorySlug]);
+
+  useEffect(() => {
+    const trimmed = query.trim();
+
+    // Neither a category nor a search term -- idle state, no fetch, no
+    // search consumed. Keyed on categorySlug (the UI selection), not
+    // categoryId (which only resolves once the categories fetch above
+    // completes) -- otherwise tapping a pill before that fetch finishes
+    // would be wrongly treated as idle.
+    if (!categorySlug && trimmed === "") {
+      latestRequestRef.current = "";
       setResults([]);
       setHasSearched(false);
       setSearchError(null);
@@ -528,17 +611,22 @@ function SearchPageContent() {
       return;
     }
 
+    // A category is selected but its id hasn't resolved yet -- wait
+    // rather than fetching with a null categoryId (which would silently
+    // run an unfiltered search). Re-fires once categoryIdBySlug loads.
+    if (categorySlug && !categoryId) return;
+
     // Entitlement/search-state haven't loaded yet -- wait rather than
     // checking the limit against stale defaults. The effect re-runs once
     // readyToSearch flips true.
     if (!readyToSearch) return;
 
     const timeoutId = setTimeout(async () => {
-      const thisQuery = query;
-      latestQueryRef.current = thisQuery;
+      const thisRequest = `${categoryId ?? ""}::${trimmed}`;
+      latestRequestRef.current = thisRequest;
 
       const allowed = await consumeOneSearch();
-      if (latestQueryRef.current !== thisQuery) return;
+      if (latestRequestRef.current !== thisRequest) return;
       if (!allowed) {
         setResults([]);
         setHasSearched(false);
@@ -551,8 +639,11 @@ function SearchPageContent() {
       setSearchError(null);
 
       try {
-        const qoylProducts = await fetchQoylProducts(thisQuery);
-        if (latestQueryRef.current !== thisQuery) return;
+        const qoylProducts =
+          categoryId && trimmed === ""
+            ? await fetchProductsByCategory(categoryId)
+            : await fetchQoylProducts(trimmed, categoryId);
+        if (latestRequestRef.current !== thisRequest) return;
 
         setResults(qoylProducts);
         setHasSearched(true);
@@ -561,21 +652,21 @@ function SearchPageContent() {
         setScoresByCode({});
 
         if (qoylProducts.length > 0) {
-          scoreResults(qoylProducts, thisQuery);
+          scoreResults(qoylProducts, thisRequest);
         }
       } catch {
-        if (latestQueryRef.current === thisQuery) {
+        if (latestRequestRef.current === thisRequest) {
           setSearchError("Couldn't reach the product search. Try again.");
           setHasSearched(true);
         }
       } finally {
-        if (latestQueryRef.current === thisQuery) setLoading(false);
+        if (latestRequestRef.current === thisRequest) setLoading(false);
       }
     }, 300);
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, readyToSearch]);
+  }, [query, categorySlug, categoryId, readyToSearch]);
 
   function toggleCard(code: string) {
     setExpandedCardCode((prev) => (prev === code ? null : code));
@@ -629,13 +720,49 @@ function SearchPageContent() {
           Find a product to check its compatibility with your hair profile.
         </p>
 
+        <div className="relative -mx-4 mt-6 px-4 sm:mx-0 sm:px-0">
+          <div
+            onScroll={() => setHasScrolledCategories(true)}
+            className="no-scrollbar flex gap-2 overflow-x-auto pb-1"
+          >
+            {PRODUCT_CATEGORIES.map((c) => {
+              const isActive = c.slug === categorySlug;
+              return (
+                <button
+                  key={c.slug}
+                  type="button"
+                  onClick={() => handleCategoryTap(c.slug)}
+                  className={`shrink-0 whitespace-nowrap rounded-full border border-bronze px-3 py-1.5 font-sans text-xs font-medium transition-colors ${
+                    isActive
+                      ? "bg-dark text-cream"
+                      : "bg-transparent text-bronze hover:bg-bronze/10"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
+          </div>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex w-10 items-center justify-end bg-gradient-to-r from-transparent to-dark">
+            {!hasScrolledCategories && (
+              <span className="pr-1 text-lg leading-none text-bronze">›</span>
+            )}
+          </div>
+        </div>
+
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by product name..."
-          className="mt-6 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+          placeholder="Search by product name or brand..."
+          className="mt-4 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
         />
+
+        {!categorySlug && query.trim() === "" && (
+          <p className="mt-2 font-sans text-[11px] text-cream/40">
+            Or browse by category above ↑
+          </p>
+        )}
 
         {readyToSearch && subscribed && (
           <p className="mt-2 font-sans text-[10px] font-medium text-bronze">
@@ -657,6 +784,12 @@ function SearchPageContent() {
           />
         )}
 
+        {!limitReached && !categorySlug && query.trim() === "" && !hasSearched && (
+          <p className="mt-6 text-sm text-cream/50">
+            Search a product or browse by category above
+          </p>
+        )}
+
         {!limitReached && loading && (
           <p className="mt-4 text-sm text-cream/50">Searching...</p>
         )}
@@ -664,6 +797,17 @@ function SearchPageContent() {
         {!limitReached && searchError && (
           <p className="mt-4 text-sm text-red">{searchError}</p>
         )}
+
+        {!limitReached &&
+          !loading &&
+          hasSearched &&
+          categorySlug &&
+          query.trim() === "" && (
+            <p className="mt-6 text-sm text-cream/70">
+              All {CATEGORY_LABEL_BY_SLUG[categorySlug] ?? categorySlug}s in
+              the Qoyl catalog ({results.length} products)
+            </p>
+          )}
 
         {!limitReached && !loading && results.length > 0 && (
           <ul className="mt-2">

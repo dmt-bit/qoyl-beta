@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import PostFilterGrid from "@/components/PostFilterGrid";
 import Testimonials from "@/components/Testimonials";
+import { PRODUCT_CATEGORIES } from "@/lib/productCategories";
 import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -207,7 +208,29 @@ export default async function Home() {
         </div>
       </section>
 
-      <div className="fade-up-block border-b border-bronze/20 px-4 pb-10 pt-14 sm:px-6 sm:pt-10">
+      <div className="fade-up-block border-b border-bronze/20 bg-dark px-4 pb-8 pt-10 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-bronze">
+            Browse the catalog
+          </p>
+          <div className="relative mt-4">
+            <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+              {PRODUCT_CATEGORIES.map((c) => (
+                <Link
+                  key={c.slug}
+                  href={`/search?category=${c.slug}`}
+                  className="shrink-0 whitespace-nowrap rounded-full border border-bronze bg-transparent px-3 py-1.5 font-sans text-xs font-medium text-bronze transition-colors hover:bg-bronze/10"
+                >
+                  {c.label}
+                </Link>
+              ))}
+            </div>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex w-10 items-center justify-end bg-gradient-to-r from-transparent to-dark" />
+          </div>
+        </div>
+      </div>
+
+      <div className="fade-up-block border-b border-bronze/20 px-4 pb-10 pt-10 sm:px-6 sm:pt-10">
         <div className="mx-auto max-w-5xl">
           <PostFilterGrid posts={posts ?? []} />
         </div>
