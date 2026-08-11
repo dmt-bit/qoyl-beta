@@ -1,10 +1,16 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Collapse from "@/components/Collapse";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
+import {
+  CLIMATE_LABELS,
+  ClimateZone,
+  WATER_HARDNESS_LABELS,
+  WaterHardness,
+} from "@/lib/locationFactors";
 import { supabase } from "@/lib/supabase";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -457,6 +463,11 @@ function ProfileForm() {
   const [scalpCondition, setScalpCondition] = useState("");
   const [strandThickness, setStrandThickness] = useState<string | null>(null);
   const [zipCode, setZipCode] = useState("");
+  const [climate, setClimate] = useState<ClimateZone | null>(null);
+  const [waterHardness, setWaterHardness] = useState<WaterHardness | null>(
+    null
+  );
+  const [detectingLocation, setDetectingLocation] = useState(false);
   const [hairConcerns, setHairConcerns] = useState<string[]>([]);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -475,6 +486,7 @@ function ProfileForm() {
   const [hydratedFromProfileId, setHydratedFromProfileId] = useState<
     string | null
   >(null);
+  const lastDetectedZipRef = useRef<string>("");
 
   useEffect(() => {
     if (!hairProfile || hydratedFromProfileId === hairProfile.id) return;
@@ -487,6 +499,13 @@ function ProfileForm() {
     setScalpCondition(hairProfile.scalp_condition ?? "");
     setStrandThickness(hairProfile.strand_thickness);
     setZipCode(hairProfile.zip_code ?? "");
+    setClimate((hairProfile.climate as ClimateZone | null) ?? null);
+    setWaterHardness(
+      (hairProfile.water_hardness as WaterHardness | null) ?? null
+    );
+    // Already-detected for this zip as of the last save -- don't
+    // immediately re-fetch on load, only once the user actually changes it.
+    lastDetectedZipRef.current = hairProfile.zip_code ?? "";
     setHairConcerns(hairProfile.hair_concerns ?? []);
     setFirstName(hairProfile.first_name ?? "");
     setLastName(hairProfile.last_name ?? "");
@@ -506,6 +525,39 @@ function ProfileForm() {
     if (!user || hairProfile || hairProfileLoading) return;
     setEmail((prev) => prev || user.email || "");
   }, [user, hairProfile, hairProfileLoading]);
+
+  // Debounced climate/water-hardness detection -- fires once the user
+  // has entered a plausible 5-digit zip and stopped typing, skips
+  // re-fetching for a zip already detected (including one just hydrated
+  // from a saved profile).
+  useEffect(() => {
+    const trimmed = zipCode.trim();
+    if (!/^\d{5}$/.test(trimmed) || trimmed === lastDetectedZipRef.current) {
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      lastDetectedZipRef.current = trimmed;
+      setDetectingLocation(true);
+      try {
+        const res = await fetch("/api/detect-location-factors", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ zip_code: trimmed }),
+        });
+        const data = await res.json();
+        setClimate(data.climate ?? null);
+        setWaterHardness(data.waterHardness ?? null);
+      } catch {
+        // Best-effort enrichment -- silently leave climate/waterHardness
+        // as they were rather than surfacing an error for this.
+      } finally {
+        setDetectingLocation(false);
+      }
+    }, 600);
+
+    return () => clearTimeout(timeoutId);
+  }, [zipCode]);
 
   function toggleConcern(value: string) {
     setHairConcerns((prev) =>
@@ -553,6 +605,8 @@ function ProfileForm() {
       scalp_condition: scalpCondition,
       strand_thickness: strandThickness,
       zip_code: zipCode,
+      climate,
+      water_hardness: waterHardness,
       hair_concerns: hairConcerns,
       first_name: firstName,
       last_name: lastName,
@@ -1033,6 +1087,34 @@ function ProfileForm() {
               placeholder="e.g. 90210"
               className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
             />
+
+            {detectingLocation && (
+              <p className="mt-2 text-xs text-cream/50">
+                Detecting your climate and water hardness...
+              </p>
+            )}
+
+            {!detectingLocation && climate && (
+              <div className="mt-3">
+                <Chip label={`Detected climate: ${CLIMATE_LABELS[climate]}`} />
+                <p className="mt-1.5 text-xs text-cream/50">
+                  This affects how humectants like glycerin score for your
+                  hair.
+                </p>
+              </div>
+            )}
+
+            {!detectingLocation && waterHardness && (
+              <div className="mt-3">
+                <Chip
+                  label={`Detected water hardness: ${WATER_HARDNESS_LABELS[waterHardness]}`}
+                />
+                <p className="mt-1.5 text-xs text-cream/50">
+                  We&apos;ll flag chelating ingredients more favorably for
+                  your area.
+                </p>
+              </div>
+            )}
           </fieldset>
 
           <div role="group" aria-labelledby="hair-concerns-label">

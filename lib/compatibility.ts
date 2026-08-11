@@ -250,28 +250,100 @@ const SULFATE_FREE_CLEANSERS = new Set([
   "sodium lauroyl isethionate",
 ]);
 
-// "climate" is a real hair_profiles column but nothing in the profile
-// form collects it today, so it's always null in practice -- these two
-// checks (and the glycerin rules that use them) are effectively dormant
-// until a climate field exists. Implemented now so the rule is correct
-// the moment that data shows up, rather than silently missing.
+// climate is auto-detected from the user's zip code (see
+// lib/locationFactors.ts and /api/detect-location-factors) and stored as
+// one of exactly four values: "humid", "tropical", "dry", "cold-dry".
 function isHumidClimate(climate: string | null): boolean {
-  if (!climate) return false;
-  const c = climate.toLowerCase();
-  return c.includes("humid") || c.includes("tropical");
+  return climate === "humid" || climate === "tropical";
 }
 function isDryClimate(climate: string | null): boolean {
-  if (!climate) return false;
-  const c = climate.toLowerCase();
-  return c.includes("dry") || c.includes("arid");
+  return climate === "dry" || climate === "cold-dry";
+}
+
+// Common humectants -- ingredients that work by attracting ambient
+// moisture into the hair. That mechanism is climate-dependent: humid air
+// gives them moisture to draw in; dry air has none, so the humectant can
+// instead pull moisture back out of the hair and into the (drier)
+// surrounding air.
+const HUMECTANTS = new Set([
+  "glycerin",
+  "propanediol",
+  "sodium hyaluronate",
+  "hyaluronic acid",
+  "sorbitol",
+]);
+
+// Climate + porosity adjustment for humectants, applied on top of
+// whatever score the DB/curl-type steps already produced. Runs
+// regardless of curl family or hairTypeOverridden -- climate physics
+// isn't curl-pattern-specific the way the section-3 rules above are, and
+// a DB row scoped to hair_type doesn't already account for it.
+function applyClimateAdjustment(
+  inciName: string,
+  climate: string | null,
+  porosity: string,
+  score: number,
+  rating: string
+): { score: number; rating: string } {
+  const name = inciName.trim().toLowerCase();
+  if (!HUMECTANTS.has(name)) return { score, rating };
+
+  let adjustedScore = score;
+
+  if (isHumidClimate(climate)) {
+    adjustedScore = clampScore(score + 2); // ambient moisture for the humectant to draw in
+  } else if (isDryClimate(climate)) {
+    // No ambient moisture to draw in -- the humectant can instead pull
+    // moisture out of the hair shaft. Worse for high porosity hair,
+    // which already struggles to retain moisture once it's in.
+    const penalty = porosity === "high" ? 4 : porosity === "medium" ? 2 : 1;
+    adjustedScore = clampScore(score - penalty);
+  }
+
+  if (adjustedScore === score) return { score, rating };
+  return { score: adjustedScore, rating: ratingForScore(adjustedScore) };
+}
+
+// Chelating agents bind the calcium/magnesium ions hard water deposits on
+// the hair shaft; clarifying surfactants (reusing the existing SULFATES
+// set) help strip that same mineral buildup during cleansing. Both
+// matter more in hard water areas -- in soft/moderate water there's
+// little buildup to address, so they're left at their DB-resolved score
+// rather than penalized (they're still fine ingredients, just not doing
+// extra work).
+const CHELATING_AGENTS = new Set([
+  "citric acid",
+  "tetrasodium edta",
+  "disodium edta",
+  "sodium phytate",
+]);
+
+function applyWaterHardnessAdjustment(
+  inciName: string,
+  waterHardness: string | null,
+  score: number,
+  rating: string
+): { score: number; rating: string } {
+  if (waterHardness !== "hard") return { score, rating };
+
+  const name = inciName.trim().toLowerCase();
+  let adjustedScore = score;
+
+  if (CHELATING_AGENTS.has(name)) {
+    adjustedScore = clampScore(score + 3);
+  } else if (SULFATES.has(name)) {
+    adjustedScore = clampScore(score + 2);
+  }
+
+  if (adjustedScore === score) return { score, rating };
+  return { score: adjustedScore, rating: ratingForScore(adjustedScore) };
 }
 
 function applyCurlTypeAdjustment(
   inciName: string,
   family: CurlFamily | null,
   score: number,
-  rating: string,
-  climate: string | null
+  rating: string
 ): { score: number; rating: string } {
   if (!family || family === "coily") return { score, rating };
 
@@ -310,8 +382,6 @@ function applyCurlTypeAdjustment(
       adjustedScore = Math.min(score, 4); // weighs down wave pattern
     } else if (SULFATE_FREE_CLEANSERS.has(name)) {
       adjustedScore = clampScore(score + 1); // benefits from gentler cleansing
-    } else if (name === "glycerin" && isHumidClimate(climate)) {
-      adjustedScore = Math.min(score, 4); // causes frizz in humid climates
     }
   } else if (family === "curly") {
     if (name === "dimethicone") {
@@ -320,8 +390,6 @@ function applyCurlTypeAdjustment(
       adjustedScore = Math.min(score, 4); // buildup in curl pattern
     } else if (DEFINING_AGENTS.has(name)) {
       adjustedScore = Math.max(score, 8); // enhance curl definition
-    } else if (name === "glycerin" && isDryClimate(climate)) {
-      adjustedScore = Math.min(score, 4); // caution in dry climates
     }
   }
 
@@ -331,6 +399,7 @@ function applyCurlTypeAdjustment(
 
 type ScoringProfile = {
   climate: string | null;
+  waterHardness: string | null;
   porosity: string;
   scalpCondition: string | null;
   family: CurlFamily | null;
@@ -348,7 +417,9 @@ async function loadScoringProfile(): Promise<
 
   const { data: profile, error: profileError } = await supabase
     .from("hair_profiles")
-    .select("curl_type, porosity, scalp_condition, strand_thickness, climate")
+    .select(
+      "curl_type, porosity, scalp_condition, strand_thickness, climate, water_hardness"
+    )
     .eq("id", profileId)
     .single();
 
@@ -367,6 +438,7 @@ async function loadScoringProfile(): Promise<
   return {
     profile: {
       climate: profile.climate,
+      waterHardness: profile.water_hardness,
       porosity,
       scalpCondition: normalizeScalpCondition(profile.scalp_condition),
       family: curlFamily(profile.curl_type),
@@ -416,7 +488,7 @@ function resolveScoreResult(
   scoreRows: ScoreRow[],
   profile: ScoringProfile
 ): ScoreResult {
-  const { scalpCondition, family, climate } = profile;
+  const { scalpCondition, family, climate, waterHardness, porosity } = profile;
 
   if (ingredients.length === 0) {
     return { normalizedScore: 0, matches: [] };
@@ -469,15 +541,32 @@ function resolveScoreResult(
     const scored = bestRowPerIngredient.get(ingredient.id);
     if (!scored) continue;
 
-    const { score, rating } = hairTypeOverridden.has(ingredient.id)
+    let { score, rating } = hairTypeOverridden.has(ingredient.id)
       ? scored
       : applyCurlTypeAdjustment(
           ingredient.inci_name,
           family,
           scored.score,
-          scored.rating,
-          climate
+          scored.rating
         );
+
+    // Climate and water hardness are independent of curl-type/hair-type
+    // scoping -- they apply on top regardless of whether the score above
+    // came from a hair-type-specific DB row or the generic curl-type
+    // adjustment.
+    ({ score, rating } = applyClimateAdjustment(
+      ingredient.inci_name,
+      climate,
+      porosity,
+      score,
+      rating
+    ));
+    ({ score, rating } = applyWaterHardnessAdjustment(
+      ingredient.inci_name,
+      waterHardness,
+      score,
+      rating
+    ));
 
     matchList.push({
       ingredient_name: ingredient.common_name || ingredient.inci_name,

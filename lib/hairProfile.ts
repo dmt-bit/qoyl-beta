@@ -7,6 +7,8 @@ export type HairProfile = {
   scalp_condition: string | null;
   strand_thickness: string | null;
   zip_code: string | null;
+  climate: string | null;
+  water_hardness: string | null;
   hair_concerns: string[] | null;
   first_name: string | null;
   last_name: string | null;
@@ -27,7 +29,7 @@ export type HairProfile = {
 };
 
 const HAIR_PROFILE_COLUMNS =
-  "id, curl_type, porosity, scalp_condition, strand_thickness, zip_code, hair_concerns, first_name, last_name, email, shower_filter, color_treated, color_type, extensions, extension_type, extension_care, budget, notes, updated_at, profile_for, age_range, gender, hair_goals";
+  "id, curl_type, porosity, scalp_condition, strand_thickness, zip_code, climate, water_hardness, hair_concerns, first_name, last_name, email, shower_filter, color_treated, color_type, extensions, extension_type, extension_care, budget, notes, updated_at, profile_for, age_range, gender, hair_goals";
 
 export async function fetchHairProfileByUserId(
   userId: string
