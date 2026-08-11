@@ -191,11 +191,22 @@ function ResultCard({
               </p>
             )}
             {cardExpanded && tier && scoreState?.status === "done" && (
-              <span
-                className={`mt-1 inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${TIER_CLASSES[tier]}`}
-              >
-                {scoreState.result.normalizedScore} · {TIER_LABELS[tier]}
-              </span>
+              <>
+                <span
+                  className={`mt-1 inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${TIER_CLASSES[tier]}`}
+                >
+                  {scoreState.result.normalizedScore} · {TIER_LABELS[tier]}
+                </span>
+                <div>
+                  <Link
+                    href="/how-we-score"
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-1 inline-block font-sans text-[10px] text-bronze hover:text-bronze2"
+                  >
+                    How is this score calculated? →
+                  </Link>
+                </div>
+              </>
             )}
           </div>
         </div>

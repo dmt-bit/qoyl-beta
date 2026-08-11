@@ -417,6 +417,13 @@ function RoutineContent() {
               </ul>
             </div>
           )}
+
+          <Link
+            href="/how-we-score"
+            className="print-hide mt-6 inline-block text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70"
+          >
+            How is this score calculated? →
+          </Link>
         </section>
 
         {/* SECTION 5 -- Download */}
