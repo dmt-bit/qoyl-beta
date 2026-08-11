@@ -19,23 +19,6 @@ export const WATER_HARDNESS_LABELS: Record<WaterHardness, string> = {
   soft: "Soft",
 };
 
-// wttr.in returns current conditions + a short forecast, not long-term
-// climate normals (no free, no-key API offers true Köppen-style climate
-// classification by zip code) -- this is a same-day approximation, and
-// will occasionally misclassify a zip during an atypical weather day
-// (e.g. a rare humid day in a normally-dry city). Two axes: humidity
-// splits humid-side vs dry-side, temperature then splits which flavor
-// of each (tropical vs humid, dry vs cold-dry).
-export function classifyClimate(
-  humidityPercent: number,
-  avgTempC: number
-): ClimateZone {
-  if (humidityPercent >= 55) {
-    return avgTempC >= 20 ? "tropical" : "humid";
-  }
-  return avgTempC <= 10 ? "cold-dry" : "dry";
-}
-
 // Standard USPS zip-code-prefix-to-state allocation (the first 3 digits
 // of a US zip code fall within well-known, stable ranges per state).
 // Approximate at the boundaries between neighboring states/prefixes --

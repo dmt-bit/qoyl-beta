@@ -1,15 +1,16 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Collapse from "@/components/Collapse";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
+import { classifyClimateFromZip } from "@/lib/climateData";
 import {
   CLIMATE_LABELS,
-  ClimateZone,
   WATER_HARDNESS_LABELS,
-  WaterHardness,
+  stateFromZipCode,
+  waterHardnessFromState,
 } from "@/lib/locationFactors";
 import { supabase } from "@/lib/supabase";
 
@@ -463,11 +464,6 @@ function ProfileForm() {
   const [scalpCondition, setScalpCondition] = useState("");
   const [strandThickness, setStrandThickness] = useState<string | null>(null);
   const [zipCode, setZipCode] = useState("");
-  const [climate, setClimate] = useState<ClimateZone | null>(null);
-  const [waterHardness, setWaterHardness] = useState<WaterHardness | null>(
-    null
-  );
-  const [detectingLocation, setDetectingLocation] = useState(false);
   const [hairConcerns, setHairConcerns] = useState<string[]>([]);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -486,7 +482,6 @@ function ProfileForm() {
   const [hydratedFromProfileId, setHydratedFromProfileId] = useState<
     string | null
   >(null);
-  const lastDetectedZipRef = useRef<string>("");
 
   useEffect(() => {
     if (!hairProfile || hydratedFromProfileId === hairProfile.id) return;
@@ -499,13 +494,6 @@ function ProfileForm() {
     setScalpCondition(hairProfile.scalp_condition ?? "");
     setStrandThickness(hairProfile.strand_thickness);
     setZipCode(hairProfile.zip_code ?? "");
-    setClimate((hairProfile.climate as ClimateZone | null) ?? null);
-    setWaterHardness(
-      (hairProfile.water_hardness as WaterHardness | null) ?? null
-    );
-    // Already-detected for this zip as of the last save -- don't
-    // immediately re-fetch on load, only once the user actually changes it.
-    lastDetectedZipRef.current = hairProfile.zip_code ?? "";
     setHairConcerns(hairProfile.hair_concerns ?? []);
     setFirstName(hairProfile.first_name ?? "");
     setLastName(hairProfile.last_name ?? "");
@@ -526,38 +514,19 @@ function ProfileForm() {
     setEmail((prev) => prev || user.email || "");
   }, [user, hairProfile, hairProfileLoading]);
 
-  // Debounced climate/water-hardness detection -- fires once the user
-  // has entered a plausible 5-digit zip and stopped typing, skips
-  // re-fetching for a zip already detected (including one just hydrated
-  // from a saved profile).
-  useEffect(() => {
-    const trimmed = zipCode.trim();
-    if (!/^\d{5}$/.test(trimmed) || trimmed === lastDetectedZipRef.current) {
-      return;
-    }
-
-    const timeoutId = setTimeout(async () => {
-      lastDetectedZipRef.current = trimmed;
-      setDetectingLocation(true);
-      try {
-        const res = await fetch("/api/detect-location-factors", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ zip_code: trimmed }),
-        });
-        const data = await res.json();
-        setClimate(data.climate ?? null);
-        setWaterHardness(data.waterHardness ?? null);
-      } catch {
-        // Best-effort enrichment -- silently leave climate/waterHardness
-        // as they were rather than surfacing an error for this.
-      } finally {
-        setDetectingLocation(false);
-      }
-    }, 600);
-
-    return () => clearTimeout(timeoutId);
-  }, [zipCode]);
+  // Both are pure, static, offline lookups keyed off the zip code -- no
+  // network call, so no loading state or debounce needed. Recomputed
+  // live as the user types; null (hides the chips) until zipCode is a
+  // plausible 5-digit value.
+  const isPlausibleZip = /^\d{5}$/.test(zipCode.trim());
+  const climate = useMemo(
+    () => (isPlausibleZip ? classifyClimateFromZip(zipCode) : null),
+    [isPlausibleZip, zipCode]
+  );
+  const waterHardness = useMemo(
+    () => (isPlausibleZip ? waterHardnessFromState(stateFromZipCode(zipCode)) : null),
+    [isPlausibleZip, zipCode]
+  );
 
   function toggleConcern(value: string) {
     setHairConcerns((prev) =>
@@ -1088,23 +1057,16 @@ function ProfileForm() {
               className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
             />
 
-            {detectingLocation && (
-              <p className="mt-2 text-xs text-cream/50">
-                Detecting your climate and water hardness...
-              </p>
-            )}
-
-            {!detectingLocation && climate && (
+            {climate && (
               <div className="mt-3">
                 <Chip label={`Detected climate: ${CLIMATE_LABELS[climate]}`} />
                 <p className="mt-1.5 text-xs text-cream/50">
-                  This affects how humectants like glycerin score for your
-                  hair.
+                  Based on your region&apos;s 30-year climate patterns.
                 </p>
               </div>
             )}
 
-            {!detectingLocation && waterHardness && (
+            {waterHardness && (
               <div className="mt-3">
                 <Chip
                   label={`Detected water hardness: ${WATER_HARDNESS_LABELS[waterHardness]}`}
