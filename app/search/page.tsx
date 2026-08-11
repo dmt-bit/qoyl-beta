@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import FeedbackSurveyModal from "@/components/FeedbackSurveyModal";
 import ShopButton from "@/components/ShopButton";
+import UpgradeWall from "@/components/UpgradeWall";
 import { useAuth } from "@/lib/auth-context";
 import {
   Match,
@@ -16,6 +17,14 @@ import {
   scoreIngredientsText,
   scoreTier,
 } from "@/lib/compatibility";
+import {
+  DAILY_SEARCH_LIMIT,
+  SearchLimitState,
+  consumeSearch,
+  effectiveSearchState,
+  readAnonSearchState,
+  writeAnonSearchState,
+} from "@/lib/searchLimit";
 import { supabase } from "@/lib/supabase";
 
 const TIER_LABELS: Record<"green" | "amber" | "red", string> = {
@@ -254,10 +263,28 @@ function ResultCard({
   );
 }
 
+function DisclaimerBanner() {
+  return (
+    <div
+      className="mb-6 border-l-[3px] border-bronze bg-warm px-4 py-3 font-sans text-[12px] text-dark"
+    >
+      Qoyl provides cosmetic ingredient compatibility scores only — not
+      medical advice. Results are based on your hair profile and our
+      ingredient database. Individual results may vary. Free users get 5
+      product searches per day. Unlock unlimited searches with a{" "}
+      <Link href="/dashboard" className="underline underline-offset-2">
+        Qoyl subscription
+      </Link>
+      .
+    </div>
+  );
+}
+
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading: authLoading, hairProfile } = useAuth();
+  const { user, loading: authLoading, hairProfile, hairProfileLoading } =
+    useAuth();
   const [checkedAccess, setCheckedAccess] = useState(false);
 
   useEffect(() => {
@@ -269,6 +296,107 @@ function SearchPageContent() {
     }
     setCheckedAccess(true);
   }, [user, authLoading, router]);
+
+  // Search-limit tracking. subscribed/entitlementLoaded cover the
+  // "unlimited for active subscribers" carve-out (only ever true for
+  // signed-in users -- checkout requires a user_id, so anonymous users
+  // can never hold a subscription). searchState is the raw stored
+  // count/resetAt (DB-backed for signed-in users, localStorage for
+  // anonymous); it's read through effectiveSearchState() everywhere it's
+  // displayed or checked, so an expired 24h window always shows as reset
+  // even before the next search writes that reset back to storage.
+  const [subscribed, setSubscribed] = useState(false);
+  const [entitlementLoaded, setEntitlementLoaded] = useState(false);
+  const [searchState, setSearchState] = useState<SearchLimitState>({
+    count: 0,
+    resetAt: null,
+  });
+  const [searchStateLoaded, setSearchStateLoaded] = useState(false);
+  const [limitReached, setLimitReached] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setSubscribed(false);
+      setEntitlementLoaded(true);
+      return;
+    }
+    let cancelled = false;
+    setEntitlementLoaded(false);
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/purchases?user_id=${user.id}`);
+        const data = await res.json();
+        if (!cancelled) setSubscribed(Boolean(data.hasRoutineSubscription));
+      } catch {
+        // Fail closed -- treat as not subscribed.
+      } finally {
+        if (!cancelled) setEntitlementLoaded(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setSearchState(readAnonSearchState());
+      setSearchStateLoaded(true);
+      return;
+    }
+    if (hairProfileLoading) return;
+    if (hairProfile) {
+      setSearchState({
+        count: hairProfile.daily_search_count ?? 0,
+        resetAt: hairProfile.daily_search_reset_at,
+      });
+    } else {
+      // Signed in but hasn't saved a hair profile yet -- there's no row
+      // to track the count on, so fall back to the same per-device
+      // localStorage tracking anonymous users get until they have one.
+      setSearchState(readAnonSearchState());
+    }
+    setSearchStateLoaded(true);
+  }, [user, hairProfile, hairProfileLoading]);
+
+  // Gates the search-triggering effect below so it never runs against
+  // stale defaults (e.g. treating a subscriber as unsubscribed, or a
+  // user who's already at their limit as having zero searches used)
+  // while entitlement/search-state are still loading.
+  const readyToSearch = entitlementLoaded && searchStateLoaded;
+
+  // Checks the current limit and, if allowed, persists the incremented
+  // count. Returns whether the caller may proceed with the search.
+  async function consumeOneSearch(): Promise<boolean> {
+    if (subscribed) return true;
+
+    const effective = effectiveSearchState(searchState);
+    const next = consumeSearch(effective);
+    if (!next) {
+      setLimitReached(true);
+      return false;
+    }
+
+    setSearchState(next);
+    setLimitReached(false);
+
+    if (user && hairProfile) {
+      const { error } = await supabase
+        .from("hair_profiles")
+        .update({
+          daily_search_count: next.count,
+          daily_search_reset_at: next.resetAt,
+        })
+        .eq("user_id", user.id);
+      if (error) console.error("Failed to update search count:", error);
+    } else {
+      writeAnonSearchState(next);
+    }
+
+    return true;
+  }
 
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [results, setResults] = useState<Product[]>([]);
@@ -396,12 +524,28 @@ function SearchPageContent() {
       setScoresByCode({});
       setExpandedCardCode(null);
       setIngredientsExpanded(false);
+      setLimitReached(false);
       return;
     }
+
+    // Entitlement/search-state haven't loaded yet -- wait rather than
+    // checking the limit against stale defaults. The effect re-runs once
+    // readyToSearch flips true.
+    if (!readyToSearch) return;
 
     const timeoutId = setTimeout(async () => {
       const thisQuery = query;
       latestQueryRef.current = thisQuery;
+
+      const allowed = await consumeOneSearch();
+      if (latestQueryRef.current !== thisQuery) return;
+      if (!allowed) {
+        setResults([]);
+        setHasSearched(false);
+        setSearchError(null);
+        setScoresByCode({});
+        return;
+      }
 
       setLoading(true);
       setSearchError(null);
@@ -431,7 +575,7 @@ function SearchPageContent() {
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query]);
+  }, [query, readyToSearch]);
 
   function toggleCard(code: string) {
     setExpandedCardCode((prev) => (prev === code ? null : code));
@@ -471,9 +615,13 @@ function SearchPageContent() {
     );
   }
 
+  const effectiveSearches = effectiveSearchState(searchState);
+
   return (
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
       <div className="mx-auto max-w-md">
+        <DisclaimerBanner />
+
         <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
           Search a Product
         </h1>
@@ -489,15 +637,35 @@ function SearchPageContent() {
           className="mt-6 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
         />
 
-        {loading && (
+        {readyToSearch && subscribed && (
+          <p className="mt-2 font-sans text-[10px] font-medium text-bronze">
+            Unlimited searches · Subscriber
+          </p>
+        )}
+        {readyToSearch && !subscribed && !limitReached && (
+          <p className="mt-2 font-sans text-[10px] text-bronze/70">
+            {effectiveSearches.count} of {DAILY_SEARCH_LIMIT} free searches
+            used today
+          </p>
+        )}
+
+        {limitReached && (
+          <UpgradeWall
+            resetAt={searchState.resetAt}
+            userId={user?.id ?? null}
+            userEmail={user?.email}
+          />
+        )}
+
+        {!limitReached && loading && (
           <p className="mt-4 text-sm text-cream/50">Searching...</p>
         )}
 
-        {searchError && (
+        {!limitReached && searchError && (
           <p className="mt-4 text-sm text-red">{searchError}</p>
         )}
 
-        {!loading && results.length > 0 && (
+        {!limitReached && !loading && results.length > 0 && (
           <ul className="mt-2">
             {results.map((product) => (
               <ResultCard

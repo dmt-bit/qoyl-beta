@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PostCard, { Post } from "@/components/PostCard";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { useAuth } from "@/lib/auth-context";
 import { getChildSafetyNote } from "@/lib/childSafety";
 import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
@@ -141,8 +142,6 @@ function DashboardContent() {
   const [checkedAccess, setCheckedAccess] = useState(false);
   const [hasRoutineSubscription, setHasRoutineSubscription] = useState(false);
   const [entitlementLoading, setEntitlementLoading] = useState(true);
-  const [unlockLoading, setUnlockLoading] = useState(false);
-  const [unlockError, setUnlockError] = useState<string | null>(null);
 
   const paymentStatus = searchParams.get("payment");
 
@@ -249,36 +248,6 @@ function DashboardContent() {
       cancelled = true;
     };
   }, [user]);
-
-  async function handleUnlockClick() {
-    if (!user) return;
-    setUnlockError(null);
-    setUnlockLoading(true);
-
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_type: "routine_subscription",
-          user_id: user.id,
-          email: user.email,
-        }),
-      });
-      const data = await res.json();
-
-      if (!res.ok || !data.url) {
-        setUnlockError(data.error ?? "Something went wrong. Please try again.");
-        setUnlockLoading(false);
-        return;
-      }
-
-      window.location.href = data.url;
-    } catch {
-      setUnlockError("Couldn't reach the server. Please try again.");
-      setUnlockLoading(false);
-    }
-  }
 
   if (!checkedAccess) {
     return (
@@ -388,21 +357,10 @@ function DashboardContent() {
                   </Link>
                 </div>
               ) : (
-                !entitlementLoading && (
-                  <div className="print-hide mt-6 border-t border-bronze/20 pt-4">
-                    {unlockError && (
-                      <p className="mb-2 text-sm text-red">{unlockError}</p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleUnlockClick}
-                      disabled={unlockLoading}
-                      className="text-sm text-bronze2 underline underline-offset-2 hover:text-cream disabled:opacity-50"
-                    >
-                      {unlockLoading
-                        ? "Redirecting..."
-                        : "Unlock your full 30-day calendar →"}
-                    </button>
+                !entitlementLoading &&
+                user && (
+                  <div className="print-hide mt-6 border-t border-bronze/20 pt-6">
+                    <UpgradePrompt userId={user.id} userEmail={user.email} />
                   </div>
                 )
               )}
