@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import FeedbackSurveyModal from "@/components/FeedbackSurveyModal";
+import SearchAuthGate from "@/components/SearchAuthGate";
 import ShopButton from "@/components/ShopButton";
 import UpgradeWall from "@/components/UpgradeWall";
 import { useAuth } from "@/lib/auth-context";
@@ -319,17 +320,39 @@ function SearchPageContent() {
   const searchParams = useSearchParams();
   const { user, loading: authLoading, hairProfile, hairProfileLoading } =
     useAuth();
-  const [checkedAccess, setCheckedAccess] = useState(false);
+
+  // Anonymous visitors who built a profile without an account (no login,
+  // just a hair_profile_id in localStorage) keep the existing "no account
+  // required to try" path -- checked once on mount since localStorage
+  // isn't available during the initial server render.
+  const [hasLocalProfile, setHasLocalProfile] = useState(false);
+  const [localProfileChecked, setLocalProfileChecked] = useState(false);
 
   useEffect(() => {
-    if (authLoading) return;
-    const hasLocalProfile = Boolean(localStorage.getItem("hair_profile_id"));
-    if (!user && !hasLocalProfile) {
-      router.replace("/auth");
+    setHasLocalProfile(Boolean(localStorage.getItem("hair_profile_id")));
+    setLocalProfileChecked(true);
+  }, []);
+
+  // True until we know both whether the visitor is signed in and, if so,
+  // whether they have a saved hair profile.
+  const resolvingAccess =
+    authLoading || (Boolean(user) && hairProfileLoading) || !localProfileChecked;
+
+  // A plain spinner is fine for a brief check, but must never hang
+  // indefinitely -- after 1s of still resolving, switch to a skeleton
+  // that at least shows the page's shape instead of an open-ended spinner.
+  const [showAccessSkeleton, setShowAccessSkeleton] = useState(false);
+
+  useEffect(() => {
+    if (!resolvingAccess) {
+      setShowAccessSkeleton(false);
       return;
     }
-    setCheckedAccess(true);
-  }, [user, authLoading, router]);
+    const timeoutId = setTimeout(() => setShowAccessSkeleton(true), 1000);
+    return () => clearTimeout(timeoutId);
+  }, [resolvingAccess]);
+
+  const canSearch = Boolean((user && hairProfile) || (!user && hasLocalProfile));
 
   // Search-limit tracking. subscribed/entitlementLoaded cover the
   // "unlimited for active subscribers" carve-out (only ever true for
@@ -698,12 +721,25 @@ function SearchPageContent() {
 
   const showNoResults = !loading && hasSearched && results.length === 0 && !searchError;
 
-  if (!checkedAccess) {
+  if (resolvingAccess) {
+    if (showAccessSkeleton) {
+      return (
+        <main className="flex min-h-screen items-center justify-center bg-dark px-4 font-sans sm:px-6">
+          <div className="w-full max-w-md">
+            <div className="h-12 w-full animate-pulse rounded-lg bg-[#2C2420]" />
+          </div>
+        </main>
+      );
+    }
     return (
       <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
         <p className="text-sm text-cream/60">Loading...</p>
       </main>
     );
+  }
+
+  if (!canSearch) {
+    return <SearchAuthGate variant={user ? "no-profile" : "anonymous"} />;
   }
 
   const effectiveSearches = effectiveSearchState(searchState);
