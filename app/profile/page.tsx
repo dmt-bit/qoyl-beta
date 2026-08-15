@@ -221,10 +221,7 @@ type CurlTypeOption = {
 };
 
 // Image URLs are Cloudinary-hosted (f_auto,q_auto -- format/quality
-// auto-negotiated per request, no explicit extension needed). 1a/1b and
-// 2a/2b intentionally share an image each -- the visual difference
-// between those subtypes is subtle enough that the descriptor text
-// carries it better than a distinct photo would.
+// auto-negotiated per request, no explicit extension needed).
 const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
   {
     value: "1a",
@@ -242,7 +239,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     type: "Straight",
     descriptor: "Straight with slight body. Minimal bend at ends only.",
     image:
-      "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-photo-35267456",
+      "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-fall-maple-1195057-2325807",
   },
   {
     value: "1c",
@@ -269,7 +266,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     type: "Wavy",
     descriptor: "Defined S-wave, medium texture. Wave pattern throughout.",
     image:
-      "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-ulrick-t-16207701",
+      "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-aibek-skakov-418917601-27679976",
   },
   {
     value: "2c",
