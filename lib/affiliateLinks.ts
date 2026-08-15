@@ -1,42 +1,58 @@
-const AFFILIATE_LINKS: Record<string, string> = {
-  // Mielle — Shopper.com affiliate links
-  "mielle pomegranate honey twisting souffle": "https://www.shopper.com/p/RsiZ/r",
-  "mielle pomegranate and honey twisting souffle": "https://www.shopper.com/p/RsiZ/r",
-  "mielle pomegranate & honey twisting souffle": "https://www.shopper.com/p/RsiZ/r",
-  "mielle pomegranate honey leave in conditioner": "https://www.shopper.com/p/yJZT/r",
-  "mielle pomegranate and honey leave in": "https://www.shopper.com/p/yJZT/r",
-  "mielle pomegranate & honey leave-in conditioner": "https://www.shopper.com/p/yJZT/r",
-  "mielle babassu oil mint deep conditioner": "https://www.shopper.com/p/SXw6/r",
-  "mielle babassu oil and mint deep conditioner": "https://www.shopper.com/p/SXw6/r",
-  "mielle babassu oil & mint deep conditioner": "https://www.shopper.com/p/SXw6/r",
-  "mielle white peony leave in conditioner": "https://www.shopper.com/p/AnIb/r",
-  "mielle white peony leave-in conditioner": "https://www.shopper.com/p/AnIb/r",
-  "mielle rosemary mint scalp hair strengthening oil": "https://www.shopper.com/p/Xwu1/r",
-  "mielle rosemary mint scalp and hair strengthening oil": "https://www.shopper.com/p/Xwu1/r",
-  "mielle rosemary mint scalp & hair strengthening oil": "https://www.shopper.com/p/Xwu1/r",
-  "mielle rosemary mint oil": "https://www.shopper.com/p/Xwu1/r",
+const BRAND_FALLBACKS: Record<string, string> = {
+  'camille rose': 'https://www.camillerose.com',
+  'mielle': 'https://www.mielleorganics.com',
+  'mielle organics': 'https://www.mielleorganics.com',
+  'as i am': 'https://asiamnaturally.com',
+  'cantu': 'https://www.cantubeauty.com',
+  'sheamoisture': 'https://www.sheamoisture.com',
+  'shea moisture': 'https://www.sheamoisture.com',
+  'tgin': 'https://tginaturals.com',
+  'thank god its natural': 'https://tginaturals.com',
+  "carol's daughter": 'https://www.carolsdaughter.com',
+  'carols daughter': 'https://www.carolsdaughter.com',
+  "aunt jackie's": 'https://auntjackiescurlsandcoils.com',
+  'aunt jackies': 'https://auntjackiescurlsandcoils.com',
+  'ecoslay': 'https://ecoslay.com',
+  'alikay naturals': 'https://alikaynaturals.com',
+  'adwoa beauty': 'https://adwoabeauty.com',
+  'tropic isle living': 'https://tropicisleliving.com',
+  'kinky curly': 'https://kinkycurly.com',
+  'giovanni': 'https://www.giovannihaircare.com',
+  "africa's best": 'https://www.africasbest.com',
+  'africas best': 'https://www.africasbest.com',
+  "miss jessie's": 'https://missjessies.com',
+  'miss jessies': 'https://missjessies.com',
+  'eco style': 'https://ecostyleproducts.com',
+  'ecostyle': 'https://ecostyleproducts.com',
+  'design essentials': 'https://www.designessentials.com',
+  'pattern beauty': 'https://patternbeauty.com',
+  'briogeo': 'https://www.briogeohair.com',
+  'malibu c': 'https://www.malibuc.com',
+  'olaplex': 'https://olaplex.com',
+  'k18': 'https://k18hair.com',
+  'ouai': 'https://theouai.com',
+  'redken': 'https://www.redken.com',
+  'moroccanoil': 'https://www.moroccanoil.com',
 };
 
 export function getAffiliateLink(productName: string, brandName?: string): string | null {
-  const normalized = productName.toLowerCase()
-    .replace(/[&]/g, 'and')
-    .replace(/[-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  // Normalize brand name and check fallback table
+  if (brandName) {
+    const normalizedBrand = brandName.toLowerCase().trim();
 
-  // Check exact match first
-  if (AFFILIATE_LINKS[normalized]) return AFFILIATE_LINKS[normalized];
+    // Exact brand match
+    if (BRAND_FALLBACKS[normalizedBrand]) {
+      return BRAND_FALLBACKS[normalizedBrand];
+    }
 
-  // Check partial match — if any key is contained in the product name
-  for (const [key, url] of Object.entries(AFFILIATE_LINKS)) {
-    if (normalized.includes(key) || key.includes(normalized)) return url;
+    // Partial brand match
+    for (const [key, url] of Object.entries(BRAND_FALLBACKS)) {
+      if (normalizedBrand.includes(key) || key.includes(normalizedBrand)) {
+        return url;
+      }
+    }
   }
 
-  // Fallback: if brand is Mielle but no specific link, go to Ulta search
-  if (brandName?.toLowerCase().includes('mielle')) {
-    return `https://www.ulta.com/search?query=${encodeURIComponent(productName)}`;
-  }
-
-  // Generic fallback for all other brands — Ulta search
-  return `https://www.ulta.com/search?query=${encodeURIComponent(productName)}`;
+  // No match — return null
+  return null;
 }

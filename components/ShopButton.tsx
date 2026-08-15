@@ -10,22 +10,32 @@ export default function ShopButton({
   className?: string;
 }) {
   const link = getAffiliateLink(productName, brandName);
-  if (!link) return null;
 
-  const label = link.includes("shopper.com")
-    ? "Shop at Shopper →"
-    : link.includes("ulta.com")
-    ? "Shop at Ulta →"
-    : "Shop this product →";
+  if (link) {
+    return (
+      <a
+        href={link}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+      >
+        Visit brand site →
+      </a>
+    );
+  }
+
+  // No brand site to link to -- always give the user a working path to
+  // find the product rather than a dead end.
+  const searchQuery = [productName, brandName].filter(Boolean).join(" ");
 
   return (
     <a
-      href={link}
+      href={`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`}
       target="_blank"
       rel="noopener noreferrer"
       className={className}
     >
-      {label}
+      Search for this product →
     </a>
   );
 }
