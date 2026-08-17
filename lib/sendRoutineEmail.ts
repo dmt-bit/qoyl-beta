@@ -7,7 +7,10 @@ import { generateSeasonalNote } from "@/lib/routineSeasonalNote";
 import { lookupCityState } from "@/lib/zipLookup";
 import { renderRoutineEmailHtml } from "@/emails/routine-template";
 
-const FROM_ADDRESS = "Qoyl <hello@qoyl.com>";
+// onboarding@resend.dev is Resend's shared sender -- works without
+// verifying a sending domain. Switch to a verified qoyl.live address once
+// domain verification is configured.
+const FROM_ADDRESS = "Qoyl <onboarding@resend.dev>";
 const DASHBOARD_URL = "qoyl-beta-alpha.vercel.app/dashboard";
 
 const MONTH_NAMES = [

@@ -1,8 +1,9 @@
 import { getResend } from "@/lib/resend";
 
 const ADMIN_EMAIL = "twinedaily@gmail.com";
-// onboarding@resend.dev is Resend's shared test sender -- works without
-// verifying a sending domain, unlike hello@qoyl.com used elsewhere.
+// onboarding@resend.dev is Resend's shared sender -- works without
+// verifying a sending domain. Every sender in this codebase currently
+// uses it for that reason, pending qoyl.live domain verification.
 const NOTIFY_FROM = "Qoyl <onboarding@resend.dev>";
 
 export async function sendAdminNotification(
