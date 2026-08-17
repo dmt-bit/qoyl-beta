@@ -43,14 +43,26 @@ export async function sendNotificationEmail(
       text,
     });
 
+    console.log("[notify] send data:", JSON.stringify(data));
+    console.log("[notify] send error:", JSON.stringify(error));
+
     if (error) {
       console.error("Resend API rejected notification email:", subject, error);
+      console.log(
+        "[notify] Resend rejection full error:",
+        JSON.stringify(error, null, 2)
+      );
+      console.log(
+        "[notify] Resend rejection data:",
+        JSON.stringify(data, null, 2)
+      );
       return { sent: false, reason: "api_error", error };
     }
 
     return { sent: true, id: data?.id ?? null };
   } catch (err) {
     console.error("Failed to send notification email:", subject, err);
+    console.log("[notify] send threw:", JSON.stringify(err));
     return { sent: false, reason: "threw", error: err };
   }
 }
