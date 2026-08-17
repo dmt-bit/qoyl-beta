@@ -46,6 +46,22 @@ export default function AuthPage() {
         setError(signUpError.message);
         return;
       }
+
+      // Fire-and-forget -- never awaited, never shown to the user, and
+      // must not delay the info message/redirect below. Server-side
+      // bridge (see app/api/notify/new-signup/route.ts) since this is a
+      // client component and can't import lib/sendWelcomeEmail.ts /
+      // lib/notify.ts (and RESEND_API_KEY) directly.
+      if (data.user) {
+        fetch("/api/notify/new-signup", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }).catch((err) =>
+          console.warn("[auth] Signup notification request failed:", err)
+        );
+      }
+
       if (!data.session) {
         setInfoMessage(
           "Check your email to confirm your account, then sign in."
