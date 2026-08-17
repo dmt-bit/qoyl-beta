@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { sendAdminNotification } from "@/lib/adminNotify";
 import { sendNotificationEmail } from "@/lib/notify";
+import { getResend } from "@/lib/resend";
 
 export async function POST(request: Request) {
+  console.log("[product-requests] route hit");
+
   const body = await request.json();
   const {
     productName,
@@ -41,17 +43,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: insertError.message }, { status: 500 });
   }
 
-  await sendAdminNotification(
-    `New product evaluation request — ${productName}`,
-    `product_name: ${productName}\n` +
-      `brand_name: ${brandName}\n` +
-      `ingredient_list: ${ingredientList || "Not provided"}\n` +
-      `requester_email: ${email}`
+  console.log(
+    "[product-requests] RESEND_API_KEY present:",
+    Boolean(process.env.RESEND_API_KEY)
+  );
+  console.log(
+    "[product-requests] getResend() returned:",
+    getResend() ? "client" : "null"
   );
 
   const hasIngredientList = Boolean(ingredientList && ingredientList.trim());
 
-  await sendNotificationEmail(
+  const notifyResult = await sendNotificationEmail(
     `Product evaluation request — ${productName}`,
     `Someone requested a product evaluation on Qoyl.
 
@@ -67,6 +70,8 @@ Submitted at: ${new Date().toISOString()}
 
 ACTION NEEDED: Evaluate this product and reply to ${email} within 48 hours with their compatibility score.`
   );
+
+  console.log("[product-requests] sendNotificationEmail result:", notifyResult);
 
   return NextResponse.json({ ok: true });
 }
