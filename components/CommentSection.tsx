@@ -85,6 +85,10 @@ export default function CommentSection({
     setSubmitting(false);
 
     if (insertError || !data) {
+      // insertError was previously discarded here -- a failure (missing
+      // table, RLS rejection, constraint violation) was indistinguishable
+      // from any other failure in both the UI and the server logs.
+      console.error("Failed to insert post_comments row:", insertError);
       setError("Couldn't post your comment. Please try again.");
       return;
     }
