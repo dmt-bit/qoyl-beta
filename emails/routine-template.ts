@@ -269,7 +269,7 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
   <div class="footer-text">
     ${escapeHtml(data.firstName)} &middot; Monthly Routine Subscriber &middot; ${escapeHtml(data.monthLabel)}<br/>
     Built from your ${data.curlTypeLabel ? escapeHtml(data.curlTypeLabel) + " " : ""}${data.porosityLabel ? escapeHtml(data.porosityLabel) + " porosity " : ""}profile${data.cityStateLabel ? " &middot; " + escapeHtml(data.cityStateLabel) : ""}${data.waterHardnessLabel ? " &middot; " + escapeHtml(data.waterHardnessLabel) : ""}<br/>
-    Questions about your routine? Reply to this email &mdash; hello@qoyl.com<br/>
+    Questions about your routine? Reply to this email &mdash; support@qoyl.live<br/>
     Manage your subscription at ${escapeHtml(data.dashboardUrl)}
   </div>
 </div>
