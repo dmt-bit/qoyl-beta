@@ -118,3 +118,13 @@ export function classifyClimateFromZip(zip: string): ClimateZone | null {
 
   return STATE_CLIMATE[state] ?? "humid";
 }
+
+// Every state/territory code this table recognizes -- used by
+// lib/destinationClimate.ts to check whether a free-text travel
+// destination (e.g. "Miami, FL") contains a real state abbreviation
+// before trusting a match, rather than duplicating this list.
+export const KNOWN_STATE_CODES: string[] = Object.keys(STATE_CLIMATE);
+
+export function classifyClimateFromState(state: string): ClimateZone {
+  return STATE_CLIMATE[state] ?? "humid";
+}

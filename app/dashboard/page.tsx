@@ -18,6 +18,20 @@ type RecentSearch = {
   searched_at: string;
 };
 
+type TravelKitSummary = {
+  id: string;
+  destination: string;
+  departure_date: string | null;
+  return_date: string | null;
+};
+
+function formatTravelDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 const SCALP_LABELS: Record<string, string> = {
   normal: "Normal scalp",
   dry: "Dry scalp",
@@ -249,6 +263,28 @@ function DashboardContent() {
     };
   }, [user]);
 
+  const [travelKits, setTravelKits] = useState<TravelKitSummary[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    async function loadTravelKits() {
+      const { data } = await supabase
+        .from("travel_kits")
+        .select("id, destination, departure_date, return_date")
+        .eq("user_id", user!.id)
+        .eq("status", "active")
+        .order("departure_date", { ascending: true });
+      if (!cancelled) setTravelKits(data ?? []);
+    }
+
+    loadTravelKits();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   if (!checkedAccess) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
@@ -401,6 +437,52 @@ function DashboardContent() {
                         className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
                       >
                         Search again →
+                      </Link>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+
+        {travelKits.length > 0 && (
+          <section className="print-hide mt-10">
+            <h2 className="font-serif text-2xl font-semibold text-cream">
+              My Travel Kits
+            </h2>
+            <ul className="mt-4 space-y-2">
+              {travelKits.map((kit) => {
+                const isUpcoming = kit.departure_date
+                  ? new Date(`${kit.departure_date}T00:00:00`) >= new Date(new Date().toDateString())
+                  : true;
+                return (
+                  <li
+                    key={kit.id}
+                    className="flex items-center justify-between gap-4 rounded-lg border border-bronze/30 px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm text-cream">{kit.destination}</p>
+                      <p className="mt-0.5 text-xs text-cream/50">
+                        {formatTravelDate(kit.departure_date)} –{" "}
+                        {formatTravelDate(kit.return_date)}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-3">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          isUpcoming
+                            ? "bg-green/20 text-green"
+                            : "bg-bronze/20 text-bronze2"
+                        }`}
+                      >
+                        {isUpcoming ? "Upcoming" : "Past"}
+                      </span>
+                      <Link
+                        href={`/travel?kit=${kit.id}`}
+                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                      >
+                        View kit →
                       </Link>
                     </div>
                   </li>

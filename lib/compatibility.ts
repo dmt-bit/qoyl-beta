@@ -397,13 +397,50 @@ function applyCurlTypeAdjustment(
   return { score: adjustedScore, rating: ratingForScore(adjustedScore) };
 }
 
-type ScoringProfile = {
+export type ScoringProfile = {
   climate: string | null;
   waterHardness: string | null;
   porosity: string;
   scalpCondition: string | null;
   family: CurlFamily | null;
 };
+
+type ProfileRow = {
+  curl_type: string | null;
+  porosity: string | null;
+  scalp_condition: string | null;
+  climate: string | null;
+  water_hardness: string | null;
+};
+
+// Shared by loadScoringProfile (browser, localStorage-driven) and any
+// server-side caller that already has a hair_profiles row in hand (e.g.
+// travel kit generation in the Stripe webhook, which has no browser
+// session/localStorage to read) -- so both paths apply the exact same
+// porosity-default/normalization rules instead of two copies drifting
+// apart. climate is intentionally overridable by the caller (e.g. a
+// travel kit scores against the destination's climate, not the user's
+// home climate) via the optional climateOverride param.
+export function buildScoringProfile(
+  row: ProfileRow,
+  climateOverride?: string | null
+): ScoringProfile {
+  // porosity is never null in compatibility_scores -- default unknown
+  // ("not sure") profiles to medium rather than a filter that would
+  // never match anything.
+  const porosity =
+    row.porosity === "not sure" || row.porosity === "not_sure" || !row.porosity
+      ? "medium"
+      : row.porosity;
+
+  return {
+    climate: climateOverride !== undefined ? climateOverride : row.climate,
+    waterHardness: row.water_hardness,
+    porosity,
+    scalpCondition: normalizeScalpCondition(row.scalp_condition),
+    family: curlFamily(row.curl_type),
+  };
+}
 
 async function loadScoringProfile(): Promise<
   { error: string } | { profile: ScoringProfile }
@@ -427,23 +464,7 @@ async function loadScoringProfile(): Promise<
     return { error: "Couldn't load your hair profile." };
   }
 
-  // porosity is never null in compatibility_scores -- default unknown
-  // ("not sure") profiles to medium rather than a filter that would
-  // never match anything.
-  const porosity =
-    profile.porosity === "not sure" || profile.porosity === "not_sure" || !profile.porosity
-      ? "medium"
-      : profile.porosity;
-
-  return {
-    profile: {
-      climate: profile.climate,
-      waterHardness: profile.water_hardness,
-      porosity,
-      scalpCondition: normalizeScalpCondition(profile.scalp_condition),
-      family: curlFamily(profile.curl_type),
-    },
-  };
+  return { profile: buildScoringProfile(profile) };
 }
 
 type PositionedIngredient = {
@@ -719,7 +740,25 @@ export async function scoreCatalogProducts(
   if ("error" in ctx) {
     return Object.fromEntries(productIds.map((id) => [id, { error: ctx.error }]));
   }
-  const { profile } = ctx;
+
+  return scoreCatalogProductsForProfile(productIds, ctx.profile);
+}
+
+// Same as scoreCatalogProducts, but for callers that already have a
+// ScoringProfile in hand instead of a browser session to load one from
+// (e.g. travel kit generation in the Stripe webhook -- no
+// localStorage/user session exists there, so the caller fetches the
+// hair_profiles row itself via the service-role client and builds the
+// profile with buildScoringProfile()). catalog_products/
+// catalog_product_ingredients/compatibility_scores are all
+// anon-readable, so the plain supabase client works fine server-side
+// for these reads -- only the hair_profiles fetch itself needs the
+// service role, and that happens before this function is called.
+export async function scoreCatalogProductsForProfile(
+  productIds: string[],
+  profile: ScoringProfile
+): Promise<Record<string, { error?: string; result?: ScoreResult }>> {
+  if (productIds.length === 0) return {};
 
   const { data: rows, error: piError } = await supabase
     .from("catalog_product_ingredients")

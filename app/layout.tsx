@@ -19,7 +19,7 @@ const dmSans = DM_Sans({
 
 export const metadata: Metadata = {
   title: "Qoyl",
-  description: "Hair intelligence for every texture.",
+  description: "Personalized hair care for every texture.",
 };
 
 export default function RootLayout({

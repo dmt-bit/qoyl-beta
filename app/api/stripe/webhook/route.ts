@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendRoutineEmail } from "@/lib/sendRoutineEmail";
 import { sendAdminNotification } from "@/lib/adminNotify";
 import { sendNotificationEmail } from "@/lib/notify";
+import { generateTravelKitProducts } from "@/lib/travelKitGenerator";
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -88,18 +89,70 @@ export async function POST(request: Request) {
         const purchaseTimestamp = new Date().toISOString();
 
         if (productType === "travel_kit") {
-          await sendNotificationEmail(
-            "New travel kit purchase — $4.99",
-            `Someone just purchased the Qoyl Travel Kit.
+          const travelKitId = session.metadata?.travel_kit_id;
+
+          if (!travelKitId) {
+            console.error(
+              "checkout.session.completed travel_kit purchase missing travel_kit_id metadata:",
+              session.id
+            );
+          } else {
+            const { data: travelKitRow, error: fetchError } =
+              await getSupabaseAdmin()
+                .from("travel_kits")
+                .select(
+                  "destination, climate, swimming, protective_style, hair_priority"
+                )
+                .eq("id", travelKitId)
+                .single();
+
+            if (fetchError || !travelKitRow) {
+              console.error(
+                "Couldn't load travel_kits row for generation:",
+                travelKitId,
+                fetchError
+              );
+            } else {
+              const products = await generateTravelKitProducts({
+                userId,
+                climate: travelKitRow.climate,
+                swimming: travelKitRow.swimming,
+                protectiveStyle: travelKitRow.protective_style,
+                hairPriority: travelKitRow.hair_priority,
+              });
+
+              const { error: updateError } = await getSupabaseAdmin()
+                .from("travel_kits")
+                .update({
+                  status: "active",
+                  products,
+                  stripe_session_id: session.id,
+                })
+                .eq("id", travelKitId);
+
+              if (updateError) {
+                console.error(
+                  "Failed to update travel_kits row after payment:",
+                  travelKitId,
+                  updateError
+                );
+              }
+
+              await sendNotificationEmail(
+                "Travel kit purchased and generated",
+                `Travel kit purchased and generated — ${travelKitRow.destination} for ${userId}.
 
 User ID: ${userId}
+Destination: ${travelKitRow.destination}
 Stripe customer: ${stripeCustomerId}
 Amount: $4.99
 Purchased at: ${purchaseTimestamp}
+Products generated: ${products.length}
 
-No manual action needed — dashboard unlocks automatically.
-Check Supabase user_purchases table for full details.`
-          );
+No manual action needed.`
+              );
+            }
+          }
         }
 
         if (productType === "routine_subscription") {

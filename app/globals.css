@@ -129,6 +129,23 @@ body {
   }
 }
 
+/* Step transition for the /travel multi-step survey -- runs on mount of
+   each step (the caller re-keys the step container so React remounts it
+   on every step change, retriggering this animation). */
+@keyframes fade-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-step {
+  animation: fade-step-in 0.25s ease-out both;
+}
+
 /* Infinite horizontal scroll for the hero's hair-type strip. Duplicated
    list in the markup (two copies back to back) + a 50% translate makes
    the loop seamless. */

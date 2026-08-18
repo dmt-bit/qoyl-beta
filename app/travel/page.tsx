@@ -1,230 +1,745 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
 import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
-import {
-  getTravelKit,
-  TRAVEL_CLIMATES,
-  TravelClimate,
-  TravelKitItem,
-} from "@/lib/travelKit";
+import { classifyClimateFromDestination } from "@/lib/destinationClimate";
+import type { ClimateZone } from "@/lib/locationFactors";
+import { supabase } from "@/lib/supabase";
+import type { TravelKitProduct } from "@/lib/travelKitGenerator";
 
-// ---- Icons -- outline style matching the rest of the app (stroke,
-// 24x24 viewBox, strokeWidth 1.5, currentColor) ----
+type ClimateChoice = ClimateZone | "similar_to_home";
 
-function DropletIcon() {
-  return (
-    <svg className="h-7 w-7 text-bronze" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.25S6 9.5 6 13.5a6 6 0 0012 0c0-4-6-11.25-6-11.25z" />
-    </svg>
-  );
-}
-
-function SunIcon() {
-  return (
-    <svg className="h-7 w-7 text-bronze" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-6.364-.386l1.591-1.591M3 12h2.25m.386-6.364l1.591 1.591M16.5 12a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-    </svg>
-  );
-}
-
-function SnowflakeIcon() {
-  return (
-    <svg className="h-7 w-7 text-bronze" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 2.5v19M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07M2.5 12h19M8 5l4-2.5L16 5M8 19l4 2.5L16 19M5 8l-2.5 4L5 16M19 8l2.5 4L19 16" />
-    </svg>
-  );
-}
-
-function CheckCircleIcon() {
-  return (
-    <svg className="h-7 w-7 text-bronze" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75l2.25 2.25L15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
-
-function ListIcon() {
-  return (
-    <svg className="h-5 w-5 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12M8.25 17.25h12M4.5 6.75h.008v.008H4.5V6.75zM4.5 12h.008v.008H4.5V12zm0 5.25h.008v.008H4.5v-.008z" />
-    </svg>
-  );
-}
-
-function BeakerIcon() {
-  return (
-    <svg className="h-5 w-5 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5m4.75-11.396a24.301 24.301 0 014.5 0M14.25 3.104v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M9.75 3.104c1.499-.137 3.001-.137 4.5 0M5 14.5l1.35.35a9.065 9.065 0 006.23-.693 9.065 9.065 0 016.23-.693l1.35.35M5 14.5l-1.402 1.402c-1.232 1.232-.65 3.318 1.067 3.611A48.309 48.309 0 0012 20c2.773 0 5.491-.235 8.135-.687 1.718-.293 2.3-2.379 1.067-3.61L19.8 15.3" />
-    </svg>
-  );
-}
-
-function LinkIcon() {
-  return (
-    <svg className="h-5 w-5 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-    </svg>
-  );
-}
-
-function SparklesIcon() {
-  return (
-    <svg className="h-5 w-5 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
-    </svg>
-  );
-}
-
-const CLIMATE_PROBLEM_CARDS = [
-  {
-    icon: DropletIcon,
-    title: "Humidity zones",
-    examples: "Miami, Houston, Southeast Asia",
-    description:
-      "High humidity causes frizz and hygral fatigue for most hair types. You need lighter products and frizz control — not your usual heavy routine.",
-  },
-  {
-    icon: SunIcon,
-    title: "Dry climates",
-    examples: "Phoenix, Las Vegas, Denver, desert climates",
-    description:
-      "Low humidity pulls moisture out of your hair faster than normal. Humectants like glycerin work against you here. Your routine needs heavier sealants and less water-attracting ingredients.",
-  },
-  {
-    icon: SnowflakeIcon,
-    title: "Cold & dry",
-    examples: "Chicago in January, NYC, Northern Europe",
-    description:
-      "Cold air holds less moisture and indoor heating strips what's left. Hair gets brittle and breaks more easily. Your kit needs more protein protection and occlusive sealing.",
-  },
-  {
-    icon: CheckCircleIcon,
-    title: "Similar climate",
-    examples: null,
-    description:
-      "If your destination has a similar climate to home, your existing routine mostly works — but hard water differences can still affect how your products perform.",
-  },
+const CLIMATE_OPTIONS: { value: ClimateChoice; label: string }[] = [
+  { value: "humid", label: "Humid/Tropical" },
+  { value: "dry", label: "Dry/Arid" },
+  { value: "cold-dry", label: "Cold/Winter" },
+  { value: "similar_to_home", label: "Similar to home" },
 ];
 
-const FEATURE_ROWS = [
-  {
-    icon: ListIcon,
-    title: "5 personalized product recommendations",
-    description:
-      "Not generic travel picks. Products matched to your curl type, porosity, and your destination climate specifically.",
-  },
-  {
-    icon: BeakerIcon,
-    title: "Climate-specific ingredient guidance",
-    description:
-      "We flag which ingredients in your usual products will work against you at your destination, and what to look for instead.",
-  },
-  {
-    icon: LinkIcon,
-    title: "Direct shopping links",
-    description:
-      "Every recommendation links directly to where you can buy it. Shop before you pack.",
-  },
-  {
-    icon: SparklesIcon,
-    title: "Works for every hair type",
-    description:
-      "Whether you have 1a pin-straight hair or 4c tight coils, the kit is built from your specific profile. Waves, curls, coils, straight — all textures covered.",
-  },
-];
-
-const STATS = [
-  {
-    stat: "6 variables",
-    description:
-      "We score products against your curl type, porosity, scalp, climate, strand thickness, and water type",
-  },
-  {
-    stat: "200+ ingredients",
-    description:
-      "In our database — scored for every hair type and climate combination",
-  },
-  {
-    stat: "10 seconds",
-    description: "To get your personalized travel kit once your profile is built",
-  },
-];
-
-// No real product/brand catalog exists yet (Phase 1) -- these render as
-// guidance ("look for a cleanser with X") rather than a specific product
-// name, so nothing implies a real shoppable item that doesn't exist.
-const CATEGORY_NOUN: Record<string, string> = {
-  shampoo: "cleanser",
-  conditioner: "conditioner",
-  leave_in: "leave-in conditioner",
-  gel: "styler",
-  curl_refresher: "curl refresher",
+const CLIMATE_LABELS: Record<string, string> = {
+  humid: "Humid",
+  tropical: "Tropical",
+  dry: "Dry",
+  "cold-dry": "Cold & dry",
+  similar_to_home: "Similar to home",
 };
 
-export default function TravelPage() {
+const SWIMMING_OPTIONS: { value: string; label: string }[] = [
+  { value: "no_swimming", label: "No swimming" },
+  { value: "pool", label: "Pool swimming" },
+  { value: "ocean", label: "Ocean or open water" },
+  { value: "hot_tub", label: "Hot tub" },
+  { value: "multiple", label: "Multiple (pool + ocean etc)" },
+];
+
+const PROTECTIVE_STYLE_OPTIONS: { value: string; label: string }[] = [
+  { value: "none", label: "No — wearing my natural hair" },
+  { value: "braids_twists", label: "Braids or twists" },
+  { value: "weave_sew_in", label: "Weave or sew-in" },
+  { value: "wig", label: "Wig" },
+  { value: "locs", label: "Locs" },
+  { value: "not_sure", label: "Not sure yet" },
+];
+
+const HAIR_PRIORITY_OPTIONS: { value: string; label: string }[] = [
+  { value: "low_maintenance", label: "Low maintenance — keep it simple" },
+  {
+    value: "moisture",
+    label: "Moisture retention — my hair gets dry when I travel",
+  },
+  {
+    value: "definition",
+    label: "Definition and styling — I want my hair to look great",
+  },
+  {
+    value: "scalp_health",
+    label: "Scalp health — focus on keeping my scalp fresh",
+  },
+];
+
+function labelFor(options: { value: string; label: string }[], value: string | null) {
+  return options.find((o) => o.value === value)?.label ?? value ?? "—";
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return "—";
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+type TravelKitRow = {
+  id: string;
+  destination: string;
+  departure_date: string | null;
+  return_date: string | null;
+  climate: string | null;
+  swimming: string | null;
+  protective_style: string | null;
+  hair_priority: string | null;
+  status: string;
+  products: TravelKitProduct[] | null;
+};
+
+function Pill({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full rounded-lg border px-4 py-3 text-left text-sm font-medium transition-colors ${
+        selected
+          ? "border-bronze bg-bronze text-dark"
+          : "border-bronze/40 text-cream hover:border-bronze"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function ProgressBar({ step, totalSteps }: { step: number; totalSteps: number }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
+        Step {step} of {totalSteps}
+      </p>
+      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-bronze/20">
+        <div
+          className="h-full rounded-full bg-bronze transition-all duration-300 ease-out"
+          style={{ width: `${(step / totalSteps) * 100}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function TravelKitProductCard({ item }: { item: TravelKitProduct }) {
+  const tier = scoreTier(item.score);
+  return (
+    <li className="rounded-lg border border-bronze/30 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-serif text-lg text-cream">{item.name}</p>
+          <p className="text-xs text-muted">{item.brand}</p>
+        </div>
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${TIER_CLASSES[tier]}`}
+        >
+          {item.score}
+        </span>
+      </div>
+      <p className="mt-2 text-sm text-cream/70">{item.reason}</p>
+      <div className="mt-2">
+        <ShopButton
+          productName={item.name}
+          brandName={item.brand}
+          className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+        />
+      </div>
+    </li>
+  );
+}
+
+// ---- STATE A: landing ----
+
+function LandingView({
+  onBuildClick,
+  error,
+  cancelled,
+}: {
+  onBuildClick: () => void;
+  error: string | null;
+  cancelled: boolean;
+}) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-dark px-4 py-16 font-sans text-cream sm:px-6">
+      <div className="mx-auto max-w-xl text-center">
+        <h1 className="font-serif text-4xl font-semibold leading-tight text-cream sm:text-5xl">
+          Your hair goes where you go.
+        </h1>
+        <p className="mx-auto mt-5 max-w-lg text-base text-cream/70">
+          Different climates, different water, different routines. Tell us
+          where you&apos;re headed and we will build you a personalized list
+          of 5 products matched to your hair profile and your destination.
+        </p>
+
+        {cancelled && (
+          <p className="mt-4 text-sm text-cream/60">
+            No worries — you can build your kit anytime.
+          </p>
+        )}
+        {error && <p className="mt-4 text-sm text-red">{error}</p>}
+
+        <button
+          type="button"
+          onClick={onBuildClick}
+          className="mx-auto mt-8 flex h-[52px] w-full max-w-sm items-center justify-center rounded-full bg-bronze px-6 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 sm:w-auto sm:px-10"
+        >
+          Build my travel kit — $4.99 →
+        </button>
+
+        <p className="mt-4 text-xs text-cream/50">
+          One-time purchase. Yours to keep and shop from before you leave.
+        </p>
+      </div>
+    </main>
+  );
+}
+
+// ---- STATE B: survey ----
+
+function SurveyView({
+  step,
+  totalSteps,
+  destination,
+  setDestination,
+  detectedClimate,
+  climate,
+  setClimate,
+  departureDate,
+  setDepartureDate,
+  returnDate,
+  setReturnDate,
+  swimming,
+  setSwimming,
+  protectiveStyle,
+  setProtectiveStyle,
+  hairPriority,
+  setHairPriority,
+  onNext,
+  onBack,
+  onSubmit,
+  submitting,
+  submitError,
+}: {
+  step: number;
+  totalSteps: number;
+  destination: string;
+  setDestination: (v: string) => void;
+  detectedClimate: ClimateZone | null;
+  climate: ClimateChoice | null;
+  setClimate: (v: ClimateChoice) => void;
+  departureDate: string;
+  setDepartureDate: (v: string) => void;
+  returnDate: string;
+  setReturnDate: (v: string) => void;
+  swimming: string | null;
+  setSwimming: (v: string) => void;
+  protectiveStyle: string | null;
+  setProtectiveStyle: (v: string) => void;
+  hairPriority: string | null;
+  setHairPriority: (v: string) => void;
+  onNext: () => void;
+  onBack: () => void;
+  onSubmit: () => void;
+  submitting: boolean;
+  submitError: string | null;
+}) {
+  const step1Valid =
+    destination.trim().length > 0 &&
+    Boolean(departureDate) &&
+    Boolean(returnDate) &&
+    Boolean(climate) &&
+    returnDate >= departureDate;
+  const step2Valid = Boolean(swimming);
+  const step3Valid = Boolean(protectiveStyle) && Boolean(hairPriority);
+
+  return (
+    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+      <div className="mx-auto max-w-md">
+        <ProgressBar step={step} totalSteps={totalSteps} />
+
+        <div key={step} className="fade-step mt-8">
+          {step === 1 && (
+            <div>
+              <h2 className="font-serif text-2xl font-semibold text-cream">
+                Where are you headed?
+              </h2>
+              <input
+                type="text"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                placeholder="Miami, FL or Paris, France"
+                className="mt-4 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              />
+
+              {detectedClimate && (
+                <div className="mt-3">
+                  <span className="inline-block rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
+                    Detected climate: {CLIMATE_LABELS[detectedClimate]}
+                  </span>
+                  <p className="mt-1.5 text-xs text-cream/50">
+                    You can change this below if needed.
+                  </p>
+                </div>
+              )}
+
+              <p className="mt-6 font-serif text-lg text-bronze2">Climate</p>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                {CLIMATE_OPTIONS.map((option) => (
+                  <Pill
+                    key={option.value}
+                    label={option.label}
+                    selected={climate === option.value}
+                    onClick={() => setClimate(option.value)}
+                  />
+                ))}
+              </div>
+
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="departure-date" className="text-xs font-medium text-cream/70">
+                    Departure date
+                  </label>
+                  <input
+                    id="departure-date"
+                    type="date"
+                    value={departureDate}
+                    onChange={(e) => setDepartureDate(e.target.value)}
+                    className="mt-1.5 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2.5 text-sm text-cream focus:border-bronze focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="return-date" className="text-xs font-medium text-cream/70">
+                    Return date
+                  </label>
+                  <input
+                    id="return-date"
+                    type="date"
+                    value={returnDate}
+                    min={departureDate || undefined}
+                    onChange={(e) => setReturnDate(e.target.value)}
+                    className="mt-1.5 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2.5 text-sm text-cream focus:border-bronze focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div>
+              <h2 className="font-serif text-2xl font-semibold text-cream">
+                Will you be swimming or in water?
+              </h2>
+              <div className="mt-4 space-y-2.5">
+                {SWIMMING_OPTIONS.map((option) => (
+                  <Pill
+                    key={option.value}
+                    label={option.label}
+                    selected={swimming === option.value}
+                    onClick={() => setSwimming(option.value)}
+                  />
+                ))}
+              </div>
+              <p className="mt-4 text-xs text-cream/50">
+                Chlorine, salt water, and minerals affect your hair
+                differently. This helps us include the right protective and
+                clarifying products.
+              </p>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div>
+              <h2 className="font-serif text-2xl font-semibold text-cream">
+                Are you planning a protective style for this trip?
+              </h2>
+              <div className="mt-4 space-y-2.5">
+                {PROTECTIVE_STYLE_OPTIONS.map((option) => (
+                  <Pill
+                    key={option.value}
+                    label={option.label}
+                    selected={protectiveStyle === option.value}
+                    onClick={() => setProtectiveStyle(option.value)}
+                  />
+                ))}
+              </div>
+
+              <h2 className="mt-8 font-serif text-2xl font-semibold text-cream">
+                What&apos;s your hair priority on this trip?
+              </h2>
+              <div className="mt-4 space-y-2.5">
+                {HAIR_PRIORITY_OPTIONS.map((option) => (
+                  <Pill
+                    key={option.value}
+                    label={option.label}
+                    selected={hairPriority === option.value}
+                    onClick={() => setHairPriority(option.value)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 4 && (
+            <div>
+              <h2 className="font-serif text-2xl font-semibold text-cream">
+                Review your trip
+              </h2>
+              <p className="mt-3 text-sm text-cream/80">
+                Your trip to {destination || "—"} ·{" "}
+                {formatDate(departureDate)}–{formatDate(returnDate)} ·{" "}
+                {CLIMATE_LABELS[climate ?? ""] ?? "—"} ·{" "}
+                {labelFor(SWIMMING_OPTIONS, swimming)} ·{" "}
+                {labelFor(PROTECTIVE_STYLE_OPTIONS, protectiveStyle)}
+              </p>
+              <p className="mt-4 text-sm text-cream/70">
+                Based on your profile and trip details we will build you a
+                personalized list of 5 products. Ready?
+              </p>
+
+              {submitError && (
+                <p className="mt-4 text-sm text-red">{submitError}</p>
+              )}
+
+              <button
+                type="button"
+                onClick={onSubmit}
+                disabled={submitting}
+                className="mt-6 w-full rounded-lg bg-bronze py-4 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+              >
+                {submitting ? "Please wait..." : "Get my travel kit — $4.99 →"}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {step < 4 && (
+          <div className="mt-8 flex items-center justify-between">
+            {step > 1 ? (
+              <button
+                type="button"
+                onClick={onBack}
+                className="text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+              >
+                ← Back
+              </button>
+            ) : (
+              <span />
+            )}
+            <button
+              type="button"
+              onClick={onNext}
+              disabled={
+                (step === 1 && !step1Valid) ||
+                (step === 2 && !step2Valid) ||
+                (step === 3 && !step3Valid)
+              }
+              className="rounded-lg bg-bronze px-6 py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+            >
+              Next →
+            </button>
+          </div>
+        )}
+        {step === 4 && (
+          <div className="mt-6">
+            <button
+              type="button"
+              onClick={onBack}
+              className="text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+            >
+              ← Back
+            </button>
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}
+
+// ---- Loading transition ----
+
+function GeneratingView({ destination }: { destination: string }) {
+  return (
+    <main className="flex min-h-screen flex-col items-center justify-center bg-dark px-4 font-sans text-cream">
+      <h1 className="font-serif text-2xl italic text-cream">Qoyl</h1>
+      <div className="mt-8 flex gap-2">
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="h-2.5 w-2.5 animate-bounce rounded-full bg-bronze"
+            style={{ animationDelay: `${i * 150}ms` }}
+          />
+        ))}
+      </div>
+      <p className="mt-8 font-serif text-xl text-cream">
+        Building your kit for {destination}...
+      </p>
+    </main>
+  );
+}
+
+// ---- STATE C: kit ready ----
+
+function KitView({
+  kit,
+  paymentSuccess,
+  onBuildAnother,
+}: {
+  kit: TravelKitRow;
+  paymentSuccess: boolean;
+  onBuildAnother: () => void;
+}) {
+  const products = kit.products ?? [];
+
+  return (
+    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+      <div className="mx-auto max-w-md">
+        {paymentSuccess && (
+          <p className="mb-4 rounded-lg border border-green/40 bg-green/10 px-4 py-3 text-sm text-green">
+            You&apos;re all set — your travel kit is ready.
+          </p>
+        )}
+
+        <h1 className="font-serif text-3xl font-semibold text-cream">
+          Your travel kit
+        </h1>
+        <p className="mt-1 text-sm font-medium text-bronze2">
+          {kit.destination} · {formatDate(kit.departure_date)} to{" "}
+          {formatDate(kit.return_date)}
+        </p>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {kit.climate && (
+            <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
+              {CLIMATE_LABELS[kit.climate] ?? kit.climate}
+            </span>
+          )}
+          {kit.swimming && (
+            <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
+              {labelFor(SWIMMING_OPTIONS, kit.swimming)}
+            </span>
+          )}
+          {kit.protective_style && (
+            <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
+              {labelFor(PROTECTIVE_STYLE_OPTIONS, kit.protective_style)}
+            </span>
+          )}
+        </div>
+
+        {kit.status === "pending_payment" && (
+          <p className="mt-6 text-sm text-cream/60">
+            Your kit is still being generated. This can take a minute after
+            payment — refresh shortly.
+          </p>
+        )}
+
+        {products.length > 0 && (
+          <ul className="mt-6 space-y-3">
+            {products.map((item) => (
+              <TravelKitProductCard key={item.catalogProductId} item={item} />
+            ))}
+          </ul>
+        )}
+
+        <p className="mt-6 text-xs text-cream/50">
+          Your kit is a curated digital guide — click each link to purchase
+          directly from the brand or retailer. All products are
+          independently evaluated by Qoyl with no brand partnerships
+          influencing recommendations.
+        </p>
+
+        <button
+          type="button"
+          onClick={onBuildAnother}
+          className="mt-8 text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+        >
+          Planning another trip? Build a new kit →
+        </button>
+      </div>
+    </main>
+  );
+}
+
+// ---- Root component / state machine ----
+
+type View = "landing" | "survey" | "generating" | "kit";
+
+function TravelPageContent() {
   const router = useRouter();
-  const { user, loading: authLoading, hairProfile } = useAuth();
+  const searchParams = useSearchParams();
+  const { user, loading: authLoading } = useAuth();
 
-  const [hasTravelKit, setHasTravelKit] = useState(false);
-  const [entitlementLoading, setEntitlementLoading] = useState(true);
+  const kitIdParam = searchParams.get("kit");
+  const paymentStatus = searchParams.get("payment");
 
-  const [climate, setClimate] = useState<TravelClimate | null>(null);
-  const [kit, setKit] = useState<TravelKitItem[]>([]);
-  const [kitLoading, setKitLoading] = useState(false);
+  const [view, setView] = useState<View>("landing");
+  const [resolvingKit, setResolvingKit] = useState(Boolean(kitIdParam));
+  const [kit, setKit] = useState<TravelKitRow | null>(null);
+  const [landingError, setLandingError] = useState<string | null>(null);
 
-  const [buildLoading, setBuildLoading] = useState(false);
-  const [buildError, setBuildError] = useState<string | null>(null);
-
+  // Load a specific kit when linked with ?kit=<id> (from the dashboard's
+  // "View kit" link, or the Stripe success redirect).
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      setHasTravelKit(false);
-      setEntitlementLoading(false);
+    if (!kitIdParam) {
+      setResolvingKit(false);
       return;
     }
-    let cancelled = false;
-
-    async function loadEntitlement() {
-      setEntitlementLoading(true);
-      try {
-        const res = await fetch(`/api/purchases?user_id=${user!.id}`);
-        const data = await res.json();
-        if (!cancelled) setHasTravelKit(Boolean(data.hasTravelKit));
-      } catch {
-        // Fail closed -- treat as not purchased.
-      } finally {
-        if (!cancelled) setEntitlementLoading(false);
-      }
+    if (authLoading) return;
+    if (!user) {
+      setResolvingKit(false);
+      return;
     }
 
-    loadEntitlement();
+    let cancelled = false;
+    (async () => {
+      setResolvingKit(true);
+      const { data } = await supabase
+        .from("travel_kits")
+        .select(
+          "id, destination, departure_date, return_date, climate, swimming, protective_style, hair_priority, status, products"
+        )
+        .eq("id", kitIdParam)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (data) {
+        setKit(data as TravelKitRow);
+        setView("kit");
+      }
+      setResolvingKit(false);
+    })();
+
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading]);
+  }, [kitIdParam, user, authLoading]);
 
-  async function handleSelectClimate(value: TravelClimate) {
-    setClimate(value);
-    setKitLoading(true);
-    const result = await getTravelKit(hairProfile?.porosity ?? null, value);
-    setKit(result);
-    setKitLoading(false);
+  // ---- survey state ----
+  const [step, setStep] = useState(1);
+  const [destination, setDestination] = useState("");
+  const [detectedClimate, setDetectedClimate] = useState<ClimateZone | null>(null);
+  const [climate, setClimate] = useState<ClimateChoice | null>(null);
+  const [departureDate, setDepartureDate] = useState("");
+  const [returnDate, setReturnDate] = useState("");
+  const [swimming, setSwimming] = useState<string | null>(null);
+  const [protectiveStyle, setProtectiveStyle] = useState<string | null>(null);
+  const [hairPriority, setHairPriority] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [pendingKitId, setPendingKitId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const detected = classifyClimateFromDestination(destination);
+      setDetectedClimate(detected);
+      // Only auto-select if the user hasn't already picked a climate
+      // themselves -- detection should suggest, not override a manual
+      // choice made after typing (e.g. correcting a wrong guess).
+      // "tropical" maps to the combined "Humid/Tropical" pill (value
+      // "humid") -- there's no separate pill for it, so the raw detected
+      // value can't be assigned directly or the pill would never show as
+      // selected.
+      const pillValue: ClimateChoice | null =
+        detected === "tropical" ? "humid" : detected;
+      setClimate((prev) => (prev === null && pillValue ? pillValue : prev));
+    }, 300);
+    return () => clearTimeout(timeoutId);
+  }, [destination]);
+
+  function resetSurvey() {
+    setStep(1);
+    setDestination("");
+    setDetectedClimate(null);
+    setClimate(null);
+    setDepartureDate("");
+    setReturnDate("");
+    setSwimming(null);
+    setProtectiveStyle(null);
+    setHairPriority(null);
+    setSubmitError(null);
+    setPendingKitId(null);
   }
 
-  async function handleBuildClick() {
+  function handleBuildClick() {
     if (!user) {
       router.push("/auth");
       return;
     }
+    setLandingError(null);
+    resetSurvey();
+    setView("survey");
+  }
 
-    setBuildError(null);
-    setBuildLoading(true);
+  function handleBuildAnother() {
+    resetSurvey();
+    setKit(null);
+    router.replace("/travel", { scroll: false });
+    setView("survey");
+  }
+
+  async function handleSurveySubmit() {
+    if (!user) {
+      router.push("/auth");
+      return;
+    }
+    setSubmitError(null);
+    setSubmitting(true);
 
     try {
+      let travelKitId = pendingKitId;
+
+      if (!travelKitId) {
+        const { data, error: insertError } = await supabase
+          .from("travel_kits")
+          .insert({
+            user_id: user.id,
+            destination: destination.trim(),
+            departure_date: departureDate || null,
+            return_date: returnDate || null,
+            climate,
+            swimming,
+            protective_style: protectiveStyle,
+            hair_priority: hairPriority,
+            status: "pending_payment",
+          })
+          .select("id")
+          .single();
+
+        if (insertError || !data) {
+          setSubmitError("Couldn't save your trip details. Please try again.");
+          setSubmitting(false);
+          return;
+        }
+
+        travelKitId = data.id;
+        setPendingKitId(travelKitId);
+
+        // Fire-and-forget -- never awaited, never shown to the user, must
+        // not delay the flow below.
+        fetch("/api/notify/new-travel-survey", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            user_id: user.id,
+            destination: destination.trim(),
+            departure_date: departureDate || null,
+            return_date: returnDate || null,
+            climate,
+            swimming,
+            protective_style: protectiveStyle,
+            hair_priority: hairPriority,
+          }),
+        }).catch((err) =>
+          console.warn("[travel] Survey notification request failed:", err)
+        );
+      }
+
+      setView("generating");
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -232,227 +747,92 @@ export default function TravelPage() {
           product_type: "travel_kit",
           user_id: user.id,
           email: user.email,
+          travel_kit_id: travelKitId,
         }),
       });
-      const data = await res.json();
+      const checkoutData = await res.json();
 
-      if (!res.ok || !data.url) {
-        setBuildError(data.error ?? "Something went wrong. Please try again.");
-        setBuildLoading(false);
+      if (!res.ok || !checkoutData.url) {
+        setSubmitError(
+          checkoutData.error ?? "Something went wrong. Please try again."
+        );
+        setSubmitting(false);
+        setView("survey");
         return;
       }
 
-      window.location.href = data.url;
+      window.location.href = checkoutData.url;
     } catch {
-      setBuildError("Couldn't reach the server. Please try again.");
-      setBuildLoading(false);
+      setSubmitError("Couldn't reach the server. Please try again.");
+      setSubmitting(false);
+      setView("survey");
     }
   }
 
+  if (authLoading || resolvingKit) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
+        <p className="text-sm text-cream/60">Loading...</p>
+      </main>
+    );
+  }
+
+  if (view === "kit" && kit) {
+    return (
+      <KitView
+        kit={kit}
+        paymentSuccess={paymentStatus === "success"}
+        onBuildAnother={handleBuildAnother}
+      />
+    );
+  }
+
+  if (view === "generating") {
+    return <GeneratingView destination={destination} />;
+  }
+
+  if (view === "survey") {
+    return (
+      <SurveyView
+        step={step}
+        totalSteps={4}
+        destination={destination}
+        setDestination={setDestination}
+        detectedClimate={detectedClimate}
+        climate={climate}
+        setClimate={setClimate}
+        departureDate={departureDate}
+        setDepartureDate={setDepartureDate}
+        returnDate={returnDate}
+        setReturnDate={setReturnDate}
+        swimming={swimming}
+        setSwimming={setSwimming}
+        protectiveStyle={protectiveStyle}
+        setProtectiveStyle={setProtectiveStyle}
+        hairPriority={hairPriority}
+        setHairPriority={setHairPriority}
+        onNext={() => setStep((s) => Math.min(4, s + 1))}
+        onBack={() => setStep((s) => Math.max(1, s - 1))}
+        onSubmit={handleSurveySubmit}
+        submitting={submitting}
+        submitError={submitError}
+      />
+    );
+  }
+
   return (
-    <main className="min-h-screen bg-dark font-sans text-cream">
-      {/* SECTION 1 -- Hero (no login required) */}
-      <section className="border-b border-bronze/20 px-4 py-16 sm:px-6 sm:py-24">
-        <div className="mx-auto max-w-4xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
-            Travel hair intelligence
-          </p>
-          <h1 className="mt-4 font-serif text-4xl font-semibold leading-tight text-cream sm:text-5xl">
-            Your hair doesn&apos;t know you&apos;re on vacation.
-          </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base text-cream/70">
-            Humidity in Miami. Dry heat in Phoenix. Hard water in London.
-            Every destination changes what your hair needs — and most
-            people find out the hard way mid-trip. Qoyl builds you a
-            personalized product list before you leave.
-          </p>
-        </div>
+    <LandingView
+      onBuildClick={handleBuildClick}
+      error={landingError}
+      cancelled={paymentStatus === "cancelled"}
+    />
+  );
+}
 
-        <div className="mx-auto mt-14 grid max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {CLIMATE_PROBLEM_CARDS.map((card) => (
-            <div
-              key={card.title}
-              className="rounded-xl border border-bronze/30 p-6"
-            >
-              <card.icon />
-              <h3 className="mt-4 font-serif text-xl font-semibold text-cream">
-                {card.title}
-              </h3>
-              {card.examples && (
-                <p className="mt-1 text-xs text-cream/40">{card.examples}</p>
-              )}
-              <p className="mt-2 text-sm text-cream/70">{card.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* SECTION 2 -- What you get (no login required) */}
-      <section className="border-b border-bronze/20 px-4 py-16 sm:px-6">
-        <div className="mx-auto max-w-3xl">
-          <h2 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
-            What&apos;s in your travel kit
-          </h2>
-
-          <div className="mt-10 space-y-8">
-            {FEATURE_ROWS.map((row) => (
-              <div key={row.title} className="flex gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
-                  <row.icon />
-                </div>
-                <div>
-                  <p className="font-serif text-lg font-semibold text-cream">
-                    {row.title}
-                  </p>
-                  <p className="mt-1 text-sm text-cream/70">{row.description}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 3 -- Social proof strip */}
-      <section className="bg-bronze px-4 py-12 sm:px-6">
-        <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 text-center sm:grid-cols-3 sm:text-left">
-          {STATS.map((s) => (
-            <div key={s.stat}>
-              <p className="font-serif text-3xl font-semibold text-dark">
-                {s.stat}
-              </p>
-              <p className="mt-2 text-sm text-dark/70">{s.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* SECTION 4 -- Paywall / CTA, or the climate selector + kit */}
-      <section className="px-4 py-16 sm:px-6">
-        <div className="mx-auto max-w-md">
-          {authLoading || entitlementLoading ? (
-            <p className="text-sm text-cream/50">Loading...</p>
-          ) : !hasTravelKit ? (
-            <div className="rounded-xl border border-bronze/30 p-8 text-center">
-              <h2 className="font-serif text-2xl font-semibold text-cream sm:text-3xl">
-                Get your personalized travel kit — $4.99
-              </h2>
-              <p className="mt-3 text-sm text-cream/70">
-                One-time purchase. Tell us where you&apos;re going and we
-                build your kit. Yours to keep and shop from before you
-                leave.
-              </p>
-
-              {buildError && (
-                <p className="mt-3 text-sm text-red">{buildError}</p>
-              )}
-
-              <button
-                type="button"
-                onClick={handleBuildClick}
-                disabled={buildLoading}
-                className="mt-6 w-full rounded-lg bg-bronze py-4 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
-              >
-                {buildLoading ? "Redirecting..." : "Build my travel kit →"}
-              </button>
-
-              <p className="mt-4 text-xs text-cream/50">
-                Already have a hair profile? Your kit uses your existing
-                profile data — no re-entering anything.
-              </p>
-            </div>
-          ) : (
-            <div>
-              <p className="font-serif text-lg text-bronze2">
-                Where are you headed?
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                {TRAVEL_CLIMATES.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => handleSelectClimate(option.value)}
-                    className={`rounded-lg border px-4 py-3 text-sm font-medium transition-colors ${
-                      climate === option.value
-                        ? "border-bronze bg-bronze text-dark"
-                        : "border-bronze/40 text-cream hover:border-bronze"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-
-              {kitLoading && (
-                <p className="mt-6 text-sm text-cream/50">
-                  Building your kit...
-                </p>
-              )}
-
-              {!kitLoading && kit.length > 0 && (
-                <>
-                  <p className="mt-8 font-serif text-xl font-semibold text-cream">
-                    Your travel kit for{" "}
-                    {TRAVEL_CLIMATES.find((c) => c.value === climate)?.label}
-                  </p>
-
-                  <ul className="mt-4 space-y-3">
-                    {kit.map((item) => (
-                      <li
-                        key={item.category}
-                        className="rounded-lg border border-bronze/30 p-4"
-                      >
-                        <p className="text-xs uppercase tracking-wide text-bronze2">
-                          {item.categoryLabel}
-                        </p>
-                        {item.ingredientName ? (
-                          <>
-                            <div className="mt-1 flex items-center justify-between gap-3">
-                              <p className="text-sm text-cream">
-                                Look for a{" "}
-                                {CATEGORY_NOUN[item.category] ?? "product"} with{" "}
-                                <span className="font-serif text-lg">
-                                  {item.ingredientName}
-                                </span>{" "}
-                                as a primary ingredient.
-                              </p>
-                              {item.score !== null && (
-                                <span
-                                  className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                                    TIER_CLASSES[scoreTier(item.score * 10)]
-                                  }`}
-                                >
-                                  {item.score}/10
-                                </span>
-                              )}
-                            </div>
-                            {item.reason && (
-                              <p className="mt-1 text-xs text-cream/60">
-                                {item.reason}
-                              </p>
-                            )}
-                            <ShopButton productName={item.ingredientName} />
-                          </>
-                        ) : (
-                          <p className="mt-1 text-sm text-cream/50">
-                            No match found yet for this category.
-                          </p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <p className="mt-4 text-xs text-cream/50">
-                    Your kit is a curated digital guide — click each link to
-                    purchase directly from the brand or retailer. All
-                    products are independently evaluated by Qoyl with no
-                    brand partnerships influencing recommendations.
-                  </p>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-    </main>
+export default function TravelPage() {
+  return (
+    <Suspense fallback={null}>
+      <TravelPageContent />
+    </Suspense>
   );
 }
