@@ -692,34 +692,12 @@ function TravelPageContent() {
       let travelKitId = pendingKitId;
 
       if (!travelKitId) {
-        const { data, error: insertError } = await supabase
-          .from("travel_kits")
-          .insert({
-            user_id: user.id,
-            destination: destination.trim(),
-            departure_date: departureDate || null,
-            return_date: returnDate || null,
-            climate,
-            swimming,
-            protective_style: protectiveStyle,
-            hair_priority: hairPriority,
-            status: "pending_payment",
-          })
-          .select("id")
-          .single();
-
-        if (insertError || !data) {
-          setSubmitError("Couldn't save your trip details. Please try again.");
-          setSubmitting(false);
-          return;
-        }
-
-        travelKitId = data.id;
-        setPendingKitId(travelKitId);
-
-        // Fire-and-forget -- never awaited, never shown to the user, must
-        // not delay the flow below.
-        fetch("/api/notify/new-travel-survey", {
+        // Single server-side route saves the row (service role client,
+        // never subject to a client RLS session) and sends the admin
+        // notification atomically -- see app/api/travel-kits/route.ts.
+        // Awaited, since the returned id is required for Stripe
+        // checkout below, unlike a pure side-effect notification.
+        const saveRes = await fetch("/api/travel-kits", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -732,9 +710,19 @@ function TravelPageContent() {
             protective_style: protectiveStyle,
             hair_priority: hairPriority,
           }),
-        }).catch((err) =>
-          console.warn("[travel] Survey notification request failed:", err)
-        );
+        });
+        const saveData = await saveRes.json();
+
+        if (!saveRes.ok || !saveData.id) {
+          setSubmitError(
+            saveData.error ?? "Couldn't save your trip details. Please try again."
+          );
+          setSubmitting(false);
+          return;
+        }
+
+        travelKitId = saveData.id;
+        setPendingKitId(travelKitId);
       }
 
       setView("generating");
