@@ -2,7 +2,7 @@ import { getResend } from "@/lib/resend";
 
 // lib/adminNotify.ts (purchase events) sends here too now -- both were
 // consolidated onto the same inbox.
-const NOTIFY_TO = "qoylnotifications@gmail.com";
+const NOTIFY_TO = "hey@qoyl.live";
 const NOTIFY_FROM = "Qoyl <hey@qoyl.live>";
 
 export type SendNotificationResult =

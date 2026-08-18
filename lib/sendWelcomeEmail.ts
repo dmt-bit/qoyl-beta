@@ -2,11 +2,11 @@ import { getResend } from "@/lib/resend";
 
 const FROM_ADDRESS = "Qoyl <hey@qoyl.live>";
 
-// TEMPORARY: also sends a copy of the welcome email to
-// qoylnotifications@gmail.com (subject prefixed "PREVIEW:") so it can be
-// previewed in a real inbox. Remove PREVIEW_TO and the second
-// resend.emails.send() call below once the design is approved.
-const PREVIEW_TO = "qoylnotifications@gmail.com";
+// TEMPORARY: also sends a copy of the welcome email to hey@qoyl.live
+// (subject prefixed "PREVIEW:") so it can be previewed in a real inbox.
+// Remove PREVIEW_TO and the second resend.emails.send() call below once
+// the design is approved.
+const PREVIEW_TO = "hey@qoyl.live";
 
 // Only fires for new signups going forward -- there is no retroactive
 // send for accounts created before this existed. A re-engagement email
