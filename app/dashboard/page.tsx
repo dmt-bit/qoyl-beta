@@ -25,6 +25,19 @@ type TravelKitSummary = {
   return_date: string | null;
 };
 
+type StyleMatchSummary = {
+  id: string;
+  detected_style: string | null;
+  detected_details: { style_description?: string; maintenance_tips?: string } | null;
+  created_at: string;
+};
+
+function formatMatchDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 function formatTravelDate(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(`${iso}T00:00:00`);
@@ -109,9 +122,36 @@ function TravelIcon() {
   );
 }
 
+function SparkleIcon() {
+  return (
+    <svg className="h-6 w-6 text-bronze2" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2zM19 14l.9 2.6L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.4L19 14zM5 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z" />
+    </svg>
+  );
+}
+
 function QuickActions() {
   return (
     <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <Link
+        href="/style-match"
+        className="rounded-xl border border-bronze/30 p-6 transition-colors hover:border-bronze"
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
+          <SparkleIcon />
+        </div>
+        <p className="mt-4 font-serif text-xl font-semibold text-cream">
+          Style Match
+        </p>
+        <p className="mt-1 text-sm text-cream/70">
+          Upload a photo or describe a style — get matching tutorials, a
+          scored shopping list, and a local stylist if one&apos;s available.
+        </p>
+        <span className="mt-3 inline-block text-sm font-semibold text-bronze2">
+          Try Style Match →
+        </span>
+      </Link>
+
       <Link
         href="/search"
         className="rounded-xl border border-bronze/30 p-6 transition-colors hover:border-bronze"
@@ -285,6 +325,29 @@ function DashboardContent() {
     };
   }, [user]);
 
+  const [recentStyleMatches, setRecentStyleMatches] = useState<StyleMatchSummary[]>([]);
+  const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    async function loadRecentStyleMatches() {
+      const { data } = await supabase
+        .from("style_matches")
+        .select("id, detected_style, detected_details, created_at")
+        .eq("user_id", user!.id)
+        .order("created_at", { ascending: false })
+        .limit(3);
+      if (!cancelled) setRecentStyleMatches(data ?? []);
+    }
+
+    loadRecentStyleMatches();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   if (!checkedAccess) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
@@ -449,6 +512,65 @@ function DashboardContent() {
                 );
               })}
             </ul>
+          </section>
+        )}
+
+        {recentStyleMatches.length > 0 && (
+          <section className="print-hide mt-10">
+            <h2 className="font-serif text-2xl font-semibold text-cream">
+              Recent Style Matches
+            </h2>
+            <ul className="mt-4 space-y-2">
+              {recentStyleMatches.map((match) => {
+                const expanded = expandedMatchId === match.id;
+                return (
+                  <li
+                    key={match.id}
+                    className="rounded-lg border border-bronze/30 px-4 py-3"
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="min-w-0">
+                        <p className="text-sm text-cream">
+                          {match.detected_style || "Unknown style"}
+                        </p>
+                        <p className="mt-0.5 text-xs text-cream/50">
+                          {formatMatchDate(match.created_at)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedMatchId(expanded ? null : match.id)
+                        }
+                        className="shrink-0 text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                      >
+                        {expanded ? "Hide" : "View →"}
+                      </button>
+                    </div>
+                    {expanded && match.detected_details && (
+                      <div className="mt-3 border-t border-bronze/20 pt-3">
+                        {match.detected_details.style_description && (
+                          <p className="text-sm text-cream/70">
+                            {match.detected_details.style_description}
+                          </p>
+                        )}
+                        {match.detected_details.maintenance_tips && (
+                          <p className="mt-2 text-xs text-cream/50">
+                            {match.detected_details.maintenance_tips}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+            <Link
+              href="/style-match"
+              className="mt-4 inline-block text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+            >
+              Try another style →
+            </Link>
           </section>
         )}
 

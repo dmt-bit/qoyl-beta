@@ -36,6 +36,20 @@ function SearchIcon({ size = 18 }: { size?: number }) {
   );
 }
 
+function SparkleIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className="shrink-0 text-cream"
+    >
+      <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2zM19 14l.9 2.6L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.4L19 14zM5 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z" />
+    </svg>
+  );
+}
+
 function PersonIcon() {
   return (
     <svg
@@ -109,6 +123,13 @@ export default function Nav() {
             </span>
           </Link>
           <Link
+            href="/style-match"
+            aria-label="Style Match"
+            className="flex items-center justify-center rounded-full border border-bronze/40 p-1.5"
+          >
+            <SparkleIcon size={15} />
+          </Link>
+          <Link
             href={loading ? "/auth" : user ? "/dashboard" : "/auth"}
             aria-label={user ? "My dashboard" : "Sign in"}
           >
@@ -143,6 +164,19 @@ export default function Nav() {
                 className="whitespace-nowrap rounded-lg bg-bronze px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
               >
                 Search a Product
+              </Link>
+            </li>
+
+            <li className="shrink-0">
+              <Link
+                href="/style-match"
+                className={`whitespace-nowrap text-sm font-medium transition-colors ${
+                  isLinkActive(pathname, "/style-match")
+                    ? "text-bronze2"
+                    : "text-cream/70 hover:text-cream"
+                }`}
+              >
+                Style Match
               </Link>
             </li>
 
