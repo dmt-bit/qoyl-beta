@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
@@ -563,6 +564,21 @@ function KitView({
               <TravelKitProductCard key={item.catalogProductId} item={item} />
             ))}
           </ul>
+        )}
+
+        {kit.status !== "pending_payment" && products.length < 5 && (
+          <p className="mt-4 text-sm text-cream/60">
+            We found {products.length} product
+            {products.length === 1 ? "" : "s"} for your trip. As we add more
+            brands to our catalog your kit will grow.{" "}
+            <Link
+              href="/request"
+              className="text-bronze2 underline underline-offset-2 hover:text-cream"
+            >
+              Request a product evaluation
+            </Link>{" "}
+            if you want a specific brand evaluated →
+          </p>
         )}
 
         <p className="mt-6 text-xs text-cream/50">
