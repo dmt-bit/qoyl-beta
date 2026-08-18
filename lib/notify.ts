@@ -1,8 +1,7 @@
 import { getResend } from "@/lib/resend";
 
-// Distinct from lib/adminNotify.ts (which sends to twinedaily@gmail.com
-// for purchase events) -- this is the dedicated recipient requested for
-// the new profile/purchase/comment notification triggers.
+// lib/adminNotify.ts (purchase events) sends here too now -- both were
+// consolidated onto the same inbox.
 const NOTIFY_TO = "qoylnotifications@gmail.com";
 const NOTIFY_FROM = "Qoyl <notifications@qoyl.live>";
 
