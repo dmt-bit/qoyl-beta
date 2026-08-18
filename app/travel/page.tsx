@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
@@ -485,13 +485,18 @@ function GeneratingView({ destination }: { destination: string }) {
 function KitView({
   kit,
   paymentSuccess,
+  activeKits,
+  onSwitchKit,
   onBuildAnother,
 }: {
   kit: TravelKitRow;
   paymentSuccess: boolean;
+  activeKits: { id: string; destination: string; created_at: string }[];
+  onSwitchKit: (id: string) => void;
   onBuildAnother: () => void;
 }) {
   const products = kit.products ?? [];
+  const otherKits = activeKits.filter((k) => k.id !== kit.id);
 
   return (
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
@@ -502,9 +507,26 @@ function KitView({
           </p>
         )}
 
-        <h1 className="font-serif text-3xl font-semibold text-cream">
-          Your travel kit
-        </h1>
+        <div className="flex items-start justify-between gap-4">
+          <h1 className="font-serif text-3xl font-semibold text-cream">
+            Your travel kit
+          </h1>
+          {otherKits.length > 0 && (
+            <select
+              value=""
+              onChange={(e) => e.target.value && onSwitchKit(e.target.value)}
+              aria-label="View a different trip"
+              className="shrink-0 rounded-lg border border-bronze/40 bg-dark px-2 py-1.5 text-xs text-cream/70 focus:border-bronze focus:outline-none"
+            >
+              <option value="">View a different trip →</option>
+              {otherKits.map((k) => (
+                <option key={k.id} value={k.id}>
+                  {k.destination}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
         <p className="mt-1 text-sm font-medium text-bronze2">
           {kit.destination} · {formatDate(kit.departure_date)} to{" "}
           {formatDate(kit.return_date)}
@@ -553,9 +575,9 @@ function KitView({
         <button
           type="button"
           onClick={onBuildAnother}
-          className="mt-8 text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+          className="mt-8 w-full rounded-lg border border-bronze/40 py-3 text-sm font-semibold text-cream transition-colors hover:border-bronze"
         >
-          Planning another trip? Build a new kit →
+          Plan another trip →
         </button>
       </div>
     </main>
@@ -575,19 +597,40 @@ function TravelPageContent() {
   const paymentStatus = searchParams.get("payment");
 
   const [view, setView] = useState<View>("landing");
-  const [resolvingKit, setResolvingKit] = useState(Boolean(kitIdParam));
+  const [resolvingKit, setResolvingKit] = useState(true);
   const [kit, setKit] = useState<TravelKitRow | null>(null);
+  const [activeKits, setActiveKits] = useState<
+    { id: string; destination: string; created_at: string }[]
+  >([]);
   const [landingError, setLandingError] = useState<string | null>(null);
 
-  // Load a specific kit when linked with ?kit=<id> (from the dashboard's
-  // "View kit" link, or the Stripe success redirect).
+  // Set right before an explicit "start a new trip" action (Plan another
+  // trip / Build my travel kit) so the auto-detection effect below never
+  // fights that choice -- e.g. clearing ?kit= from the URL after clicking
+  // "Plan another trip" would otherwise re-trigger this effect, which
+  // would then re-select the most recent active kit and silently bounce
+  // the user right back to the kit view they just tried to leave.
+  const skipAutoKitRef = useRef(false);
+
+  // Resolves which kit (if any) to show. Two cases:
+  //  - ?kit=<id> present (dashboard's "View kit" link, the Stripe success
+  //    redirect, or the trip switcher below): load that exact row
+  //    regardless of status -- right after the Stripe redirect the
+  //    webhook may not have flipped it to 'active' yet, and KitView
+  //    already renders a "still being generated" note for that case.
+  //  - No ?kit= (a bare /travel visit): look up the user's active kits
+  //    and default to the most recent one by created_at, so a returning
+  //    user sees their kit immediately instead of the landing page.
+  // Either way, the full list of active kits is loaded too, so the "view
+  // a different trip" switcher works regardless of which path launched
+  // the kit view.
   useEffect(() => {
-    if (!kitIdParam) {
+    if (authLoading) return;
+    if (!user) {
       setResolvingKit(false);
       return;
     }
-    if (authLoading) return;
-    if (!user) {
+    if (skipAutoKitRef.current) {
       setResolvingKit(false);
       return;
     }
@@ -595,12 +638,29 @@ function TravelPageContent() {
     let cancelled = false;
     (async () => {
       setResolvingKit(true);
+
+      const { data: kitsList } = await supabase
+        .from("travel_kits")
+        .select("id, destination, created_at")
+        .eq("user_id", user.id)
+        .eq("status", "active")
+        .order("created_at", { ascending: false });
+
+      if (cancelled) return;
+      setActiveKits(kitsList ?? []);
+
+      const targetId = kitIdParam ?? kitsList?.[0]?.id ?? null;
+      if (!targetId) {
+        setResolvingKit(false);
+        return;
+      }
+
       const { data } = await supabase
         .from("travel_kits")
         .select(
           "id, destination, departure_date, return_date, climate, swimming, protective_style, hair_priority, status, products"
         )
-        .eq("id", kitIdParam)
+        .eq("id", targetId)
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -674,10 +734,15 @@ function TravelPageContent() {
   }
 
   function handleBuildAnother() {
+    skipAutoKitRef.current = true;
     resetSurvey();
     setKit(null);
     router.replace("/travel", { scroll: false });
     setView("survey");
+  }
+
+  function handleSwitchKit(id: string) {
+    router.push(`/travel?kit=${id}`);
   }
 
   async function handleSurveySubmit() {
@@ -770,6 +835,8 @@ function TravelPageContent() {
       <KitView
         kit={kit}
         paymentSuccess={paymentStatus === "success"}
+        activeKits={activeKits}
+        onSwitchKit={handleSwitchKit}
         onBuildAnother={handleBuildAnother}
       />
     );
