@@ -250,15 +250,16 @@ function RoutineContent() {
         </div>
 
         {showWelcome && (
-          <div className="print-hide mb-6 flex items-start justify-between gap-4 rounded-lg border border-green/40 bg-green/10 px-4 py-3">
-            <p className="text-sm text-green">
-              Your routine is ready. Bookmark this page — it updates every
-              month.
+          <div className="print-hide mb-6 flex items-start justify-between gap-4 rounded-lg bg-bronze px-4 py-3">
+            <p className="text-sm text-dark">
+              Your routine is ready. We will send your personalized monthly
+              routine to your email within 24 hours. Bookmark this page — it
+              updates every month.
             </p>
             <button
               type="button"
               onClick={() => setWelcomeDismissed(true)}
-              className="shrink-0 text-sm text-green/70 hover:text-green"
+              className="shrink-0 text-sm text-dark/70 hover:text-dark"
               aria-label="Dismiss"
             >
               ✕

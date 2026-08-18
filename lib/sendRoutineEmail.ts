@@ -18,14 +18,25 @@ const MONTH_NAMES = [
 const VALID_CURL_TYPES = new Set(["4a", "4b", "4c"]);
 const VALID_POROSITIES = new Set(["low", "medium", "high"]);
 
+export type SendRoutineEmailResult =
+  | { sent: true; id: string | null }
+  | { sent: false; reason: "no_api_key" }
+  | { sent: false; reason: "no_profile" }
+  | {
+      sent: false;
+      reason: "api_error";
+      error: { message: string; name: string; statusCode: number | null };
+    }
+  | { sent: false; reason: "threw"; error: unknown };
+
 export async function sendRoutineEmail(
   userId: string,
   recipientEmail: string
-): Promise<void> {
+): Promise<SendRoutineEmailResult> {
   const resend = getResend();
   if (!resend) {
     console.warn("RESEND_API_KEY is not set; skipping routine email.");
-    return;
+    return { sent: false, reason: "no_api_key" };
   }
 
   const admin = getSupabaseAdmin();
@@ -43,7 +54,7 @@ export async function sendRoutineEmail(
       userId,
       error
     );
-    return;
+    return { sent: false, reason: "no_profile" };
   }
 
   const now = new Date();
@@ -87,13 +98,21 @@ export async function sendRoutineEmail(
   });
 
   try {
-    await resend.emails.send({
+    const { data, error: sendError } = await resend.emails.send({
       from: FROM_ADDRESS,
       to: recipientEmail,
       subject: `Your Qoyl routine for ${monthLabel} is ready, ${firstName}`,
       html,
     });
-  } catch (sendError) {
-    console.error("Failed to send routine email:", userId, sendError);
+
+    if (sendError) {
+      console.error("Resend API rejected routine email:", userId, sendError);
+      return { sent: false, reason: "api_error", error: sendError };
+    }
+
+    return { sent: true, id: data?.id ?? null };
+  } catch (err) {
+    console.error("Failed to send routine email:", userId, err);
+    return { sent: false, reason: "threw", error: err };
   }
 }

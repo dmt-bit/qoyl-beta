@@ -485,27 +485,39 @@ function GeneratingView({ destination }: { destination: string }) {
 
 function KitView({
   kit,
-  paymentSuccess,
+  welcome,
   activeKits,
   onSwitchKit,
   onBuildAnother,
 }: {
   kit: TravelKitRow;
-  paymentSuccess: boolean;
+  welcome: boolean;
   activeKits: { id: string; destination: string; created_at: string }[];
   onSwitchKit: (id: string) => void;
   onBuildAnother: () => void;
 }) {
   const products = kit.products ?? [];
   const otherKits = activeKits.filter((k) => k.id !== kit.id);
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false);
 
   return (
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
       <div className="mx-auto max-w-md">
-        {paymentSuccess && (
-          <p className="mb-4 rounded-lg border border-green/40 bg-green/10 px-4 py-3 text-sm text-green">
-            You&apos;re all set — your travel kit is ready.
-          </p>
+        {welcome && !welcomeDismissed && (
+          <div className="mb-4 flex items-start justify-between gap-4 rounded-lg bg-bronze px-4 py-3">
+            <p className="text-sm text-dark">
+              Your travel kit for {kit.destination} is ready. Shop each
+              product before you pack.
+            </p>
+            <button
+              type="button"
+              onClick={() => setWelcomeDismissed(true)}
+              className="shrink-0 text-sm text-dark/70 hover:text-dark"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
         )}
 
         <div className="flex items-start justify-between gap-4">
@@ -569,15 +581,14 @@ function KitView({
         {kit.status !== "pending_payment" && products.length < 5 && (
           <p className="mt-4 text-sm text-cream/60">
             We found {products.length} product
-            {products.length === 1 ? "" : "s"} for your trip. As we add more
-            brands to our catalog your kit will grow.{" "}
+            {products.length === 1 ? "" : "s"} for your trip.{" "}
             <Link
               href="/request"
               className="text-bronze2 underline underline-offset-2 hover:text-cream"
             >
               Request a product evaluation
             </Link>{" "}
-            if you want a specific brand evaluated →
+            to add more →
           </p>
         )}
 
@@ -611,6 +622,8 @@ function TravelPageContent() {
 
   const kitIdParam = searchParams.get("kit");
   const paymentStatus = searchParams.get("payment");
+  const welcome = searchParams.get("welcome") === "true";
+  const forceNewParam = searchParams.get("new") === "true";
 
   const [view, setView] = useState<View>("landing");
   const [resolvingKit, setResolvingKit] = useState(true);
@@ -643,6 +656,15 @@ function TravelPageContent() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
+      setResolvingKit(false);
+      return;
+    }
+    // ?new=true (the dashboard's "Plan another trip" link) always starts
+    // a fresh survey, bypassing auto-detection entirely -- same intent
+    // as clicking "Plan another trip" from the kit view itself.
+    if (forceNewParam) {
+      skipAutoKitRef.current = true;
+      setView("survey");
       setResolvingKit(false);
       return;
     }
@@ -691,7 +713,7 @@ function TravelPageContent() {
     return () => {
       cancelled = true;
     };
-  }, [kitIdParam, user, authLoading]);
+  }, [kitIdParam, user, authLoading, forceNewParam]);
 
   // ---- survey state ----
   const [step, setStep] = useState(1);
@@ -850,7 +872,7 @@ function TravelPageContent() {
     return (
       <KitView
         kit={kit}
-        paymentSuccess={paymentStatus === "success"}
+        welcome={welcome}
         activeKits={activeKits}
         onSwitchKit={handleSwitchKit}
         onBuildAnother={handleBuildAnother}

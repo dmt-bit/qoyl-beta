@@ -6,6 +6,7 @@ import { sendRoutineEmail } from "@/lib/sendRoutineEmail";
 import { sendAdminNotification } from "@/lib/adminNotify";
 import { sendNotificationEmail } from "@/lib/notify";
 import { generateTravelKitProducts } from "@/lib/travelKitGenerator";
+import { sendTravelKitEmail } from "@/lib/sendTravelKitEmail";
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
               await getSupabaseAdmin()
                 .from("travel_kits")
                 .select(
-                  "destination, climate, swimming, protective_style, hair_priority"
+                  "destination, departure_date, return_date, climate, swimming, protective_style, hair_priority"
                 )
                 .eq("id", travelKitId)
                 .single();
@@ -138,26 +139,125 @@ export async function POST(request: Request) {
                 );
               }
 
+              const { data: travelProfile } = await getSupabaseAdmin()
+                .from("hair_profiles")
+                .select("curl_type, porosity, scalp_condition, zip_code")
+                .eq("user_id", userId)
+                .maybeSingle();
+
+              const recipientEmail =
+                session.customer_email ?? session.customer_details?.email ?? null;
+
+              let travelEmailStatus = "Confirmation email sent to customer.";
+
+              if (!recipientEmail) {
+                console.error(
+                  "checkout.session.completed missing customer email for travel kit email:",
+                  session.id
+                );
+                travelEmailStatus =
+                  "Confirmation email NOT sent — no customer email on the Stripe session.";
+              } else {
+                try {
+                  await sendTravelKitEmail({
+                    recipientEmail,
+                    destination: travelKitRow.destination,
+                    departureDate: travelKitRow.departure_date,
+                    returnDate: travelKitRow.return_date,
+                    climate: travelKitRow.climate,
+                    swimming: travelKitRow.swimming,
+                    protectiveStyle: travelKitRow.protective_style,
+                    products,
+                  });
+                } catch (emailError) {
+                  console.error(
+                    "Failed to send travel kit email:",
+                    travelKitId,
+                    emailError
+                  );
+                  travelEmailStatus =
+                    "Confirmation email FAILED to send — see server logs.";
+                }
+              }
+
               await sendNotificationEmail(
-                "Travel kit purchased and generated",
+                `Travel kit purchased — ${travelKitRow.destination}`,
                 `Travel kit purchased and generated — ${travelKitRow.destination} for ${userId}.
 
 User ID: ${userId}
+Customer email: ${recipientEmail ?? "Unknown"}
 Destination: ${travelKitRow.destination}
+Departure: ${travelKitRow.departure_date ?? "Not set"}
+Return: ${travelKitRow.return_date ?? "Not set"}
 Stripe customer: ${stripeCustomerId}
 Amount: $4.99
 Purchased at: ${purchaseTimestamp}
-Products generated: ${products.length}
 
-No manual action needed.`
+Curl type: ${travelProfile?.curl_type ?? "Not set"}
+Porosity: ${travelProfile?.porosity ?? "Not set"}
+Scalp condition: ${travelProfile?.scalp_condition ?? "Not set"}
+Zip code: ${travelProfile?.zip_code ?? "Not set"}
+
+Products generated: ${products.length}
+${travelEmailStatus}
+
+View this travel_kits row (id: ${travelKitId}) in Supabase:
+https://app.supabase.com/project/cqpxiassldkmusngqorx/editor`
               );
             }
           }
         }
 
         if (productType === "routine_subscription") {
+          const { data: routineProfile } = await getSupabaseAdmin()
+            .from("hair_profiles")
+            .select("curl_type, porosity, zip_code, climate")
+            .eq("user_id", userId)
+            .maybeSingle();
+
+          const recipientEmail =
+            session.customer_email ?? session.customer_details?.email ?? null;
+
+          let routineEmailStatus =
+            "Automated routine email sent to subscriber.";
+
+          if (!recipientEmail) {
+            console.error(
+              "checkout.session.completed missing customer email for routine email:",
+              session.id
+            );
+            routineEmailStatus =
+              "Automated routine email NOT sent — no customer email on the Stripe session. Send manually.";
+          } else {
+            // Never let an email failure fail the webhook -- the purchase
+            // row above is already recorded, and Stripe would otherwise
+            // retry this event and re-run everything. sendRoutineEmail
+            // returns a result rather than only throwing, since Resend
+            // doesn't throw on API-level rejections -- checking the
+            // result (not just catching) is what actually catches those.
+            try {
+              const routineResult = await sendRoutineEmail(userId, recipientEmail);
+              if (!routineResult.sent) {
+                console.error(
+                  "Routine email not sent:",
+                  userId,
+                  routineResult
+                );
+                routineEmailStatus = `Automated routine email FAILED to send (${routineResult.reason}) — see server logs. Send manually.`;
+              }
+            } catch (emailError) {
+              console.error(
+                "Failed to send routine email:",
+                userId,
+                emailError
+              );
+              routineEmailStatus =
+                "Automated routine email FAILED to send — see server logs. Send manually.";
+            }
+          }
+
           await sendNotificationEmail(
-            "New routine subscriber — $7.99/month 🎉",
+            "New routine subscriber — action needed",
             `Someone just subscribed to the Qoyl Monthly Routine.
 
 User ID: ${userId}
@@ -165,33 +265,13 @@ Stripe customer: ${stripeCustomerId}
 Amount: $7.99/month recurring
 Subscribed at: ${purchaseTimestamp}
 
-ACTION NEEDED: Send their personalized routine email from hey@qoyl.live within 24 hours.
-Pull their hair profile from Supabase using the user_id above.
-Check Supabase hair_profiles table for their curl type, porosity, and zip code.`
+Curl type: ${routineProfile?.curl_type ?? "Not set"}
+Porosity: ${routineProfile?.porosity ?? "Not set"}
+Zip code: ${routineProfile?.zip_code ?? "Not set"}
+Climate: ${routineProfile?.climate ?? "Not set"}
+
+${routineEmailStatus} Review their /routine page to confirm it looks correct.`
           );
-
-          const recipientEmail =
-            session.customer_email ?? session.customer_details?.email ?? null;
-
-          if (!recipientEmail) {
-            console.error(
-              "checkout.session.completed missing customer email for routine email:",
-              session.id
-            );
-          } else {
-            // Never let an email failure fail the webhook -- the purchase
-            // row above is already recorded, and Stripe would otherwise
-            // retry this event and re-run everything.
-            try {
-              await sendRoutineEmail(userId, recipientEmail);
-            } catch (emailError) {
-              console.error(
-                "Failed to send routine email:",
-                userId,
-                emailError
-              );
-            }
-          }
         }
         break;
       }

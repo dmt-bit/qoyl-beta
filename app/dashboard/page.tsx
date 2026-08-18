@@ -315,6 +315,12 @@ function DashboardContent() {
           </Link>
         </div>
 
+        {!entitlementLoading && hasRoutineSubscription && (
+          <span className="mt-3 inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-dark">
+            Monthly Routine
+          </span>
+        )}
+
         <ProfileChips />
 
         {childSafetyNote && (
@@ -489,6 +495,12 @@ function DashboardContent() {
                 );
               })}
             </ul>
+            <Link
+              href="/travel?new=true"
+              className="mt-4 inline-block text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+            >
+              Plan another trip →
+            </Link>
           </section>
         )}
 

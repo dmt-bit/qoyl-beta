@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     product_type === "routine_subscription"
       ? `${origin}/routine?welcome=true`
       : product_type === "travel_kit"
-      ? `${origin}/travel?kit=${travel_kit_id}&payment=success`
+      ? `${origin}/travel?kit=${travel_kit_id}&welcome=true`
       : `${origin}/dashboard?payment=success`;
 
   const cancelUrl =
