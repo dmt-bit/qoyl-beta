@@ -1,7 +1,7 @@
 import { getResend } from "@/lib/resend";
 
 const ADMIN_EMAIL = "qoylnotifications@gmail.com";
-const NOTIFY_FROM = "Qoyl <notifications@qoyl.live>";
+const NOTIFY_FROM = "Qoyl <hey@qoyl.live>";
 
 export async function sendAdminNotification(
   subject: string,

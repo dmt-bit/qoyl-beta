@@ -1,6 +1,6 @@
 import { getResend } from "@/lib/resend";
 
-const FROM_ADDRESS = "Qoyl <support@qoyl.live>";
+const FROM_ADDRESS = "Qoyl <hey@qoyl.live>";
 
 // TEMPORARY: also sends a copy of the welcome email to
 // qoylnotifications@gmail.com (subject prefixed "PREVIEW:") so it can be

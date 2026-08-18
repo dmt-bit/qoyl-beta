@@ -7,7 +7,7 @@ import { generateSeasonalNote } from "@/lib/routineSeasonalNote";
 import { lookupCityState } from "@/lib/zipLookup";
 import { renderRoutineEmailHtml } from "@/emails/routine-template";
 
-const FROM_ADDRESS = "Qoyl <support@qoyl.live>";
+const FROM_ADDRESS = "Qoyl <hey@qoyl.live>";
 const DASHBOARD_URL = "qoyl-beta-alpha.vercel.app/dashboard";
 
 const MONTH_NAMES = [

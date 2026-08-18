@@ -44,7 +44,7 @@ const PRIVACY_CONTENT = `
 
 <div class="effective">
   <strong>Effective date:</strong> July 28, 2026 &nbsp;·&nbsp; <strong>Last updated:</strong> July 28, 2026<br/>
-  Questions about this policy? Contact us at <a href="mailto:support@qoyl.live">support@qoyl.live</a>
+  Questions about this policy? Contact us at <a href="mailto:hey@qoyl.live">hey@qoyl.live</a>
 </div>
 
 <h2>1. Who we are</h2>
@@ -129,7 +129,7 @@ const PRIVACY_CONTENT = `
 
 <h2>5. Data retention</h2>
 <ul>
-  <li><strong>Account and hair profile data:</strong> Retained while your account is active. You can request deletion at any time by emailing <a href="mailto:support@qoyl.live">support@qoyl.live</a></li>
+  <li><strong>Account and hair profile data:</strong> Retained while your account is active. You can request deletion at any time by emailing <a href="mailto:hey@qoyl.live">hey@qoyl.live</a></li>
   <li><strong>Product search logs:</strong> Retained for up to 24 months to improve our scoring algorithm</li>
   <li><strong>Payment records:</strong> Retained as required by Stripe and applicable tax laws</li>
   <li><strong>Deleted accounts:</strong> We delete your personal data within 30 days of an account deletion request</li>
@@ -141,22 +141,22 @@ const PRIVACY_CONTENT = `
 <p>You can view and update your hair profile at any time by logging into your account and visiting the My Profile page. You can update your profile once every 30 days.</p>
 
 <h3>Deletion</h3>
-<p>You can request deletion of your account and all associated personal data by emailing <a href="mailto:support@qoyl.live">support@qoyl.live</a>. We will process your request within 30 days.</p>
+<p>You can request deletion of your account and all associated personal data by emailing <a href="mailto:hey@qoyl.live">hey@qoyl.live</a>. We will process your request within 30 days.</p>
 
 <h3>Email communications</h3>
-<p>You can unsubscribe from non-essential emails at any time using the unsubscribe link in any email we send, or by emailing <a href="mailto:support@qoyl.live">support@qoyl.live</a>. We will still send essential account communications such as password resets.</p>
+<p>You can unsubscribe from non-essential emails at any time using the unsubscribe link in any email we send, or by emailing <a href="mailto:hey@qoyl.live">hey@qoyl.live</a>. We will still send essential account communications such as password resets.</p>
 
 <h3>California residents (CCPA)</h3>
-<p>California residents have the right to know what personal information we collect, the right to delete it, and the right to opt out of the sale of personal information. We do not sell personal information. To exercise your rights, contact us at <a href="mailto:support@qoyl.live">support@qoyl.live</a>.</p>
+<p>California residents have the right to know what personal information we collect, the right to delete it, and the right to opt out of the sale of personal information. We do not sell personal information. To exercise your rights, contact us at <a href="mailto:hey@qoyl.live">hey@qoyl.live</a>.</p>
 
 <h3>European residents (GDPR)</h3>
-<p>If you are located in the European Economic Area, you have rights including access, rectification, erasure, restriction of processing, and data portability. Our legal basis for processing your data is your consent (given when you create an account and hair profile) and the performance of our contract with you (delivering the service you signed up for). To exercise your rights, contact us at <a href="mailto:support@qoyl.live">support@qoyl.live</a>.</p>
+<p>If you are located in the European Economic Area, you have rights including access, rectification, erasure, restriction of processing, and data portability. Our legal basis for processing your data is your consent (given when you create an account and hair profile) and the performance of our contract with you (delivering the service you signed up for). To exercise your rights, contact us at <a href="mailto:hey@qoyl.live">hey@qoyl.live</a>.</p>
 
 <h2>7. Security</h2>
-<p>We use industry-standard security practices to protect your data, including encrypted connections (HTTPS), row-level security on our database ensuring users can only access their own data, and secure third-party payment processing through Stripe. No system is perfectly secure — if you believe your account has been compromised, contact us immediately at <a href="mailto:support@qoyl.live">support@qoyl.live</a>.</p>
+<p>We use industry-standard security practices to protect your data, including encrypted connections (HTTPS), row-level security on our database ensuring users can only access their own data, and secure third-party payment processing through Stripe. No system is perfectly secure — if you believe your account has been compromised, contact us immediately at <a href="mailto:hey@qoyl.live">hey@qoyl.live</a>.</p>
 
 <h2>8. Children's privacy</h2>
-<p>Qoyl is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you believe we have inadvertently collected information from a child under 13, contact us at <a href="mailto:support@qoyl.live">support@qoyl.live</a> and we will delete it promptly. Qoyl does provide hair care content and recommendations relevant to babies and children — this content is directed at parents and caregivers, not children themselves.</p>
+<p>Qoyl is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you believe we have inadvertently collected information from a child under 13, contact us at <a href="mailto:hey@qoyl.live">hey@qoyl.live</a> and we will delete it promptly. Qoyl does provide hair care content and recommendations relevant to babies and children — this content is directed at parents and caregivers, not children themselves.</p>
 
 <h2>9. Third-party links</h2>
 <p>Qoyl's product search results and recommendations include links to third-party retailers and affiliate shopping platforms including Shopper.com, Ulta Beauty, and Sephora. These sites have their own privacy policies and we are not responsible for their practices. We recommend reviewing the privacy policy of any third-party site you visit through our links.</p>
@@ -170,7 +170,7 @@ const PRIVACY_CONTENT = `
 <h2>12. Contact us</h2>
 <p>If you have questions, concerns, or requests related to this Privacy Policy or your personal data:</p>
 <ul>
-  <li><strong>Email:</strong> <a href="mailto:support@qoyl.live">support@qoyl.live</a></li>
+  <li><strong>Email:</strong> <a href="mailto:hey@qoyl.live">hey@qoyl.live</a></li>
   <li><strong>Mailing address:</strong> Qoyl LLC, Chicago, Illinois</li>
   <li><strong>Response time:</strong> We aim to respond to all privacy-related requests within 5 business days</li>
 </ul>
@@ -182,7 +182,7 @@ const PRIVACY_CONTENT = `
     Qoyl · Privacy Policy · Effective July 28, 2026<br/>
     <a href="https://qoyl-beta-alpha.vercel.app" style="color:#9C7B5A">Consumer app</a> ·
     <a href="https://business.qoyl.live" style="color:#9C7B5A">Brand portal</a> ·
-    <a href="mailto:support@qoyl.live" style="color:#9C7B5A">support@qoyl.live</a>
+    <a href="mailto:hey@qoyl.live" style="color:#9C7B5A">hey@qoyl.live</a>
   </div>
 </div>
 `;

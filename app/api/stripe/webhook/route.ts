@@ -112,7 +112,7 @@ Stripe customer: ${stripeCustomerId}
 Amount: $7.99/month recurring
 Subscribed at: ${purchaseTimestamp}
 
-ACTION NEEDED: Send their personalized routine email from support@qoyl.live within 24 hours.
+ACTION NEEDED: Send their personalized routine email from hey@qoyl.live within 24 hours.
 Pull their hair profile from Supabase using the user_id above.
 Check Supabase hair_profiles table for their curl type, porosity, and zip code.`
           );
