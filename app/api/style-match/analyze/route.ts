@@ -1,21 +1,17 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { downloadHairPhotoAsBase64, getMostRecentHairPhoto } from "@/lib/hairPhotos";
 
 // POST routes that read the request body are never statically optimized
 // regardless, but this makes it explicit rather than implicit.
 export const dynamic = "force-dynamic";
 
-// With no maxDuration set, this runs on Vercel's platform default (10s
-// on Hobby, 15s on Pro) -- measured the two-image flow (current hair
-// photo + desired style) at ~13s end to end, which is already over the
-// Hobby default and close to Pro's. A platform-level timeout kills the
-// function mid-request with no response body, which the client sees as
-// a plain network failure indistinguishable from "can't reach the
-// server" -- exactly the symptom being debugged. On Hobby this is
-// capped at 10s regardless of what's set here; Pro/Enterprise honor it
-// up to their own ceiling (60s/900s).
-export const maxDuration = 60;
+// 25s: enough headroom for a single-image call even on a slow response,
+// well under Pro's ceiling. Harmless on Hobby -- that plan hard-caps at
+// 10s regardless of what's set here, which is exactly why the real fix
+// is keeping this call fast (smaller image, shorter prompt, and no
+// current-hair-photo image in this call at all -- see
+// app/api/style-match/translate/route.ts for that part now).
+export const maxDuration = 25;
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 
@@ -63,60 +59,40 @@ const SUPPORTED_IMAGE_TYPES = new Set([
   "image/webp",
 ]);
 
+// Shortened deliberately -- fewer/shorter fields means less output for
+// the model to generate, which is a direct, significant chunk of total
+// response time. current_to_desired_translation/length_gap/prep_needed
+// used to live here too, but that meant every request with a current
+// hair photo attached the photo AND asked for more output in the same
+// call. That's now a separate, tiny, image-free follow-up call fired
+// after this one returns -- see app/api/style-match/translate/route.ts.
 function buildAnalysisInstructions(opts: {
   colorMatch: boolean;
   translateForHairType: boolean;
   curlType: string | null;
-  // "photo-photo": current hair photo + desired style photo (both images).
-  // "photo-text": current hair photo + desired style described in words.
-  // "none": no current hair photo on file -- original single-image/text flow.
-  currentPhotoMode: "photo-photo" | "photo-text" | "none";
-  desiredText?: string;
 }): string {
   const fields = [
-    `"style_name": "name of the hairstyle (e.g. Box Braids, Wash and Go, Twist Out, Knotless Braids, Locs, Bantu Knots, etc)"`,
-    `"style_description": "2 sentence description of what this style is"`,
+    `"style_name": "name only"`,
+    `"style_description": "one sentence only"`,
     `"hair_length": "short/medium/long"`,
     `"requires_fake_hair": true/false`,
-    `"fake_hair_type": "type of fake hair needed if any (e.g. braiding hair, crochet hair, lace front wig) or null"`,
-    `"accessories_visible": ["list of accessories visible like beads, bands, ribbons, clips"]`,
-    `"estimated_time": "how long this style typically takes"`,
+    `"fake_hair_type": "type or null"`,
+    `"accessories_visible": []`,
+    `"estimated_time": "X hours"`,
     `"difficulty": "beginner/intermediate/advanced"`,
-    `"compatible_hair_types": ["array of curl types this style works for e.g. 3c, 4a, 4b, 4c"]`,
-    `"maintenance_tips": "one sentence on maintaining this style"`,
+    `"compatible_hair_types": []`,
   ];
 
   if (opts.colorMatch) {
-    fields.push(
-      `"detected_color": "the primary hair color shown or described (e.g. honey blonde, burgundy, jet black), or null if no specific color is shown/mentioned"`
-    );
+    fields.push(`"detected_color": "primary color shown/described, or null"`);
   }
   if (opts.translateForHairType) {
     fields.push(
-      `"hair_type_translation": "how this style would translate onto ${opts.curlType ?? "the user's"} hair specifically, and what modifications may be needed -- 2-3 sentences"`
-    );
-  }
-  if (opts.currentPhotoMode !== "none") {
-    fields.push(
-      `"current_to_desired_translation": "One paragraph explaining specifically how to achieve the desired style starting from the user's current hair shown in Image 1. Note any length difference, texture differences, or significant preparation needed."`,
-      `"length_gap": "none/slight/moderate/significant -- how much length difference exists between current and desired"`,
-      `"prep_needed": ["array of preparation steps specific to going from current hair to desired style"]`
+      `"hair_type_translation": "how this translates onto ${opts.curlType ?? "the user's"} hair -- 1-2 sentences max"`
     );
   }
 
-  const translateNote = opts.translateForHairType
-    ? `\n\nNote: the user has ${opts.curlType ?? "an unspecified"} hair type. Explain how this style would translate to their hair type and what modifications may be needed.`
-    : "";
-
-  if (opts.currentPhotoMode === "photo-photo") {
-    return `Image 1 is the user's current hair. Image 2 is the hairstyle they want to achieve.\nAnalyze the desired style (Image 2) and return the standard JSON response.\nAdditionally include these fields about the translation:\n{\n  ${fields.join(",\n  ")}\n}${translateNote}\nReturn ONLY the JSON object, no other text.`;
-  }
-
-  if (opts.currentPhotoMode === "photo-text") {
-    return `Image 1 is the user's current hair. They want to achieve this hairstyle: "${opts.desiredText ?? ""}".\nAnalyze the desired style described above and return the standard JSON response.\nAdditionally include these fields about the translation:\n{\n  ${fields.join(",\n  ")}\n}${translateNote}\nReturn ONLY the JSON object, no other text.`;
-  }
-
-  return `Analyze this hairstyle image and return a JSON object with these exact fields:\n{\n  ${fields.join(",\n  ")}\n}${translateNote}\nReturn ONLY the JSON object, no other text.`;
+  return `Analyze this hairstyle and return ONLY this JSON, no other text:\n{\n  ${fields.join(",\n  ")}\n}`;
 }
 
 type DetectedStyle = {
@@ -129,13 +105,9 @@ type DetectedStyle = {
   estimated_time: string;
   difficulty: string;
   compatible_hair_types: string[];
-  maintenance_tips: string;
   detected_color?: string | null;
   hair_type_translation?: string | null;
   image_url?: string | null;
-  current_to_desired_translation?: string | null;
-  length_gap?: string | null;
-  prep_needed?: string[];
 };
 
 // Claude sometimes wraps JSON in a ```json ... ``` fence despite being
@@ -179,7 +151,6 @@ export async function POST(request: Request) {
     color_match,
     translate_for_hair_type,
     curl_type,
-    user_id,
   }: {
     input_type?: "photo" | "text";
     image_base64?: string;
@@ -188,57 +159,21 @@ export async function POST(request: Request) {
     color_match?: boolean;
     translate_for_hair_type?: boolean;
     curl_type?: string | null;
-    user_id?: string;
   } = body;
 
   console.log("[style-match/analyze] Request type:", input_type);
-
-  // Part 2: pull in the user's most recent hair photo (if any) so the
-  // analysis can speak to their actual current hair, not just the
-  // desired style. Never fatal -- a lookup/download failure just falls
-  // back to the original single-image/text flow.
-  let currentHairPhoto: { base64: string; mediaType: string } | null = null;
-  if (user_id) {
-    try {
-      const recent = await getMostRecentHairPhoto(user_id);
-      if (recent) currentHairPhoto = await downloadHairPhotoAsBase64(recent.path);
-    } catch (err) {
-      console.error("[style-match/analyze] Failed to load current hair photo:", err);
-    }
-  }
-
-  const currentPhotoMode: "photo-photo" | "photo-text" | "none" = !currentHairPhoto
-    ? "none"
-    : input_type === "photo"
-    ? "photo-photo"
-    : "photo-text";
 
   const analysisInstructions = buildAnalysisInstructions({
     colorMatch: Boolean(color_match),
     translateForHairType: Boolean(translate_for_hair_type),
     curlType: curl_type ?? null,
-    currentPhotoMode,
-    desiredText: text,
   });
 
   let messageContent: unknown[];
   // Kicked off alongside the Anthropic call (not awaited yet) so the
   // upload and the analysis happen concurrently rather than adding to
-  // the ~10s wait shown in the loading overlay.
+  // the wait shown in the loading overlay.
   let imageUploadPromise: Promise<string | null> = Promise.resolve(null);
-
-  const currentHairImageBlock = currentHairPhoto
-    ? [
-        {
-          type: "image",
-          source: {
-            type: "base64",
-            media_type: currentHairPhoto.mediaType,
-            data: currentHairPhoto.base64,
-          },
-        },
-      ]
-    : [];
 
   if (input_type === "photo") {
     if (!image_base64 || !image_media_type) {
@@ -257,7 +192,6 @@ export async function POST(request: Request) {
     imageUploadPromise = uploadStyleImage(image_base64, image_media_type);
 
     messageContent = [
-      ...currentHairImageBlock,
       {
         type: "image",
         source: {
@@ -280,12 +214,9 @@ export async function POST(request: Request) {
     }
 
     messageContent = [
-      ...currentHairImageBlock,
       {
         type: "text",
-        text: currentPhotoMode === "photo-text"
-          ? analysisInstructions
-          : `The user wants this hairstyle: "${text.trim()}". Return the same JSON structure as below based on the described style.\n\n${analysisInstructions}`,
+        text: `The user wants this hairstyle: "${text.trim()}". Return the same JSON structure as below based on the described style.\n\n${analysisInstructions}`,
       },
     ];
   } else {
@@ -310,7 +241,10 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
-        max_tokens: 1024,
+        // Lower than before on purpose -- this schema is short enough
+        // that 1024 was never being used, just giving the model room to
+        // ramble. Capping it tighter nudges faster generation too.
+        max_tokens: 500,
         messages: [{ role: "user", content: messageContent }],
       }),
     });

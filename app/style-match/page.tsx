@@ -26,7 +26,7 @@ type DetectedStyle = {
   estimated_time: string;
   difficulty: string;
   compatible_hair_types: string[];
-  maintenance_tips: string;
+  maintenance_tips?: string;
   detected_color?: string | null;
   hair_type_translation?: string | null;
   image_url?: string | null;
@@ -322,16 +322,37 @@ function SelectableCard({
   );
 }
 
-function fileToBase64(file: File): Promise<{ base64: string; mediaType: string }> {
+// Resizes to maxSize on the longest side and re-encodes as JPEG at 0.8
+// quality before the image ever leaves the browser -- a smaller request
+// body is a direct, sizable chunk of the analyze route's total time
+// (upload + Anthropic's own image processing both scale with size).
+// Always outputs image/jpeg regardless of the source format.
+function resizeImage(file: File, maxSize: number): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(",")[1] ?? "";
-      resolve({ base64, mediaType: file.type });
+    const objectUrl = URL.createObjectURL(file);
+    const canvas = document.createElement("canvas");
+    // window.Image, not the next/image import shadowing `Image` in this
+    // file -- this needs the real DOM constructor.
+    const img = new window.Image();
+    img.onload = () => {
+      const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+      canvas.width = img.width * ratio;
+      canvas.height = img.height * ratio;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Couldn't get canvas context"));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(objectUrl);
+      resolve(canvas.toDataURL("image/jpeg", 0.8).split(",")[1] ?? "");
     };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Couldn't load the selected image"));
+    };
+    img.src = objectUrl;
   });
 }
 
@@ -451,10 +472,15 @@ function StyleMatchContent() {
   const showUpgradeWall = entitlementLoaded && !resolvingAccess && !canRunMatch;
   const [justUsedFreeMatch, setJustUsedFreeMatch] = useState(false);
 
-  // Part 2: whether the user has any hair photo on file -- drives the
-  // "add a hair photo" nudge on the landing screen. The analyze route
-  // does its own lookup regardless of this; this is just for the UI hint.
+  // Whether the user has any hair photo on file -- drives the "add a
+  // hair photo" nudge on the landing screen, and whether the background
+  // translation call fires after analyze() resolves (see analyze()
+  // below). The analyze call itself never touches hair photos anymore --
+  // that used to slow down every request with a current photo attached,
+  // which is the whole reason it moved to a separate, optional,
+  // image-free follow-up call.
   const [hasHairPhoto, setHasHairPhoto] = useState<boolean | null>(null);
+  const [translationLoading, setTranslationLoading] = useState(false);
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -595,10 +621,7 @@ function StyleMatchContent() {
       const res = await fetch("/api/style-match/analyze", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        // user_id lets the route pull in the user's most recent hair
-        // photo (Part 2) -- harmless to always send, the route just
-        // falls back to the single-image/text flow if there's no photo.
-        body: JSON.stringify({ ...body, user_id: user?.id }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
 
@@ -613,6 +636,32 @@ function StyleMatchContent() {
       }
 
       setDetected(data as DetectedStyle);
+
+      // Fired after the fast, image-only analyze call above resolves --
+      // not awaited, so it never delays showing results. Only when a
+      // hair photo is on file, since that's the only thing this
+      // translation is for. Updates `detected` in place when it lands,
+      // which re-renders the translation banner with no page reload.
+      if (hasHairPhoto && data.style_name) {
+        setTranslationLoading(true);
+        fetch("/api/style-match/translate", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            style_name: data.style_name,
+            curl_type: hairProfile?.curl_type ?? null,
+            porosity: hairProfile?.porosity ?? null,
+          }),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((translation) => {
+            if (translation) {
+              setDetected((prev) => (prev ? { ...prev, ...translation } : prev));
+            }
+          })
+          .catch((err) => console.error("[style-match] background translation failed:", err))
+          .finally(() => setTranslationLoading(false));
+      }
 
       // Free-match gate: only the first match for a non-subscriber
       // consumes/increments the counter. Mirrors app/search/page.tsx's
@@ -671,7 +720,9 @@ function StyleMatchContent() {
 
   async function handleSubmitPhoto() {
     if (!imageFile && !prefilledImage) return;
-    const { base64, mediaType } = imageFile ? await fileToBase64(imageFile) : prefilledImage!;
+    const { base64, mediaType } = imageFile
+      ? { base64: await resizeImage(imageFile, 800), mediaType: "image/jpeg" }
+      : prefilledImage!;
     const deepFields =
       matchMode === "deep"
         ? {
@@ -1392,7 +1443,9 @@ function StyleMatchContent() {
                 <HeartIcon filled={Boolean(savedStyleId)} />
               </button>
             </div>
-            <p className="mt-1 text-sm text-cream/60">{detected.maintenance_tips}</p>
+            {detected.maintenance_tips && (
+              <p className="mt-1 text-sm text-cream/60">{detected.maintenance_tips}</p>
+            )}
 
             {justUsedFreeMatch && !subscribed && (
               <p className="mt-2 text-xs text-bronze2">
@@ -1406,6 +1459,10 @@ function StyleMatchContent() {
                   Style adapted for your {hairProfile?.curl_type ?? ""} hair: {detected.hair_type_translation}
                 </p>
               </div>
+            )}
+
+            {translationLoading && !detected.current_to_desired_translation && (
+              <p className="mt-4 text-xs text-cream/50">Personalizing for your current hair...</p>
             )}
 
             {detected.current_to_desired_translation && (

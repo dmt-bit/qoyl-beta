@@ -67,8 +67,9 @@ export async function deleteHairPhotoObject(path: string): Promise<void> {
   if (error) console.error("[hairPhotos] Failed to delete storage object:", error);
 }
 
-// Used by Style Match (Part 2) to pull the user's most recent hair
-// photo into the Anthropic Vision call as base64.
+// Used by the community photo bridge (app/api/hair-photos/community/
+// [id]/image/route.ts) to feed a tapped community photo into Style
+// Match's photo-input flow as base64.
 export async function downloadHairPhotoAsBase64(
   path: string
 ): Promise<{ base64: string; mediaType: string } | null> {
@@ -82,19 +83,4 @@ export async function downloadHairPhotoAsBase64(
     base64: Buffer.from(arrayBuffer).toString("base64"),
     mediaType: mimeForPath(path),
   };
-}
-
-export async function getMostRecentHairPhoto(
-  userId: string
-): Promise<{ path: string; caption: string | null } | null> {
-  const { data } = await getSupabaseAdmin()
-    .from("hair_photos")
-    .select("photo_url, caption")
-    .eq("user_id", userId)
-    .order("taken_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!data) return null;
-  return { path: data.photo_url, caption: data.caption };
 }
