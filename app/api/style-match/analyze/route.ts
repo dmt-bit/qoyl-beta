@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { downloadHairPhotoAsBase64, getMostRecentHairPhoto } from "@/lib/hairPhotos";
 
+// POST routes that read the request body are never statically optimized
+// regardless, but this makes it explicit rather than implicit.
+export const dynamic = "force-dynamic";
+
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 
 const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
@@ -142,6 +146,10 @@ function parseDetectedStyle(rawText: string): DetectedStyle | null {
 
 export async function POST(request: Request) {
   console.log("[style-match/analyze] route hit");
+  console.log("[style-match/analyze] ANTHROPIC_API_KEY present:", !!process.env.ANTHROPIC_API_KEY);
+  // First 10 chars only -- enough to confirm the right key is loaded
+  // (e.g. "sk-ant-api...") without exposing the rest in logs.
+  console.log("[style-match/analyze] ANTHROPIC_API_KEY prefix:", process.env.ANTHROPIC_API_KEY?.slice(0, 10));
 
   if (!process.env.ANTHROPIC_API_KEY) {
     console.warn("[style-match/analyze] ANTHROPIC_API_KEY is not set");
@@ -171,6 +179,8 @@ export async function POST(request: Request) {
     curl_type?: string | null;
     user_id?: string;
   } = body;
+
+  console.log("[style-match/analyze] Request type:", input_type);
 
   // Part 2: pull in the user's most recent hair photo (if any) so the
   // analysis can speak to their actual current hair, not just the
@@ -278,7 +288,12 @@ export async function POST(request: Request) {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        // .trim() guards against a trailing newline/space from pasting
+        // the key into Vercel's env var UI -- an invalid header value
+        // makes fetch() throw before the request is even sent, which
+        // otherwise shows up here as an opaque "couldn't reach the
+        // service" with no indication it was ever about the key.
+        "x-api-key": process.env.ANTHROPIC_API_KEY.trim(),
         "anthropic-version": "2023-06-01",
         "content-type": "application/json",
       },
@@ -297,7 +312,7 @@ export async function POST(request: Request) {
         errorBody
       );
       return NextResponse.json(
-        { error: "Couldn't analyze this style. Please try again." },
+        { error: "Couldn't analyze this style. Please try again.", detail: errorBody },
         { status: 502 }
       );
     }
@@ -326,9 +341,22 @@ export async function POST(request: Request) {
     console.log("[style-match/analyze] detected style:", detected.style_name);
     return NextResponse.json({ ...detected, image_url: imageUrl });
   } catch (err) {
-    console.error("[style-match/analyze] Failed to reach Anthropic API:", err);
+    // JSON.stringify(err) on a real Error yields "{}" (message/stack
+    // aren't own-enumerable properties) -- log err.message/err.stack
+    // explicitly too, or this tells you nothing beyond "something threw."
+    console.error("[style-match/analyze] Anthropic API error:", JSON.stringify(err));
+    console.error(
+      "[style-match/analyze] Anthropic API error message:",
+      err instanceof Error ? err.message : String(err)
+    );
+    if (err instanceof Error && err.stack) {
+      console.error("[style-match/analyze] Anthropic API error stack:", err.stack);
+    }
     return NextResponse.json(
-      { error: "Couldn't reach the style analysis service. Please try again." },
+      {
+        error: "Analysis failed",
+        detail: err instanceof Error ? err.message : String(err),
+      },
       { status: 500 }
     );
   }

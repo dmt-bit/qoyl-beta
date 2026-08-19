@@ -603,7 +603,11 @@ function StyleMatchContent() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Couldn't analyze this style. Please try again.");
+        // data.detail is server debug info (see app/api/style-match/
+        // analyze/route.ts) -- appended when present so the actual
+        // failure is visible without needing to check server logs.
+        const base = data.error ?? "Couldn't analyze this style. Please try again.";
+        setError(data.detail ? `${base} (${data.detail})` : base);
         setPageState("landing");
         return;
       }
