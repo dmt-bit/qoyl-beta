@@ -11,6 +11,14 @@ const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 // image-free follow-up fills in the translation afterward without
 // holding up the initial response. Client fires this only when the user
 // has a hair photo on file (app/style-match/page.tsx).
+//
+// Deliberately plain text, not JSON -- a single required sentence needs
+// no structure to parse, and one less thing that can fail (malformed
+// JSON) on the call that's supposed to be the fast, simple one. This
+// also means the length_gap chip / prep_needed checklist the results
+// screen can render (from an older style_matches row, or if this route
+// changes again later) just won't be populated by new matches going
+// forward -- that's an intentional simplification, not an oversight.
 export async function POST(request: Request) {
   console.log("[style-match/translate] route hit");
 
@@ -34,11 +42,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "style_name is required." }, { status: 400 });
   }
 
-  const hairDescription = [curl_type, porosity && `${porosity} porosity`]
-    .filter(Boolean)
-    .join(", ") || "an unspecified hair type";
-
-  const prompt = `Given this desired style "${style_name}" and the user has ${hairDescription} hair, what would the translation look like? Answer in 2 sentences max.\nReturn ONLY this JSON, no other text:\n{\n  "current_to_desired_translation": "2 sentences max",\n  "length_gap": "none/slight/moderate/significant",\n  "prep_needed": ["max 3 short items"]\n}`;
+  const hairDescription = [curl_type, porosity].filter(Boolean).join(" ") || "an unspecified hair type";
+  const prompt = `The user has ${hairDescription} hair and wants to achieve: ${style_name}. In exactly one sentence, describe what achieving this style would take starting from their hair type.`;
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -50,7 +55,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
-        max_tokens: 250,
+        max_tokens: 150,
         messages: [{ role: "user", content: [{ type: "text", text: prompt }] }],
       }),
     });
@@ -67,14 +72,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Translation failed." }, { status: 502 });
     }
 
-    const stripped = rawText
-      .trim()
-      .replace(/^```(?:json)?\s*/i, "")
-      .replace(/```\s*$/i, "")
-      .trim();
-
-    const parsed = JSON.parse(stripped);
-    return NextResponse.json(parsed);
+    return NextResponse.json({ current_to_desired_translation: rawText.trim() });
   } catch (err) {
     console.error(
       "[style-match/translate] Failed:",

@@ -279,8 +279,8 @@ function AnalyzingOverlay() {
           <span key={i} className="h-3 w-3 animate-bounce rounded-full bg-bronze" style={{ animationDelay: `${i * 150}ms` }} />
         ))}
       </div>
-      <p className="mt-6 font-serif text-xl text-cream">Analyzing your style...</p>
-      <p className="mt-2 text-sm text-cream/60">This takes about 10 seconds</p>
+      <p className="mt-6 font-serif text-xl text-cream">Identifying your style...</p>
+      <p className="mt-2 text-sm text-cream/60">This takes about 5 seconds</p>
     </div>
   );
 }
@@ -327,7 +327,10 @@ function SelectableCard({
 // body is a direct, sizable chunk of the analyze route's total time
 // (upload + Anthropic's own image processing both scale with size).
 // Always outputs image/jpeg regardless of the source format.
-function resizeImage(file: File, maxSize: number): Promise<string> {
+function resizeImageToBase64(
+  file: File,
+  maxSize: number = 800
+): Promise<{ base64: string; mediaType: string }> {
   return new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(file);
     const canvas = document.createElement("canvas");
@@ -336,8 +339,8 @@ function resizeImage(file: File, maxSize: number): Promise<string> {
     const img = new window.Image();
     img.onload = () => {
       const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
-      canvas.width = img.width * ratio;
-      canvas.height = img.height * ratio;
+      canvas.width = Math.round(img.width * ratio);
+      canvas.height = Math.round(img.height * ratio);
       const ctx = canvas.getContext("2d");
       if (!ctx) {
         URL.revokeObjectURL(objectUrl);
@@ -346,7 +349,8 @@ function resizeImage(file: File, maxSize: number): Promise<string> {
       }
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       URL.revokeObjectURL(objectUrl);
-      resolve(canvas.toDataURL("image/jpeg", 0.8).split(",")[1] ?? "");
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+      resolve({ base64: dataUrl.split(",")[1] ?? "", mediaType: "image/jpeg" });
     };
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
@@ -721,7 +725,7 @@ function StyleMatchContent() {
   async function handleSubmitPhoto() {
     if (!imageFile && !prefilledImage) return;
     const { base64, mediaType } = imageFile
-      ? { base64: await resizeImage(imageFile, 800), mediaType: "image/jpeg" }
+      ? await resizeImageToBase64(imageFile, 800)
       : prefilledImage!;
     const deepFields =
       matchMode === "deep"
@@ -1462,7 +1466,7 @@ function StyleMatchContent() {
             )}
 
             {translationLoading && !detected.current_to_desired_translation && (
-              <p className="mt-4 text-xs text-cream/50">Personalizing for your current hair...</p>
+              <p className="mt-4 text-xs text-cream/50">Personalizing for your hair...</p>
             )}
 
             {detected.current_to_desired_translation && (

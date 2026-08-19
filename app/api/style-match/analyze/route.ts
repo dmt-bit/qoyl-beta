@@ -241,10 +241,11 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
-        // Lower than before on purpose -- this schema is short enough
-        // that 1024 was never being used, just giving the model room to
-        // ramble. Capping it tighter nudges faster generation too.
-        max_tokens: 500,
+        // Lower than the original 1024 on purpose -- this schema is
+        // short enough that 1024 was never being used, just giving the
+        // model room to ramble. Capping it tighter nudges faster
+        // generation too.
+        max_tokens: 512,
         messages: [{ role: "user", content: messageContent }],
       }),
     });
