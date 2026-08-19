@@ -6,6 +6,17 @@ import { downloadHairPhotoAsBase64, getMostRecentHairPhoto } from "@/lib/hairPho
 // regardless, but this makes it explicit rather than implicit.
 export const dynamic = "force-dynamic";
 
+// With no maxDuration set, this runs on Vercel's platform default (10s
+// on Hobby, 15s on Pro) -- measured the two-image flow (current hair
+// photo + desired style) at ~13s end to end, which is already over the
+// Hobby default and close to Pro's. A platform-level timeout kills the
+// function mid-request with no response body, which the client sees as
+// a plain network failure indistinguishable from "can't reach the
+// server" -- exactly the symptom being debugged. On Hobby this is
+// capped at 10s regardless of what's set here; Pro/Enterprise honor it
+// up to their own ceiling (60s/900s).
+export const maxDuration = 60;
+
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 
 const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {

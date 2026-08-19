@@ -658,7 +658,12 @@ function StyleMatchContent() {
       }
 
       setPageState("confirm");
-    } catch {
+    } catch (err) {
+      // A bare network failure and a Vercel platform-level timeout
+      // (function killed mid-request, no response body) look identical
+      // to fetch() -- both just throw. Logging the actual error at
+      // least tells us which one it was next time this happens.
+      console.error("[style-match] analyze request failed:", err);
       setError("Couldn't reach the style analysis service. Please try again.");
       setPageState("landing");
     }
