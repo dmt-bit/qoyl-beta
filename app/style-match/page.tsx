@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { COMMUNITY_PREFILL_KEY } from "@/components/CommunityGrid";
 import PostCard, { Post } from "@/components/PostCard";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
@@ -29,6 +30,9 @@ type DetectedStyle = {
   detected_color?: string | null;
   hair_type_translation?: string | null;
   image_url?: string | null;
+  current_to_desired_translation?: string | null;
+  length_gap?: string | null;
+  prep_needed?: string[];
 };
 
 type YouTubeVideo = {
@@ -190,6 +194,83 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
+function CheckListIcon() {
+  return (
+    <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function UploadIcon() {
+  return (
+    <svg className="h-6 w-6 text-cream/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 8.25L12 3.75 7.5 8.25M12 3.75v12" />
+    </svg>
+  );
+}
+
+function DemoSection() {
+  return (
+    <div className="mt-8">
+      <p className="text-xs font-semibold uppercase tracking-widest text-bronze">How it works</p>
+      <h2 className="mt-2 font-serif text-2xl font-semibold text-cream">
+        Your complete style plan in under 30 seconds
+      </h2>
+
+      <div className="no-scrollbar -mx-4 mt-5 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
+        <div className="w-[85%] shrink-0 snap-center rounded-xl bg-[#2C2420] p-5 sm:w-auto">
+          <div className="flex items-center justify-between">
+            <span className="font-serif text-2xl text-bronze">1</span>
+            <CameraIcon />
+          </div>
+          <p className="mt-3 text-sm text-cream/80">
+            Upload a photo of the style you want or describe it in words
+          </p>
+          <div className="mt-4 flex h-28 items-center justify-center rounded-2xl border-2 border-cream/20">
+            <UploadIcon />
+          </div>
+        </div>
+
+        <div className="w-[85%] shrink-0 snap-center rounded-xl bg-[#2C2420] p-5 sm:w-auto">
+          <div className="flex items-center justify-between">
+            <span className="font-serif text-2xl text-bronze">2</span>
+            <SparkleIcon />
+          </div>
+          <p className="mt-3 text-sm text-cream/80">
+            Claude identifies the style, difficulty, time required, and what you need
+          </p>
+          <div className="mt-4 rounded-lg bg-dark p-3">
+            <p className="font-serif text-sm text-cream">Knotless Braids</p>
+            <div className="mt-2 flex gap-1.5">
+              <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[9px] text-bronze2">Intermediate</span>
+              <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[9px] text-bronze2">5-9 hrs</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="w-[85%] shrink-0 snap-center rounded-xl bg-[#2C2420] p-5 sm:w-auto">
+          <div className="flex items-center justify-between">
+            <span className="font-serif text-2xl text-bronze">3</span>
+            <CheckListIcon />
+          </div>
+          <p className="mt-3 text-sm text-cream/80">
+            Tutorials from real creators, a shopping list scored for your hair, and a local
+            stylist if available
+          </p>
+          <div className="mt-4 flex gap-1.5">
+            {["Tutorials", "Shopping List", "Stylist"].map((label) => (
+              <div key={label} className="flex-1 rounded-lg bg-dark px-1.5 py-3 text-center">
+                <p className="text-[9px] font-medium text-cream/70">{label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AnalyzingOverlay() {
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-dark/95 font-sans">
@@ -287,6 +368,10 @@ function UpgradeWallContent({ userId, userEmail }: { userId: string; userEmail: 
         Your first match is free. Upgrade to the Qoyl routine subscription for unlimited style
         matches, your personalized monthly routine, and a curated product list — all in one.
       </p>
+      <p className="mt-3 text-sm text-cream/70">
+        Add your hair photos to your profile and Style Match will use them to show you
+        exactly what any style would take starting from your current hair.
+      </p>
 
       <ul className="mt-6 space-y-2.5">
         {[
@@ -366,6 +451,26 @@ function StyleMatchContent() {
   const showUpgradeWall = entitlementLoaded && !resolvingAccess && !canRunMatch;
   const [justUsedFreeMatch, setJustUsedFreeMatch] = useState(false);
 
+  // Part 2: whether the user has any hair photo on file -- drives the
+  // "add a hair photo" nudge on the landing screen. The analyze route
+  // does its own lookup regardless of this; this is just for the UI hint.
+  const [hasHairPhoto, setHasHairPhoto] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetch(`/api/hair-photos?user_id=${user.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setHasHairPhoto((data.photos ?? []).length > 0);
+      })
+      .catch(() => {
+        if (!cancelled) setHasHairPhoto(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   const [pageState, setPageState] = useState<PageState>("landing");
   const [error, setError] = useState<string | null>(null);
 
@@ -380,6 +485,26 @@ function StyleMatchContent() {
   useEffect(() => {
     const prefill = searchParams.get("prefill");
     if (prefill) setTextDescription(prefill);
+  }, [searchParams]);
+
+  // Pre-fill from a community photo's "Style Match this ->" button --
+  // there's no File object for these (the image came from another
+  // user's storage object, downloaded server-side as base64), so it's
+  // carried across the navigation via sessionStorage instead.
+  const [prefilledImage, setPrefilledImage] = useState<{ base64: string; mediaType: string } | null>(null);
+  useEffect(() => {
+    if (searchParams.get("fromCommunity") !== "1") return;
+    const raw = sessionStorage.getItem(COMMUNITY_PREFILL_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(COMMUNITY_PREFILL_KEY);
+    try {
+      const parsed = JSON.parse(raw) as { base64: string; mediaType: string };
+      setPrefilledImage(parsed);
+      setImagePreviewUrl(`data:${parsed.mediaType};base64,${parsed.base64}`);
+    } catch {
+      // Malformed/stale sessionStorage value -- ignore, user can still
+      // upload a photo normally.
+    }
   }, [searchParams]);
 
   // Deep Match survey state (Part 2)
@@ -470,7 +595,10 @@ function StyleMatchContent() {
       const res = await fetch("/api/style-match/analyze", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
+        // user_id lets the route pull in the user's most recent hair
+        // photo (Part 2) -- harmless to always send, the route just
+        // falls back to the single-image/text flow if there's no photo.
+        body: JSON.stringify({ ...body, user_id: user?.id }),
       });
       const data = await res.json();
 
@@ -533,8 +661,8 @@ function StyleMatchContent() {
   }
 
   async function handleSubmitPhoto() {
-    if (!imageFile) return;
-    const { base64, mediaType } = await fileToBase64(imageFile);
+    if (!imageFile && !prefilledImage) return;
+    const { base64, mediaType } = imageFile ? await fileToBase64(imageFile) : prefilledImage!;
     const deepFields =
       matchMode === "deep"
         ? {
@@ -574,7 +702,7 @@ function StyleMatchContent() {
   }
 
   function handleDeepSurveyFinish() {
-    if (imageFile) handleSubmitPhoto();
+    if (imageFile || prefilledImage) handleSubmitPhoto();
     else handleSubmitText();
   }
 
@@ -824,6 +952,8 @@ function StyleMatchContent() {
               available in your city.
             </p>
 
+            <DemoSection />
+
             {error && <p className="mt-4 text-sm text-red">{error}</p>}
 
             <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -846,11 +976,14 @@ function StyleMatchContent() {
                     <Image src={imagePreviewUrl} alt="Selected style" fill className="object-cover" />
                   </div>
                 )}
+                {prefilledImage && !imageFile && (
+                  <p className="mt-2 text-xs text-bronze2">Using the community photo you picked →</p>
+                )}
 
                 <button
                   type="button"
                   onClick={() => handlePrimarySubmit("photo")}
-                  disabled={!imageFile}
+                  disabled={!imageFile && !prefilledImage}
                   className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-40"
                 >
                   Analyze this style →
@@ -897,7 +1030,7 @@ function StyleMatchContent() {
               </button>
             </div>
 
-            {(imageFile || textDescription.trim()) && (
+            {(imageFile || prefilledImage || textDescription.trim()) && (
               <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <SelectableCard
                   icon={<LightningIcon />}
@@ -914,6 +1047,15 @@ function StyleMatchContent() {
                   onClick={() => setMatchMode("deep")}
                 />
               </div>
+            )}
+
+            {hasHairPhoto === false && (
+              <Link
+                href="/profile"
+                className="mt-6 block text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+              >
+                Add a hair photo to your profile for a more personalized style analysis →
+              </Link>
             )}
           </>
         )}
@@ -1254,6 +1396,31 @@ function StyleMatchContent() {
                 <p className="text-sm leading-relaxed text-cream/90">
                   Style adapted for your {hairProfile?.curl_type ?? ""} hair: {detected.hair_type_translation}
                 </p>
+              </div>
+            )}
+
+            {detected.current_to_desired_translation && (
+              <div className="mt-4 rounded-lg border-l-2 border-bronze bg-warm/10 px-4 py-3">
+                <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
+                  From your current hair to this style
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-cream/90">
+                  {detected.current_to_desired_translation}
+                </p>
+                {detected.length_gap && (
+                  <span className="mt-2 inline-block rounded-full border border-bronze/40 px-2.5 py-0.5 text-[11px] font-medium capitalize text-bronze2">
+                    Length gap: {detected.length_gap}
+                  </span>
+                )}
+                {detected.prep_needed && detected.prep_needed.length > 0 && (
+                  <ul className="mt-2 space-y-1">
+                    {detected.prep_needed.map((step) => (
+                      <li key={step} className="text-xs text-cream/70">
+                        • {step}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
 

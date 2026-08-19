@@ -4,6 +4,7 @@ import { Fragment, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Collapse from "@/components/Collapse";
+import HairJourneySection from "@/components/HairJourneySection";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
 import { classifyClimateFromZip } from "@/lib/climateData";
@@ -1482,6 +1483,12 @@ function ProfileForm() {
           </button>
         </form>
         )}
+
+        {/* Deliberately outside the showForm/summary split above -- hair
+            photos aren't part of the 30-day-locked profile fields, so
+            they must stay reachable regardless of whether the rest of
+            the profile is currently editable. */}
+        {user && <HairJourneySection userId={user.id} />}
       </div>
 
       {user && <MyPurchases userId={user.id} />}

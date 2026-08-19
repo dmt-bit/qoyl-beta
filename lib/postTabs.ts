@@ -12,7 +12,8 @@ export type TabKey =
   | "coily"
   | "extensions"
   | "mens"
-  | "baby";
+  | "baby"
+  | "community";
 
 export const TABS: { key: TabKey; label: string }[] = [
   { key: "all", label: "All" },
@@ -24,6 +25,7 @@ export const TABS: { key: TabKey; label: string }[] = [
   { key: "extensions", label: "Extensions & Wigs" },
   { key: "mens", label: "Men's Hair" },
   { key: "baby", label: "Baby & Kids" },
+  { key: "community", label: "Community" },
 ];
 
 const TAB_KEYS = new Set<string>(TABS.map((tab) => tab.key));

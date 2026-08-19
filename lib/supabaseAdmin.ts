@@ -22,7 +22,18 @@ export function getSupabaseAdmin(): SupabaseClient {
       );
     }
 
-    adminClient = createClient(supabaseUrl, serviceRoleKey);
+    adminClient = createClient(supabaseUrl, serviceRoleKey, {
+      global: {
+        // Route Handlers run under Next.js's patched fetch, which caches
+        // GET requests by default -- without this, supabase-js's REST
+        // calls get silently cached at the fetch layer, independent of
+        // any `export const dynamic` on the route itself. Confirmed the
+        // hard way: app/api/hair-photos/community/route.ts served a
+        // stale empty result long after real rows existed. Mirrors the
+        // same fix already applied to the anon client in lib/supabase.ts.
+        fetch: (url, options) => fetch(url, { ...options, cache: "no-store" }),
+      },
+    });
   }
   return adminClient;
 }

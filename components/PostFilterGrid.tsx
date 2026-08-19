@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import CommunityGrid from "@/components/CommunityGrid";
 import PostCard, { Post } from "@/components/PostCard";
 import { useAuth } from "@/lib/auth-context";
 import { TABS, TabKey } from "@/lib/postTabs";
@@ -145,28 +146,30 @@ export default function PostFilterGrid({
         The feed
       </p>
 
-      <div className="relative mt-4">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
-          <SearchIcon />
-        </span>
-        <input
-          type="text"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search the feed — try 'glycerin' or 'porosity'"
-          className="w-full rounded-lg border border-bronze/40 bg-dark py-3 pl-10 pr-10 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
-        />
-        {searchInput && (
-          <button
-            type="button"
-            onClick={() => setSearchInput("")}
-            aria-label="Clear search"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-cream/40 transition-colors hover:text-cream"
-          >
-            ✕
-          </button>
-        )}
-      </div>
+      {activeTab !== "community" && (
+        <div className="relative mt-4">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2">
+            <SearchIcon />
+          </span>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder="Search the feed — try 'glycerin' or 'porosity'"
+            className="w-full rounded-lg border border-bronze/40 bg-dark py-3 pl-10 pr-10 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+          />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => setSearchInput("")}
+              aria-label="Clear search"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-cream/40 transition-colors hover:text-cream"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="relative -mx-4 mt-4 px-4 sm:mx-0 sm:px-0">
         <div
@@ -206,7 +209,9 @@ export default function PostFilterGrid({
         </div>
       </div>
 
-      {filteredPosts.length > 0 ? (
+      {activeTab === "community" ? (
+        <CommunityGrid />
+      ) : filteredPosts.length > 0 ? (
         <>
           <div className="-mx-4 mt-8 grid grid-cols-2 gap-px bg-[#1C1612] sm:mx-0 sm:grid-cols-3">
             {filteredPosts.map((post) => (

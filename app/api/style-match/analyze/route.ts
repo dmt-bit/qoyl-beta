@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
+import { downloadHairPhotoAsBase64, getMostRecentHairPhoto } from "@/lib/hairPhotos";
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 
@@ -51,6 +52,11 @@ function buildAnalysisInstructions(opts: {
   colorMatch: boolean;
   translateForHairType: boolean;
   curlType: string | null;
+  // "photo-photo": current hair photo + desired style photo (both images).
+  // "photo-text": current hair photo + desired style described in words.
+  // "none": no current hair photo on file -- original single-image/text flow.
+  currentPhotoMode: "photo-photo" | "photo-text" | "none";
+  desiredText?: string;
 }): string {
   const fields = [
     `"style_name": "name of the hairstyle (e.g. Box Braids, Wash and Go, Twist Out, Knotless Braids, Locs, Bantu Knots, etc)"`,
@@ -75,12 +81,27 @@ function buildAnalysisInstructions(opts: {
       `"hair_type_translation": "how this style would translate onto ${opts.curlType ?? "the user's"} hair specifically, and what modifications may be needed -- 2-3 sentences"`
     );
   }
+  if (opts.currentPhotoMode !== "none") {
+    fields.push(
+      `"current_to_desired_translation": "One paragraph explaining specifically how to achieve the desired style starting from the user's current hair shown in Image 1. Note any length difference, texture differences, or significant preparation needed."`,
+      `"length_gap": "none/slight/moderate/significant -- how much length difference exists between current and desired"`,
+      `"prep_needed": ["array of preparation steps specific to going from current hair to desired style"]`
+    );
+  }
 
-  const note = opts.translateForHairType
+  const translateNote = opts.translateForHairType
     ? `\n\nNote: the user has ${opts.curlType ?? "an unspecified"} hair type. Explain how this style would translate to their hair type and what modifications may be needed.`
     : "";
 
-  return `Analyze this hairstyle image and return a JSON object with these exact fields:\n{\n  ${fields.join(",\n  ")}\n}${note}\nReturn ONLY the JSON object, no other text.`;
+  if (opts.currentPhotoMode === "photo-photo") {
+    return `Image 1 is the user's current hair. Image 2 is the hairstyle they want to achieve.\nAnalyze the desired style (Image 2) and return the standard JSON response.\nAdditionally include these fields about the translation:\n{\n  ${fields.join(",\n  ")}\n}${translateNote}\nReturn ONLY the JSON object, no other text.`;
+  }
+
+  if (opts.currentPhotoMode === "photo-text") {
+    return `Image 1 is the user's current hair. They want to achieve this hairstyle: "${opts.desiredText ?? ""}".\nAnalyze the desired style described above and return the standard JSON response.\nAdditionally include these fields about the translation:\n{\n  ${fields.join(",\n  ")}\n}${translateNote}\nReturn ONLY the JSON object, no other text.`;
+  }
+
+  return `Analyze this hairstyle image and return a JSON object with these exact fields:\n{\n  ${fields.join(",\n  ")}\n}${translateNote}\nReturn ONLY the JSON object, no other text.`;
 }
 
 type DetectedStyle = {
@@ -97,6 +118,9 @@ type DetectedStyle = {
   detected_color?: string | null;
   hair_type_translation?: string | null;
   image_url?: string | null;
+  current_to_desired_translation?: string | null;
+  length_gap?: string | null;
+  prep_needed?: string[];
 };
 
 // Claude sometimes wraps JSON in a ```json ... ``` fence despite being
@@ -136,6 +160,7 @@ export async function POST(request: Request) {
     color_match,
     translate_for_hair_type,
     curl_type,
+    user_id,
   }: {
     input_type?: "photo" | "text";
     image_base64?: string;
@@ -144,12 +169,35 @@ export async function POST(request: Request) {
     color_match?: boolean;
     translate_for_hair_type?: boolean;
     curl_type?: string | null;
+    user_id?: string;
   } = body;
+
+  // Part 2: pull in the user's most recent hair photo (if any) so the
+  // analysis can speak to their actual current hair, not just the
+  // desired style. Never fatal -- a lookup/download failure just falls
+  // back to the original single-image/text flow.
+  let currentHairPhoto: { base64: string; mediaType: string } | null = null;
+  if (user_id) {
+    try {
+      const recent = await getMostRecentHairPhoto(user_id);
+      if (recent) currentHairPhoto = await downloadHairPhotoAsBase64(recent.path);
+    } catch (err) {
+      console.error("[style-match/analyze] Failed to load current hair photo:", err);
+    }
+  }
+
+  const currentPhotoMode: "photo-photo" | "photo-text" | "none" = !currentHairPhoto
+    ? "none"
+    : input_type === "photo"
+    ? "photo-photo"
+    : "photo-text";
 
   const analysisInstructions = buildAnalysisInstructions({
     colorMatch: Boolean(color_match),
     translateForHairType: Boolean(translate_for_hair_type),
     curlType: curl_type ?? null,
+    currentPhotoMode,
+    desiredText: text,
   });
 
   let messageContent: unknown[];
@@ -157,6 +205,19 @@ export async function POST(request: Request) {
   // upload and the analysis happen concurrently rather than adding to
   // the ~10s wait shown in the loading overlay.
   let imageUploadPromise: Promise<string | null> = Promise.resolve(null);
+
+  const currentHairImageBlock = currentHairPhoto
+    ? [
+        {
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: currentHairPhoto.mediaType,
+            data: currentHairPhoto.base64,
+          },
+        },
+      ]
+    : [];
 
   if (input_type === "photo") {
     if (!image_base64 || !image_media_type) {
@@ -175,6 +236,7 @@ export async function POST(request: Request) {
     imageUploadPromise = uploadStyleImage(image_base64, image_media_type);
 
     messageContent = [
+      ...currentHairImageBlock,
       {
         type: "image",
         source: {
@@ -197,9 +259,12 @@ export async function POST(request: Request) {
     }
 
     messageContent = [
+      ...currentHairImageBlock,
       {
         type: "text",
-        text: `The user wants this hairstyle: "${text.trim()}". Return the same JSON structure as below based on the described style.\n\n${analysisInstructions}`,
+        text: currentPhotoMode === "photo-text"
+          ? analysisInstructions
+          : `The user wants this hairstyle: "${text.trim()}". Return the same JSON structure as below based on the described style.\n\n${analysisInstructions}`,
       },
     ];
   } else {
