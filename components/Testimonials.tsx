@@ -44,7 +44,7 @@ const TESTIMONIALS = [
 
 function TestimonialCard({ t }: { t: (typeof TESTIMONIALS)[number] }) {
   return (
-    <div className="rounded-xl bg-[#2C2420] p-6">
+    <div className="rounded-xl bg-[#2C2420] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
       <div className="flex gap-1">
         {Array.from({ length: t.stars }).map((_, i) => (
           <StarIcon key={i} />
@@ -78,12 +78,12 @@ export default function Testimonials() {
   }
 
   return (
-    <section className="fade-up-block bg-dark px-4 py-16 sm:px-6 sm:py-20">
+    <section className="fade-up-block bg-warm px-4 py-16 sm:px-6 sm:py-20">
       <div className="mx-auto max-w-5xl">
         <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
           What the community is saying
         </p>
-        <h2 className="mt-3 font-serif text-3xl font-semibold text-cream sm:text-4xl">
+        <h2 className="mt-3 font-serif text-3xl font-semibold text-dark sm:text-4xl">
           Real hair. Real results.
         </h2>
 
@@ -106,7 +106,7 @@ export default function Testimonials() {
               <span
                 key={t.name}
                 className={`h-2 w-2 rounded-full transition-colors ${
-                  i === activeIndex ? "bg-bronze" : "bg-cream/20"
+                  i === activeIndex ? "bg-bronze" : "bg-dark/15"
                 }`}
               />
             ))}
