@@ -1,6 +1,44 @@
 import { NextResponse } from "next/server";
+import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
+
+const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+};
+
+// Uploaded with the service-role key rather than the user's own session
+// so this works with no storage RLS policy on the bucket at all -- the
+// bucket ("style-match-images") is public-read, so the resulting URL is
+// usable directly by the client and stored on style_matches/saved_styles.
+// Best-effort: a failure here must not fail the whole analysis, since
+// the detected style is the important part and image_url is secondary.
+async function uploadStyleImage(base64: string, mediaType: string): Promise<string | null> {
+  const extension = IMAGE_EXTENSION_BY_MIME[mediaType];
+  if (!extension) return null;
+
+  try {
+    const buffer = Buffer.from(base64, "base64");
+    const path = `uploads/${crypto.randomUUID()}.${extension}`;
+    const { error } = await getSupabaseAdmin()
+      .storage.from("style-match-images")
+      .upload(path, buffer, { contentType: mediaType });
+
+    if (error) {
+      console.error("[style-match/analyze] Failed to upload style image:", error);
+      return null;
+    }
+
+    const { data } = getSupabaseAdmin().storage.from("style-match-images").getPublicUrl(path);
+    return data.publicUrl;
+  } catch (err) {
+    console.error("[style-match/analyze] Failed to upload style image:", err);
+    return null;
+  }
+}
 
 const SUPPORTED_IMAGE_TYPES = new Set([
   "image/jpeg",
@@ -9,20 +47,41 @@ const SUPPORTED_IMAGE_TYPES = new Set([
   "image/webp",
 ]);
 
-const ANALYSIS_INSTRUCTIONS = `Analyze this hairstyle image and return a JSON object with these exact fields:
-{
-  "style_name": "name of the hairstyle (e.g. Box Braids, Wash and Go, Twist Out, Knotless Braids, Locs, Bantu Knots, etc)",
-  "style_description": "2 sentence description of what this style is",
-  "hair_length": "short/medium/long",
-  "requires_fake_hair": true/false,
-  "fake_hair_type": "type of fake hair needed if any (e.g. braiding hair, crochet hair, lace front wig) or null",
-  "accessories_visible": ["list of accessories visible like beads, bands, ribbons, clips"],
-  "estimated_time": "how long this style typically takes",
-  "difficulty": "beginner/intermediate/advanced",
-  "compatible_hair_types": ["array of curl types this style works for e.g. 3c, 4a, 4b, 4c"],
-  "maintenance_tips": "one sentence on maintaining this style"
+function buildAnalysisInstructions(opts: {
+  colorMatch: boolean;
+  translateForHairType: boolean;
+  curlType: string | null;
+}): string {
+  const fields = [
+    `"style_name": "name of the hairstyle (e.g. Box Braids, Wash and Go, Twist Out, Knotless Braids, Locs, Bantu Knots, etc)"`,
+    `"style_description": "2 sentence description of what this style is"`,
+    `"hair_length": "short/medium/long"`,
+    `"requires_fake_hair": true/false`,
+    `"fake_hair_type": "type of fake hair needed if any (e.g. braiding hair, crochet hair, lace front wig) or null"`,
+    `"accessories_visible": ["list of accessories visible like beads, bands, ribbons, clips"]`,
+    `"estimated_time": "how long this style typically takes"`,
+    `"difficulty": "beginner/intermediate/advanced"`,
+    `"compatible_hair_types": ["array of curl types this style works for e.g. 3c, 4a, 4b, 4c"]`,
+    `"maintenance_tips": "one sentence on maintaining this style"`,
+  ];
+
+  if (opts.colorMatch) {
+    fields.push(
+      `"detected_color": "the primary hair color shown or described (e.g. honey blonde, burgundy, jet black), or null if no specific color is shown/mentioned"`
+    );
+  }
+  if (opts.translateForHairType) {
+    fields.push(
+      `"hair_type_translation": "how this style would translate onto ${opts.curlType ?? "the user's"} hair specifically, and what modifications may be needed -- 2-3 sentences"`
+    );
+  }
+
+  const note = opts.translateForHairType
+    ? `\n\nNote: the user has ${opts.curlType ?? "an unspecified"} hair type. Explain how this style would translate to their hair type and what modifications may be needed.`
+    : "";
+
+  return `Analyze this hairstyle image and return a JSON object with these exact fields:\n{\n  ${fields.join(",\n  ")}\n}${note}\nReturn ONLY the JSON object, no other text.`;
 }
-Return ONLY the JSON object, no other text.`;
 
 type DetectedStyle = {
   style_name: string;
@@ -35,6 +94,9 @@ type DetectedStyle = {
   difficulty: string;
   compatible_hair_types: string[];
   maintenance_tips: string;
+  detected_color?: string | null;
+  hair_type_translation?: string | null;
+  image_url?: string | null;
 };
 
 // Claude sometimes wraps JSON in a ```json ... ``` fence despite being
@@ -71,14 +133,30 @@ export async function POST(request: Request) {
     image_base64,
     image_media_type,
     text,
+    color_match,
+    translate_for_hair_type,
+    curl_type,
   }: {
     input_type?: "photo" | "text";
     image_base64?: string;
     image_media_type?: string;
     text?: string;
+    color_match?: boolean;
+    translate_for_hair_type?: boolean;
+    curl_type?: string | null;
   } = body;
 
+  const analysisInstructions = buildAnalysisInstructions({
+    colorMatch: Boolean(color_match),
+    translateForHairType: Boolean(translate_for_hair_type),
+    curlType: curl_type ?? null,
+  });
+
   let messageContent: unknown[];
+  // Kicked off alongside the Anthropic call (not awaited yet) so the
+  // upload and the analysis happen concurrently rather than adding to
+  // the ~10s wait shown in the loading overlay.
+  let imageUploadPromise: Promise<string | null> = Promise.resolve(null);
 
   if (input_type === "photo") {
     if (!image_base64 || !image_media_type) {
@@ -94,6 +172,8 @@ export async function POST(request: Request) {
       );
     }
 
+    imageUploadPromise = uploadStyleImage(image_base64, image_media_type);
+
     messageContent = [
       {
         type: "image",
@@ -105,7 +185,7 @@ export async function POST(request: Request) {
       },
       {
         type: "text",
-        text: ANALYSIS_INSTRUCTIONS,
+        text: analysisInstructions,
       },
     ];
   } else if (input_type === "text") {
@@ -119,7 +199,7 @@ export async function POST(request: Request) {
     messageContent = [
       {
         type: "text",
-        text: `The user wants this hairstyle: "${text.trim()}". Return the same JSON structure as below based on the described style.\n\n${ANALYSIS_INSTRUCTIONS}`,
+        text: `The user wants this hairstyle: "${text.trim()}". Return the same JSON structure as below based on the described style.\n\n${analysisInstructions}`,
       },
     ];
   } else {
@@ -176,8 +256,10 @@ export async function POST(request: Request) {
       );
     }
 
+    const imageUrl = await imageUploadPromise;
+
     console.log("[style-match/analyze] detected style:", detected.style_name);
-    return NextResponse.json(detected);
+    return NextResponse.json({ ...detected, image_url: imageUrl });
   } catch (err) {
     console.error("[style-match/analyze] Failed to reach Anthropic API:", err);
     return NextResponse.json(

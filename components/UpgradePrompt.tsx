@@ -4,6 +4,7 @@ import { useState } from "react";
 
 const FEATURES = [
   "Unlimited product searches",
+  "Unlimited Style Match",
   "Personalized monthly wash-day routine",
   "Curated product picks for your hair profile",
 ];

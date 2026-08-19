@@ -32,6 +32,12 @@ type StyleMatchSummary = {
   created_at: string;
 };
 
+type SavedStyle = {
+  id: string;
+  style_name: string;
+  created_at: string;
+};
+
 function formatMatchDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
@@ -126,6 +132,24 @@ function SparkleIcon() {
   return (
     <svg className="h-6 w-6 text-bronze2" fill="currentColor" viewBox="0 0 24 24">
       <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2zM19 14l.9 2.6L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.4L19 14zM5 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z" />
+    </svg>
+  );
+}
+
+function HeartIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      className={`h-5 w-5 ${filled ? "text-bronze" : "text-cream/50"}`}
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth={1.5}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+      />
     </svg>
   );
 }
@@ -348,6 +372,35 @@ function DashboardContent() {
     };
   }, [user]);
 
+  const [savedStyles, setSavedStyles] = useState<SavedStyle[]>([]);
+  const [savedStylesLoaded, setSavedStylesLoaded] = useState(false);
+
+  async function loadSavedStyles() {
+    if (!user) return;
+    const { data } = await supabase
+      .from("saved_styles")
+      .select("id, style_name, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+    setSavedStyles(data ?? []);
+    setSavedStylesLoaded(true);
+  }
+
+  useEffect(() => {
+    if (!user) return;
+    loadSavedStyles();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  async function handleUnsaveStyle(id: string) {
+    setSavedStyles((prev) => prev.filter((s) => s.id !== id));
+    const { error } = await supabase.from("saved_styles").delete().eq("id", id);
+    if (error) {
+      console.error("Failed to unsave style:", error);
+      loadSavedStyles();
+    }
+  }
+
   if (!checkedAccess) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
@@ -408,6 +461,51 @@ function DashboardContent() {
         <div className="print-hide">
           <QuickActions />
         </div>
+
+        {savedStylesLoaded && (
+          <section className="print-hide mt-10">
+            <h2 className="font-serif text-2xl font-semibold text-cream">My Style Inspo</h2>
+
+            {savedStyles.length === 0 ? (
+              <Link
+                href="/style-match"
+                className="mt-4 flex items-center gap-3 rounded-xl border border-bronze/30 px-5 py-6 transition-colors hover:border-bronze"
+              >
+                <HeartIcon filled={false} />
+                <span className="text-sm text-cream/70">
+                  Save styles you love and build your inspiration board. →
+                </span>
+              </Link>
+            ) : (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {savedStyles.map((style) => (
+                  <div key={style.id} className="rounded-xl border border-bronze/30 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-serif text-base leading-tight text-cream">{style.style_name}</p>
+                      <button
+                        type="button"
+                        onClick={() => handleUnsaveStyle(style.id)}
+                        aria-label="Unsave style"
+                        className="shrink-0"
+                      >
+                        <HeartIcon filled />
+                      </button>
+                    </div>
+                    <span className="mt-2 inline-block rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium text-bronze2">
+                      {formatMatchDate(style.created_at)}
+                    </span>
+                    <Link
+                      href={`/style-match?prefill=${encodeURIComponent(style.style_name)}`}
+                      className="mt-3 block text-xs font-semibold text-bronze2 underline underline-offset-2 hover:text-cream"
+                    >
+                      Match this style →
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {hairProfileLoading && (
           <p className="mt-8 text-sm text-cream/50">

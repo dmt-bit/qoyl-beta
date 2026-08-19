@@ -21,17 +21,27 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const styleName = searchParams.get("style_name");
   const curlType = searchParams.get("curl_type");
+  const mode = searchParams.get("mode");
+  const color = searchParams.get("color");
 
-  if (!styleName) {
-    return NextResponse.json(
-      { error: "style_name is required." },
-      { status: 400 }
-    );
+  let query: string;
+  if (mode === "color") {
+    if (!color) {
+      return NextResponse.json({ error: "color is required for mode=color." }, { status: 400 });
+    }
+    // Deep Match's Color tab -- exact template from the spec.
+    query = [color, "hair color tutorial", curlType, "natural hair"]
+      .filter(Boolean)
+      .join(" ");
+  } else {
+    if (!styleName) {
+      return NextResponse.json(
+        { error: "style_name is required." },
+        { status: 400 }
+      );
+    }
+    query = [styleName, "tutorial", curlType, "hair"].filter(Boolean).join(" ");
   }
-
-  const query = [styleName, "tutorial", curlType, "hair"]
-    .filter(Boolean)
-    .join(" ");
 
   const url = new URL("https://www.googleapis.com/youtube/v3/search");
   url.searchParams.set("part", "snippet");

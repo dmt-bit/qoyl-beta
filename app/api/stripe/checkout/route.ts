@@ -78,7 +78,12 @@ export async function POST(request: Request) {
         ...(travel_kit_id ? { travel_kit_id } : {}),
       },
       ...(product.mode === "subscription"
-        ? { subscription_data: { metadata: { user_id, product_type } } }
+        ? {
+            subscription_data: {
+              metadata: { user_id, product_type },
+              description: product.description,
+            },
+          }
         : {}),
     });
 

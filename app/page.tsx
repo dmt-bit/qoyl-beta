@@ -152,6 +152,70 @@ export default async function Home() {
         </Link>
       </section>
 
+      <section className="fade-up-block border-b border-bronze/20 bg-[#1C1612] px-4 py-16 sm:px-6 sm:py-24">
+        <div className="mx-auto flex max-w-5xl flex-col items-center gap-12 lg:flex-row lg:items-center">
+          <div className="w-full text-center lg:w-1/2 lg:text-left">
+            <p className="text-xs font-semibold uppercase tracking-[0.15em] text-bronze">
+              NEW · STYLE MATCH
+            </p>
+            <h2 className="mt-3 font-serif text-[32px] italic leading-[1.15] text-cream">
+              Show us the style. We will build your plan.
+            </h2>
+            <p className="mt-4 text-sm leading-[1.8] text-cream/70">
+              Upload any hair photo or describe what you want. Style Match identifies the
+              style, finds tutorials from real creators, builds a complete shopping list
+              scored for your hair profile, and connects you with a local stylist who can
+              make it happen.
+            </p>
+
+            <div className="mt-6 flex flex-wrap justify-center gap-2 lg:justify-start">
+              {["Tutorials from real creators", "Shopping list scored for your hair", "Local stylist matching"].map(
+                (pill) => (
+                  <span
+                    key={pill}
+                    className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2"
+                  >
+                    {pill}
+                  </span>
+                )
+              )}
+            </div>
+
+            <Link
+              href="/style-match"
+              className="mt-8 inline-flex h-[52px] items-center justify-center rounded-full bg-bronze px-8 text-center font-sans text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+            >
+              Try Style Match free →
+            </Link>
+          </div>
+
+          <div className="w-full max-w-sm lg:w-1/2">
+            <div className="rounded-2xl border border-bronze/30 bg-dark p-5">
+              <p className="font-serif text-xl text-cream">Knotless Braids</p>
+              <div className="mt-3 flex gap-4 border-b border-bronze/20 pb-2 text-xs font-medium text-cream/50">
+                <span className="border-b-2 border-bronze pb-2 text-cream">Tutorials</span>
+                <span>Shopping List</span>
+                <span>Stylist</span>
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="relative flex aspect-square items-center justify-center rounded-lg bg-[#2C2420]">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-full bg-cream/90">
+                      <svg className="ml-0.5 h-3 w-3 text-dark" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <span className="mt-4 inline-block rounded-full bg-bronze/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-bronze">
+                Powered by AI · Free for profile holders
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section className="fade-up-block bg-warm px-4 py-16 sm:px-6 sm:py-20">
         <div className="mx-auto flex max-w-5xl flex-col items-center text-center lg:grid lg:grid-cols-2 lg:items-center lg:gap-16 lg:text-left">
           <div className="lg:order-1">

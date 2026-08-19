@@ -22,6 +22,7 @@ export const STRIPE_PRODUCTS: Record<
   ProductType,
   {
     name: string;
+    description?: string;
     mode: "subscription" | "payment";
     unitAmount: number;
     currency: string;
@@ -30,6 +31,17 @@ export const STRIPE_PRODUCTS: Record<
 > = {
   routine_subscription: {
     name: "Qoyl Monthly Routine",
+    // Passed as subscription_data.description below (shows on the
+    // subscription/invoices in Stripe) -- NOT the same as what the
+    // customer sees on the Checkout page itself. That page's product
+    // name/description comes from the Product object attached to
+    // STRIPE_ROUTINE_PRICE_ID in the Stripe Dashboard, which this
+    // codebase has no code path to change (the session references a
+    // fixed pre-created price, not inline price_data). Update that
+    // Product's description in the Stripe Dashboard to match this text
+    // if you want customers to see it before paying.
+    description:
+      "Unlimited product searches, Style Match, monthly routine calendar, and personalized product list",
     mode: "subscription",
     unitAmount: 799,
     currency: "usd",

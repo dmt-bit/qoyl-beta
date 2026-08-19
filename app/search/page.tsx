@@ -306,7 +306,8 @@ function DisclaimerBanner() {
       Qoyl provides cosmetic ingredient compatibility scores only — not
       medical advice. Results are based on your hair profile and our
       ingredient database. Individual results may vary. Free users get 5
-      product searches per day. Unlock unlimited searches with a{" "}
+      product searches per day. Unlock unlimited searches and Style Match
+      with a{" "}
       <Link href="/dashboard" className="underline underline-offset-2">
         Qoyl subscription
       </Link>

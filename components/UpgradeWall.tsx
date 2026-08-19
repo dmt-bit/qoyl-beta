@@ -101,8 +101,8 @@ export default function UpgradeWall({
           </Link>
         )}
         <p className="text-[11px] text-cream/50">
-          Includes unlimited product searches + your personalized monthly
-          routine
+          Includes unlimited product searches, Style Match, and your
+          personalized monthly routine
         </p>
 
         {!userId && (

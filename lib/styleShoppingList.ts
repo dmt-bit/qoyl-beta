@@ -20,6 +20,7 @@ export type StyleShoppingList = {
   hairCare: ScoredHairCareItem[];
   fakeHair: StaticShoppingItem[];
   fakeHairNote: string | null;
+  showFakeHairSection: boolean;
   tools: StaticShoppingItem[];
   accessories: StaticShoppingItem[];
 };
@@ -179,6 +180,31 @@ function buildFakeHairOptions(
   };
 }
 
+// Deep Match's "longer than my current hair, include extension options"
+// answer -- a different concept from requires_fake_hair (which is about
+// the *style itself* needing added hair, e.g. box braids). This is about
+// reaching extra length regardless of style, so the options differ:
+// clip-ins/tape-ins for a natural-hair-plus-length look, or a full
+// weave/wig for styles that are already braided/covered.
+function buildLengthExtensionOptions(
+  styleName: string,
+  styleDescription: string
+): StaticShoppingItem[] {
+  const text = styleText(styleName, styleDescription);
+
+  if (isBraidedStyle(text)) {
+    return [
+      { name: "Weave/sew-in extensions", url: amazonSearch("weave hair extensions bundle"), retailer: "Amazon" },
+      { name: "Braiding hair (extra length)", url: sallyBeautySearch("braiding hair extensions"), retailer: "Sally Beauty" },
+    ];
+  }
+
+  return [
+    { name: "Clip-in extensions", url: amazonSearch("clip in hair extensions textured"), retailer: "Amazon" },
+    { name: "Tape-in extensions", url: sallyBeautySearch("tape in hair extensions"), retailer: "Sally Beauty" },
+  ];
+}
+
 function buildTools(styleName: string, styleDescription: string): StaticShoppingItem[] {
   const text = styleText(styleName, styleDescription);
   const tools: StaticShoppingItem[] = [
@@ -231,6 +257,7 @@ export async function buildStyleShoppingList(input: {
   requiresFakeHair: boolean;
   fakeHairType: string | null;
   accessoriesVisible: string[];
+  wantsLengthExtensions?: boolean;
 }): Promise<StyleShoppingList> {
   const categorySlugs = pickCategoriesForStyle(input.styleName, input.styleDescription);
   const hairCare = await fetchScoredHairCareProducts(categorySlugs);
@@ -239,10 +266,17 @@ export async function buildStyleShoppingList(input: {
     ? buildFakeHairOptions(input.styleName, input.styleDescription, input.fakeHairType)
     : null;
 
+  const lengthExtensionItems = input.wantsLengthExtensions
+    ? buildLengthExtensionOptions(input.styleName, input.styleDescription)
+    : [];
+
   return {
     hairCare,
-    fakeHair: fakeHairResult?.items ?? [],
-    fakeHairNote: fakeHairResult?.note ?? null,
+    fakeHair: [...(fakeHairResult?.items ?? []), ...lengthExtensionItems],
+    fakeHairNote: fakeHairResult?.note ?? (lengthExtensionItems.length > 0
+      ? "We recommend purchasing from a beauty supply store to see colors in person."
+      : null),
+    showFakeHairSection: input.requiresFakeHair || lengthExtensionItems.length > 0,
     tools: buildTools(input.styleName, input.styleDescription),
     accessories: buildAccessories(input.accessoriesVisible),
   };
