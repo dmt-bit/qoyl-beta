@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAdminUserId } from "@/lib/isAdmin";
 import { getUserPurchases } from "@/lib/purchases";
 
 // getUserPurchases (and hasRoutineSubscription/hasTravelKit) use the
@@ -17,13 +18,20 @@ export async function GET(request: Request) {
     );
   }
 
-  const purchases = await getUserPurchases(userId);
+  const [purchases, admin] = await Promise.all([
+    getUserPurchases(userId),
+    isAdminUserId(userId),
+  ]);
 
   return NextResponse.json({
-    hasRoutineSubscription: purchases.some(
-      (p) => p.product_type === "routine_subscription"
-    ),
-    hasTravelKit: purchases.some((p) => p.product_type === "travel_kit"),
+    // Admin bypass folds straight into these two flags -- every caller
+    // that already gates a feature on hasRoutineSubscription/hasTravelKit
+    // gets the bypass for free, no separate admin-only branch needed.
+    hasRoutineSubscription:
+      admin || purchases.some((p) => p.product_type === "routine_subscription"),
+    hasTravelKit:
+      admin || purchases.some((p) => p.product_type === "travel_kit"),
+    isAdmin: admin,
     purchases,
   });
 }

@@ -219,6 +219,7 @@ function DashboardContent() {
 
   const [checkedAccess, setCheckedAccess] = useState(false);
   const [hasRoutineSubscription, setHasRoutineSubscription] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [entitlementLoading, setEntitlementLoading] = useState(true);
 
   const paymentStatus = searchParams.get("payment");
@@ -243,6 +244,7 @@ function DashboardContent() {
         const data = await res.json();
         if (!cancelled) {
           setHasRoutineSubscription(Boolean(data.hasRoutineSubscription));
+          setIsAdminUser(Boolean(data.isAdmin));
         }
       } catch {
         // Fail closed -- treat as not subscribed.
@@ -435,6 +437,17 @@ function DashboardContent() {
           <span className="mt-3 inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-dark">
             Monthly Routine
           </span>
+        )}
+
+        {user?.email && (
+          <p className="mt-3 flex items-center gap-2 text-xs text-cream/50">
+            {user.email}
+            {!entitlementLoading && isAdminUser && (
+              <span className="rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-dark">
+                Admin
+              </span>
+            )}
+          </p>
         )}
 
         <ProfileChips />

@@ -1,3 +1,4 @@
+import { isAdminUserId } from "@/lib/isAdmin";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 export type UserPurchase = {
@@ -35,6 +36,7 @@ export async function getUserPurchases(
 }
 
 export async function hasRoutineSubscription(userId: string): Promise<boolean> {
+  if (await isAdminUserId(userId)) return true;
   const purchases = await getUserPurchases(userId);
   return purchases.some((p) => p.product_type === "routine_subscription");
 }

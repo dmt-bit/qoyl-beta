@@ -632,6 +632,26 @@ function TravelPageContent() {
     { id: string; destination: string; created_at: string }[]
   >([]);
   const [landingError, setLandingError] = useState<string | null>(null);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setIsAdminUser(false);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/purchases?user_id=${user.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setIsAdminUser(Boolean(data.isAdmin));
+      })
+      .catch(() => {
+        if (!cancelled) setIsAdminUser(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   // Set right before an explicit "start a new trip" action (Plan another
   // trip / Build my travel kit) so the auto-detection effect below never
@@ -830,6 +850,30 @@ function TravelPageContent() {
 
       setView("generating");
       await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      if (isAdminUser) {
+        // Admin bypass -- runs the exact same activation logic Stripe's
+        // webhook would run after payment, just without Stripe. See
+        // app/api/travel-kits/admin-activate/route.ts.
+        const activateRes = await fetch("/api/travel-kits/admin-activate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ user_id: user.id, travel_kit_id: travelKitId }),
+        });
+        const activateData = await activateRes.json();
+
+        if (!activateRes.ok) {
+          setSubmitError(
+            activateData.error ?? "Something went wrong. Please try again."
+          );
+          setSubmitting(false);
+          setView("survey");
+          return;
+        }
+
+        router.push(`/travel?kit=${travelKitId}&welcome=true`);
+        return;
+      }
 
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",

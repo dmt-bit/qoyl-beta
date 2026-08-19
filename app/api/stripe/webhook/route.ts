@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { activateTravelKit } from "@/lib/activateTravelKit";
 import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendRoutineEmail } from "@/lib/sendRoutineEmail";
 import { sendAdminNotification } from "@/lib/adminNotify";
 import { sendNotificationEmail } from "@/lib/notify";
-import { generateTravelKitProducts } from "@/lib/travelKitGenerator";
-import { sendTravelKitEmail } from "@/lib/sendTravelKitEmail";
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -98,113 +97,15 @@ export async function POST(request: Request) {
               session.id
             );
           } else {
-            const { data: travelKitRow, error: fetchError } =
-              await getSupabaseAdmin()
-                .from("travel_kits")
-                .select(
-                  "destination, departure_date, return_date, climate, swimming, protective_style, hair_priority"
-                )
-                .eq("id", travelKitId)
-                .single();
-
-            if (fetchError || !travelKitRow) {
-              console.error(
-                "Couldn't load travel_kits row for generation:",
-                travelKitId,
-                fetchError
-              );
-            } else {
-              const products = await generateTravelKitProducts({
-                userId,
-                climate: travelKitRow.climate,
-                swimming: travelKitRow.swimming,
-                protectiveStyle: travelKitRow.protective_style,
-                hairPriority: travelKitRow.hair_priority,
-              });
-
-              const { error: updateError } = await getSupabaseAdmin()
-                .from("travel_kits")
-                .update({
-                  status: "active",
-                  products,
-                  stripe_session_id: session.id,
-                })
-                .eq("id", travelKitId);
-
-              if (updateError) {
-                console.error(
-                  "Failed to update travel_kits row after payment:",
-                  travelKitId,
-                  updateError
-                );
-              }
-
-              const { data: travelProfile } = await getSupabaseAdmin()
-                .from("hair_profiles")
-                .select("curl_type, porosity, scalp_condition, zip_code")
-                .eq("user_id", userId)
-                .maybeSingle();
-
-              const recipientEmail =
-                session.customer_email ?? session.customer_details?.email ?? null;
-
-              let travelEmailStatus = "Confirmation email sent to customer.";
-
-              if (!recipientEmail) {
-                console.error(
-                  "checkout.session.completed missing customer email for travel kit email:",
-                  session.id
-                );
-                travelEmailStatus =
-                  "Confirmation email NOT sent — no customer email on the Stripe session.";
-              } else {
-                try {
-                  await sendTravelKitEmail({
-                    recipientEmail,
-                    destination: travelKitRow.destination,
-                    departureDate: travelKitRow.departure_date,
-                    returnDate: travelKitRow.return_date,
-                    climate: travelKitRow.climate,
-                    swimming: travelKitRow.swimming,
-                    protectiveStyle: travelKitRow.protective_style,
-                    products,
-                  });
-                } catch (emailError) {
-                  console.error(
-                    "Failed to send travel kit email:",
-                    travelKitId,
-                    emailError
-                  );
-                  travelEmailStatus =
-                    "Confirmation email FAILED to send — see server logs.";
-                }
-              }
-
-              await sendNotificationEmail(
-                `Travel kit purchased — ${travelKitRow.destination}`,
-                `Travel kit purchased and generated — ${travelKitRow.destination} for ${userId}.
-
-User ID: ${userId}
-Customer email: ${recipientEmail ?? "Unknown"}
-Destination: ${travelKitRow.destination}
-Departure: ${travelKitRow.departure_date ?? "Not set"}
-Return: ${travelKitRow.return_date ?? "Not set"}
-Stripe customer: ${stripeCustomerId}
-Amount: $4.99
-Purchased at: ${purchaseTimestamp}
-
-Curl type: ${travelProfile?.curl_type ?? "Not set"}
-Porosity: ${travelProfile?.porosity ?? "Not set"}
-Scalp condition: ${travelProfile?.scalp_condition ?? "Not set"}
-Zip code: ${travelProfile?.zip_code ?? "Not set"}
-
-Products generated: ${products.length}
-${travelEmailStatus}
-
-View this travel_kits row (id: ${travelKitId}) in Supabase:
-https://app.supabase.com/project/cqpxiassldkmusngqorx/editor`
-              );
-            }
+            await activateTravelKit({
+              travelKitId,
+              userId,
+              recipientEmail:
+                session.customer_email ?? session.customer_details?.email ?? null,
+              stripeSessionId: session.id,
+              stripeCustomerId: stripeCustomerId === "none" ? null : stripeCustomerId,
+              source: "stripe",
+            });
           }
         }
 
