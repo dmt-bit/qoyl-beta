@@ -55,6 +55,10 @@ const SCORE_VARIABLES = [
     title: "Water hardness (from your zip code)",
     body: "Hard water deposits calcium and magnesium on the hair shaft, blocking moisture and making products less effective. We factor your local water hardness into how we score chelating agents and clarifying ingredients — if you're in a hard water city, we weight those ingredients more favorably.",
   },
+  {
+    title: "Age range",
+    body: "Hair texture, density, scalp oil production, and protein tolerance all change with age. We apply age-aware scoring adjustments — particularly for users over 35 who may be experiencing hormonal-related texture changes, thinning, or increased scalp sensitivity. Older age ranges receive higher scores for scalp-stimulating and strengthening ingredients and lower scores for heavy proteins and harsh surfactants.",
+  },
 ];
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -112,7 +116,7 @@ export default function HowWeScorePage() {
         <section className="mt-14">
           <SectionLabel>What goes into your score</SectionLabel>
           <h2 className="mt-3 font-serif text-2xl font-semibold text-cream sm:text-3xl">
-            Six variables. One score.
+            Seven variables. One score.
           </h2>
 
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">

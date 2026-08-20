@@ -43,7 +43,7 @@ export async function sendRoutineEmail(
   const { data: profile, error } = await admin
     .from("hair_profiles")
     .select(
-      "first_name, curl_type, porosity, scalp_condition, zip_code, water_hardness"
+      "first_name, curl_type, porosity, scalp_condition, zip_code, water_hardness, adult_age_range"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -72,7 +72,12 @@ export async function sendRoutineEmail(
   const steps = generateRoutineSteps(
     profile.curl_type,
     profile.porosity,
-    profile.water_hardness
+    profile.water_hardness,
+    null,
+    null,
+    null,
+    null,
+    profile.adult_age_range
   );
   const seasonalNote = generateSeasonalNote(profile.zip_code, now);
 

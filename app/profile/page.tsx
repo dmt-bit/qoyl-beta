@@ -7,6 +7,7 @@ import Collapse from "@/components/Collapse";
 import HairJourneySection from "@/components/HairJourneySection";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
+import { ADULT_AGE_RANGE_OPTIONS, formatAdultAgeRange } from "@/lib/ageRange";
 import { classifyClimateFromZip } from "@/lib/climateData";
 import { CLIMATE_LABELS, WATER_HARDNESS_LABELS } from "@/lib/locationFactors";
 import { waterHardnessFromZip } from "@/lib/waterHardnessData";
@@ -611,6 +612,7 @@ function ProfileForm() {
 
   const [profileFor, setProfileFor] = useState("myself");
   const [ageRange, setAgeRange] = useState<string | null>(null);
+  const [adultAgeRange, setAdultAgeRange] = useState<string | null>(null);
   const [gender, setGender] = useState<string | null>(null);
   const [hairGoals, setHairGoals] = useState<string[]>([]);
   const [curlType, setCurlType] = useState<string | null>(null);
@@ -641,6 +643,7 @@ function ProfileForm() {
     if (!hairProfile || hydratedFromProfileId === hairProfile.id) return;
     setProfileFor(hairProfile.profile_for ?? "myself");
     setAgeRange(hairProfile.age_range);
+    setAdultAgeRange(hairProfile.adult_age_range);
     setGender(hairProfile.gender);
     setHairGoals(hairProfile.hair_goals ?? []);
     setCurlType(hairProfile.curl_type);
@@ -718,9 +721,15 @@ function ProfileForm() {
     const isChildOrBaby = profileFor === "child" || profileFor === "baby";
     const showHairGoals = profileFor === "myself" && gender === "male";
 
+    const showAdultAgeRange = profileFor === "myself";
+
     const payload = {
       profile_for: profileFor,
       age_range: isChildOrBaby ? ageRange : null,
+      adult_age_range:
+        showAdultAgeRange && adultAgeRange !== "prefer_not_to_say"
+          ? adultAgeRange
+          : null,
       gender,
       hair_goals: showHairGoals ? hairGoals : [],
       curl_type: curlType,
@@ -824,6 +833,13 @@ function ProfileForm() {
               hairProfile.age_range && (
                 <ReadOnlyField label="Age Range">
                   <Chip label={hairProfile.age_range} />
+                </ReadOnlyField>
+              )}
+
+            {hairProfile.profile_for === "myself" &&
+              formatAdultAgeRange(hairProfile.adult_age_range) && (
+                <ReadOnlyField label="Age Range">
+                  <Chip label={formatAdultAgeRange(hairProfile.adult_age_range)!} />
                 </ReadOnlyField>
               )}
 
@@ -1000,6 +1016,36 @@ function ProfileForm() {
               anything that may be too harsh for young scalps.
             </div>
           )}
+
+          <Collapse show={profileFor === "myself"}>
+            <div role="group" aria-labelledby="adult-age-range-label">
+              <p
+                id="adult-age-range-label"
+                className="font-serif text-lg text-bronze2"
+              >
+                What is your age range?
+              </p>
+              <p className="mt-1 text-xs text-cream/60">
+                Age affects hair texture, thickness, and scalp health. This
+                helps us give you more accurate recommendations.
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {ADULT_AGE_RANGE_OPTIONS.map((option) => (
+                  <SelectButton
+                    key={option.value}
+                    label={option.label}
+                    selected={adultAgeRange === option.value}
+                    onClick={() => setAdultAgeRange(option.value)}
+                  />
+                ))}
+                <SelectButton
+                  label="Prefer not to say"
+                  selected={adultAgeRange === "prefer_not_to_say"}
+                  onClick={() => setAdultAgeRange("prefer_not_to_say")}
+                />
+              </div>
+            </div>
+          </Collapse>
 
           <div role="group" aria-labelledby="gender-label">
             <p

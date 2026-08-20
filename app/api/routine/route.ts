@@ -39,7 +39,7 @@ export async function GET(request: Request) {
   const { data: profile } = await getSupabaseAdmin()
     .from("hair_profiles")
     .select(
-      "first_name, curl_type, porosity, scalp_condition, zip_code, water_hardness, extensions, extension_type, extension_care, profile_for"
+      "first_name, curl_type, porosity, scalp_condition, zip_code, water_hardness, extensions, extension_type, extension_care, profile_for, adult_age_range"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -66,7 +66,8 @@ export async function GET(request: Request) {
         profile?.extensions ?? null,
         profile?.extension_type ?? null,
         profile?.extension_care ?? null,
-        profileFor
+        profileFor,
+        profile?.adult_age_range ?? null
       )
     ),
     getRoutineProductPicks(porosity),

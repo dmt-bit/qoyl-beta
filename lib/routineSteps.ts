@@ -1,6 +1,7 @@
 import { curlFamily } from "@/lib/compatibility";
 import { getExtensionCareGuidance } from "@/lib/extensionCare";
 import { getChildSafetyStep } from "@/lib/childSafety";
+import { isAdultAgeAtLeast } from "@/lib/ageRange";
 
 export type RoutineStep = {
   title: string;
@@ -298,6 +299,41 @@ const GENERIC_FALLBACK_STEPS: RoutineStep[] = [
   },
 ];
 
+// Additive, like getChildSafetyStep -- appends age-aware notes on top of
+// the underlying curl-type/porosity routine rather than rewriting it.
+// Each threshold's note stacks on top of the ones below it (a 65_plus
+// profile gets all three), since each addresses a different, still-
+// relevant concern as hair continues to change with age.
+export function getAgeAwareRoutineStep(
+  ageRange: string | null
+): RoutineStep | null {
+  const notes: string[] = [];
+
+  if (isAdultAgeAtLeast(ageRange, "36_45")) {
+    notes.push(
+      "As hair changes with age, pay attention to signs of thinning or texture changes. Scalp massage during wash day stimulates circulation. Consider adding rosemary oil to your routine -- clinical studies show it performs comparably to minoxidil for some types of hair thinning."
+    );
+  }
+  if (isAdultAgeAtLeast(ageRange, "46_55")) {
+    notes.push(
+      "Hormonal changes can significantly affect hair texture, density, and scalp oil production. If you're noticing significant changes, consider consulting a trichologist or dermatologist alongside your Qoyl routine."
+    );
+  }
+  if (ageRange === "65_plus") {
+    notes.push(
+      "Hair becomes more fragile with age -- avoid harsh physical manipulation, use a wide-tooth comb only, and prioritize moisture and ceramide-rich products. Protective styling reduces mechanical stress on fragile strands."
+    );
+  }
+
+  if (notes.length === 0) return null;
+
+  return {
+    title: "Age-Aware Care",
+    body: notes.join(" "),
+    why: "Why: hair texture, density, and scalp health shift with age -- these adjustments help your routine keep pace.",
+  };
+}
+
 export function generateRoutineSteps(
   curlType: string | null,
   porosity: string | null,
@@ -305,7 +341,8 @@ export function generateRoutineSteps(
   extensions: string | null = null,
   extensionType: string[] | null = null,
   extensionCare: string | null = null,
-  profileFor: string | null = null
+  profileFor: string | null = null,
+  adultAgeRange: string | null = null
 ): RoutineStep[] {
   const family = curlFamily(curlType);
 
@@ -323,6 +360,11 @@ export function generateRoutineSteps(
   const childSafetyStep = getChildSafetyStep(profileFor);
   if (childSafetyStep) {
     steps = [...steps, childSafetyStep];
+  }
+
+  const ageAwareStep = getAgeAwareRoutineStep(adultAgeRange);
+  if (ageAwareStep) {
+    steps = [...steps, ageAwareStep];
   }
 
   return steps;

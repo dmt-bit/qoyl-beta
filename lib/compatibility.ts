@@ -339,6 +339,100 @@ function applyWaterHardnessAdjustment(
   return { score: adjustedScore, rating: ratingForScore(adjustedScore) };
 }
 
+// ---- Age-range scoring adjustments -------------------------------------
+//
+// adult_age_range lives on hair_profiles as its own column, separate from
+// the pre-existing age_range column (child/baby brackets like
+// "0-12 months" -- see supabase/add_adult_age_range.sql). These
+// adjustments apply on top of whatever score porosity/curl-type/climate/
+// water-hardness already produced, same layering as
+// applyClimateAdjustment and applyWaterHardnessAdjustment above.
+//
+// 18_25 and 26_35 are "peak hair health years" -- no modifiers, standard
+// scoring applies. 46_55's rule set is the base tier that 56_65/65_plus
+// double via midlifeModifier(), plus their own additional rules.
+
+const FRAGRANCE = new Set(["parfum"]);
+const YOUTH_ESSENTIAL_OILS = new Set([
+  "mentha piperita oil", // Peppermint Oil
+  "melaleuca alternifolia leaf oil", // Tea Tree Oil
+  "eucalyptus globolus (eucalyptus) leaf oil", // Eucalyptus Oil
+]);
+const ROSEMARY = new Set([
+  "rosmarinus officinalis leaf oil",
+  "rosmarinus officinalis leaf extract",
+]);
+const BIOTIN = new Set(["biotin"]);
+const SAW_PALMETTO = new Set(["serenoa serrulata fruit extract"]);
+const PUMPKIN_SEED_OIL = new Set(["cucurbita pepo seed oil"]);
+const CAFFEINE = new Set(["caffeine"]);
+const HEAVY_SILICONES = new Set(["dimethicone", "amodimethicone"]);
+const HEAVY_SULFATE = new Set(["sodium lauryl sulfate"]);
+const HYDROLYZED_KERATIN = "hydrolyzed keratin";
+const CERAMIDES = new Set(["ceramide np", "ceramide eop", "ceramide ap"]);
+const PANTHENOL = new Set(["panthenol"]);
+const LOW_CONC_STIMULANTS = new Set(["menthol", "mentha piperita oil"]);
+
+function isPeptide(name: string): boolean {
+  return name.includes("peptide");
+}
+
+// The 46_55 rule set, at "one tier" strength -- 56_65/65_plus reuse this
+// doubled rather than duplicating each rule.
+function midlifeModifier(name: string, position: number): number {
+  let delta = 0;
+  if (ROSEMARY.has(name)) delta += 1;
+  if (BIOTIN.has(name)) delta += 1;
+  if (SAW_PALMETTO.has(name)) delta += 1;
+  if (PUMPKIN_SEED_OIL.has(name)) delta += 1;
+  if (CAFFEINE.has(name)) delta += 1;
+  if (name === HYDROLYZED_KERATIN && position <= 5) delta -= 1;
+  if (HEAVY_SULFATE.has(name)) delta -= 2;
+  if (FRAGRANCE.has(name)) delta -= 1;
+  if (LIGHT_OILS.has(name)) delta += 1;
+  return delta;
+}
+
+function applyAgeAdjustment(
+  inciName: string,
+  ageRange: string | null,
+  porosity: string,
+  position: number,
+  score: number,
+  rating: string
+): { score: number; rating: string } {
+  if (!ageRange || ageRange === "prefer_not_to_say") return { score, rating };
+
+  const name = inciName.trim().toLowerCase();
+  let delta = 0;
+
+  if (ageRange === "under_18") {
+    if (FRAGRANCE.has(name)) delta -= 2;
+    if (YOUTH_ESSENTIAL_OILS.has(name)) delta -= 1;
+    if (SULFATES.has(name)) delta -= 1;
+  } else if (ageRange === "36_45") {
+    if (ROSEMARY.has(name)) delta += 1;
+    if (BIOTIN.has(name)) delta += 1;
+    if (SAW_PALMETTO.has(name)) delta += 1;
+    if (CAFFEINE.has(name)) delta += 1;
+    if (HEAVY_SILICONES.has(name) && porosity === "low") delta -= 1;
+  } else if (ageRange === "46_55") {
+    delta += midlifeModifier(name, position);
+  } else if (ageRange === "56_65" || ageRange === "65_plus") {
+    delta += midlifeModifier(name, position) * 2;
+    if (HEAVY_BUTTERS.has(name) && position <= 5) delta -= 1;
+    if (CERAMIDES.has(name)) delta += 2;
+    if (isPeptide(name)) delta += 2;
+    if (PANTHENOL.has(name)) delta += 1;
+    if (LOW_CONC_STIMULANTS.has(name)) delta += 1;
+  }
+  // 18_25 and 26_35: no modifiers.
+
+  if (delta === 0) return { score, rating };
+  const adjusted = clampScore(score + delta);
+  return { score: adjusted, rating: ratingForScore(adjusted) };
+}
+
 function applyCurlTypeAdjustment(
   inciName: string,
   family: CurlFamily | null,
@@ -403,6 +497,7 @@ export type ScoringProfile = {
   porosity: string;
   scalpCondition: string | null;
   family: CurlFamily | null;
+  ageRange: string | null;
 };
 
 type ProfileRow = {
@@ -411,6 +506,11 @@ type ProfileRow = {
   scalp_condition: string | null;
   climate: string | null;
   water_hardness: string | null;
+  // Optional -- not every caller's select includes it (e.g.
+  // lib/travelKitGenerator.ts doesn't apply age-based scoring), so this
+  // just falls back to no age adjustment rather than requiring every
+  // caller to be updated.
+  adult_age_range?: string | null;
 };
 
 // Shared by loadScoringProfile (browser, localStorage-driven) and any
@@ -439,6 +539,7 @@ export function buildScoringProfile(
     porosity,
     scalpCondition: normalizeScalpCondition(row.scalp_condition),
     family: curlFamily(row.curl_type),
+    ageRange: row.adult_age_range ?? null,
   };
 }
 
@@ -455,7 +556,7 @@ async function loadScoringProfile(): Promise<
   const { data: profile, error: profileError } = await supabase
     .from("hair_profiles")
     .select(
-      "curl_type, porosity, scalp_condition, strand_thickness, climate, water_hardness"
+      "curl_type, porosity, scalp_condition, strand_thickness, climate, water_hardness, adult_age_range"
     )
     .eq("id", profileId)
     .single();
@@ -509,7 +610,8 @@ function resolveScoreResult(
   scoreRows: ScoreRow[],
   profile: ScoringProfile
 ): ScoreResult {
-  const { scalpCondition, family, climate, waterHardness, porosity } = profile;
+  const { scalpCondition, family, climate, waterHardness, porosity, ageRange } =
+    profile;
 
   if (ingredients.length === 0) {
     return { normalizedScore: 0, matches: [] };
@@ -585,6 +687,14 @@ function resolveScoreResult(
     ({ score, rating } = applyWaterHardnessAdjustment(
       ingredient.inci_name,
       waterHardness,
+      score,
+      rating
+    ));
+    ({ score, rating } = applyAgeAdjustment(
+      ingredient.inci_name,
+      ageRange,
+      porosity,
+      ingredient.position,
       score,
       rating
     ));

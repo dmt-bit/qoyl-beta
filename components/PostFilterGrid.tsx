@@ -5,6 +5,7 @@ import Link from "next/link";
 import CommunityGrid from "@/components/CommunityGrid";
 import PostCard, { Post } from "@/components/PostCard";
 import { useAuth } from "@/lib/auth-context";
+import { isAdultAgeAtLeast } from "@/lib/ageRange";
 import { TABS, TabKey } from "@/lib/postTabs";
 
 // Tabs that filter on a specific hair_type value -- "coming soon" messaging
@@ -26,6 +27,24 @@ function matchesTab(post: Post, tab: TabKey): boolean {
   if (tab === "ingredients") return post.category === "ingredient-evaluation";
   if (tab === "coily") return post.hair_type === "coily" || post.hair_type === "all";
   return post.hair_type === tab;
+}
+
+// Keyword surface for "does this post matter for aging-hair users" -- no
+// dedicated post category exists for this, so it's a simple free-text
+// scan rather than a new schema field for what's meant to be a light
+// feed-ordering nudge, not a hard filter.
+const AGE_RELEVANT_KEYWORDS = [
+  "thinning",
+  "hormonal",
+  "scalp health",
+  "aging hair",
+  "hair loss",
+  "menopause",
+];
+
+function isAgeRelevantPost(post: Post): boolean {
+  const haystack = `${post.title} ${post.excerpt} ${post.body ?? ""}`.toLowerCase();
+  return AGE_RELEVANT_KEYWORDS.some((keyword) => haystack.includes(keyword));
 }
 
 function matchesSearch(post: Post, term: string): boolean {
@@ -111,7 +130,7 @@ export default function PostFilterGrid({
     return () => clearTimeout(id);
   }, [searchInput]);
 
-  const matchingPosts = useMemo(
+  const unorderedMatchingPosts = useMemo(
     () =>
       posts.filter(
         (post) =>
@@ -120,10 +139,44 @@ export default function PostFilterGrid({
       ),
     [posts, activeTab, debouncedSearch]
   );
+
+  // For signed-in users 36+ , surface the newest age-relevant post (see
+  // AGE_RELEVANT_KEYWORDS) first in the "All" feed, labeled "For you" --
+  // rather than creating dedicated posts, this just reorders what's
+  // already there. Scoped to the unfiltered "All" tab with no active
+  // search so it doesn't fight the user's own tab/search choice.
+  const showAgeRelevantSection =
+    activeTab === "all" &&
+    !debouncedSearch &&
+    isAdultAgeAtLeast(hairProfile?.adult_age_range ?? null, "36_45");
+
+  const { matchingPosts, ageRelevantSlug } = useMemo(() => {
+    if (!showAgeRelevantSection) {
+      return { matchingPosts: unorderedMatchingPosts, ageRelevantSlug: null as string | null };
+    }
+    const idx = unorderedMatchingPosts.findIndex(isAgeRelevantPost);
+    if (idx <= 0) {
+      return {
+        matchingPosts: unorderedMatchingPosts,
+        ageRelevantSlug: idx === 0 ? unorderedMatchingPosts[0].slug : null,
+      };
+    }
+    const target = unorderedMatchingPosts[idx];
+    const reordered = [
+      target,
+      ...unorderedMatchingPosts.slice(0, idx),
+      ...unorderedMatchingPosts.slice(idx + 1),
+    ];
+    return { matchingPosts: reordered, ageRelevantSlug: target.slug };
+  }, [unorderedMatchingPosts, showAgeRelevantSection]);
+
   // posts is already ordered by published_at descending, so this keeps the
-  // newest -- overall for "All", or the newest matching the active tab.
+  // newest -- overall for "All", or the newest matching the active tab
+  // (aside from the age-relevant reorder above, when it applies).
   const filteredPosts =
     limit === null ? matchingPosts : matchingPosts.slice(0, limit);
+  const showForYouLabel =
+    ageRelevantSlug !== null && filteredPosts[0]?.slug === ageRelevantSlug;
 
   const activeTabLabel = TABS.find((tab) => tab.key === activeTab)?.label;
   const showComingSoon =
@@ -213,7 +266,16 @@ export default function PostFilterGrid({
         <CommunityGrid />
       ) : filteredPosts.length > 0 ? (
         <>
-          <div className="-mx-4 mt-8 grid grid-cols-2 gap-px bg-[#1C1612] sm:mx-0 sm:grid-cols-3">
+          {showForYouLabel && (
+            <p className="mt-8 text-[9px] font-semibold uppercase tracking-[0.15em] text-bronze">
+              For you
+            </p>
+          )}
+          <div
+            className={`-mx-4 grid grid-cols-2 gap-px bg-[#1C1612] sm:mx-0 sm:grid-cols-3 ${
+              showForYouLabel ? "mt-3" : "mt-8"
+            }`}
+          >
             {filteredPosts.map((post) => (
               <PostCard key={post.slug} post={post} />
             ))}

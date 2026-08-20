@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import PostCard, { Post } from "@/components/PostCard";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { useAuth } from "@/lib/auth-context";
+import { formatAdultAgeRange } from "@/lib/ageRange";
 import { getChildSafetyNote } from "@/lib/childSafety";
 import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import { getBasicRoutineSteps, RoutineStep } from "@/lib/routine";
@@ -75,6 +76,7 @@ function ProfileChips() {
       ? SCALP_LABELS[hairProfile.scalp_condition] ?? hairProfile.scalp_condition
       : null,
     hairProfile.zip_code || null,
+    formatAdultAgeRange(hairProfile.adult_age_range),
   ].filter((chip): chip is string => Boolean(chip));
 
   if (chips.length === 0) return null;
