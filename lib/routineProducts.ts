@@ -60,17 +60,38 @@ export type RoutineProductPick = {
 
 const SULFATE_NAME_PATTERN = /sulfate|\bsls\b|\bsles\b/i;
 
-// Hard weight exclusions per curl family, on top of the scoring modifier
-// in lib/compatibility.ts's getWeightModifier -- a very_heavy butter might
-// still score decently on ingredients alone for straight hair, but it's
-// never actually a reasonable routine recommendation, so it's filtered out
-// here rather than left to compete on score. Coily has no exclusions:
-// porosity-based scoring already handles the nuance there.
-function isWeightAllowedForCategory(
-  weight: ProductWeight,
-  categorySlug: string,
-  family: CurlFamily | null
+// Format words that mean "this is a cream/butter," independent of how the
+// product happens to be filed in the category table -- catalog curation
+// can lag or miscategorize (see Almond Jai Twisting Butter, filed under
+// "styler" until this was reported), so the name check is a backstop for
+// the category-based exclusion below, not a substitute for it.
+const HEAVY_FORMAT_NAME_PATTERN = /butter|pudding|souffl[eé]|whip/i;
+
+// Hard weight/format exclusions layered on top of the scoring modifier in
+// lib/compatibility.ts's getWeightModifier -- a heavy product can still
+// out-score lighter alternatives on ingredients alone, so these override
+// scoring entirely rather than leaving it to compete.
+function isProductAllowed(
+  candidate: { weight: ProductWeight; categorySlug: string; productName: string },
+  family: CurlFamily | null,
+  hairConcerns: string[] | null
 ): boolean {
+  const { weight, categorySlug, productName } = candidate;
+  const isHeavyFormat = HEAVY_FORMAT_NAME_PATTERN.test(productName);
+
+  // Thinning hair overrides curl-type rules entirely -- never very_heavy
+  // anywhere, and a styler pick must be a gel/mousse/light-spray, never a
+  // cream or butter, regardless of hair type.
+  if (hairConcerns?.includes("thinning")) {
+    if (weight === "very_heavy") return false;
+    if (categorySlug === "styler" && isHeavyFormat) return false;
+  }
+
+  if (family === "straight" || family === "wavy") {
+    if (categorySlug === "butter" || categorySlug === "curl-cream") return false;
+    if (isHeavyFormat) return false;
+  }
+
   if (!family || family === "coily") return true;
 
   if (family === "straight") {
@@ -191,7 +212,15 @@ async function rankCategoryProducts(
       // real score or a grounded "why," so it's not a usable candidate
       // rather than a false 0.
       if (!result || result.matches.length === 0) return null;
-      if (!isWeightAllowedForCategory(result.productWeight, categorySlug, family)) return null;
+      if (
+        !isProductAllowed(
+          { weight: result.productWeight, categorySlug, productName: row.name },
+          family,
+          hairConcerns
+        )
+      ) {
+        return null;
+      }
 
       const brandName = brandNameOf(row);
       return {

@@ -20,7 +20,14 @@ import {
   scoreTier,
 } from "@/lib/compatibility";
 import { CATEGORY_LABEL_BY_SLUG, PRODUCT_CATEGORIES } from "@/lib/productCategories";
-import { WEIGHT_PILL_CLASSES, WEIGHT_PILL_LABEL, weightFitNote } from "@/lib/productWeight";
+import {
+  isWeightWarningTier,
+  WEIGHT_PILL_CLASSES,
+  WEIGHT_PILL_LABEL,
+  WEIGHT_WARNING_CLASSES,
+  WEIGHT_WARNING_LABEL,
+  weightFitNote,
+} from "@/lib/productWeight";
 import {
   DAILY_SEARCH_LIMIT,
   SearchLimitState,
@@ -177,9 +184,14 @@ function ResultCard({
   const tier =
     scoreState?.status === "done" ? scoreTier(scoreState.result.normalizedScore) : null;
   const productWeight = scoreState?.status === "done" ? scoreState.result.productWeight : null;
-  const fitNote = productWeight
-    ? weightFitNote(productWeight, curlFamily(curlType), curlType, porosity)
-    : null;
+  const family = curlFamily(curlType);
+  const fitNote = productWeight ? weightFitNote(productWeight, family, curlType, porosity) : null;
+  // Straight/wavy searchers get a blunter warning instead of the plain
+  // weight label once a product is medium or heavier -- a good ingredient
+  // score doesn't mean the formulation weight is a good fit. Routine
+  // recommendations don't need this: lib/routineProducts.ts already
+  // hard-excludes these before they'd ever be picked.
+  const showWeightWarning = productWeight ? isWeightWarningTier(productWeight, family) : false;
 
   return (
     <li className="border-b border-[#2C2420]">
@@ -253,9 +265,11 @@ function ResultCard({
                     {scoreState.result.normalizedScore} · {TIER_LABELS[tier]}
                   </span>
                   <span
-                    className={`inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-medium ${WEIGHT_PILL_CLASSES[productWeight]}`}
+                    className={`inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-medium ${
+                      showWeightWarning ? WEIGHT_WARNING_CLASSES : WEIGHT_PILL_CLASSES[productWeight]
+                    }`}
                   >
-                    {WEIGHT_PILL_LABEL[productWeight]}
+                    {showWeightWarning ? WEIGHT_WARNING_LABEL : WEIGHT_PILL_LABEL[productWeight]}
                   </span>
                 </div>
                 {fitNote && (
@@ -528,6 +542,13 @@ function SearchPageContent() {
   }
 
   const [hasScrolledCategories, setHasScrolledCategories] = useState(false);
+  // Weight filter pills, item 6 -- "Lightweight"/"Medium"/"Rich" split the
+  // 5 internal ProductWeight tiers into 3 non-overlapping buckets (the
+  // request's own wording for what "Rich" filters to overlapped with
+  // "Medium," so this uses the non-overlapping partition implied by the
+  // 3-pill layout instead: Lightweight = ultralight+light, Medium =
+  // medium, Rich = heavy+very_heavy).
+  const [weightFilter, setWeightFilter] = useState<"all" | "light" | "medium" | "rich">("all");
 
   const [results, setResults] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
@@ -674,6 +695,7 @@ function SearchPageContent() {
       setExpandedCardCode(null);
       setIngredientsExpanded(false);
       setLimitReached(false);
+      setWeightFilter("all");
       return;
     }
 
@@ -716,6 +738,7 @@ function SearchPageContent() {
         setExpandedCardCode(null);
         setIngredientsExpanded(false);
         setScoresByCode({});
+        setWeightFilter("all");
 
         if (qoylProducts.length > 0) {
           scoreResults(qoylProducts, thisRequest);
@@ -786,6 +809,18 @@ function SearchPageContent() {
   }
 
   const effectiveSearches = effectiveSearchState(searchState);
+
+  const filteredResults =
+    weightFilter === "all"
+      ? results
+      : results.filter((product) => {
+          const state = scoresByCode[product.code];
+          if (state?.status !== "done") return false;
+          const w = state.result.productWeight;
+          if (weightFilter === "light") return w === "ultralight" || w === "light";
+          if (weightFilter === "medium") return w === "medium";
+          return w === "heavy" || w === "very_heavy";
+        });
 
   return (
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
@@ -889,8 +924,40 @@ function SearchPageContent() {
           )}
 
         {!limitReached && !loading && results.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {(
+              [
+                { key: "all", label: "All weights" },
+                { key: "light", label: "Lightweight" },
+                { key: "medium", label: "Medium" },
+                { key: "rich", label: "Rich" },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setWeightFilter(opt.key)}
+                className={`shrink-0 whitespace-nowrap rounded-full border border-bronze2/50 px-3 py-1 font-sans text-[11px] font-medium transition-colors ${
+                  weightFilter === opt.key
+                    ? "bg-bronze2 text-dark"
+                    : "bg-transparent text-bronze2 hover:bg-bronze2/10"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {!limitReached && !loading && results.length > 0 && (
           <ul className="mt-2">
-            {results.map((product) => (
+            {filteredResults.length === 0 && (
+              <p className="mt-4 font-sans text-[12px] text-cream/50">
+                No results match this weight filter yet -- results are still scoring, or none of
+                these products match.
+              </p>
+            )}
+            {filteredResults.map((product) => (
               <ResultCard
                 key={product.code}
                 product={product}

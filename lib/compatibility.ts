@@ -218,15 +218,15 @@ const WEIGHT_MODIFIERS: Record<CurlFamily, Record<ProductWeight, number>> = {
     ultralight: 5,
     light: 3,
     medium: 0,
-    heavy: -10,
-    very_heavy: -20,
+    heavy: -20,
+    very_heavy: -35,
   },
   wavy: {
     ultralight: 3,
     light: 2,
     medium: 0,
-    heavy: -7,
-    very_heavy: -15,
+    heavy: -15,
+    very_heavy: -25,
   },
   curly: {
     ultralight: 0,
@@ -704,7 +704,8 @@ function resolveScoreResult(
   ingredients: PositionedIngredient[],
   scoreRows: ScoreRow[],
   profile: ScoringProfile,
-  category: string | null = null
+  category: string | null = null,
+  productName: string | null = null
 ): ScoreResult {
   const { scalpCondition, family, climate, waterHardness, porosity, ageRange, hairConcerns } =
     profile;
@@ -713,7 +714,7 @@ function resolveScoreResult(
     return {
       normalizedScore: 0,
       matches: [],
-      productWeight: classifyProductWeight([], category ?? ""),
+      productWeight: classifyProductWeight([], category ?? "", productName ?? ""),
     };
   }
 
@@ -835,7 +836,7 @@ function resolveScoreResult(
   const orderedIngredientNames = [...ingredients]
     .sort((a, b) => a.position - b.position)
     .map((i) => i.inci_name);
-  const productWeight = classifyProductWeight(orderedIngredientNames, category ?? "");
+  const productWeight = classifyProductWeight(orderedIngredientNames, category ?? "", productName ?? "");
   const weightModifier = getWeightModifier(productWeight, family);
   const normalizedScore = Math.min(100, Math.max(0, baseScore + weightModifier));
 
@@ -847,14 +848,15 @@ function resolveScoreResult(
 async function scorePositionedIngredients(
   ingredients: PositionedIngredient[],
   profile: ScoringProfile,
-  category: string | null = null
+  category: string | null = null,
+  productName: string | null = null
 ): Promise<{ error?: string; result?: ScoreResult }> {
   if (ingredients.length === 0) {
     return {
       result: {
         normalizedScore: 0,
         matches: [],
-        productWeight: classifyProductWeight([], category ?? ""),
+        productWeight: classifyProductWeight([], category ?? "", productName ?? ""),
       },
     };
   }
@@ -866,7 +868,7 @@ async function scorePositionedIngredients(
   if (error) return { error };
 
   return {
-    result: resolveScoreResult(ingredients, scoreRows ?? [], profile, category),
+    result: resolveScoreResult(ingredients, scoreRows ?? [], profile, category, productName),
   };
 }
 
@@ -943,7 +945,7 @@ export async function scoreCatalogProduct(
       .order("position"),
     supabase
       .from("catalog_products")
-      .select("categories(slug)")
+      .select("name, categories(slug)")
       .eq("id", productId)
       .maybeSingle(),
   ]);
@@ -969,7 +971,7 @@ export async function scoreCatalogProduct(
     (productRow?.categories as unknown as { slug: string } | { slug: string }[] | null) ?? null;
   const category = Array.isArray(categorySlug) ? categorySlug[0]?.slug : categorySlug?.slug;
 
-  return scorePositionedIngredients(positioned, profile, category ?? null);
+  return scorePositionedIngredients(positioned, profile, category ?? null, productRow?.name ?? null);
 }
 
 // Batch version of scoreCatalogProduct, for scoring an entire search
@@ -1014,7 +1016,7 @@ export async function scoreCatalogProductsForProfile(
       .select("product_id, position, ingredients(id, inci_name, common_name)")
       .in("product_id", productIds)
       .order("position"),
-    supabase.from("catalog_products").select("id, categories(slug)").in("id", productIds),
+    supabase.from("catalog_products").select("id, name, categories(slug)").in("id", productIds),
   ]);
 
   if (piError) {
@@ -1024,6 +1026,7 @@ export async function scoreCatalogProductsForProfile(
   }
 
   const categoryByProduct = new Map<string, string | null>();
+  const nameByProduct = new Map<string, string | null>();
   for (const row of categoryRows ?? []) {
     const categories = row.categories as unknown as
       | { slug: string }
@@ -1031,6 +1034,7 @@ export async function scoreCatalogProductsForProfile(
       | null;
     const slug = Array.isArray(categories) ? categories[0]?.slug : categories?.slug;
     categoryByProduct.set(row.id, slug ?? null);
+    nameByProduct.set(row.id, row.name ?? null);
   }
 
   const ingredientsByProduct = new Map<string, PositionedIngredient[]>();
@@ -1064,7 +1068,8 @@ export async function scoreCatalogProductsForProfile(
         ingredientsByProduct.get(id) ?? [],
         scoreRows ?? [],
         profile,
-        categoryByProduct.get(id) ?? null
+        categoryByProduct.get(id) ?? null,
+        nameByProduct.get(id) ?? null
       ),
     };
   }
