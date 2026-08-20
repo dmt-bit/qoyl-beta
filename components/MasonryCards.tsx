@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { Post } from "@/components/PostCard";
 
@@ -43,17 +44,31 @@ export type SheetTarget = {
   onSave: () => void | Promise<void>;
 };
 
-// ---- long-press detection -----------------------------------------------
+// ---- long-press + auth-gate tap detection ---------------------------------
 //
-// Registers onLongPressStart as a capture-phase click interceptor: if the
-// hold timer fired, the capture handler stops the click before it reaches
-// the card's own bubble-phase click/nav handler (Next's <Link> attaches
-// its client-side navigation the same way) -- so a long press never also
-// triggers a normal tap. A pointer move cancels the timer, since a drag/
-// scroll shouldn't be mistaken for a hold.
+// Registers a capture-phase click interceptor that handles two cases
+// before the card's own bubble-phase click/nav handler (Next's <Link>
+// attaches its client-side navigation the same way) ever sees the click:
+//   1. The hold timer fired (long press) -- stop the click outright so it
+//      never also triggers a normal tap.
+//   2. The tap is otherwise gated (signed out, or signed in with no hair
+//      profile) -- stop the click and open the auth gate sheet instead of
+//      navigating. Long presses are NOT gated -- only normal taps are, per
+//      spec -- so this check only runs once the long-press branch above
+//      has ruled itself out.
+// A pointer move cancels the hold timer, since a drag/scroll shouldn't be
+// mistaken for a hold.
 const LONG_PRESS_MS = 500;
 
-export function useLongPress(onLongPress: () => void) {
+export function useCardTap({
+  onLongPress,
+  gated,
+  onGateTap,
+}: {
+  onLongPress: () => void;
+  gated: boolean;
+  onGateTap: () => void;
+}) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggeredRef = useRef(false);
 
@@ -88,6 +103,12 @@ export function useLongPress(onLongPress: () => void) {
         e.preventDefault();
         e.stopPropagation();
         triggeredRef.current = false;
+        return;
+      }
+      if (gated) {
+        e.preventDefault();
+        e.stopPropagation();
+        onGateTap();
       }
     },
   };
@@ -111,6 +132,15 @@ function PlayIcon() {
   return (
     <svg className="h-5 w-5 text-dark" fill="currentColor" viewBox="0 0 24 24">
       <path d="M8 5v14l11-7z" />
+    </svg>
+  );
+}
+
+function LockIcon() {
+  return (
+    <svg className="h-6 w-6 text-bronze" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+      <rect x="5" y="10.5" width="14" height="9" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 10.5V7a4 4 0 118 0v3.5" />
     </svg>
   );
 }
@@ -153,21 +183,28 @@ function HairTypeChip({ label }: { label: string }) {
 export function EditorialMasonryCard({
   post,
   onLongPress,
+  gated,
+  onGateTap,
 }: {
   post: Post;
   onLongPress: (target: SheetTarget) => void;
+  gated: boolean;
+  onGateTap: () => void;
 }) {
   const isVideo = post.content_type === "original-video";
   const isRepost = post.content_type === "repost";
 
-  const longPress = useLongPress(() =>
-    onLongPress({
-      cardType: "editorial",
-      title: post.title,
-      shareUrl: `${window.location.origin}/posts/${post.slug}`,
-      onSave: () => saveLocalBookmark("post", post.slug),
-    })
-  );
+  const longPress = useCardTap({
+    onLongPress: () =>
+      onLongPress({
+        cardType: "editorial",
+        title: post.title,
+        shareUrl: `${window.location.origin}/posts/${post.slug}`,
+        onSave: () => saveLocalBookmark("post", post.slug),
+      }),
+    gated,
+    onGateTap,
+  });
 
   return (
     <Link href={`/posts/${post.slug}`} className={CARD_CLASS} {...longPress}>
@@ -212,19 +249,26 @@ export function CommunityMasonryCard({
   photo,
   onOpen,
   onLongPress,
+  gated,
+  onGateTap,
 }: {
   photo: CommunityPhoto;
   onOpen: (photo: CommunityPhoto) => void;
   onLongPress: (target: SheetTarget) => void;
+  gated: boolean;
+  onGateTap: () => void;
 }) {
-  const longPress = useLongPress(() =>
-    onLongPress({
-      cardType: "community",
-      title: "Community hair photo",
-      shareUrl: photo.url,
-      onSave: () => saveLocalBookmark("community", photo.id),
-    })
-  );
+  const longPress = useCardTap({
+    onLongPress: () =>
+      onLongPress({
+        cardType: "community",
+        title: "Community hair photo",
+        shareUrl: photo.url,
+        onSave: () => saveLocalBookmark("community", photo.id),
+      }),
+    gated,
+    onGateTap,
+  });
 
   return (
     <button type="button" onClick={() => onOpen(photo)} className={CARD_CLASS} {...longPress}>
@@ -263,21 +307,28 @@ export function ProductMasonryCard({
   product,
   affiliateLink,
   onLongPress,
+  gated,
+  onGateTap,
 }: {
   product: ScoredProduct;
   affiliateLink: string;
   onLongPress: (target: SheetTarget) => void;
+  gated: boolean;
+  onGateTap: () => void;
 }) {
   const isExternal = affiliateLink.startsWith("http");
 
-  const longPress = useLongPress(() =>
-    onLongPress({
-      cardType: "product",
-      title: product.name,
-      shareUrl: affiliateLink,
-      onSave: () => saveLocalBookmark("product", product.id),
-    })
-  );
+  const longPress = useCardTap({
+    onLongPress: () =>
+      onLongPress({
+        cardType: "product",
+        title: product.name,
+        shareUrl: affiliateLink,
+        onSave: () => saveLocalBookmark("product", product.id),
+      }),
+    gated,
+    onGateTap,
+  });
 
   const body = (
     <>
@@ -321,21 +372,28 @@ export function StyleMasonryCard({
   style,
   onLongPress,
   onSaveStyle,
+  gated,
+  onGateTap,
 }: {
   style: StyleRow;
   onLongPress: (target: SheetTarget) => void;
   onSaveStyle: (style: StyleRow) => void | Promise<void>;
+  gated: boolean;
+  onGateTap: () => void;
 }) {
   const href = `/style-match?prefill=${encodeURIComponent(style.name)}`;
 
-  const longPress = useLongPress(() =>
-    onLongPress({
-      cardType: "style",
-      title: style.name,
-      shareUrl: `${window.location.origin}${href}`,
-      onSave: () => onSaveStyle(style),
-    })
-  );
+  const longPress = useCardTap({
+    onLongPress: () =>
+      onLongPress({
+        cardType: "style",
+        title: style.name,
+        shareUrl: `${window.location.origin}${href}`,
+        onSave: () => onSaveStyle(style),
+      }),
+    gated,
+    onGateTap,
+  });
 
   return (
     <Link href={href} className={CARD_CLASS} {...longPress}>
@@ -410,7 +468,13 @@ export function ActionSheet({
     onClose();
   }
 
-  return (
+  // Portaled to document.body -- the feed section's ancestor .fade-up-block
+  // (see globals.css) runs a scroll-triggered CSS animation on `transform`,
+  // which per spec makes it the containing block for any `position: fixed`
+  // descendant. Left un-portaled, this sheet renders "fixed" relative to
+  // that (large, scrolled) ancestor box instead of the real viewport --
+  // visually broken/mispositioned rather than covering the screen.
+  return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60" onClick={handleBackdropClick}>
       <div
         className="slide-up-sheet w-full max-w-md rounded-t-2xl bg-[#1C1612] pb-6"
@@ -458,6 +522,144 @@ export function ActionSheet({
           Cancel
         </button>
       </div>
+    </div>,
+    document.body
+  );
+}
+
+// ---- content gate: bottom sheet shown when a signed-out user taps a card ---
+//
+// Swipe-down-to-dismiss: tracks the drag delta on the sheet itself and
+// translates it live; releasing past the threshold closes the sheet,
+// otherwise it snaps back. A tap outside the sheet (the backdrop) also
+// dismisses it -- unlike ActionSheet, there's no long-press-release race
+// here (this sheet only ever opens from a single ordinary tap, never a
+// held one), so no opened-at debounce is needed on the backdrop.
+
+const SWIPE_DISMISS_THRESHOLD = 80;
+const FEED_SCROLL_POS_KEY = "qoyl_feed_scroll_y";
+
+// Both gates' CTAs navigate away to /profile or /auth -- MasonryFeed
+// fully unmounts on that route change and remounts fresh on the way
+// back, which would otherwise drop the user at the top of the feed
+// instead of back near the gate they just cleared.
+function saveFeedScrollPosition() {
+  sessionStorage.setItem(FEED_SCROLL_POS_KEY, String(window.scrollY));
+}
+
+export function consumeSavedFeedScrollPosition(): number | null {
+  const raw = sessionStorage.getItem(FEED_SCROLL_POS_KEY);
+  if (raw === null) return null;
+  sessionStorage.removeItem(FEED_SCROLL_POS_KEY);
+  const y = Number(raw);
+  return Number.isFinite(y) ? y : null;
+}
+
+export function AuthGateSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const dragStartY = useRef<number | null>(null);
+  const [dragY, setDragY] = useState(0);
+
+  useEffect(() => {
+    if (open) setDragY(0);
+  }, [open]);
+
+  if (!open) return null;
+
+  function handlePointerDown(e: React.PointerEvent) {
+    dragStartY.current = e.clientY;
+  }
+  function handlePointerMove(e: React.PointerEvent) {
+    if (dragStartY.current === null) return;
+    const delta = e.clientY - dragStartY.current;
+    if (delta > 0) setDragY(delta);
+  }
+  function endDrag() {
+    if (dragY > SWIPE_DISMISS_THRESHOLD) {
+      onClose();
+    } else {
+      setDragY(0);
+    }
+    dragStartY.current = null;
+  }
+
+  // Portaled to document.body for the same reason as ActionSheet above --
+  // otherwise this "fixed" backdrop is positioned relative to the feed's
+  // animated .fade-up-block ancestor instead of the real viewport.
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60" onClick={onClose}>
+      <div
+        className={dragY === 0 ? "slide-up-sheet w-full max-w-md rounded-t-[20px] bg-[#1C1612] px-6 pb-8 pt-3" : "w-full max-w-md rounded-t-[20px] bg-[#1C1612] px-6 pb-8 pt-3"}
+        style={{ transform: `translateY(${dragY}px)`, transition: dragY === 0 ? "transform 0.2s ease-out" : "none" }}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+      >
+        <div className="mx-auto h-1 w-10 rounded-full bg-bronze" />
+        <p className="mt-4 text-center font-serif text-lg text-cream">
+          Q<span className="italic text-bronze2">oyl</span>
+        </p>
+        <h2 className="mt-4 text-center font-serif text-2xl text-cream">Join Qoyl to keep reading.</h2>
+        <p className="mt-2 text-center font-sans text-[13px] leading-relaxed text-muted">
+          Free forever. Build your hair profile and get personalized scores, style matches, and a
+          feed tailored to your hair.
+        </p>
+        <Link
+          href="/profile"
+          onClick={saveFeedScrollPosition}
+          className="mt-6 block w-full rounded-lg bg-bronze py-3 text-center text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+        >
+          Create my free profile →
+        </Link>
+        <Link
+          href="/auth"
+          onClick={saveFeedScrollPosition}
+          className="mt-3 block w-full rounded-lg border border-bronze/40 py-3 text-center text-sm font-semibold text-cream transition-colors hover:border-bronze"
+        >
+          Sign in →
+        </Link>
+        <p className="mt-4 text-center text-xs text-cream/40">
+          No credit card. No commitment. Just your hair.
+        </p>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ---- scroll gate: full-width card inserted after 8 cards for a signed- ----
+// out user, or a signed-in user with no hair profile yet.
+
+export function ScrollGateCard({ needsProfileOnly }: { needsProfileOnly: boolean }) {
+  return (
+    <div className="mt-1 flex h-[280px] w-full flex-col items-center justify-center rounded-xl border border-bronze/30 bg-gradient-to-b from-[#1C1612] to-[#2C2420] px-6 text-center">
+      <LockIcon />
+      <h3 className="mt-3 font-serif text-[22px] leading-snug text-cream">
+        {needsProfileOnly ? "One more step — tell us about your hair." : "Your feed is waiting."}
+      </h3>
+      {!needsProfileOnly && (
+        <p className="mt-2 font-sans text-[12px] leading-relaxed text-muted">
+          Create a free profile to unlock your full personalized feed — product scores, style
+          inspo, and hair tips matched to your specific texture.
+        </p>
+      )}
+      <Link
+        href="/profile"
+        onClick={saveFeedScrollPosition}
+        className="mt-4 w-full max-w-xs rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+      >
+        {needsProfileOnly ? "Complete my profile →" : "Build my free profile →"}
+      </Link>
+      {!needsProfileOnly && (
+        <Link
+          href="/auth"
+          onClick={saveFeedScrollPosition}
+          className="mt-3 text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+        >
+          Already have an account? Sign in →
+        </Link>
+      )}
     </div>
   );
 }

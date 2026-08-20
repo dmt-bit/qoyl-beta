@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Masonry from "react-masonry-css";
@@ -8,6 +9,9 @@ import { COMMUNITY_PREFILL_KEY } from "@/components/CommunityGrid";
 import type { Post } from "@/components/PostCard";
 import {
   ActionSheet,
+  AuthGateSheet,
+  ScrollGateCard,
+  consumeSavedFeedScrollPosition,
   hideCardType,
   CommunityMasonryCard,
   EditorialMasonryCard,
@@ -199,9 +203,46 @@ function LoadingDots() {
   );
 }
 
+// Cards visible before a signed-out (or profile-less) user hits the
+// scroll gate -- comfortably inside the first infinite-scroll page, so
+// the gate never has to wait on a network round trip to appear.
+const SCROLL_GATE_AFTER = 8;
+
 export default function MasonryFeed({ posts }: { posts: Post[] }) {
-  const { user, hairProfile } = useAuth();
+  const { user, loading: authLoading, hairProfile, hairProfileLoading } = useAuth();
   const router = useRouter();
+
+  // Mirrors the resolvingAccess pattern used on /style-match and
+  // elsewhere: don't decide gating until we actually know whether
+  // there's a session, and (if so) whether its hair profile has loaded --
+  // otherwise a genuinely signed-in user flashes a gate for a frame on
+  // every load.
+  //
+  // The two gates key off different conditions -- #9 (tap gate) is
+  // titled "login required," so it only fires for a genuinely signed-out
+  // visitor; a signed-in user with no hair profile yet can still read
+  // and tap around normally. #10 (scroll gate) explicitly covers both
+  // signed-out AND signed-in-without-a-profile as its own case with
+  // different copy, so it uses the broader "fully set up" check.
+  const resolvingAuth = authLoading || (Boolean(user) && hairProfileLoading);
+  const isSignedOut = !resolvingAuth && !user;
+  const isFullyAuthed = Boolean(user) && Boolean(hairProfile);
+  const needsScrollGate = !resolvingAuth && !isFullyAuthed;
+
+  const [showAuthGateSheet, setShowAuthGateSheet] = useState(false);
+
+  // Restores the scroll position saved when the user left for /profile or
+  // /auth from a gate CTA, once they're back here and actually past the
+  // gate -- not on every mount, so a still-gated user (e.g. bounced back
+  // without finishing sign-up) doesn't get scrolled past content they
+  // can't see yet.
+  useEffect(() => {
+    if (resolvingAuth || !isFullyAuthed) return;
+    const y = consumeSavedFeedScrollPosition();
+    if (y !== null) {
+      requestAnimationFrame(() => window.scrollTo(0, y));
+    }
+  }, [resolvingAuth, isFullyAuthed]);
 
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [searchInput, setSearchInput] = useState("");
@@ -332,8 +373,16 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
     setVisibleCount(PAGE_SIZE);
   }, [activeTab, debouncedSearch]);
 
-  const visibleCards = composedFeed.slice(0, visibleCount);
-  const hasMore = visibleCount < composedFeed.length;
+  // Once a gated user has scrolled past SCROLL_GATE_AFTER cards, the feed
+  // stops revealing more entirely -- capped right there regardless of
+  // visibleCount/infinite scroll, with the gate card taking the place of
+  // card #9 onward until they sign in (or, if signed in, finish their
+  // hair profile).
+  const showScrollGate = needsScrollGate && composedFeed.length > SCROLL_GATE_AFTER;
+  const visibleCards = showScrollGate
+    ? composedFeed.slice(0, SCROLL_GATE_AFTER)
+    : composedFeed.slice(0, visibleCount);
+  const hasMore = !showScrollGate && visibleCount < composedFeed.length;
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -445,8 +494,17 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
             columnClassName="flex flex-col gap-1 bg-clip-padding"
           >
             {visibleCards.map((card) => {
+              const onGateTap = () => setShowAuthGateSheet(true);
               if (card.type === "editorial") {
-                return <EditorialMasonryCard key={card.feedId} post={card.post} onLongPress={setSheetTarget} />;
+                return (
+                  <EditorialMasonryCard
+                    key={card.feedId}
+                    post={card.post}
+                    onLongPress={setSheetTarget}
+                    gated={isSignedOut}
+                    onGateTap={onGateTap}
+                  />
+                );
               }
               if (card.type === "community") {
                 return (
@@ -455,6 +513,8 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
                     photo={card.photo}
                     onOpen={setOpenPhoto}
                     onLongPress={setSheetTarget}
+                    gated={isSignedOut}
+                    onGateTap={onGateTap}
                   />
                 );
               }
@@ -468,6 +528,8 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
                     product={card.product}
                     affiliateLink={link}
                     onLongPress={setSheetTarget}
+                    gated={isSignedOut}
+                    onGateTap={onGateTap}
                   />
                 );
               }
@@ -477,13 +539,21 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
                   style={card.style}
                   onLongPress={setSheetTarget}
                   onSaveStyle={handleSaveStyle}
+                  gated={isSignedOut}
+                  onGateTap={onGateTap}
                 />
               );
             })}
           </Masonry>
 
-          <div ref={sentinelRef} />
-          {loadingMore && <LoadingDots />}
+          {showScrollGate ? (
+            <ScrollGateCard needsProfileOnly={Boolean(user) && !hairProfile} />
+          ) : (
+            <>
+              <div ref={sentinelRef} />
+              {loadingMore && <LoadingDots />}
+            </>
+          )}
         </div>
       ) : debouncedSearch ? (
         <p className="mt-8 text-sm text-cream/50">
@@ -507,54 +577,66 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
         }}
       />
 
-      {/* Community photo full-screen modal */}
-      {openPhoto && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setOpenPhoto(null)}
-        >
-          <div className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="relative h-[360px] w-full overflow-hidden rounded-xl bg-[#1C1612]">
-              <Image src={openPhoto.url} alt="Community hair photo" fill className="object-cover" />
-            </div>
-            {openPhoto.caption && <p className="mt-3 text-sm text-cream/80">{openPhoto.caption}</p>}
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {openPhoto.curlType && (
-                <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-bronze2">
-                  {openPhoto.curlType}
-                </span>
-              )}
-              {openPhoto.porosity && (
-                <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] capitalize text-bronze2">
-                  {openPhoto.porosity} porosity
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => handleStyleMatchThis(openPhoto)}
-              disabled={sendingCommunityMatch}
-              className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
-            >
-              {sendingCommunityMatch ? "Loading..." : "Style Match this →"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setOpenPhoto(null)}
-              className="mt-2 w-full text-center text-xs text-cream/50 underline"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      <AuthGateSheet open={showAuthGateSheet} onClose={() => setShowAuthGateSheet(false)} />
 
-      {/* Toast */}
-      {toast && (
-        <div className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-full bg-[#1C1612] px-4 py-2 text-xs text-cream shadow-lg">
-          {toast}
-        </div>
-      )}
+      {/* Community photo full-screen modal + toast -- portaled to
+          document.body for the same reason as the sheets in
+          MasonryCards.tsx: the feed's .fade-up-block ancestor runs a
+          transform-based CSS animation, which makes it the containing
+          block for any un-portaled `position: fixed` descendant instead
+          of the real viewport. */}
+      {typeof document !== "undefined" &&
+        createPortal(
+          <>
+            {openPhoto && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+                onClick={() => setOpenPhoto(null)}
+              >
+                <div className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+                  <div className="relative h-[360px] w-full overflow-hidden rounded-xl bg-[#1C1612]">
+                    <Image src={openPhoto.url} alt="Community hair photo" fill className="object-cover" />
+                  </div>
+                  {openPhoto.caption && <p className="mt-3 text-sm text-cream/80">{openPhoto.caption}</p>}
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {openPhoto.curlType && (
+                      <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-bronze2">
+                        {openPhoto.curlType}
+                      </span>
+                    )}
+                    {openPhoto.porosity && (
+                      <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] capitalize text-bronze2">
+                        {openPhoto.porosity} porosity
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleStyleMatchThis(openPhoto)}
+                    disabled={sendingCommunityMatch}
+                    className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+                  >
+                    {sendingCommunityMatch ? "Loading..." : "Style Match this →"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOpenPhoto(null)}
+                    className="mt-2 w-full text-center text-xs text-cream/50 underline"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {toast && (
+              <div className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-full bg-[#1C1612] px-4 py-2 text-xs text-cream shadow-lg">
+                {toast}
+              </div>
+            )}
+          </>,
+          document.body
+        )}
     </div>
   );
 }
