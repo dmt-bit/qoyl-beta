@@ -5,7 +5,6 @@ import {
   curlFamily,
   scoreCatalogProductsForProfile,
   type CurlFamily,
-  type Match,
 } from "@/lib/compatibility";
 import type { ProductWeight } from "@/lib/productWeight";
 
@@ -58,14 +57,15 @@ export type RoutineProductPick = {
   noProductsYet: boolean;
 };
 
-const SULFATE_NAME_PATTERN = /sulfate|\bsls\b|\bsles\b/i;
-
-// Format words that mean "this is a cream/butter," independent of how the
-// product happens to be filed in the category table -- catalog curation
-// can lag or miscategorize (see Almond Jai Twisting Butter, filed under
-// "styler" until this was reported), so the name check is a backstop for
-// the category-based exclusion below, not a substitute for it.
-const HEAVY_FORMAT_NAME_PATTERN = /butter|pudding|souffl[eé]|whip/i;
+// Format words that mean "this is a cream/butter/yogurt," independent of
+// how the product happens to be filed in the category table -- catalog
+// curation can lag or miscategorize (see Almond Jai Twisting Butter,
+// filed under "styler" until this was reported), so the name check is a
+// backstop for the category-based exclusion below, not a substitute.
+const HEAVY_FORMAT_NAME_PATTERN = /butter|pudding|souffl[eé]|whip|yogurt|yoghurt|groyogurt/i;
+// Growth-oriented/heavy-format products specifically to steer away from
+// for thinning hair, on top of the general weight-based exclusions below.
+const THINNING_EXCLUDE_NAME_PATTERN = /growth cream|groyogurt|hair food/i;
 
 // Hard weight/format exclusions layered on top of the scoring modifier in
 // lib/compatibility.ts's getWeightModifier -- a heavy product can still
@@ -80,13 +80,24 @@ function isProductAllowed(
   const isHeavyFormat = HEAVY_FORMAT_NAME_PATTERN.test(productName);
 
   // Thinning hair overrides curl-type rules entirely -- never very_heavy
-  // anywhere, and a styler pick must be a gel/mousse/light-spray, never a
-  // cream or butter, regardless of hair type.
+  // anywhere, never heavy in a leave-in or styler, and a styler pick must
+  // be a gel/mousse/light-spray, never a cream/butter/yogurt formula,
+  // regardless of hair type.
   if (hairConcerns?.includes("thinning")) {
     if (weight === "very_heavy") return false;
+    if ((categorySlug === "leave-in" || categorySlug === "styler") && weight === "heavy") {
+      return false;
+    }
     if (categorySlug === "styler" && isHeavyFormat) return false;
+    if (THINNING_EXCLUDE_NAME_PATTERN.test(productName)) return false;
   }
 
+  // very_heavy is already excluded everywhere for straight/wavy below,
+  // and heavy is already excluded from leave-in/styler for straight and
+  // from everywhere but deep-conditioner for wavy -- so the weight-based
+  // halves of "deep-conditioner AND very_heavy" / "leave-in or styler AND
+  // heavy-or-very_heavy" are already covered by those per-family rules
+  // further down. What's left to add here is the category/name backstop.
   if (family === "straight" || family === "wavy") {
     if (categorySlug === "butter" || categorySlug === "curl-cream") return false;
     if (isHeavyFormat) return false;
@@ -117,44 +128,60 @@ function isProductAllowed(
   return true;
 }
 
-// One sentence, grounded in the actual scored ingredient matches for
-// THIS product -- not a generic ingredient blurb. Shampoo gets a
-// dedicated sulfate-free check since that's the single most common
-// "why this cleanser" reason; every other category falls back to
-// naming whichever well-rated ingredient carried the most weight in the
-// score, or a plainer profile-match statement if nothing stood out.
+// Product-type + hair-type aware, not a generic ingredient blurb --
+// replaces the old version's "BTMS near the top of the ingredient list"
+// style copy, which didn't say anything about whether the product's
+// actual weight/format made sense for this category or hair type.
+// productName/weight aren't referenced in every branch below, but are
+// kept in the signature for a consistent shape across all of them.
 function generateWhyCopy(
-  categorySlug: string,
-  matches: Match[],
-  normalizedScore: number,
+  productName: string,
+  category: string,
+  curlType: string | null,
   porosity: string,
-  curlType: string | null
+  weight: ProductWeight,
+  hairConcerns: string[] | null
 ): string {
   const family = curlFamily(curlType);
-  const profileDescriptor = porosity && porosity !== "not sure" && porosity !== "not_sure"
-    ? `${porosity} porosity${family ? ` ${curlType}` : ""} hair`
-    : family
-    ? `${family} hair`
-    : "your hair profile";
+  const hasThinning = hairConcerns?.includes("thinning") ?? false;
+  const curlTypeLabel = curlType && curlType !== "not_sure" ? curlType : "your";
 
-  if (categorySlug === "shampoo") {
-    const hasSulfates = matches.some((m) => SULFATE_NAME_PATTERN.test(m.ingredient_name));
-    if (!hasSulfates) {
-      return family
-        ? `Sulfate-free cleanser that won't strip your natural ${family} texture.`
-        : "Sulfate-free cleanser that cleanses without stripping natural oils.";
+  if (category === "deep-conditioner" || category === "conditioner") {
+    if (family === "straight" || family === "wavy") {
+      return `Recommended for ${porosity} porosity ${curlTypeLabel} hair — use weekly for 10-15 minutes then rinse thoroughly. The formula weight is appropriate for occasional deep treatment without risking buildup on fine strands.`;
+    }
+    return `Strong match for ${porosity} porosity ${curlTypeLabel} hair — apply generously and use heat for maximum penetration.`;
+  }
+
+  if (category === "leave-in") {
+    if (hasThinning) {
+      return `Lightweight enough for thinning ${curlTypeLabel} hair — won't weigh down fine strands while providing moisture. Apply sparingly to mid-lengths and ends only, avoid roots.`;
+    }
+    if (family === "straight") {
+      return `Appropriate weight for ${curlTypeLabel} straight hair — apply to damp hair focusing on ends only to avoid root heaviness.`;
     }
   }
 
-  const topGoodMatch = [...matches]
-    .filter((m) => m.rating === "good" && m.position <= 10)
-    .sort((a, b) => b.weight * b.score - a.weight * a.score)[0];
-
-  if (topGoodMatch) {
-    return `Scores well for ${profileDescriptor} — ${topGoodMatch.ingredient_name} near the top of the ingredient list is a strong match for your profile.`;
+  if (category === "shampoo") {
+    return `Gentle enough for regular use on ${porosity} porosity ${curlTypeLabel} hair without stripping natural oils.`;
   }
 
-  return `Scores ${normalizedScore}/100 for ${profileDescriptor} based on its full ingredient list.`;
+  if (category === "styler" || category === "gel") {
+    if (family === "straight") {
+      return `Lightweight hold appropriate for ${curlTypeLabel} fine hair — provides structure without weighing strands down.`;
+    }
+    return `Good hold and definition for ${curlTypeLabel} ${porosity} porosity hair.`;
+  }
+
+  if (category === "oil") {
+    if (hasThinning) {
+      return `Scalp-nourishing formula — massage into scalp to stimulate circulation. Lightweight enough to use without weighing down thinning strands.`;
+    }
+    return `Sealing oil appropriate for ${porosity} porosity ${curlTypeLabel} hair — apply to ends after styling to lock in moisture.`;
+  }
+
+  // Generic fallback -- still better than "BTMS near the top."
+  return `Scores well for ${porosity} porosity ${curlTypeLabel} hair based on ingredient compatibility and formula weight.`;
 }
 
 type CandidateRow = {
@@ -228,7 +255,14 @@ async function rankCategoryProducts(
         brandName,
         score: result.normalizedScore,
         weight: result.productWeight,
-        why: generateWhyCopy(categorySlug, result.matches, result.normalizedScore, profile.porosity, curlType),
+        why: generateWhyCopy(
+          row.name,
+          categorySlug,
+          curlType,
+          profile.porosity,
+          result.productWeight,
+          hairConcerns
+        ),
         affiliateLink: getAffiliateLink(row.name, brandName),
       };
     })

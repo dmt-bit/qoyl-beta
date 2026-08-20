@@ -9,35 +9,117 @@ const WEIGHT_RANK: Record<ProductWeight, number> = {
 };
 const RANK_TO_WEIGHT: ProductWeight[] = ["ultralight", "light", "medium", "heavy", "very_heavy"];
 
-// ---- Step 1: product-name override ---------------------------------------
+// ---- Step 1: product-name signals -----------------------------------------
 //
-// A "Twisting Butter" or "Whip" is heavy/rich by formulation regardless of
-// how its ingredient list happens to be ordered -- checked first because
-// step 2/3 below, driven purely by top-8 ingredient position, can miss a
-// product like Camille Rose's Almond Jai Twisting Butter entirely: its
-// only classically "heavy" ingredients (Olive Oil, Castor Oil) sit at
-// label positions 11 and 14, outside the top 8, diluted by seven named
-// carrier oils ahead of them. Name-based heavy keywords floor the result
-// at "heavy" (ingredients can still push it to "very_heavy"); light
-// keywords cap it at "light" (ingredients can still pull it to
-// "ultralight"). Heavy is checked first when a name matches both lists.
-const HEAVY_NAME_KEYWORDS = [
+// Checked most-severe first, since a name can plausibly match more than
+// one list (e.g. "Deep Treatment" contains "treatment"). A match either
+// floors the result at a minimum tier (ingredients can still push it
+// higher), forces an exact tier (ultralight product types), or caps it at
+// a maximum tier (ingredients can still pull it lower). This runs before
+// step 2/3's ingredient counting because that step, driven purely by
+// top-8 label position, can miss a product entirely -- e.g. Camille
+// Rose's Almond Jai Twisting Butter has no classically "heavy"
+// ingredient inside its top 8 (Olive Oil and Castor Oil sit at label
+// positions 11 and 14), so without this, ingredient counting alone would
+// call it "ultralight".
+const VERY_HEAVY_NAME_KEYWORDS = [
   "butter",
   "whip",
   "pudding",
   "soufflé",
   "souffle",
-  "cream butter",
-  "twisting butter",
-  "curl butter",
-  "hair butter",
+  "grease",
+  "pomade",
+  "wax",
+  "beeswax",
+  // "Yogurt"/"groyogurt" formulas in this catalog (e.g. As I Am's Long &
+  // Luxe Groyogurt) run heavier than a "heavy" floor alone accounts for:
+  // their real top-8 ingredients are humectants/proteins/extracts, with
+  // the actual butters/oils positioned past the top 8, so nothing in
+  // step 2/3 pushes a "heavy" floor any higher on its own.
+  "yogurt",
+  "yoghurt",
+  "groyogurt",
 ];
-const LIGHT_NAME_KEYWORDS = ["mist", "spray", "water", "milk", "serum", "mousse", "foam"];
+const HEAVY_NAME_KEYWORDS = [
+  "masque",
+  "mask",
+  "cream",
+  "creme",
+  "growth cream",
+  "curl cream",
+  "hair cream",
+  "nourishing cream",
+  "deep treatment",
+  "reconstructor",
+  "intensive",
+  "ultra hydrating",
+  "moisture bomb",
+];
+// Bare "conditioner"/"treatment" need carve-outs below since they'd
+// otherwise steal the match from more specific phrases in other tiers
+// ("Leave-In Conditioner" is lighter than a rinse-out conditioner
+// despite the word match; "Oil Treatment" is a light-tier phrase that
+// happens to contain "treatment").
+const MEDIUM_NAME_KEYWORDS = ["deep conditioner", "co-wash", "cowash", "cleansing conditioner"];
+const ULTRALIGHT_NAME_KEYWORDS = ["dry shampoo", "scalp spray", "refresher", "setting spray"];
+const LIGHT_NAME_KEYWORDS = [
+  "mist",
+  "spray",
+  "water",
+  "milk",
+  "serum",
+  "elixir",
+  "oil treatment",
+  "hair oil",
+  "drops",
+  "essence",
+];
 
-function nameSignal(productName: string): "heavy" | "light" | null {
+// Word-boundary match, not raw substring -- plain .includes() lets short
+// phrases like "hair oil" false-positive inside an unrelated word (found
+// during testing: "Long & Luxe Groh**air oil**" contains "hair oil" as a
+// substring purely by coincidence, which wrongly capped a very_heavy oil
+// at "light"). \b prevents that without needing an exclusion list for
+// every possible collision.
+function containsPhrase(name: string, phrase: string): boolean {
+  const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\b${escaped}\\b`, "i").test(name);
+}
+
+function matchesMediumSignal(name: string): boolean {
+  if (MEDIUM_NAME_KEYWORDS.some((k) => containsPhrase(name, k))) return true;
+  if (containsPhrase(name, "treatment") && !containsPhrase(name, "oil treatment")) return true;
+  return containsPhrase(name, "conditioner") && !containsPhrase(name, "leave-in");
+}
+
+type NameSignal =
+  | { kind: "floor"; tier: ProductWeight }
+  | { kind: "force"; tier: ProductWeight }
+  | { kind: "ceiling"; tier: ProductWeight }
+  | null;
+
+function nameSignal(productName: string): NameSignal {
   const name = productName.toLowerCase();
-  if (HEAVY_NAME_KEYWORDS.some((k) => name.includes(k))) return "heavy";
-  if (LIGHT_NAME_KEYWORDS.some((k) => name.includes(k))) return "light";
+
+  if (VERY_HEAVY_NAME_KEYWORDS.some((k) => containsPhrase(name, k))) {
+    return { kind: "floor", tier: "very_heavy" };
+  }
+  if (HEAVY_NAME_KEYWORDS.some((k) => containsPhrase(name, k))) {
+    return { kind: "floor", tier: "heavy" };
+  }
+  if (matchesMediumSignal(name)) {
+    return { kind: "floor", tier: "medium" };
+  }
+  // Checked before the generic light-tier list below -- "Setting Spray"/
+  // "Dry Shampoo" are more specific than the bare "spray"/"water" words
+  // there and must win the match.
+  if (ULTRALIGHT_NAME_KEYWORDS.some((k) => containsPhrase(name, k))) {
+    return { kind: "force", tier: "ultralight" };
+  }
+  if (LIGHT_NAME_KEYWORDS.some((k) => containsPhrase(name, k))) {
+    return { kind: "ceiling", tier: "light" };
+  }
   return null;
 }
 
@@ -98,29 +180,68 @@ function weightedHeavyCount(ingredientList: string[]): number {
     .reduce((total, name, index) => (isHeavyIngredient(name) ? total + positionWeightFactor(index + 1) : total), 0);
 }
 
-function tierFromWeightedCount(count: number): ProductWeight {
+// Full label length matters when the top 8 has zero heavy-keyword hits:
+// a short, simple label (roughly a dozen ingredients or fewer) with
+// nothing heavy up front is a genuinely minimal, watery formula (e.g.
+// Giovanni Direct Leave-In's ~10-ingredient label -- "ultralight"). A
+// longer label with nothing heavy in the top 8 more often just means the
+// named oils/butters are further down the list, diluted by humectants
+// and extracts ahead of them (e.g. Mielle's Pomegranate & Honey Leave-In,
+// 30 ingredients, with named oils starting at position 8) -- "light" is
+// the more honest default there than the single most extreme tier.
+const SIMPLE_FORMULA_MAX_INGREDIENTS = 12;
+
+function tierFromWeightedCount(count: number, totalIngredientCount: number): ProductWeight {
   if (count >= 4) return "very_heavy";
   if (count >= 2.5) return "heavy";
   if (count >= 1.5) return "medium";
   if (count >= 0.5) return "light";
-  return "ultralight";
+  return totalIngredientCount <= SIMPLE_FORMULA_MAX_INGREDIENTS ? "ultralight" : "light";
 }
 
-// `category` is accepted for call-site/API stability (every scoring entry
-// point in lib/compatibility.ts already fetches and passes it) but isn't
-// used in the tier computation -- the rewritten classifier is name +
-// ingredient-position driven only, per spec.
+// ---- Step 2 (part 2 of this rewrite): category weight floor/ceiling ------
+//
+// A product can never be classified lighter than its category structurally
+// implies (a deep conditioner/masque is always at least medium) or, for
+// the two capped categories, heavier than the category allows (mousse is
+// always lightweight by nature). This is the final, most-authoritative
+// constraint -- applied after both ingredient counting and the name
+// signal above, so it can override either.
+const CATEGORY_WEIGHT_FLOOR: Partial<Record<string, ProductWeight>> = {
+  butter: "very_heavy",
+  "deep-conditioner": "medium",
+  conditioner: "light",
+  oil: "light",
+  treatment: "medium",
+};
+const CATEGORY_WEIGHT_CEILING: Partial<Record<string, ProductWeight>> = {
+  mousse: "light",
+  "scalp-treatment": "medium",
+  // Not in the original spec, added to close a real gap found while
+  // testing against Camille Rose's Curl Maker: a gel with castor +
+  // coconut oil blended in for shine/hold reads as "heavy" by pure
+  // ingredient count, but a gel's water/humectant-thickened base means
+  // it never actually behaves as heavy on hair the way a cream or
+  // butter of the same ingredient count would.
+  gel: "medium",
+};
+
 export function classifyProductWeight(
   ingredientList: string[],
-  _category: string,
+  category: string,
   productName: string = ""
 ): ProductWeight {
-  const ingredientRank = WEIGHT_RANK[tierFromWeightedCount(weightedHeavyCount(ingredientList))];
+  let rank = WEIGHT_RANK[tierFromWeightedCount(weightedHeavyCount(ingredientList), ingredientList.length)];
 
   const signal = nameSignal(productName);
-  let rank = ingredientRank;
-  if (signal === "heavy") rank = Math.max(rank, WEIGHT_RANK.heavy);
-  if (signal === "light") rank = Math.min(rank, WEIGHT_RANK.light);
+  if (signal?.kind === "floor") rank = Math.max(rank, WEIGHT_RANK[signal.tier]);
+  if (signal?.kind === "ceiling") rank = Math.min(rank, WEIGHT_RANK[signal.tier]);
+  if (signal?.kind === "force") rank = WEIGHT_RANK[signal.tier];
+
+  const floor = CATEGORY_WEIGHT_FLOOR[category];
+  if (floor) rank = Math.max(rank, WEIGHT_RANK[floor]);
+  const ceiling = CATEGORY_WEIGHT_CEILING[category];
+  if (ceiling) rank = Math.min(rank, WEIGHT_RANK[ceiling]);
 
   return RANK_TO_WEIGHT[rank];
 }
