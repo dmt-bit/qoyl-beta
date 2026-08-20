@@ -22,10 +22,11 @@ type RoutineStep = {
 };
 
 type ProductCandidate = {
-  ingredientName: string | null;
-  score: number | null;
-  rating: string | null;
-  reason: string | null;
+  productName: string;
+  brandName: string;
+  score: number;
+  why: string;
+  affiliateLink: string | null;
 };
 
 type ProductPick = {
@@ -33,6 +34,7 @@ type ProductPick = {
   categoryLabel: string;
   primary: ProductCandidate | null;
   alternate: ProductCandidate | null;
+  noProductsYet: boolean;
 };
 
 type AvoidIngredient = {
@@ -129,14 +131,26 @@ function ProductCard({ pick }: { pick: ProductPick }) {
         {pick.categoryLabel}
       </p>
 
-      {!primary || !primary.ingredientName || primary.score === null ? (
-        <p className="mt-3 text-sm text-cream/50">
-          No match found yet for this category.
-        </p>
+      {pick.noProductsYet || !primary ? (
+        <>
+          <p className="mt-3 text-sm text-cream/50">
+            We are still adding {pick.categoryLabel.toLowerCase()} products to our
+            database.
+          </p>
+          <Link
+            href={`/search?category=${encodeURIComponent(pick.category)}`}
+            className="print-hide mt-3 inline-block text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+          >
+            Search our product catalog →
+          </Link>
+        </>
       ) : (
         <>
           <div className="mt-3 flex items-start justify-between gap-3">
-            <p className="font-serif text-lg text-cream">{primary.ingredientName}</p>
+            <div>
+              <p className="font-serif text-lg text-cream">{primary.productName}</p>
+              <p className="text-xs text-cream/50">{primary.brandName}</p>
+            </div>
             <span
               className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
                 TIER_CLASSES[scoreTier(primary.score)]
@@ -145,22 +159,21 @@ function ProductCard({ pick }: { pick: ProductPick }) {
               {primary.score}
             </span>
           </div>
-          {primary.reason && (
-            <p className="mt-1 text-sm text-cream/70">{primary.reason}</p>
-          )}
+          <p className="mt-1 text-sm text-cream/70">{primary.why}</p>
           <ShopButton
-            productName={primary.ingredientName}
+            productName={primary.productName}
+            brandName={primary.brandName}
             className="print-hide mt-3 inline-block text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
           />
 
-          {alternate?.ingredientName && (
+          {alternate && (
             <div className="mt-4 border-t border-bronze/20 pt-3">
               <p className="text-xs text-cream/50">
                 Alternate pick:{" "}
-                <span className="text-cream/80">{alternate.ingredientName}</span>
-                {alternate.score !== null && (
-                  <span className="ml-2 text-cream/50">{alternate.score}/100</span>
-                )}
+                <span className="text-cream/80">
+                  {alternate.productName} · {alternate.brandName}
+                </span>
+                <span className="ml-2 text-cream/50">{alternate.score}/100</span>
               </p>
             </div>
           )}

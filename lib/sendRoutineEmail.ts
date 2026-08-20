@@ -9,6 +9,7 @@ import { renderRoutineEmailHtml } from "@/emails/routine-template";
 
 const FROM_ADDRESS = "Qoyl <hey@qoyl.live>";
 const DASHBOARD_URL = "qoyl-beta-alpha.vercel.app/dashboard";
+const SEARCH_URL = "https://qoyl.live/search";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -66,7 +67,7 @@ export async function sendRoutineEmail(
       generateWashCalendar(now.getFullYear(), now.getMonth() + 1, profile.porosity)
     ),
     lookupCityState(profile.zip_code),
-    getRoutineProducts(profile.porosity),
+    getRoutineProducts(profile.porosity, profile.curl_type, profile.hair_concerns),
   ]);
 
   const steps = generateRoutineSteps(
@@ -101,6 +102,7 @@ export async function sendRoutineEmail(
     products,
     seasonalNote,
     dashboardUrl: DASHBOARD_URL,
+    searchUrl: SEARCH_URL,
   });
 
   try {

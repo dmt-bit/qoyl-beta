@@ -1,5 +1,5 @@
 import { CalendarDay, WashDayType } from "@/lib/routineCalendar";
-import { RoutineProduct } from "@/lib/routineProducts";
+import { RoutineProductPick } from "@/lib/routineProducts";
 import { SeasonalNote } from "@/lib/routineSeasonalNote";
 import { RoutineStep } from "@/lib/routineSteps";
 
@@ -14,9 +14,10 @@ export type RoutineEmailData = {
   waterHardnessLabel: string | null; // e.g. "hard water"
   calendarDays: CalendarDay[];
   steps: RoutineStep[];
-  products: RoutineProduct[];
+  products: RoutineProductPick[];
   seasonalNote: SeasonalNote;
   dashboardUrl: string;
+  searchUrl: string;
 };
 
 function escapeHtml(value: string): string {
@@ -82,41 +83,31 @@ function scoreFillClass(score: number): string {
   return "score-fill-r";
 }
 
-// No real product/brand catalog exists yet (Phase 1) -- these read as
-// guidance ("look for a cleanser with X") rather than a specific product
-// name, so nothing implies a real shoppable item that doesn't exist.
-const CATEGORY_NOUN: Record<string, string> = {
-  chelating_shampoo: "chelating shampoo",
-  regular_shampoo: "cleanser",
-  deep_conditioner: "deep conditioner",
-  leave_in: "leave-in conditioner",
-  styler: "styler",
-  sealing_oil: "sealing oil",
-};
-
-function renderProducts(products: RoutineProduct[]): string {
+function renderProducts(products: RoutineProductPick[], searchUrl: string): string {
   return products
-    .map((product) => {
-      if (!product.ingredientName || product.score === null) {
+    .map((pick) => {
+      if (pick.noProductsYet || !pick.primary) {
         return `
   <div class="product-card">
-    <div class="product-cat">${escapeHtml(product.categoryLabel)}</div>
-    <div class="product-why">No match found yet for this category.</div>
+    <div class="product-cat">${escapeHtml(pick.categoryLabel)}</div>
+    <div class="product-why">We're still adding ${escapeHtml(pick.categoryLabel.toLowerCase())} products to our database.</div>
+    <a href="${escapeHtml(searchUrl)}?category=${encodeURIComponent(pick.category)}" class="shop-btn">Search our product catalog &rarr;</a>
   </div>`;
       }
 
-      const noun = CATEGORY_NOUN[product.category] ?? "product";
+      const { primary, alternate } = pick;
 
       return `
   <div class="product-card">
-    <div class="product-cat">${escapeHtml(product.categoryLabel)}</div>
-    <div class="product-guidance">Look for a ${escapeHtml(noun)} with <strong>${escapeHtml(product.ingredientName)}</strong> as a primary ingredient.</div>
-    ${product.reason ? `<div class="product-why">${escapeHtml(product.reason)}</div>` : ""}
+    <div class="product-cat">${escapeHtml(pick.categoryLabel)}</div>
+    <div class="product-guidance"><strong>${escapeHtml(primary.productName)}</strong> &middot; ${escapeHtml(primary.brandName)}</div>
+    <div class="product-why">${escapeHtml(primary.why)}</div>
     <div class="score-row">
-      <div class="score-bar"><div class="${scoreFillClass(product.score)}" style="width:${product.score}%"></div></div>
-      <span class="score-num">${product.score}/100 for your profile</span>
+      <div class="score-bar"><div class="${scoreFillClass(primary.score)}" style="width:${primary.score}%"></div></div>
+      <span class="score-num">${primary.score}/100 for your profile</span>
     </div>
-    <a href="${product.affiliateLink}" class="shop-btn">Shop this product &rarr;</a>
+    <a href="${escapeHtml(primary.affiliateLink ?? `${searchUrl}?q=${encodeURIComponent(primary.productName)}`)}" class="shop-btn">Shop this product &rarr;</a>
+    ${alternate ? `<div class="product-alt">Alternate: ${escapeHtml(alternate.productName)} &middot; ${escapeHtml(alternate.brandName)} &middot; ${alternate.score}/100</div>` : ""}
   </div>`;
     })
     .join("");
@@ -201,6 +192,7 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
 .product-guidance{font-size:13px;color:#1C1612;line-height:1.5;margin-bottom:6px}
 .product-guidance strong{font-weight:600}
 .product-why{font-size:11px;color:#5A4A3A;line-height:1.55;margin-bottom:6px}
+.product-alt{font-size:10px;color:#9C7B5A;margin-top:8px}
 .score-row{display:flex;align-items:center;gap:8px}
 .score-bar{width:80px;height:4px;background:#EDE5D8;border-radius:2px;overflow:hidden}
 .score-fill-g{height:100%;background:#5BA67A;border-radius:2px}
@@ -258,7 +250,7 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
   <div class="section-label">your curated product list</div>
   <div class="section-title">Top picks for your profile &middot; ${escapeHtml(data.monthLabel)}</div>
 
-  ${renderProducts(data.products)}
+  ${renderProducts(data.products, data.searchUrl)}
 
   ${renderSeasonalNote(data.seasonalNote)}
 

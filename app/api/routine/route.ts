@@ -71,7 +71,7 @@ export async function GET(request: Request) {
         profile?.hair_concerns ?? null
       )
     ),
-    getRoutineProductPicks(porosity),
+    getRoutineProductPicks(porosity, curlType, profile?.hair_concerns ?? null),
     getIngredientsToAvoid(porosity, avoidLimit),
   ]);
 
