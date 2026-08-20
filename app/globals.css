@@ -146,6 +146,20 @@ body {
   animation: fade-step-in 0.25s ease-out both;
 }
 
+/* Long-press action sheet on the home feed's masonry cards -- slides up
+   from the bottom, iOS share-sheet style. */
+@keyframes slide-up-sheet {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.slide-up-sheet {
+  animation: slide-up-sheet 0.2s ease-out both;
+}
+
 /* Infinite horizontal scroll for the hero's hair-type strip. Duplicated
    list in the markup (two copies back to back) + a 50% translate makes
    the loop seamless. */

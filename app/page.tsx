@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import PostFilterGrid from "@/components/PostFilterGrid";
+import MasonryFeed from "@/components/MasonryFeed";
 import ScoreExampleCard from "@/components/ScoreExampleCard";
 import Testimonials from "@/components/Testimonials";
 import { PRODUCT_CATEGORIES } from "@/lib/productCategories";
@@ -170,10 +170,10 @@ export default async function Home() {
       </section>
 
       {/* 3. THE FEED -- dark returns after the cream Style Match section.
-          PostFilterGrid already renders its own "The feed" eyebrow. */}
+          MasonryFeed already renders its own "The feed" eyebrow. */}
       <div className="fade-up-block border-b border-bronze/20 bg-dark px-4 py-12 sm:px-6">
         <div className="mx-auto max-w-5xl">
-          <PostFilterGrid posts={posts ?? []} />
+          <MasonryFeed posts={posts ?? []} />
         </div>
       </div>
 

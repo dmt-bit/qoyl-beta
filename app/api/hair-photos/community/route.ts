@@ -21,7 +21,14 @@ export type CommunityPhoto = {
 // embeddable via a PostgREST foreign-key join here (hair_photos.user_id
 // isn't declared as a FK to hair_profiles), so profiles are fetched
 // separately and merged server-side.
-export async function GET() {
+//
+// ?limit= lets callers ask for more than the original 9-photo grid needs
+// -- the home page masonry feed samples from the most recent 20.
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const limitParam = parseInt(searchParams.get("limit") ?? "9", 10);
+  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 50) : 9;
+
   const admin = getSupabaseAdmin();
 
   const { data: photos, error } = await admin
@@ -29,7 +36,7 @@ export async function GET() {
     .select("id, user_id, photo_url, caption")
     .eq("is_public", true)
     .order("created_at", { ascending: false })
-    .limit(9);
+    .limit(limit);
 
   if (error || !photos || photos.length === 0) {
     if (error) console.error("[hair-photos/community] Failed to list photos:", error);
