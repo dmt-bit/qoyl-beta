@@ -194,4 +194,22 @@ body {
     color: #000 !important;
     border-color: #999 !important;
   }
+
+  /* Preserve the calendar's clarify/protein color coding -- otherwise
+     the blanket `main * { border-color: #999 }` above turns every wash
+     type's border the same gray, losing the legend's meaning. Selector
+     specificity (two classes) beats `main *` (one element) regardless
+     of source order, so these win without needing to reorder anything. */
+  main .cal-cell-clarify {
+    border-color: #9C7B5A !important;
+  }
+  main .cal-cell-protein {
+    border-color: #5BA67A !important;
+  }
+
+  /* Keeps both month grids together on one printed page instead of
+     letting the browser split them across a page boundary. */
+  .cal-grid-container {
+    break-inside: avoid;
+  }
 }

@@ -8,7 +8,7 @@ import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
 import { curlFamily, CurlFamily, scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import { ProductWeight, WEIGHT_PILL_CLASSES, WEIGHT_PILL_LABEL, weightFitNote } from "@/lib/productWeight";
-import { formatWashDayLabel, WashDay, WashDayType } from "@/lib/routineCalendar";
+import { WashDay, WashDayType } from "@/lib/routineCalendar";
 
 type RoutineStep = {
   title: string;
@@ -63,65 +63,6 @@ const SCALP_LABELS: Record<string, string> = {
   "dandruff-prone": "Dandruff-prone scalp",
 };
 
-// "wash"/"chelate"/"protein" mean different things depending on curl
-// family now (a wavy "wash" day is a sulfate-free shampoo day; a coily
-// "wash" day is a regular wash inside the chelate/protein cycle), so
-// label/mini-routine text is keyed by (family, type), not type alone.
-const DEFAULT_WASH_TYPE_LABEL: Record<WashDayType, string> = {
-  chelate: "Chelating",
-  wash: "Regular wash",
-  protein: "Protein",
-  clarify: "Clarifying",
-  full_wash: "Full wash",
-  refresh: "Refresh",
-};
-
-const FAMILY_WASH_TYPE_LABEL: Partial<Record<CurlFamily, Partial<Record<WashDayType, string>>>> = {
-  wavy: { wash: "Sulfate-free wash" },
-};
-
-function washTypeLabel(type: WashDayType, family: CurlFamily | null): string {
-  const override = family ? FAMILY_WASH_TYPE_LABEL[family]?.[type] : undefined;
-  return override ?? DEFAULT_WASH_TYPE_LABEL[type];
-}
-
-const FAMILY_MINI_ROUTINE: Record<CurlFamily, Partial<Record<WashDayType, string>>> = {
-  straight: {
-    clarify: "Clarifying shampoo → Conditioner (ends only) → Style",
-    full_wash: "Gentle shampoo → Conditioner (ends only) → Style",
-    refresh: "Co-wash or dry shampoo at the roots",
-  },
-  wavy: {
-    clarify: "Clarifying shampoo → Condition → Scrunch style soaking wet",
-    wash: "Sulfate-free shampoo → Condition → Scrunch style soaking wet",
-    refresh: "Mist with water → Scrunch",
-  },
-  curly: {
-    chelate: "Chelating shampoo → Deep condition → Style soaking wet",
-    protein: "Shampoo → Protein treatment → Deep condition → Style soaking wet",
-    wash: "Shampoo → Deep condition → Style soaking wet",
-  },
-  coily: {
-    chelate: "Chelate → Shampoo → Deep condition → LCO",
-    wash: "Pre-poo → Shampoo → Deep condition → LCO",
-    protein: "Pre-poo → Shampoo → Protein → Deep condition → LCO",
-  },
-};
-
-function washTypeMiniRoutine(type: WashDayType, family: CurlFamily | null): string {
-  const byFamily = family ? FAMILY_MINI_ROUTINE[family] : undefined;
-  return byFamily?.[type] ?? FAMILY_MINI_ROUTINE.coily[type] ?? "";
-}
-
-const WASH_TYPE_ACCENT_CLASSES: Record<WashDayType, string> = {
-  chelate: "border-l-4 border-l-bronze",
-  wash: "border-l-4 border-l-dark",
-  protein: "border-l-4 border-l-green",
-  clarify: "border-l-4 border-l-bronze",
-  full_wash: "border-l-4 border-l-dark",
-  refresh: "border-l-4 border-l-dark", // unused -- refresh renders as a muted chip, not a card
-};
-
 const FREQUENCY_EXPLANATION: Record<CurlFamily, string> = {
   straight:
     "Sebum travels faster down straight hair strands — more frequent washing keeps your scalp healthy and hair looking fresh. This is normal for your hair type.",
@@ -143,32 +84,271 @@ function stepProductCategory(title: string): string {
   return "Styling product";
 }
 
-function WashDayListItem({ washDay, family }: { washDay: WashDay; family: CurlFamily | null }) {
-  // "Refresh" days (co-wash/dry-shampoo/scrunch-refresh between real wash
-  // days) render as a compact muted chip, not a full accent-bordered
-  // card -- they're a lighter-touch reminder, not a wash-day event.
-  if (washDay.washType === "refresh") {
+// ---- Calendar grid (Part 2: restores a real month-grid visual instead
+// of the rolling list) -----------------------------------------------
+//
+// Wash-date math itself is untouched -- this only changes how the
+// already-computed WashDay[] is displayed, mapping each entry onto
+// full calendar-month grids instead of a flat list.
+
+function toIsoLocal(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function addDays(date: Date, days: number): Date {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+const CALENDAR_WINDOW_DAYS = 30;
+
+type MonthMeta = { year: number; month: number; label: string };
+
+// Mirrors the given month-detection snippet (today -> today+30) -- used
+// only to decide which month grid(s) to render. Which individual days
+// fall inside the real 30-day wash window is a separate, day-accurate
+// check (windowStartIso/windowEndIso in WashCalendarGrid below).
+function getMonthsInWindow(today: Date): MonthMeta[] {
+  const endDate = addDays(today, 30);
+  const months: MonthMeta[] = [];
+  const seen = new Set<string>();
+  for (const d of [today, endDate]) {
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    months.push({
+      year: d.getFullYear(),
+      month: d.getMonth(),
+      label: d.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+    });
+  }
+  return months;
+}
+
+type DayCellData = { day: number; iso: string; weekday: number };
+
+function buildMonthCells(year: number, month: number): DayCellData[] {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: DayCellData[] = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(year, month, day);
+    cells.push({ day, iso: toIsoLocal(date), weekday: date.getDay() });
+  }
+  return cells;
+}
+
+type WashCellStyle = {
+  cellClass: string;
+  numberClass: string;
+  label: string;
+  labelClass: string;
+};
+
+// "clarify"/"chelate" render identically (bronze border -- clarifying
+// and chelating washes read the same on the calendar), as do
+// "wash"/"full_wash" (plain dark, no border).
+function washDayCellStyle(type: WashDayType): WashCellStyle {
+  if (type === "chelate" || type === "clarify") {
+    return {
+      cellClass: "cal-cell-clarify bg-dark border-2 border-bronze",
+      numberClass: "text-cream",
+      label: "Clarify",
+      labelClass: "text-bronze",
+    };
+  }
+  if (type === "protein") {
+    return {
+      cellClass: "cal-cell-protein bg-dark border-2 border-green",
+      numberClass: "text-cream",
+      label: "Protein",
+      labelClass: "text-green",
+    };
+  }
+  if (type === "refresh") {
+    return {
+      cellClass: "cal-cell-refresh bg-[#2C2420]",
+      numberClass: "text-bronze2",
+      label: "Refresh",
+      labelClass: "text-bronze2",
+    };
+  }
+  return {
+    cellClass: "cal-cell-wash bg-dark",
+    numberClass: "text-cream",
+    label: "Wash",
+    labelClass: "text-cream/50",
+  };
+}
+
+function DayCell({
+  cell,
+  washDay,
+  isToday,
+  isWithinWindow,
+  family,
+}: {
+  cell: DayCellData;
+  washDay: WashDay | undefined;
+  isToday: boolean;
+  isWithinWindow: boolean;
+  family: CurlFamily | null;
+}) {
+  const todayMarker = isToday ? (
+    <span className="absolute left-1/2 top-0.5 h-1 w-1 -translate-x-1/2 rounded-full bg-bronze2" />
+  ) : null;
+
+  if (washDay) {
+    const style = washDayCellStyle(washDay.washType);
     return (
-      <div className="flex flex-wrap items-center gap-2 rounded-md bg-warm/5 px-4 py-2">
-        <span className="shrink-0 rounded-full bg-muted/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cream/50">
-          Refresh
-        </span>
-        <span className="text-xs text-cream/60">
-          {formatWashDayLabel(washDay.date)} — {washTypeMiniRoutine(washDay.washType, family)}
+      <div
+        className={`relative flex min-h-[40px] flex-col items-center justify-center rounded-md ${style.cellClass}`}
+      >
+        {todayMarker}
+        <span className={`font-sans text-xs ${style.numberClass}`}>{cell.day}</span>
+        <span className={`font-sans text-[7px] sm:text-[8px] ${style.labelClass}`}>
+          {style.label}
         </span>
       </div>
     );
   }
 
+  if (!isWithinWindow) {
+    return (
+      <div className="flex min-h-[40px] items-center justify-center rounded-md opacity-30">
+        <span className="font-sans text-xs text-muted">{cell.day}</span>
+      </div>
+    );
+  }
+
+  // Within the window but not a wash day -- coily's routine explicitly
+  // calls for nightly ends-sealing on every non-wash day (see
+  // lib/routineSteps.ts's "Seal ends -- every single night" step), so
+  // that family gets a bronze "seal ends" dot; no other family's
+  // between-wash days are tied to one mandatory nightly action, so they
+  // read as a plain muted rest-day dot.
+  const dotClass = family === "coily" ? "bg-bronze" : "bg-muted";
   return (
-    <div
-      className={`rounded-md bg-warm/10 px-4 py-3 ${WASH_TYPE_ACCENT_CLASSES[washDay.washType]}`}
-    >
-      <p className="text-sm font-medium text-cream">
-        {formatWashDayLabel(washDay.date)}
-        <span className="text-cream/50"> — {washTypeLabel(washDay.washType, family)}</span>
-      </p>
-      <p className="mt-1 text-xs text-cream/60">{washTypeMiniRoutine(washDay.washType, family)}</p>
+    <div className="relative flex min-h-[40px] flex-col items-center justify-center rounded-md">
+      {todayMarker}
+      <span className="font-sans text-xs text-muted">{cell.day}</span>
+      <span className={`mt-0.5 h-1 w-1 rounded-full ${dotClass}`} />
+    </div>
+  );
+}
+
+function MonthCalendar({
+  meta,
+  washDayByDate,
+  todayIso,
+  windowStartIso,
+  windowEndIso,
+  family,
+}: {
+  meta: MonthMeta;
+  washDayByDate: Map<string, WashDay>;
+  todayIso: string;
+  windowStartIso: string;
+  windowEndIso: string;
+  family: CurlFamily | null;
+}) {
+  const cells = buildMonthCells(meta.year, meta.month);
+  const leadingEmpty = cells[0]?.weekday ?? 0;
+
+  return (
+    <div>
+      <h3 className="font-serif text-base text-bronze">{meta.label}</h3>
+      <div className="mt-2 grid grid-cols-7 gap-1">
+        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+          <div
+            key={i}
+            className="text-center font-sans text-[9px] uppercase tracking-wide text-muted"
+          >
+            {d}
+          </div>
+        ))}
+        {Array.from({ length: leadingEmpty }).map((_, i) => (
+          <div key={`lead-${i}`} />
+        ))}
+        {cells.map((cell) => (
+          <DayCell
+            key={cell.iso}
+            cell={cell}
+            washDay={washDayByDate.get(cell.iso)}
+            isToday={cell.iso === todayIso}
+            isWithinWindow={cell.iso >= windowStartIso && cell.iso <= windowEndIso}
+            family={family}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CalendarLegend({ family }: { family: CurlFamily | null }) {
+  const items: { swatchClass: string; label: string }[] = [
+    { swatchClass: "border-2 border-bronze bg-dark", label: "Clarifying wash" },
+    { swatchClass: "bg-dark", label: "Regular wash" },
+    { swatchClass: "border-2 border-green bg-dark", label: "Protein treatment" },
+    family === "coily"
+      ? { swatchClass: "bg-bronze", label: "Seal ends tonight" }
+      : { swatchClass: "bg-muted", label: "Rest day" },
+  ];
+  if (family === "straight" || family === "wavy") {
+    items.push({ swatchClass: "bg-[#2C2420]", label: "Refresh / co-wash day" });
+  }
+
+  return (
+    <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-cream/60">
+      {items.map((item) => (
+        <span key={item.label} className="flex items-center gap-1.5">
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-sm ${item.swatchClass}`} />
+          {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function WashCalendarGrid({
+  calendarDays,
+  family,
+}: {
+  calendarDays: WashDay[];
+  family: CurlFamily | null;
+}) {
+  if (calendarDays.length === 0) return null;
+
+  const washDayByDate = new Map(calendarDays.map((d) => [d.date, d]));
+  const todayIso = calendarDays[0].date; // offset 0 is always today, see generateWashCalendar
+  const today = new Date(`${todayIso}T00:00:00`);
+  const windowEndIso = toIsoLocal(addDays(today, CALENDAR_WINDOW_DAYS - 1));
+  const months = getMonthsInWindow(today);
+
+  return (
+    <div className="cal-grid-container mt-4">
+      <div
+        className={`grid grid-cols-1 gap-x-8 gap-y-8 ${
+          months.length > 1 ? "sm:grid-cols-2 sm:divide-x sm:divide-bronze/20" : ""
+        }`}
+      >
+        {months.map((meta, i) => (
+          <div key={`${meta.year}-${meta.month}`} className={i > 0 ? "sm:pl-8" : ""}>
+            <MonthCalendar
+              meta={meta}
+              washDayByDate={washDayByDate}
+              todayIso={todayIso}
+              windowStartIso={todayIso}
+              windowEndIso={windowEndIso}
+              family={family}
+            />
+          </div>
+        ))}
+      </div>
+      <CalendarLegend family={family} />
     </div>
   );
 }
@@ -387,7 +567,7 @@ function RoutineContent() {
           )}
         </section>
 
-        {/* SECTION 2 -- rolling 30-day wash day list */}
+        {/* SECTION 2 -- 30-day wash calendar */}
         <section className="print-page-break mt-12">
           <h2 className="font-serif text-2xl font-semibold text-cream">
             Your next 30 days — starting {data.startDateLabel}
@@ -402,11 +582,7 @@ function RoutineContent() {
             <p className="mt-2 text-sm text-cream/60">{FREQUENCY_EXPLANATION[family]}</p>
           )}
 
-          <div className="mt-4 space-y-2">
-            {data.calendarDays.map((washDay) => (
-              <WashDayListItem key={washDay.date} washDay={washDay} family={family} />
-            ))}
-          </div>
+          <WashCalendarGrid calendarDays={data.calendarDays} family={family} />
         </section>
 
         {/* SECTION 3 -- Personalized routine steps */}

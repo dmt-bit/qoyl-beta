@@ -29,6 +29,23 @@ const ROUTINE_CATEGORIES: { slug: string; label: string }[] = [
   { slug: "oil", label: "Sealing Oil" },
 ];
 
+// Extra category per curl family, inserted right after shampoo: straight
+// hair gets dry shampoo as a between-full-wash-day option; wavy, curly,
+// and coily all get co-wash as a lighter/primary cleansing alternative to
+// a full shampoo.
+const FAMILY_EXTRA_CATEGORY: Record<CurlFamily, { slug: string; label: string }> = {
+  straight: { slug: "dry-shampoo", label: "Dry Shampoo" },
+  wavy: { slug: "co-wash", label: "Co-Wash" },
+  curly: { slug: "co-wash", label: "Co-Wash" },
+  coily: { slug: "co-wash", label: "Co-Wash" },
+};
+
+function routineCategoriesForFamily(family: CurlFamily | null): { slug: string; label: string }[] {
+  if (!family) return ROUTINE_CATEGORIES;
+  const [shampoo, ...rest] = ROUTINE_CATEGORIES;
+  return [shampoo, FAMILY_EXTRA_CATEGORY[family], ...rest];
+}
+
 // Candidate pool size per category -- large enough to give the scorer a
 // real spread to rank without fetching the entire catalog on every
 // routine load.
@@ -270,12 +287,9 @@ async function rankCategoryProducts(
     .sort((a, b) => b.score - a.score);
 }
 
-async function loadCategoryIds(): Promise<Map<string, string>> {
+async function loadCategoryIds(slugs: string[]): Promise<Map<string, string>> {
   const admin = getSupabaseAdmin();
-  const { data } = await admin
-    .from("categories")
-    .select("id, slug")
-    .in("slug", ROUTINE_CATEGORIES.map((c) => c.slug));
+  const { data } = await admin.from("categories").select("id, slug").in("slug", slugs);
 
   return new Map((data ?? []).map((row) => [row.slug as string, row.id as string]));
 }
@@ -286,13 +300,15 @@ export async function getRoutineProductPicks(
   hairConcerns: string[] | null = null
 ): Promise<RoutineProductPick[]> {
   const normalizedPorosity = porosity ?? "medium";
-  const categoryIds = await loadCategoryIds();
+  const family = curlFamily(curlType);
+  const categories = routineCategoriesForFamily(family);
+  const categoryIds = await loadCategoryIds(categories.map((c) => c.slug));
 
-  // Six categories x a candidates fetch + a scoring pass each -- run
+  // Categories x a candidates fetch + a scoring pass each -- run
   // concurrently rather than one at a time, both for responsiveness and
   // to stay well under Vercel Hobby's ~10s function timeout.
   const results = await Promise.all(
-    ROUTINE_CATEGORIES.map(async (category) => {
+    categories.map(async (category) => {
       const categoryId = categoryIds.get(category.slug);
       const ranked = categoryId
         ? await rankCategoryProducts(category.slug, categoryId, normalizedPorosity, curlType, hairConcerns)

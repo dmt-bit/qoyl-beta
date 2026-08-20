@@ -11,7 +11,9 @@ export type ProductCategory = {
 
 export const PRODUCT_CATEGORIES: ProductCategory[] = [
   { label: "Shampoo", slug: "shampoo" },
+  { label: "Dry Shampoo", slug: "dry-shampoo" },
   { label: "Conditioner", slug: "conditioner" },
+  { label: "Co-Wash", slug: "co-wash" },
   { label: "Deep Conditioner", slug: "deep-conditioner" },
   { label: "Leave-In", slug: "leave-in" },
   { label: "Styler", slug: "styler" },
