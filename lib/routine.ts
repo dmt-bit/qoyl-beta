@@ -134,11 +134,27 @@ function withChildSafety(
   ];
 }
 
+function withThinningHairNote(
+  steps: RoutineStep[],
+  profile: HairProfileForRoutine
+): RoutineStep[] {
+  if (!profile.hair_concerns?.includes("thinning")) return steps;
+
+  return [
+    ...steps,
+    {
+      title: `${steps.length + 1}. Thinning Hair Care`,
+      description:
+        "Scalp massage for 4 minutes during wash day has clinical evidence supporting hair growth stimulation. Use the pads of your fingers, not your nails.",
+    },
+  ];
+}
+
 function withAdditionalGuidance(
   steps: RoutineStep[],
   profile: HairProfileForRoutine
 ): RoutineStep[] {
-  return withChildSafety(withExtensionCare(steps, profile), profile);
+  return withThinningHairNote(withChildSafety(withExtensionCare(steps, profile), profile), profile);
 }
 
 export function getBasicRoutineSteps(

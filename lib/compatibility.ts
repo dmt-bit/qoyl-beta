@@ -433,6 +433,48 @@ function applyAgeAdjustment(
   return { score: adjusted, rating: ratingForScore(adjusted) };
 }
 
+// ---- Hair-concern scoring adjustments (thinning hair) --------------------
+//
+// hair_concerns is a free-text array on hair_profiles (see
+// CONCERN_OPTIONS in app/profile/page.tsx) -- "thinning" is the value
+// behind the "Thinning hair" checkbox. Applies on top of whatever score
+// porosity/curl-type/climate/water-hardness/age already produced, same
+// layering as applyAgeAdjustment above. Reuses several of that section's
+// ingredient sets (ROSEMARY, BIOTIN, CAFFEINE, SAW_PALMETTO,
+// PUMPKIN_SEED_OIL, SULFATES, isPeptide) since thinning-hair care and
+// midlife hair care target a lot of the same ingredients.
+
+const NIACINAMIDE = new Set(["niacinamide"]);
+const CASTOR_OIL = new Set(["ricinus communis seed oil"]);
+
+function applyThinningHairAdjustment(
+  inciName: string,
+  hairConcerns: string[] | null,
+  position: number,
+  score: number,
+  rating: string
+): { score: number; rating: string } {
+  if (!hairConcerns?.includes("thinning")) return { score, rating };
+
+  const name = inciName.trim().toLowerCase();
+  let delta = 0;
+
+  if (ROSEMARY.has(name)) delta += 2;
+  if (BIOTIN.has(name)) delta += 2;
+  if (CAFFEINE.has(name)) delta += 2;
+  if (SAW_PALMETTO.has(name)) delta += 2;
+  if (PUMPKIN_SEED_OIL.has(name)) delta += 2;
+  if (NIACINAMIDE.has(name)) delta += 1;
+  if (isPeptide(name)) delta += 2;
+  if (CASTOR_OIL.has(name)) delta += 1;
+  if (SULFATES.has(name)) delta -= 2;
+  if (name === "dimethicone" && position <= 5) delta -= 1;
+
+  if (delta === 0) return { score, rating };
+  const adjusted = clampScore(score + delta);
+  return { score: adjusted, rating: ratingForScore(adjusted) };
+}
+
 function applyCurlTypeAdjustment(
   inciName: string,
   family: CurlFamily | null,
@@ -498,6 +540,7 @@ export type ScoringProfile = {
   scalpCondition: string | null;
   family: CurlFamily | null;
   ageRange: string | null;
+  hairConcerns: string[] | null;
 };
 
 type ProfileRow = {
@@ -507,10 +550,11 @@ type ProfileRow = {
   climate: string | null;
   water_hardness: string | null;
   // Optional -- not every caller's select includes it (e.g.
-  // lib/travelKitGenerator.ts doesn't apply age-based scoring), so this
-  // just falls back to no age adjustment rather than requiring every
-  // caller to be updated.
+  // lib/travelKitGenerator.ts doesn't apply age-based or concern-based
+  // scoring), so these just fall back to no adjustment rather than
+  // requiring every caller to be updated.
   adult_age_range?: string | null;
+  hair_concerns?: string[] | null;
 };
 
 // Shared by loadScoringProfile (browser, localStorage-driven) and any
@@ -540,6 +584,7 @@ export function buildScoringProfile(
     scalpCondition: normalizeScalpCondition(row.scalp_condition),
     family: curlFamily(row.curl_type),
     ageRange: row.adult_age_range ?? null,
+    hairConcerns: row.hair_concerns ?? null,
   };
 }
 
@@ -556,7 +601,7 @@ async function loadScoringProfile(): Promise<
   const { data: profile, error: profileError } = await supabase
     .from("hair_profiles")
     .select(
-      "curl_type, porosity, scalp_condition, strand_thickness, climate, water_hardness, adult_age_range"
+      "curl_type, porosity, scalp_condition, strand_thickness, climate, water_hardness, adult_age_range, hair_concerns"
     )
     .eq("id", profileId)
     .single();
@@ -610,7 +655,7 @@ function resolveScoreResult(
   scoreRows: ScoreRow[],
   profile: ScoringProfile
 ): ScoreResult {
-  const { scalpCondition, family, climate, waterHardness, porosity, ageRange } =
+  const { scalpCondition, family, climate, waterHardness, porosity, ageRange, hairConcerns } =
     profile;
 
   if (ingredients.length === 0) {
@@ -694,6 +739,13 @@ function resolveScoreResult(
       ingredient.inci_name,
       ageRange,
       porosity,
+      ingredient.position,
+      score,
+      rating
+    ));
+    ({ score, rating } = applyThinningHairAdjustment(
+      ingredient.inci_name,
+      hairConcerns,
       ingredient.position,
       score,
       rating

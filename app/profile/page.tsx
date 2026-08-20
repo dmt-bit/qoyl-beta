@@ -357,6 +357,7 @@ const CONCERN_OPTIONS = [
   { value: "scalp", label: "Scalp" },
   { value: "frizz", label: "Frizz" },
   { value: "growth", label: "Growth" },
+  { value: "thinning", label: "Thinning hair" },
 ];
 const YES_NO_OPTIONS = [
   { value: "yes", label: "Yes" },

@@ -334,6 +334,22 @@ export function getAgeAwareRoutineStep(
   };
 }
 
+// Additive, same pattern as getChildSafetyStep/getAgeAwareRoutineStep --
+// appended when "thinning" is one of the user's selected hair_concerns
+// (see CONCERN_OPTIONS in app/profile/page.tsx), regardless of curl type
+// or age.
+export function getThinningHairRoutineStep(
+  hairConcerns: string[] | null
+): RoutineStep | null {
+  if (!hairConcerns?.includes("thinning")) return null;
+
+  return {
+    title: "Thinning Hair Care",
+    body: "Scalp massage for 4 minutes during wash day has clinical evidence supporting hair growth stimulation. Use the pads of your fingers, not your nails.",
+    why: "Why: massage increases blood flow to hair follicles, which is linked to improved hair growth in clinical studies.",
+  };
+}
+
 export function generateRoutineSteps(
   curlType: string | null,
   porosity: string | null,
@@ -342,7 +358,8 @@ export function generateRoutineSteps(
   extensionType: string[] | null = null,
   extensionCare: string | null = null,
   profileFor: string | null = null,
-  adultAgeRange: string | null = null
+  adultAgeRange: string | null = null,
+  hairConcerns: string[] | null = null
 ): RoutineStep[] {
   const family = curlFamily(curlType);
 
@@ -365,6 +382,11 @@ export function generateRoutineSteps(
   const ageAwareStep = getAgeAwareRoutineStep(adultAgeRange);
   if (ageAwareStep) {
     steps = [...steps, ageAwareStep];
+  }
+
+  const thinningHairStep = getThinningHairRoutineStep(hairConcerns);
+  if (thinningHairStep) {
+    steps = [...steps, thinningHairStep];
   }
 
   return steps;
