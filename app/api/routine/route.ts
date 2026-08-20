@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { hasRoutineSubscription } from "@/lib/purchases";
-import { formatStartDateLabel, generateWashCalendar } from "@/lib/routineCalendar";
+import {
+  formatStartDateLabel,
+  generateWashCalendar,
+  getWashFrequencyDays,
+} from "@/lib/routineCalendar";
 import { generateRoutineSteps } from "@/lib/routineSteps";
 import {
   getRoutineProductPicks,
@@ -44,13 +48,14 @@ export async function GET(request: Request) {
 
   const curlType = profile?.curl_type ?? null;
   const porosity = profile?.porosity ?? null;
+  const scalpCondition = profile?.scalp_condition ?? null;
   const profileFor = profile?.profile_for ?? null;
   // Caution/avoid-rated ingredients matter more for a baby profile, so
   // surface more of them rather than the usual top 5.
   const avoidLimit = isChildSafetyProfile(profileFor) ? 10 : 5;
 
   const [calendarDays, steps, products, avoidIngredients] = await Promise.all([
-    Promise.resolve(generateWashCalendar(now, porosity)),
+    Promise.resolve(generateWashCalendar(now, curlType, porosity, scalpCondition)),
     Promise.resolve(
       generateRoutineSteps(
         curlType,
@@ -72,9 +77,10 @@ export async function GET(request: Request) {
     firstName: profile?.first_name?.trim() || null,
     curlType,
     porosity,
-    scalpCondition: profile?.scalp_condition ?? null,
+    scalpCondition,
     zipCode: profile?.zip_code ?? null,
     startDateLabel,
+    washFrequency: getWashFrequencyDays(curlType, porosity, scalpCondition),
     profileFor,
     childSafetyNote: getChildSafetyNote(profileFor),
     calendarDays,

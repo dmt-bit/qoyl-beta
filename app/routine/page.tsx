@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Collapse from "@/components/Collapse";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
-import { curlFamily, scoreTier, TIER_CLASSES } from "@/lib/compatibility";
+import { curlFamily, CurlFamily, scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import { ProductWeight, WEIGHT_PILL_CLASSES, WEIGHT_PILL_LABEL, weightFitNote } from "@/lib/productWeight";
 import { formatWashDayLabel, WashDay, WashDayType } from "@/lib/routineCalendar";
 
@@ -46,6 +46,7 @@ type RoutineData = {
   scalpCondition: string | null;
   zipCode: string | null;
   startDateLabel: string;
+  washFrequency: { min: number; max: number; recommended: number };
   profileFor: string | null;
   childSafetyNote: string | null;
   calendarDays: WashDay[];
@@ -62,22 +63,74 @@ const SCALP_LABELS: Record<string, string> = {
   "dandruff-prone": "Dandruff-prone scalp",
 };
 
-const WASH_TYPE_LABEL: Record<WashDayType, string> = {
+// "wash"/"chelate"/"protein" mean different things depending on curl
+// family now (a wavy "wash" day is a sulfate-free shampoo day; a coily
+// "wash" day is a regular wash inside the chelate/protein cycle), so
+// label/mini-routine text is keyed by (family, type), not type alone.
+const DEFAULT_WASH_TYPE_LABEL: Record<WashDayType, string> = {
   chelate: "Chelating",
   wash: "Regular wash",
   protein: "Protein",
+  clarify: "Clarifying",
+  full_wash: "Full wash",
+  refresh: "Refresh",
 };
 
-const WASH_TYPE_MINI_ROUTINE: Record<WashDayType, string> = {
-  chelate: "Chelate → Shampoo → Deep condition → LCO",
-  wash: "Pre-poo → Shampoo → Deep condition → LCO",
-  protein: "Pre-poo → Shampoo → Protein → Deep condition → LCO",
+const FAMILY_WASH_TYPE_LABEL: Partial<Record<CurlFamily, Partial<Record<WashDayType, string>>>> = {
+  wavy: { wash: "Sulfate-free wash" },
 };
+
+function washTypeLabel(type: WashDayType, family: CurlFamily | null): string {
+  const override = family ? FAMILY_WASH_TYPE_LABEL[family]?.[type] : undefined;
+  return override ?? DEFAULT_WASH_TYPE_LABEL[type];
+}
+
+const FAMILY_MINI_ROUTINE: Record<CurlFamily, Partial<Record<WashDayType, string>>> = {
+  straight: {
+    clarify: "Clarifying shampoo → Conditioner (ends only) → Style",
+    full_wash: "Gentle shampoo → Conditioner (ends only) → Style",
+    refresh: "Co-wash or dry shampoo at the roots",
+  },
+  wavy: {
+    clarify: "Clarifying shampoo → Condition → Scrunch style soaking wet",
+    wash: "Sulfate-free shampoo → Condition → Scrunch style soaking wet",
+    refresh: "Mist with water → Scrunch",
+  },
+  curly: {
+    chelate: "Chelating shampoo → Deep condition → Style soaking wet",
+    protein: "Shampoo → Protein treatment → Deep condition → Style soaking wet",
+    wash: "Shampoo → Deep condition → Style soaking wet",
+  },
+  coily: {
+    chelate: "Chelate → Shampoo → Deep condition → LCO",
+    wash: "Pre-poo → Shampoo → Deep condition → LCO",
+    protein: "Pre-poo → Shampoo → Protein → Deep condition → LCO",
+  },
+};
+
+function washTypeMiniRoutine(type: WashDayType, family: CurlFamily | null): string {
+  const byFamily = family ? FAMILY_MINI_ROUTINE[family] : undefined;
+  return byFamily?.[type] ?? FAMILY_MINI_ROUTINE.coily[type] ?? "";
+}
 
 const WASH_TYPE_ACCENT_CLASSES: Record<WashDayType, string> = {
   chelate: "border-l-4 border-l-bronze",
   wash: "border-l-4 border-l-dark",
   protein: "border-l-4 border-l-green",
+  clarify: "border-l-4 border-l-bronze",
+  full_wash: "border-l-4 border-l-dark",
+  refresh: "border-l-4 border-l-dark", // unused -- refresh renders as a muted chip, not a card
+};
+
+const FREQUENCY_EXPLANATION: Record<CurlFamily, string> = {
+  straight:
+    "Sebum travels faster down straight hair strands — more frequent washing keeps your scalp healthy and hair looking fresh. This is normal for your hair type.",
+  wavy:
+    "Sebum travels fairly quickly down wavy strands, just not as fast as straight hair — washing every few days keeps your scalp balanced without stripping your wave pattern. This is normal for your hair type.",
+  curly:
+    "Your curl pattern slows sebum travel down the hair shaft compared to straighter textures — going longer between washes protects your curls' natural moisture. Focus your between-wash routine on sealing and protecting.",
+  coily:
+    "Your curl pattern slows sebum travel down the hair shaft — less frequent washing protects your hair's natural moisture. Focus your between-wash routine on sealing and protecting.",
 };
 
 function stepProductCategory(title: string): string {
@@ -90,16 +143,32 @@ function stepProductCategory(title: string): string {
   return "Styling product";
 }
 
-function WashDayListItem({ washDay }: { washDay: WashDay }) {
+function WashDayListItem({ washDay, family }: { washDay: WashDay; family: CurlFamily | null }) {
+  // "Refresh" days (co-wash/dry-shampoo/scrunch-refresh between real wash
+  // days) render as a compact muted chip, not a full accent-bordered
+  // card -- they're a lighter-touch reminder, not a wash-day event.
+  if (washDay.washType === "refresh") {
+    return (
+      <div className="flex flex-wrap items-center gap-2 rounded-md bg-warm/5 px-4 py-2">
+        <span className="shrink-0 rounded-full bg-muted/20 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-cream/50">
+          Refresh
+        </span>
+        <span className="text-xs text-cream/60">
+          {formatWashDayLabel(washDay.date)} — {washTypeMiniRoutine(washDay.washType, family)}
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`rounded-md bg-warm/10 px-4 py-3 ${WASH_TYPE_ACCENT_CLASSES[washDay.washType]}`}
     >
       <p className="text-sm font-medium text-cream">
         {formatWashDayLabel(washDay.date)}
-        <span className="text-cream/50"> — {WASH_TYPE_LABEL[washDay.washType]} wash</span>
+        <span className="text-cream/50"> — {washTypeLabel(washDay.washType, family)}</span>
       </p>
-      <p className="mt-1 text-xs text-cream/60">{WASH_TYPE_MINI_ROUTINE[washDay.washType]}</p>
+      <p className="mt-1 text-xs text-cream/60">{washTypeMiniRoutine(washDay.washType, family)}</p>
     </div>
   );
 }
@@ -238,6 +307,7 @@ function RoutineContent() {
   }
 
   const firstName = data.firstName || "there";
+  const family = curlFamily(data.curlType);
   const isChildOrBaby = data.profileFor === "child" || data.profileFor === "baby";
   const headerText = isChildOrBaby
     ? `Here's ${firstName}'s routine.`
@@ -322,9 +392,19 @@ function RoutineContent() {
           <h2 className="font-serif text-2xl font-semibold text-cream">
             Your next 30 days — starting {data.startDateLabel}
           </h2>
+
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <span className="inline-block rounded-full bg-bronze/20 px-3 py-1 text-xs font-medium text-bronze2">
+              Your hair: wash every {data.washFrequency.min}-{data.washFrequency.max} days
+            </span>
+          </div>
+          {family && (
+            <p className="mt-2 text-sm text-cream/60">{FREQUENCY_EXPLANATION[family]}</p>
+          )}
+
           <div className="mt-4 space-y-2">
             {data.calendarDays.map((washDay) => (
-              <WashDayListItem key={washDay.date} washDay={washDay} />
+              <WashDayListItem key={washDay.date} washDay={washDay} family={family} />
             ))}
           </div>
         </section>

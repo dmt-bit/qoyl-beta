@@ -157,73 +157,68 @@ function generateCoilySteps(
 // given for these lists (coily's per-step "why" copy doesn't apply here).
 
 const STRAIGHT_WHY =
-  "Why: straight hair is prone to looking flat and greasy -- everything should be lightweight and applied away from the scalp.";
+  "Why: sebum travels fastest down straight, fine strands -- daily care that respects roots vs. lengths and stays lightweight keeps hair looking fresh instead of flat, oily, or heat-damaged.";
 
 const STRAIGHT_STEPS: RoutineStep[] = [
   {
-    title: "Clarify -- every 1-2 weeks",
-    body: "Clarifying shampoo every 1-2 weeks to prevent buildup.",
+    title: "Daily refresh",
+    body: "Rinse or co-wash on non-full-wash days to remove scalp oil without stripping. Dry shampoo at the roots for second-day hair.",
     why: STRAIGHT_WHY,
   },
   {
-    title: "Condition -- mid-length to ends only",
-    body: "Lightweight conditioner from mid-length to ends only -- avoid the roots.",
+    title: "Full wash",
+    body: "Gentle or clarifying shampoo depending on where you are in the cycle. Focus shampoo on the scalp, not the lengths.",
     why: STRAIGHT_WHY,
   },
   {
-    title: "Deep condition -- only if needed",
-    body: "Skip deep conditioning unless your hair is heat-damaged or color-treated.",
+    title: "Conditioner -- mid-lengths and ends only",
+    body: "Never apply to roots or scalp -- this causes the flat, oily look within hours.",
     why: STRAIGHT_WHY,
   },
   {
-    title: "Dry & style",
-    body: "Air dry, or blow dry on low heat with a round brush for volume.",
+    title: "Heat styling protection",
+    body: "Apply heat protectant before any blow dry or flat iron. Fine straight hair burns at lower temperatures than coily hair -- keep tools at 300-350°F maximum.",
     why: STRAIGHT_WHY,
   },
   {
-    title: "Refresh -- dry shampoo at the roots",
-    body: "Use dry shampoo at the roots between washes to extend your style.",
-    why: STRAIGHT_WHY,
-  },
-  {
-    title: "Finish -- shine serum on ends",
-    body: "Finish with a lightweight shine serum on ends only.",
+    title: "Finish",
+    body: "Lightweight oil or serum on ends only to prevent static and add shine without weighing hair down.",
     why: STRAIGHT_WHY,
   },
 ];
 
 const WAVY_WHY =
-  "Why: wavy hair needs moisture to form its pattern but goes limp with heavy products -- lightweight is everything, and technique matters as much as products.";
+  "Why: wavy hair forms its pattern through moisture and technique on soaking wet hair -- disturbing it once dry (brushing, touching, rough drying) breaks the wave into frizz.";
 
 const WAVY_STEPS: RoutineStep[] = [
   {
-    title: "Cleanse -- co-wash or gentle shampoo",
-    body: "Co-wash or use a gentle, sulfate-free shampoo.",
+    title: "Pre-wash",
+    body: "Detangle dry with a wide-tooth comb and section your hair.",
     why: WAVY_WHY,
   },
   {
-    title: "Condition -- scrunched in soaking wet",
-    body: "Apply a lightweight conditioner, scrunching it in while hair is soaking wet.",
+    title: "Cleanse",
+    body: "Sulfate-free shampoo or co-wash. Scrub the scalp, let the product run through the lengths.",
     why: WAVY_WHY,
   },
   {
-    title: "Style -- curl cream or mousse, soaking wet",
-    body: "Apply a curl cream or mousse while hair is soaking wet -- not just damp, soaking.",
+    title: "Condition",
+    body: "Apply conditioner to soaking wet hair, scrunching upward. Rinse with cool water to close the cuticle and enhance your wave.",
     why: WAVY_WHY,
   },
   {
-    title: "Scrunch out excess water",
-    body: "Scrunch out excess water with a microfiber towel.",
+    title: "Style on soaking wet hair",
+    body: "Apply curl cream or mousse while hair is dripping wet. Scrunch upward -- do not rake through.",
     why: WAVY_WHY,
   },
   {
-    title: "Dry -- diffuse or air dry",
-    body: "Diffuse on low heat, or air dry without touching your hair.",
+    title: "Dry",
+    body: "Diffuse on low heat or air dry without touching. Scrunching while wet is fine; touching while drying causes frizz.",
     why: WAVY_WHY,
   },
   {
-    title: "Scrunch out the cast",
-    body: "Once fully dry, scrunch out the cast.",
+    title: "Refresh",
+    body: "Day 2 and 3, mist with water and scrunch. Do not brush or comb wavy hair when dry.",
     why: WAVY_WHY,
   },
 ];

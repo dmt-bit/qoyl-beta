@@ -1,3 +1,4 @@
+import { type CurlFamily } from "@/lib/compatibility";
 import { formatWashDayLabel, WashDay, WashDayType } from "@/lib/routineCalendar";
 import { RoutineProductPick } from "@/lib/routineProducts";
 import { SeasonalNote } from "@/lib/routineSeasonalNote";
@@ -7,10 +8,12 @@ export type RoutineEmailData = {
   firstName: string;
   startDateLabel: string; // e.g. "September 3, 2026"
   curlTypeLabel: string | null; // e.g. "4b"
+  family: CurlFamily | null;
   porosityLabel: string | null; // e.g. "high"
   scalpConditionLabel: string | null; // e.g. "normal"
   cityStateLabel: string | null; // e.g. "Chicago, IL"
   waterHardnessLabel: string | null; // e.g. "hard water"
+  washFrequency: { min: number; max: number; recommended: number };
   calendarDays: WashDay[];
   steps: RoutineStep[];
   products: RoutineProductPick[];
@@ -26,28 +29,100 @@ function escapeHtml(value: string): string {
     .replace(/>/g, "&gt;");
 }
 
-const WASH_TAG_LABEL: Record<WashDayType, string> = {
+// "wash"/"chelate"/"protein" mean different things depending on curl
+// family (a wavy "wash" day is a sulfate-free shampoo day; a coily
+// "wash" day is a regular wash inside the chelate/protein cycle) --
+// mirrors app/routine/page.tsx's washTypeLabel/washTypeMiniRoutine.
+const DEFAULT_WASH_TAG_LABEL: Record<WashDayType, string> = {
   chelate: "Chelating",
   wash: "Regular wash",
   protein: "Protein",
+  clarify: "Clarifying",
+  full_wash: "Full wash",
+  refresh: "Refresh",
 };
 
-const WASH_MINI_ROUTINE: Record<WashDayType, string> = {
-  chelate: "Chelate → Shampoo → Deep condition → LCO",
-  wash: "Pre-poo → Shampoo → Deep condition → LCO",
-  protein: "Pre-poo → Shampoo → Protein → Deep condition → LCO",
+const FAMILY_WASH_TAG_LABEL: Partial<Record<CurlFamily, Partial<Record<WashDayType, string>>>> = {
+  wavy: { wash: "Sulfate-free wash" },
 };
 
-function renderWashDayList(calendarDays: WashDay[]): string {
-  return `<div class="wash-list">${calendarDays
-    .map(
-      ({ date, washType }) => `
+function washTagLabel(type: WashDayType, family: CurlFamily | null): string {
+  const override = family ? FAMILY_WASH_TAG_LABEL[family]?.[type] : undefined;
+  return override ?? DEFAULT_WASH_TAG_LABEL[type];
+}
+
+const FAMILY_MINI_ROUTINE: Record<CurlFamily, Partial<Record<WashDayType, string>>> = {
+  straight: {
+    clarify: "Clarifying shampoo → Conditioner (ends only) → Style",
+    full_wash: "Gentle shampoo → Conditioner (ends only) → Style",
+    refresh: "Co-wash or dry shampoo at the roots",
+  },
+  wavy: {
+    clarify: "Clarifying shampoo → Condition → Scrunch style soaking wet",
+    wash: "Sulfate-free shampoo → Condition → Scrunch style soaking wet",
+    refresh: "Mist with water → Scrunch",
+  },
+  curly: {
+    chelate: "Chelating shampoo → Deep condition → Style soaking wet",
+    protein: "Shampoo → Protein treatment → Deep condition → Style soaking wet",
+    wash: "Shampoo → Deep condition → Style soaking wet",
+  },
+  coily: {
+    chelate: "Chelate → Shampoo → Deep condition → LCO",
+    wash: "Pre-poo → Shampoo → Deep condition → LCO",
+    protein: "Pre-poo → Shampoo → Protein → Deep condition → LCO",
+  },
+};
+
+function washMiniRoutine(type: WashDayType, family: CurlFamily | null): string {
+  const byFamily = family ? FAMILY_MINI_ROUTINE[family] : undefined;
+  return byFamily?.[type] ?? FAMILY_MINI_ROUTINE.coily[type] ?? "";
+}
+
+function washItemHtml(date: string, washType: WashDayType, family: CurlFamily | null): string {
+  return `
   <div class="wash-item ${washType}">
-    <div class="wash-item-date">${escapeHtml(formatWashDayLabel(date))} &mdash; ${WASH_TAG_LABEL[washType]}</div>
-    <div class="wash-item-routine">${escapeHtml(WASH_MINI_ROUTINE[washType])}</div>
-  </div>`
-    )
+    <div class="wash-item-date">${escapeHtml(formatWashDayLabel(date))} &mdash; ${washTagLabel(washType, family)}</div>
+    <div class="wash-item-routine">${escapeHtml(washMiniRoutine(washType, family))}</div>
+  </div>`;
+}
+
+function renderWashDayList(calendarDays: WashDay[], family: CurlFamily | null): string {
+  return `<div class="wash-list">${calendarDays
+    .map(({ date, washType }) => washItemHtml(date, washType, family))
     .join("")}</div>`;
+}
+
+// Straight-hair subscribers wash near-daily, so a rolling 30-day list is
+// the wrong shape for their email -- a genuine 7-day week, including
+// explicit "Rest day" rows for any day with no scheduled activity, reads
+// far better than 20-30 stacked list rows. calendarDays[0] is always
+// today (see generateWashCalendar), so the week is built from there
+// rather than needing a separate "start date" field.
+function renderWeeklySchedule(calendarDays: WashDay[], family: CurlFamily | null): string {
+  if (calendarDays.length === 0) return "";
+  const byDate = new Map(calendarDays.map((d) => [d.date, d]));
+  const start = new Date(`${calendarDays[0].date}T00:00:00`);
+
+  const rows: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const entry = byDate.get(iso);
+
+    if (entry) {
+      rows.push(washItemHtml(entry.date, entry.washType, family));
+    } else {
+      const label = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+      rows.push(`
+  <div class="wash-item rest">
+    <div class="wash-item-date">${escapeHtml(label)} &mdash; Rest day</div>
+    <div class="wash-item-routine">No hair care needed today.</div>
+  </div>`);
+    }
+  }
+  return `<div class="wash-list">${rows.join("")}</div>`;
 }
 
 function renderSteps(steps: RoutineStep[]): string {
@@ -116,7 +191,9 @@ function renderSeasonalNote(seasonalNote: SeasonalNote): string {
 
 function renderChips(data: RoutineEmailData): string {
   const chips: string[] = [];
-  if (data.curlTypeLabel) chips.push(`${data.curlTypeLabel} coily`);
+  if (data.curlTypeLabel) {
+    chips.push(data.family ? `${data.curlTypeLabel} ${data.family}` : data.curlTypeLabel);
+  }
   if (data.porosityLabel) chips.push(`${data.porosityLabel} porosity`);
   if (data.scalpConditionLabel) chips.push(`${data.scalpConditionLabel} scalp`);
   if (data.cityStateLabel) chips.push(data.cityStateLabel);
@@ -157,6 +234,10 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
 .wash-item{background:#FDFAF8;border:1px solid #F0EBE3;border-left:4px solid #1C1612;border-radius:4px;padding:8px 12px}
 .wash-item.chelate{border-left-color:#9C7B5A}
 .wash-item.protein{border-left-color:#5BA67A}
+.wash-item.clarify{border-left-color:#9C7B5A}
+.wash-item.full_wash{border-left-color:#1C1612}
+.wash-item.refresh{background:transparent;border-color:transparent;border-left-color:#D4C4AD;padding:6px 12px}
+.wash-item.rest{background:transparent;border-style:dashed;border-color:#EDE5D8;border-left-color:#EDE5D8}
 .wash-item-date{font-size:12px;font-weight:600;color:#1C1612}
 .wash-item-routine{font-size:11px;color:#7A6A5A;margin-top:2px}
 .step{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #F5F0EA}
@@ -204,10 +285,18 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
 
 <div class="body">
 
-  <div class="section-label">your next 30 days</div>
-  <div class="section-title">Starting ${escapeHtml(data.startDateLabel)}</div>
+  <div class="section-label">${data.family === "straight" ? "your week ahead" : "your next 30 days"}</div>
+  <div class="section-title">${
+    data.family === "straight"
+      ? `Wash every ${data.washFrequency.min}-${data.washFrequency.max} days`
+      : `Starting ${escapeHtml(data.startDateLabel)}`
+  }</div>
 
-  ${renderWashDayList(data.calendarDays)}
+  ${
+    data.family === "straight"
+      ? renderWeeklySchedule(data.calendarDays, data.family)
+      : renderWashDayList(data.calendarDays, data.family)
+  }
 
   <div class="rule"></div>
 
