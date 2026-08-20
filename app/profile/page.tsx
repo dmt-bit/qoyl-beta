@@ -582,8 +582,44 @@ function ProfileForm() {
 
   const showForm = !hairProfile || unlocked;
 
+  // isAdmin() (lib/isAdmin.ts) reads ADMIN_EMAILS, which has no
+  // NEXT_PUBLIC_ prefix and is deliberately server-only -- calling it
+  // directly from this client component would just always return false.
+  // /api/purchases already does this exact check server-side (via
+  // isAdminUserId, which looks the email up itself rather than trusting
+  // a client-supplied one) and returns an `isAdmin` flag -- same bridge
+  // app/travel/page.tsx uses for its own admin bypass.
+  const [isAdminUser, setIsAdminUser] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setIsAdminUser(false);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/purchases?user_id=${user.id}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setIsAdminUser(Boolean(data.isAdmin));
+      })
+      .catch(() => {
+        if (!cancelled) setIsAdminUser(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   function handleUpdateClick() {
     setLockMessage(null);
+
+    // Admins skip the confirmation modal and the 30-day cooldown
+    // entirely -- straight to the editable form.
+    if (isAdminUser) {
+      setUnlocked(true);
+      return;
+    }
+
     setShowConfirmModal(true);
   }
 
@@ -822,6 +858,12 @@ function ProfileForm() {
             ? "Tell us about your hair so we can personalize your routine."
             : "This is what we're using to personalize your scores and routine."}
         </p>
+
+        {isAdminUser && (
+          <span className="mt-3 inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-dark">
+            Admin — unlimited edits
+          </span>
+        )}
 
         {!showForm && hairProfile && (
           <div className="mt-8 space-y-8">
