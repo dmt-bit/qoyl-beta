@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendNotificationEmail } from "@/lib/notify";
 import { generateTravelKitProducts } from "@/lib/travelKitGenerator";
 import { sendTravelKitEmail } from "@/lib/sendTravelKitEmail";
+import { formatTripDatesForNotification } from "@/lib/tripDates";
 
 // Shared by the real Stripe webhook (app/api/stripe/webhook/route.ts)
 // and the admin bypass (app/api/travel-kits/admin-activate/route.ts) --
@@ -28,7 +29,7 @@ export async function activateTravelKit({
   const { data: travelKitRow, error: fetchError } = await admin
     .from("travel_kits")
     .select(
-      "destination, departure_date, return_date, climate, swimming, protective_style, hair_priority"
+      "destination, departure_date, return_date, travel_month, climate, swimming, protective_style, hair_priority"
     )
     .eq("id", travelKitId)
     .single();
@@ -77,6 +78,7 @@ export async function activateTravelKit({
         destination: travelKitRow.destination,
         departureDate: travelKitRow.departure_date,
         returnDate: travelKitRow.return_date,
+        travelMonth: travelKitRow.travel_month,
         climate: travelKitRow.climate,
         swimming: travelKitRow.swimming,
         protectiveStyle: travelKitRow.protective_style,
@@ -98,8 +100,7 @@ export async function activateTravelKit({
 User ID: ${userId}
 Customer email: ${recipientEmail ?? "Unknown"}
 Destination: ${travelKitRow.destination}
-Departure: ${travelKitRow.departure_date ?? "Not set"}
-Return: ${travelKitRow.return_date ?? "Not set"}
+${formatTripDatesForNotification(travelKitRow.departure_date, travelKitRow.return_date, travelKitRow.travel_month)}
 Stripe customer: ${stripeCustomerId ?? "none"}
 ${amountLine}
 

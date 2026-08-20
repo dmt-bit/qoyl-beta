@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import type { TravelKitProduct } from "@/lib/travelKitGenerator";
 
 type ClimateChoice = ClimateZone | "similar_to_home";
+type DateMode = "exact" | "month";
 
 const CLIMATE_OPTIONS: { value: ClimateChoice; label: string }[] = [
   { value: "humid", label: "Humid/Tropical" },
@@ -72,11 +73,32 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+// <input type="month"> gives "2026-10" -- converts to the human-readable
+// "October 2026" that's actually stored/displayed.
+function formatMonthInputValue(value: string): string {
+  const d = new Date(`${value}-01T00:00:00`);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+}
+
+// Single source of truth for "exact dates or month" display, used by
+// both the Step 4 review line and the saved kit's header line.
+function formatTripDateRange(
+  departureDate: string | null,
+  returnDate: string | null,
+  travelMonth: string | null
+): string {
+  if (travelMonth) return travelMonth;
+  if (!departureDate && !returnDate) return "—";
+  return `${formatDate(departureDate)} to ${formatDate(returnDate)}`;
+}
+
 type TravelKitRow = {
   id: string;
   destination: string;
   departure_date: string | null;
   return_date: string | null;
+  travel_month: string | null;
   climate: string | null;
   swimming: string | null;
   protective_style: string | null;
@@ -208,10 +230,14 @@ function SurveyView({
   detectedClimate,
   climate,
   setClimate,
+  dateMode,
+  setDateMode,
   departureDate,
   setDepartureDate,
   returnDate,
   setReturnDate,
+  travelMonthInput,
+  setTravelMonthInput,
   swimming,
   setSwimming,
   protectiveStyle,
@@ -231,10 +257,14 @@ function SurveyView({
   detectedClimate: ClimateZone | null;
   climate: ClimateChoice | null;
   setClimate: (v: ClimateChoice) => void;
+  dateMode: DateMode;
+  setDateMode: (v: DateMode) => void;
   departureDate: string;
   setDepartureDate: (v: string) => void;
   returnDate: string;
   setReturnDate: (v: string) => void;
+  travelMonthInput: string;
+  setTravelMonthInput: (v: string) => void;
   swimming: string | null;
   setSwimming: (v: string) => void;
   protectiveStyle: string | null;
@@ -249,10 +279,10 @@ function SurveyView({
 }) {
   const step1Valid =
     destination.trim().length > 0 &&
-    Boolean(departureDate) &&
-    Boolean(returnDate) &&
     Boolean(climate) &&
-    returnDate >= departureDate;
+    (dateMode === "exact"
+      ? Boolean(departureDate) && Boolean(returnDate) && returnDate >= departureDate
+      : Boolean(travelMonthInput));
   const step2Valid = Boolean(swimming);
   const step3Valid = Boolean(protectiveStyle) && Boolean(hairPriority);
 
@@ -298,32 +328,70 @@ function SurveyView({
                 ))}
               </div>
 
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <div>
-                  <label htmlFor="departure-date" className="text-xs font-medium text-cream/70">
-                    Departure date
+              <p className="mt-6 font-serif text-lg text-bronze2">Travel dates</p>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <Pill
+                  label="I know my exact dates"
+                  selected={dateMode === "exact"}
+                  onClick={() => setDateMode("exact")}
+                />
+                <Pill
+                  label="I just know the month"
+                  selected={dateMode === "month"}
+                  onClick={() => setDateMode("month")}
+                />
+              </div>
+
+              {dateMode === "exact" ? (
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div>
+                    <label htmlFor="departure-date" className="text-xs font-medium text-cream/70">
+                      Departure date
+                    </label>
+                    <input
+                      id="departure-date"
+                      type="date"
+                      value={departureDate}
+                      onChange={(e) => setDepartureDate(e.target.value)}
+                      className="mt-1.5 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2.5 text-sm text-cream focus:border-bronze focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="return-date" className="text-xs font-medium text-cream/70">
+                      Return date
+                    </label>
+                    <input
+                      id="return-date"
+                      type="date"
+                      value={returnDate}
+                      min={departureDate || undefined}
+                      onChange={(e) => setReturnDate(e.target.value)}
+                      className="mt-1.5 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2.5 text-sm text-cream focus:border-bronze focus:outline-none"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4">
+                  <label htmlFor="travel-month" className="text-xs font-medium text-cream/70">
+                    Month of travel
                   </label>
                   <input
-                    id="departure-date"
-                    type="date"
-                    value={departureDate}
-                    onChange={(e) => setDepartureDate(e.target.value)}
+                    id="travel-month"
+                    type="month"
+                    value={travelMonthInput}
+                    onChange={(e) => setTravelMonthInput(e.target.value)}
                     className="mt-1.5 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2.5 text-sm text-cream focus:border-bronze focus:outline-none"
                   />
                 </div>
-                <div>
-                  <label htmlFor="return-date" className="text-xs font-medium text-cream/70">
-                    Return date
-                  </label>
-                  <input
-                    id="return-date"
-                    type="date"
-                    value={returnDate}
-                    min={departureDate || undefined}
-                    onChange={(e) => setReturnDate(e.target.value)}
-                    className="mt-1.5 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2.5 text-sm text-cream focus:border-bronze focus:outline-none"
-                  />
-                </div>
+              )}
+
+              <div className="mt-4 rounded-lg border-l-2 border-bronze bg-warm px-4 py-3">
+                <p className="text-[12px] leading-relaxed text-dark/80">
+                  Why we ask for your travel dates: if you have a Qoyl routine subscription, we
+                  will send you updated routine reminders specific to your destination climate
+                  during your trip dates. If you only know the month, we will use that as the
+                  reference window instead.
+                </p>
               </div>
             </div>
           )}
@@ -390,7 +458,10 @@ function SurveyView({
               </h2>
               <p className="mt-3 text-sm text-cream/80">
                 Your trip to {destination || "—"} ·{" "}
-                {formatDate(departureDate)}–{formatDate(returnDate)} ·{" "}
+                {dateMode === "exact"
+                  ? formatTripDateRange(departureDate || null, returnDate || null, null)
+                  : formatTripDateRange(null, null, travelMonthInput ? formatMonthInputValue(travelMonthInput) : null)}{" "}
+                ·{" "}
                 {CLIMATE_LABELS[climate ?? ""] ?? "—"} ·{" "}
                 {labelFor(SWIMMING_OPTIONS, swimming)} ·{" "}
                 {labelFor(PROTECTIVE_STYLE_OPTIONS, protectiveStyle)}
@@ -541,8 +612,8 @@ function KitView({
           )}
         </div>
         <p className="mt-1 text-sm font-medium text-bronze2">
-          {kit.destination} · {formatDate(kit.departure_date)} to{" "}
-          {formatDate(kit.return_date)}
+          {kit.destination} ·{" "}
+          {formatTripDateRange(kit.departure_date, kit.return_date, kit.travel_month)}
         </p>
 
         <div className="mt-3 flex flex-wrap gap-2">
@@ -716,7 +787,7 @@ function TravelPageContent() {
       const { data } = await supabase
         .from("travel_kits")
         .select(
-          "id, destination, departure_date, return_date, climate, swimming, protective_style, hair_priority, status, products"
+          "id, destination, departure_date, return_date, travel_month, climate, swimming, protective_style, hair_priority, status, products"
         )
         .eq("id", targetId)
         .eq("user_id", user.id)
@@ -740,8 +811,10 @@ function TravelPageContent() {
   const [destination, setDestination] = useState("");
   const [detectedClimate, setDetectedClimate] = useState<ClimateZone | null>(null);
   const [climate, setClimate] = useState<ClimateChoice | null>(null);
+  const [dateMode, setDateMode] = useState<DateMode>("exact");
   const [departureDate, setDepartureDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
+  const [travelMonthInput, setTravelMonthInput] = useState("");
   const [swimming, setSwimming] = useState<string | null>(null);
   const [protectiveStyle, setProtectiveStyle] = useState<string | null>(null);
   const [hairPriority, setHairPriority] = useState<string | null>(null);
@@ -772,8 +845,10 @@ function TravelPageContent() {
     setDestination("");
     setDetectedClimate(null);
     setClimate(null);
+    setDateMode("exact");
     setDepartureDate("");
     setReturnDate("");
+    setTravelMonthInput("");
     setSwimming(null);
     setProtectiveStyle(null);
     setHairPriority(null);
@@ -826,8 +901,12 @@ function TravelPageContent() {
           body: JSON.stringify({
             user_id: user.id,
             destination: destination.trim(),
-            departure_date: departureDate || null,
-            return_date: returnDate || null,
+            departure_date: dateMode === "exact" ? departureDate || null : null,
+            return_date: dateMode === "exact" ? returnDate || null : null,
+            travel_month:
+              dateMode === "month" && travelMonthInput
+                ? formatMonthInputValue(travelMonthInput)
+                : null,
             climate,
             swimming,
             protective_style: protectiveStyle,
@@ -938,10 +1017,14 @@ function TravelPageContent() {
         detectedClimate={detectedClimate}
         climate={climate}
         setClimate={setClimate}
+        dateMode={dateMode}
+        setDateMode={setDateMode}
         departureDate={departureDate}
         setDepartureDate={setDepartureDate}
         returnDate={returnDate}
         setReturnDate={setReturnDate}
+        travelMonthInput={travelMonthInput}
+        setTravelMonthInput={setTravelMonthInput}
         swimming={swimming}
         setSwimming={setSwimming}
         protectiveStyle={protectiveStyle}

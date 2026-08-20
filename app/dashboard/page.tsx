@@ -23,6 +23,7 @@ type TravelKitSummary = {
   destination: string;
   departure_date: string | null;
   return_date: string | null;
+  travel_month: string | null;
 };
 
 type StyleMatchSummary = {
@@ -338,7 +339,7 @@ function DashboardContent() {
     async function loadTravelKits() {
       const { data } = await supabase
         .from("travel_kits")
-        .select("id, destination, departure_date, return_date")
+        .select("id, destination, departure_date, return_date, travel_month")
         .eq("user_id", user!.id)
         .eq("status", "active")
         .order("departure_date", { ascending: true });
@@ -703,8 +704,9 @@ function DashboardContent() {
                     <div className="min-w-0">
                       <p className="text-sm text-cream">{kit.destination}</p>
                       <p className="mt-0.5 text-xs text-cream/50">
-                        {formatTravelDate(kit.departure_date)} –{" "}
-                        {formatTravelDate(kit.return_date)}
+                        {kit.travel_month
+                          ? kit.travel_month
+                          : `${formatTravelDate(kit.departure_date)} – ${formatTravelDate(kit.return_date)}`}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">

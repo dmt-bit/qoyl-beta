@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendNotificationEmail } from "@/lib/notify";
+import { formatTripDatesForNotification } from "@/lib/tripDates";
 
 // /travel is a client component, so it can't import lib/supabaseAdmin.ts
 // (service role key) or lib/notify.ts (RESEND_API_KEY) directly. This
@@ -20,6 +21,7 @@ export async function POST(request: Request) {
     destination,
     departure_date,
     return_date,
+    travel_month,
     climate,
     swimming,
     protective_style,
@@ -44,6 +46,7 @@ export async function POST(request: Request) {
       destination,
       departure_date,
       return_date,
+      travel_month,
       climate,
       swimming,
       protective_style,
@@ -115,8 +118,7 @@ ${profileSummary}
 
 === Trip Details ===
 Destination: ${destination}
-Departure: ${departure_date ?? "Not set"}
-Return: ${return_date ?? "Not set"}
+${formatTripDatesForNotification(departure_date, return_date, travel_month)}
 Climate: ${climate ?? "Not set"}
 Swimming: ${swimming ?? "Not set"}
 Protective style: ${protective_style ?? "Not set"}

@@ -64,6 +64,7 @@ export type SendTravelKitEmailInput = {
   destination: string;
   departureDate: string | null;
   returnDate: string | null;
+  travelMonth: string | null;
   climate: string | null;
   swimming: string | null;
   protectiveStyle: string | null;
@@ -89,7 +90,10 @@ export async function sendTravelKitEmail(
     return { sent: false, reason: "no_api_key" };
   }
 
-  const tripLine = `${escapeHtml(input.destination)} · ${formatDate(input.departureDate)} to ${formatDate(input.returnDate)}`;
+  const datePart = input.travelMonth
+    ? escapeHtml(input.travelMonth)
+    : `${formatDate(input.departureDate)} to ${formatDate(input.returnDate)}`;
+  const tripLine = `${escapeHtml(input.destination)} · ${datePart}`;
 
   const contextChips = [
     input.climate ? CLIMATE_LABELS[input.climate] ?? input.climate : null,
