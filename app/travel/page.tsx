@@ -11,22 +11,13 @@ import type { ClimateZone } from "@/lib/locationFactors";
 import { supabase } from "@/lib/supabase";
 import type { TravelKitProduct } from "@/lib/travelKitGenerator";
 
-type ClimateChoice = ClimateZone | "similar_to_home";
 type DateMode = "exact" | "month";
-
-const CLIMATE_OPTIONS: { value: ClimateChoice; label: string }[] = [
-  { value: "humid", label: "Humid/Tropical" },
-  { value: "dry", label: "Dry/Arid" },
-  { value: "cold-dry", label: "Cold/Winter" },
-  { value: "similar_to_home", label: "Similar to home" },
-];
 
 const CLIMATE_LABELS: Record<string, string> = {
   humid: "Humid",
   tropical: "Tropical",
   dry: "Dry",
   "cold-dry": "Cold & dry",
-  similar_to_home: "Similar to home",
 };
 
 const SWIMMING_OPTIONS: { value: string; label: string }[] = [
@@ -227,9 +218,7 @@ function SurveyView({
   totalSteps,
   destination,
   setDestination,
-  detectedClimate,
   climate,
-  setClimate,
   dateMode,
   setDateMode,
   departureDate,
@@ -254,9 +243,7 @@ function SurveyView({
   totalSteps: number;
   destination: string;
   setDestination: (v: string) => void;
-  detectedClimate: ClimateZone | null;
-  climate: ClimateChoice | null;
-  setClimate: (v: ClimateChoice) => void;
+  climate: ClimateZone | null;
   dateMode: DateMode;
   setDateMode: (v: DateMode) => void;
   departureDate: string;
@@ -305,28 +292,13 @@ function SurveyView({
                 className="mt-4 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
               />
 
-              {detectedClimate && (
+              {climate && (
                 <div className="mt-3">
                   <span className="inline-block rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
-                    Detected climate: {CLIMATE_LABELS[detectedClimate]}
+                    Detected climate: {CLIMATE_LABELS[climate]}
                   </span>
-                  <p className="mt-1.5 text-xs text-cream/50">
-                    You can change this below if needed.
-                  </p>
                 </div>
               )}
-
-              <p className="mt-6 font-serif text-lg text-bronze2">Climate</p>
-              <div className="mt-3 grid grid-cols-2 gap-3">
-                {CLIMATE_OPTIONS.map((option) => (
-                  <Pill
-                    key={option.value}
-                    label={option.label}
-                    selected={climate === option.value}
-                    onClick={() => setClimate(option.value)}
-                  />
-                ))}
-              </div>
 
               <p className="mt-6 font-serif text-lg text-bronze2">Travel dates</p>
               <div className="mt-3 grid grid-cols-2 gap-3">
@@ -560,21 +532,24 @@ function KitView({
   activeKits,
   onSwitchKit,
   onBuildAnother,
+  pollExhausted,
 }: {
   kit: TravelKitRow;
   welcome: boolean;
   activeKits: { id: string; destination: string; created_at: string }[];
   onSwitchKit: (id: string) => void;
   onBuildAnother: () => void;
+  pollExhausted: boolean;
 }) {
   const products = kit.products ?? [];
   const otherKits = activeKits.filter((k) => k.id !== kit.id);
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
+  const ready = isKitReady(kit);
 
   return (
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
       <div className="mx-auto max-w-md">
-        {welcome && !welcomeDismissed && (
+        {welcome && ready && !welcomeDismissed && (
           <div className="mb-4 flex items-start justify-between gap-4 rounded-lg bg-bronze px-4 py-3">
             <p className="text-sm text-dark">
               Your travel kit for {kit.destination} is ready. Shop each
@@ -634,11 +609,27 @@ function KitView({
           )}
         </div>
 
-        {kit.status === "pending_payment" && (
-          <p className="mt-6 text-sm text-cream/60">
-            Your kit is still being generated. This can take a minute after
-            payment — refresh shortly.
-          </p>
+        {!ready && (
+          <div className="mt-6 flex items-center gap-3 rounded-lg border border-bronze/30 px-4 py-3">
+            {!pollExhausted && (
+              <div className="flex shrink-0 gap-1.5">
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    className="h-1.5 w-1.5 animate-bounce rounded-full bg-bronze"
+                    style={{ animationDelay: `${i * 150}ms` }}
+                  />
+                ))}
+              </div>
+            )}
+            <p className="text-sm text-cream/70">
+              {pollExhausted
+                ? "Your kit is being prepared — check back in a moment or refresh this page. We have also sent your kit to your email."
+                : kit.status === "pending_payment"
+                ? "Building your kit..."
+                : "Finalizing your kit..."}
+            </p>
+          </div>
         )}
 
         {products.length > 0 && (
@@ -649,7 +640,7 @@ function KitView({
           </ul>
         )}
 
-        {kit.status !== "pending_payment" && products.length < 5 && (
+        {ready && products.length < 5 && (
           <p className="mt-4 text-sm text-cream/60">
             We found {products.length} product
             {products.length === 1 ? "" : "s"} for your trip.{" "}
@@ -685,6 +676,16 @@ function KitView({
 // ---- Root component / state machine ----
 
 type View = "landing" | "survey" | "generating" | "kit";
+
+const KIT_ROW_COLUMNS =
+  "id, destination, departure_date, return_date, travel_month, climate, swimming, protective_style, hair_priority, status, products";
+
+const KIT_POLL_INTERVAL_MS = 2000;
+const KIT_POLL_MAX_ATTEMPTS = 10;
+
+function isKitReady(row: Pick<TravelKitRow, "status" | "products"> | null): boolean {
+  return Boolean(row) && row!.status === "active" && row!.products !== null;
+}
 
 function TravelPageContent() {
   const router = useRouter();
@@ -786,9 +787,7 @@ function TravelPageContent() {
 
       const { data } = await supabase
         .from("travel_kits")
-        .select(
-          "id, destination, departure_date, return_date, travel_month, climate, swimming, protective_style, hair_priority, status, products"
-        )
+        .select(KIT_ROW_COLUMNS)
         .eq("id", targetId)
         .eq("user_id", user.id)
         .maybeSingle();
@@ -806,11 +805,55 @@ function TravelPageContent() {
     };
   }, [kitIdParam, user, authLoading, forceNewParam]);
 
+  // Right after the Stripe success redirect, the webhook that flips
+  // status to 'active' and fills in products may not have landed yet --
+  // without this, the page just sits on "still being generated" forever
+  // until the user manually refreshes. Polls the same row every 2s (up
+  // to 10 tries) while it's showing but not ready, and updates `kit` in
+  // place as soon as it is. Also covers the "active but products still
+  // null" gap defensively, even though activateTravelKit currently sets
+  // both fields in the same update.
+  const [pollExhausted, setPollExhausted] = useState(false);
+  const kitReady = isKitReady(kit);
+
+  useEffect(() => {
+    if (!kit || view !== "kit" || kitReady) {
+      setPollExhausted(false);
+      return;
+    }
+
+    let cancelled = false;
+    let attempts = 0;
+    const intervalId = setInterval(async () => {
+      attempts += 1;
+      const { data } = await supabase
+        .from("travel_kits")
+        .select(KIT_ROW_COLUMNS)
+        .eq("id", kit.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      const row = (data as TravelKitRow | null) ?? null;
+      if (row) setKit(row);
+
+      if (isKitReady(row) || attempts >= KIT_POLL_MAX_ATTEMPTS) {
+        clearInterval(intervalId);
+        if (!isKitReady(row)) setPollExhausted(true);
+      }
+    }, KIT_POLL_INTERVAL_MS);
+
+    return () => {
+      cancelled = true;
+      clearInterval(intervalId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kit?.id, kitReady, view]);
+
   // ---- survey state ----
   const [step, setStep] = useState(1);
   const [destination, setDestination] = useState("");
-  const [detectedClimate, setDetectedClimate] = useState<ClimateZone | null>(null);
-  const [climate, setClimate] = useState<ClimateChoice | null>(null);
+  const [climate, setClimate] = useState<ClimateZone | null>(null);
   const [dateMode, setDateMode] = useState<DateMode>("exact");
   const [departureDate, setDepartureDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
@@ -822,20 +865,20 @@ function TravelPageContent() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pendingKitId, setPendingKitId] = useState<string | null>(null);
 
+  // Climate is fully auto-detected from the destination text now -- no
+  // manual override exists, so this is the single source of truth for
+  // `climate` rather than just a suggestion. Falls back to "humid" (the
+  // most common classification, per classifyClimateFromState's own
+  // default) when the destination doesn't match a known state code or
+  // curated international city, so the survey never gets stuck with no
+  // climate value and nothing for the user to pick instead.
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      const detected = classifyClimateFromDestination(destination);
-      setDetectedClimate(detected);
-      // Only auto-select if the user hasn't already picked a climate
-      // themselves -- detection should suggest, not override a manual
-      // choice made after typing (e.g. correcting a wrong guess).
-      // "tropical" maps to the combined "Humid/Tropical" pill (value
-      // "humid") -- there's no separate pill for it, so the raw detected
-      // value can't be assigned directly or the pill would never show as
-      // selected.
-      const pillValue: ClimateChoice | null =
-        detected === "tropical" ? "humid" : detected;
-      setClimate((prev) => (prev === null && pillValue ? pillValue : prev));
+      if (!destination.trim()) {
+        setClimate(null);
+        return;
+      }
+      setClimate(classifyClimateFromDestination(destination) ?? "humid");
     }, 300);
     return () => clearTimeout(timeoutId);
   }, [destination]);
@@ -843,7 +886,6 @@ function TravelPageContent() {
   function resetSurvey() {
     setStep(1);
     setDestination("");
-    setDetectedClimate(null);
     setClimate(null);
     setDateMode("exact");
     setDepartureDate("");
@@ -999,6 +1041,7 @@ function TravelPageContent() {
         activeKits={activeKits}
         onSwitchKit={handleSwitchKit}
         onBuildAnother={handleBuildAnother}
+        pollExhausted={pollExhausted}
       />
     );
   }
@@ -1014,9 +1057,7 @@ function TravelPageContent() {
         totalSteps={4}
         destination={destination}
         setDestination={setDestination}
-        detectedClimate={detectedClimate}
         climate={climate}
-        setClimate={setClimate}
         dateMode={dateMode}
         setDateMode={setDateMode}
         departureDate={departureDate}

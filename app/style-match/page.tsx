@@ -61,7 +61,6 @@ type StyleRow = {
   difficulty: string | null;
 };
 
-type MatchMode = "quick" | "deep";
 type LengthDifference = "same" | "longer" | "shorter";
 type InvolvesExtensions = "none" | "braiding_hair" | "sew_in" | "wig" | "not_sure";
 
@@ -159,13 +158,6 @@ function CompassIcon() {
     <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 9l-3.5 1.5L10 14l3.5-1.5L15 9z" />
-    </svg>
-  );
-}
-function LightningIcon() {
-  return (
-    <svg className="h-6 w-6 text-bronze2" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M13 2L3 14h7l-1 8 11-14h-7l0-6z" />
     </svg>
   );
 }
@@ -508,7 +500,6 @@ function StyleMatchContent() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [textDescription, setTextDescription] = useState("");
-  const [matchMode, setMatchMode] = useState<MatchMode>("quick");
 
   // Pre-fill from a saved style ("Match this style ->", Part 4) -- fills
   // the text input but doesn't auto-submit, unlike inspo cards below.
@@ -537,7 +528,7 @@ function StyleMatchContent() {
     }
   }, [searchParams]);
 
-  // Deep Match survey state (Part 2)
+  // Style survey state -- every match goes through this now (Part 2)
   const [deepStep, setDeepStep] = useState(1);
   const [colorMatch, setColorMatch] = useState<boolean | null>(null);
   const [lengthDifference, setLengthDifference] = useState<LengthDifference | null>(null);
@@ -585,7 +576,6 @@ function StyleMatchContent() {
     setImageFile(null);
     setImagePreviewUrl(null);
     setTextDescription("");
-    setMatchMode("quick");
     setDeepStep(1);
     setColorMatch(null);
     setLengthDifference(null);
@@ -696,7 +686,7 @@ function StyleMatchContent() {
               image_url: (data as DetectedStyle).image_url ?? null,
               detected_style: (data as DetectedStyle).style_name,
               detected_details: data,
-              match_mode: matchMode,
+              match_mode: "deep",
               color_match: Boolean(colorMatch),
               length_difference: lengthDifference,
               involves_extensions: involvesExtensions,
@@ -727,42 +717,29 @@ function StyleMatchContent() {
     const { base64, mediaType } = imageFile
       ? await resizeImageToBase64(imageFile, 800)
       : prefilledImage!;
-    const deepFields =
-      matchMode === "deep"
-        ? {
-            color_match: colorMatch === true,
-            translate_for_hair_type: translateForHairType === true,
-            curl_type: hairProfile?.curl_type ?? null,
-          }
-        : {};
+    const deepFields = {
+      color_match: colorMatch === true,
+      translate_for_hair_type: translateForHairType === true,
+      curl_type: hairProfile?.curl_type ?? null,
+    };
     analyze({ input_type: "photo", image_base64: base64, image_media_type: mediaType, ...deepFields }, "photo");
   }
 
-  async function handleSubmitText(overrideText?: string, forceQuick?: boolean) {
-    const value = overrideText ?? textDescription;
-    if (!value.trim()) return;
-    const mode = forceQuick ? "quick" : matchMode;
-    const deepFields =
-      mode === "deep"
-        ? {
-            color_match: colorMatch === true,
-            translate_for_hair_type: translateForHairType === true,
-            curl_type: hairProfile?.curl_type ?? null,
-          }
-        : {};
-    analyze({ input_type: "text", text: value, ...deepFields }, "text");
+  async function handleSubmitText() {
+    if (!textDescription.trim()) return;
+    const deepFields = {
+      color_match: colorMatch === true,
+      translate_for_hair_type: translateForHairType === true,
+      curl_type: hairProfile?.curl_type ?? null,
+    };
+    analyze({ input_type: "text", text: textDescription, ...deepFields }, "text");
   }
 
-  // Called by the Photo/Text submit buttons -- routes to the deep survey
-  // instead of straight to analysis when Deep Match is selected.
-  function handlePrimarySubmit(kind: "photo" | "text") {
-    if (matchMode === "deep") {
-      setDeepStep(1);
-      setPageState("deepSurvey");
-      return;
-    }
-    if (kind === "photo") handleSubmitPhoto();
-    else handleSubmitText();
+  // Every style match now goes through the full survey -- always route
+  // to it instead of analyzing directly.
+  function handlePrimarySubmit() {
+    setDeepStep(1);
+    setPageState("deepSurvey");
   }
 
   function handleDeepSurveyFinish() {
@@ -975,13 +952,14 @@ function StyleMatchContent() {
     return vibeOk && lengthOk;
   });
 
-  // Tapping an inspo card runs Quick Match automatically (per spec),
-  // unlike the saved-styles "Match this style" flow which only pre-fills.
+  // Tapping an inspo card pre-fills the style name and jumps straight
+  // into the same survey every other match goes through, unlike the
+  // saved-styles "Match this style" flow which only pre-fills the text
+  // box and leaves the user to submit it themselves.
   function handleInspoCardTap(style: StyleRow) {
-    setMatchMode("quick");
     setTextDescription(style.name);
-    setPageState("landing");
-    handleSubmitText(style.name, true);
+    setDeepStep(1);
+    setPageState("deepSurvey");
   }
 
   if (resolvingAccess || (user && !hairProfile)) {
@@ -1011,8 +989,8 @@ function StyleMatchContent() {
           <>
             <h1 className="font-serif text-[28px] font-semibold text-cream">Style Match</h1>
             <p className="mt-2 text-sm text-cream/70">
-              Upload a photo or describe a hairstyle you want, and we&apos;ll match it to
-              tutorials, a shopping list scored for your hair, and a local stylist if one is
+              Upload a photo or describe the style you want. We will find tutorials, build
+              your complete shopping list, and match you with a local stylist if one is
               available in your city.
             </p>
 
@@ -1046,7 +1024,7 @@ function StyleMatchContent() {
 
                 <button
                   type="button"
-                  onClick={() => handlePrimarySubmit("photo")}
+                  onClick={handlePrimarySubmit}
                   disabled={!imageFile && !prefilledImage}
                   className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-40"
                 >
@@ -1071,7 +1049,7 @@ function StyleMatchContent() {
 
                 <button
                   type="button"
-                  onClick={() => handlePrimarySubmit("text")}
+                  onClick={handlePrimarySubmit}
                   disabled={!textDescription.trim()}
                   className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-40"
                 >
@@ -1093,25 +1071,6 @@ function StyleMatchContent() {
                 </p>
               </button>
             </div>
-
-            {(imageFile || prefilledImage || textDescription.trim()) && (
-              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <SelectableCard
-                  icon={<LightningIcon />}
-                  label="Quick Match"
-                  subtext="Get your tutorials and shopping list in under 30 seconds."
-                  selected={matchMode === "quick"}
-                  onClick={() => setMatchMode("quick")}
-                />
-                <SelectableCard
-                  icon={<SparkleIcon />}
-                  label="Deep Match"
-                  subtext="Tell us more about what you want — color, length, extensions. More detail, more personalized results."
-                  selected={matchMode === "deep"}
-                  onClick={() => setMatchMode("deep")}
-                />
-              </div>
-            )}
 
             {hasHairPhoto === false && (
               <Link
