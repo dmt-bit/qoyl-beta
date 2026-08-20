@@ -4,8 +4,10 @@ import {
   buildScoringProfile,
   curlFamily,
   scoreCatalogProductsForProfile,
+  type CurlFamily,
   type Match,
 } from "@/lib/compatibility";
+import type { ProductWeight } from "@/lib/productWeight";
 
 // Real product recommendations for the routine (paid /routine page + its
 // email, see app/api/routine/route.ts and lib/sendRoutineEmail.ts).
@@ -37,6 +39,7 @@ export type RoutineProductCandidate = {
   productName: string;
   brandName: string;
   score: number; // 0-100
+  weight: ProductWeight;
   why: string;
   // Precomputed for the email (plain HTML, no client component to run
   // ShopButton's logic) -- the web page instead renders <ShopButton
@@ -56,6 +59,42 @@ export type RoutineProductPick = {
 };
 
 const SULFATE_NAME_PATTERN = /sulfate|\bsls\b|\bsles\b/i;
+
+// Hard weight exclusions per curl family, on top of the scoring modifier
+// in lib/compatibility.ts's getWeightModifier -- a very_heavy butter might
+// still score decently on ingredients alone for straight hair, but it's
+// never actually a reasonable routine recommendation, so it's filtered out
+// here rather than left to compete on score. Coily has no exclusions:
+// porosity-based scoring already handles the nuance there.
+function isWeightAllowedForCategory(
+  weight: ProductWeight,
+  categorySlug: string,
+  family: CurlFamily | null
+): boolean {
+  if (!family || family === "coily") return true;
+
+  if (family === "straight") {
+    if (weight === "very_heavy") return false;
+    if (weight === "heavy" && (categorySlug === "leave-in" || categorySlug === "styler")) {
+      return false;
+    }
+    return true;
+  }
+
+  if (family === "wavy") {
+    if (weight === "very_heavy") return false;
+    if (weight === "heavy" && categorySlug !== "deep-conditioner") return false;
+    return true;
+  }
+
+  // curly: very_heavy is only excluded from shampoo/leave-in -- deep
+  // conditioner and styler allow any weight (styler even prefers heavier
+  // formulas for definition, via the scoring modifier).
+  if (weight === "very_heavy" && (categorySlug === "shampoo" || categorySlug === "leave-in")) {
+    return false;
+  }
+  return true;
+}
 
 // One sentence, grounded in the actual scored ingredient matches for
 // THIS product -- not a generic ingredient blurb. Shampoo gets a
@@ -143,6 +182,8 @@ async function rankCategoryProducts(
     profile
   );
 
+  const family = curlFamily(curlType);
+
   return candidates
     .map((row) => {
       const result = scores[row.id]?.result;
@@ -150,12 +191,14 @@ async function rankCategoryProducts(
       // real score or a grounded "why," so it's not a usable candidate
       // rather than a false 0.
       if (!result || result.matches.length === 0) return null;
+      if (!isWeightAllowedForCategory(result.productWeight, categorySlug, family)) return null;
 
       const brandName = brandNameOf(row);
       return {
         productName: row.name,
         brandName,
         score: result.normalizedScore,
+        weight: result.productWeight,
         why: generateWhyCopy(categorySlug, result.matches, result.normalizedScore, profile.porosity, curlType),
         affiliateLink: getAffiliateLink(row.name, brandName),
       };

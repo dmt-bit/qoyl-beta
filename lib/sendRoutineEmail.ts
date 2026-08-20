@@ -1,6 +1,6 @@
 import { getResend } from "@/lib/resend";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { generateWashCalendar } from "@/lib/routineCalendar";
+import { formatStartDateLabel, generateWashCalendar } from "@/lib/routineCalendar";
 import { generateRoutineSteps } from "@/lib/routineSteps";
 import { getRoutineProducts } from "@/lib/routineProducts";
 import { generateSeasonalNote } from "@/lib/routineSeasonalNote";
@@ -10,11 +10,6 @@ import { renderRoutineEmailHtml } from "@/emails/routine-template";
 const FROM_ADDRESS = "Qoyl <hey@qoyl.live>";
 const DASHBOARD_URL = "qoyl-beta-alpha.vercel.app/dashboard";
 const SEARCH_URL = "https://qoyl.live/search";
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
 
 const VALID_CURL_TYPES = new Set(["4a", "4b", "4c"]);
 const VALID_POROSITIES = new Set(["low", "medium", "high"]);
@@ -59,13 +54,10 @@ export async function sendRoutineEmail(
   }
 
   const now = new Date();
-  const monthShort = MONTH_NAMES[now.getMonth()];
-  const monthLabel = `${monthShort} ${now.getFullYear()}`;
+  const startDateLabel = formatStartDateLabel(now);
 
   const [calendarDays, cityState, products] = await Promise.all([
-    Promise.resolve(
-      generateWashCalendar(now.getFullYear(), now.getMonth() + 1, profile.porosity)
-    ),
+    Promise.resolve(generateWashCalendar(now, profile.porosity)),
     lookupCityState(profile.zip_code),
     getRoutineProducts(profile.porosity, profile.curl_type, profile.hair_concerns),
   ]);
@@ -87,8 +79,7 @@ export async function sendRoutineEmail(
 
   const html = renderRoutineEmailHtml({
     firstName,
-    monthLabel,
-    monthShort,
+    startDateLabel,
     curlTypeLabel: VALID_CURL_TYPES.has(profile.curl_type) ? profile.curl_type : null,
     porosityLabel: VALID_POROSITIES.has(profile.porosity) ? profile.porosity : null,
     scalpConditionLabel: profile.scalp_condition ?? null,
@@ -109,7 +100,7 @@ export async function sendRoutineEmail(
     const { data, error: sendError } = await resend.emails.send({
       from: FROM_ADDRESS,
       to: recipientEmail,
-      subject: `Your Qoyl routine for ${monthLabel} is ready, ${firstName}`,
+      subject: `Your Qoyl routine is ready, ${firstName}`,
       html,
     });
 

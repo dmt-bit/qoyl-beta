@@ -10,6 +10,7 @@ import ShopButton from "@/components/ShopButton";
 import UpgradeWall from "@/components/UpgradeWall";
 import { useAuth } from "@/lib/auth-context";
 import {
+  curlFamily,
   Match,
   RATING_BORDER_CLASSES,
   ScoreResult,
@@ -19,6 +20,7 @@ import {
   scoreTier,
 } from "@/lib/compatibility";
 import { CATEGORY_LABEL_BY_SLUG, PRODUCT_CATEGORIES } from "@/lib/productCategories";
+import { WEIGHT_PILL_CLASSES, WEIGHT_PILL_LABEL, weightFitNote } from "@/lib/productWeight";
 import {
   DAILY_SEARCH_LIMIT,
   SearchLimitState,
@@ -157,6 +159,8 @@ function ResultCard({
   onToggleCard,
   ingredientsExpanded,
   onToggleIngredients,
+  curlType,
+  porosity,
 }: {
   product: Product;
   scoreState: ScoreState | undefined;
@@ -164,12 +168,18 @@ function ResultCard({
   onToggleCard: () => void;
   ingredientsExpanded: boolean;
   onToggleIngredients: (e: React.MouseEvent) => void;
+  curlType: string | null;
+  porosity: string | null;
 }) {
   const matches = scoreState?.status === "done" ? scoreState.result.matches : [];
   const preview = matches.slice(0, 4);
   const rest = matches.slice(4);
   const tier =
     scoreState?.status === "done" ? scoreTier(scoreState.result.normalizedScore) : null;
+  const productWeight = scoreState?.status === "done" ? scoreState.result.productWeight : null;
+  const fitNote = productWeight
+    ? weightFitNote(productWeight, curlFamily(curlType), curlType, porosity)
+    : null;
 
   return (
     <li className="border-b border-[#2C2420]">
@@ -234,13 +244,25 @@ function ResultCard({
                 Couldn&apos;t score this product.
               </p>
             )}
-            {cardExpanded && tier && scoreState?.status === "done" && (
+            {cardExpanded && tier && scoreState?.status === "done" && productWeight && (
               <>
-                <span
-                  className={`mt-1 inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${TIER_CLASSES[tier]}`}
-                >
-                  {scoreState.result.normalizedScore} · {TIER_LABELS[tier]}
-                </span>
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <span
+                    className={`inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${TIER_CLASSES[tier]}`}
+                  >
+                    {scoreState.result.normalizedScore} · {TIER_LABELS[tier]}
+                  </span>
+                  <span
+                    className={`inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-medium ${WEIGHT_PILL_CLASSES[productWeight]}`}
+                  >
+                    {WEIGHT_PILL_LABEL[productWeight]}
+                  </span>
+                </div>
+                {fitNote && (
+                  <p className="mt-1.5 font-sans text-[11px] leading-snug text-cream/60">
+                    {fitNote}
+                  </p>
+                )}
                 <div>
                   <Link
                     href="/how-we-score"
@@ -328,10 +350,30 @@ function SearchPageContent() {
   // isn't available during the initial server render.
   const [hasLocalProfile, setHasLocalProfile] = useState(false);
   const [localProfileChecked, setLocalProfileChecked] = useState(false);
+  // Only needed for the weight-pill fit note on product cards (Part 5) --
+  // signed-in users already get porosity/curl_type from useAuth's
+  // hairProfile, but anonymous visitors with a localStorage-only profile
+  // have no other source for it at the page level.
+  const [localProfileHairInfo, setLocalProfileHairInfo] = useState<{
+    porosity: string | null;
+    curl_type: string | null;
+  } | null>(null);
 
   useEffect(() => {
-    setHasLocalProfile(Boolean(localStorage.getItem("hair_profile_id")));
+    const profileId = localStorage.getItem("hair_profile_id");
+    setHasLocalProfile(Boolean(profileId));
     setLocalProfileChecked(true);
+
+    if (profileId) {
+      supabase
+        .from("hair_profiles")
+        .select("porosity, curl_type")
+        .eq("id", profileId)
+        .single()
+        .then(({ data }) => {
+          if (data) setLocalProfileHairInfo(data);
+        });
+    }
   }, []);
 
   // True until we know both whether the visitor is signed in and, if so,
@@ -857,6 +899,8 @@ function SearchPageContent() {
                 onToggleCard={() => toggleCard(product.code)}
                 ingredientsExpanded={ingredientsExpanded}
                 onToggleIngredients={toggleIngredients}
+                curlType={user ? hairProfile?.curl_type ?? null : localProfileHairInfo?.curl_type ?? null}
+                porosity={user ? hairProfile?.porosity ?? null : localProfileHairInfo?.porosity ?? null}
               />
             ))}
           </ul>

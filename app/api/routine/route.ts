@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { hasRoutineSubscription } from "@/lib/purchases";
-import { generateWashCalendar } from "@/lib/routineCalendar";
+import { formatStartDateLabel, generateWashCalendar } from "@/lib/routineCalendar";
 import { generateRoutineSteps } from "@/lib/routineSteps";
 import {
   getRoutineProductPicks,
   getIngredientsToAvoid,
 } from "@/lib/routineProducts";
 import { getChildSafetyNote, isChildSafetyProfile } from "@/lib/childSafety";
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
 
 // Server-only bridge (mirrors /api/purchases): the /routine page is a
 // client component, so it can't call hasRoutineSubscription() or read
@@ -45,9 +40,7 @@ export async function GET(request: Request) {
     .maybeSingle();
 
   const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  const monthLabel = `${MONTH_NAMES[now.getMonth()]} ${year}`;
+  const startDateLabel = formatStartDateLabel(now);
 
   const curlType = profile?.curl_type ?? null;
   const porosity = profile?.porosity ?? null;
@@ -57,7 +50,7 @@ export async function GET(request: Request) {
   const avoidLimit = isChildSafetyProfile(profileFor) ? 10 : 5;
 
   const [calendarDays, steps, products, avoidIngredients] = await Promise.all([
-    Promise.resolve(generateWashCalendar(year, month, porosity)),
+    Promise.resolve(generateWashCalendar(now, porosity)),
     Promise.resolve(
       generateRoutineSteps(
         curlType,
@@ -81,7 +74,7 @@ export async function GET(request: Request) {
     porosity,
     scalpCondition: profile?.scalp_condition ?? null,
     zipCode: profile?.zip_code ?? null,
-    monthLabel,
+    startDateLabel,
     profileFor,
     childSafetyNote: getChildSafetyNote(profileFor),
     calendarDays,

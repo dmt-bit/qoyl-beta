@@ -6,14 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Collapse from "@/components/Collapse";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
-import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
-import { WashDayType } from "@/lib/routineCalendar";
-
-type CalendarDay = {
-  day: number;
-  weekday: number;
-  washType: WashDayType | null;
-};
+import { curlFamily, scoreTier, TIER_CLASSES } from "@/lib/compatibility";
+import { ProductWeight, WEIGHT_PILL_CLASSES, WEIGHT_PILL_LABEL, weightFitNote } from "@/lib/productWeight";
+import { formatWashDayLabel, WashDay, WashDayType } from "@/lib/routineCalendar";
 
 type RoutineStep = {
   title: string;
@@ -25,6 +20,7 @@ type ProductCandidate = {
   productName: string;
   brandName: string;
   score: number;
+  weight: ProductWeight;
   why: string;
   affiliateLink: string | null;
 };
@@ -49,10 +45,10 @@ type RoutineData = {
   porosity: string | null;
   scalpCondition: string | null;
   zipCode: string | null;
-  monthLabel: string;
+  startDateLabel: string;
   profileFor: string | null;
   childSafetyNote: string | null;
-  calendarDays: CalendarDay[];
+  calendarDays: WashDay[];
   steps: RoutineStep[];
   products: ProductPick[];
   avoidIngredients: AvoidIngredient[];
@@ -78,10 +74,10 @@ const WASH_TYPE_MINI_ROUTINE: Record<WashDayType, string> = {
   protein: "Pre-poo → Shampoo → Protein → Deep condition → LCO",
 };
 
-const WASH_TYPE_CELL_CLASSES: Record<WashDayType, string> = {
-  chelate: "border-2 border-bronze bg-dark",
-  wash: "border border-dark bg-dark",
-  protein: "border-2 border-green bg-dark",
+const WASH_TYPE_ACCENT_CLASSES: Record<WashDayType, string> = {
+  chelate: "border-l-4 border-l-bronze",
+  wash: "border-l-4 border-l-dark",
+  protein: "border-l-4 border-l-green",
 };
 
 function stepProductCategory(title: string): string {
@@ -94,36 +90,33 @@ function stepProductCategory(title: string): string {
   return "Styling product";
 }
 
-function DayCell({ day }: { day: CalendarDay }) {
-  if (!day.washType) {
-    return (
-      <div
-        className="flex min-h-[64px] flex-col items-center justify-between rounded-md border border-warm/30 bg-warm/15 p-1.5 sm:min-h-[80px]"
-        title="Refresh day -- mist and re-seal your ends tonight."
-      >
-        <span className="text-[10px] font-semibold text-cream/70">{day.day}</span>
-        <span className="mb-0.5 h-1.5 w-1.5 rounded-full bg-sand" />
-      </div>
-    );
-  }
-
+function WashDayListItem({ washDay }: { washDay: WashDay }) {
   return (
     <div
-      className={`flex min-h-[64px] flex-col rounded-md p-1.5 sm:min-h-[80px] ${WASH_TYPE_CELL_CLASSES[day.washType]}`}
+      className={`rounded-md bg-warm/10 px-4 py-3 ${WASH_TYPE_ACCENT_CLASSES[washDay.washType]}`}
     >
-      <span className="text-[10px] font-semibold text-cream">{day.day}</span>
-      <span className="mt-0.5 text-[8px] font-semibold uppercase tracking-wide text-bronze2">
-        {WASH_TYPE_LABEL[day.washType]}
-      </span>
-      <span className="mt-0.5 text-[7px] leading-tight text-cream/60 sm:text-[8px]">
-        {WASH_TYPE_MINI_ROUTINE[day.washType]}
-      </span>
+      <p className="text-sm font-medium text-cream">
+        {formatWashDayLabel(washDay.date)}
+        <span className="text-cream/50"> — {WASH_TYPE_LABEL[washDay.washType]} wash</span>
+      </p>
+      <p className="mt-1 text-xs text-cream/60">{WASH_TYPE_MINI_ROUTINE[washDay.washType]}</p>
     </div>
   );
 }
 
-function ProductCard({ pick }: { pick: ProductPick }) {
+function ProductCard({
+  pick,
+  curlType,
+  porosity,
+}: {
+  pick: ProductPick;
+  curlType: string | null;
+  porosity: string | null;
+}) {
   const { primary, alternate } = pick;
+  const fitNote = primary
+    ? weightFitNote(primary.weight, curlFamily(curlType), curlType, porosity)
+    : null;
 
   return (
     <div className="rounded-xl border border-bronze/30 p-5">
@@ -151,15 +144,23 @@ function ProductCard({ pick }: { pick: ProductPick }) {
               <p className="font-serif text-lg text-cream">{primary.productName}</p>
               <p className="text-xs text-cream/50">{primary.brandName}</p>
             </div>
-            <span
-              className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                TIER_CLASSES[scoreTier(primary.score)]
-              }`}
-            >
-              {primary.score}
-            </span>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  TIER_CLASSES[scoreTier(primary.score)]
+                }`}
+              >
+                {primary.score}
+              </span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${WEIGHT_PILL_CLASSES[primary.weight]}`}
+              >
+                {WEIGHT_PILL_LABEL[primary.weight]}
+              </span>
+            </div>
           </div>
           <p className="mt-1 text-sm text-cream/70">{primary.why}</p>
+          {fitNote && <p className="mt-1 text-xs text-cream/50">{fitNote}</p>}
           <ShopButton
             productName={primary.productName}
             brandName={primary.brandName}
@@ -240,7 +241,7 @@ function RoutineContent() {
   const isChildOrBaby = data.profileFor === "child" || data.profileFor === "baby";
   const headerText = isChildOrBaby
     ? `Here's ${firstName}'s routine.`
-    : `Your ${data.monthLabel} routine, ${firstName}.`;
+    : `Your next 30 days, ${firstName}.`;
   const chips = [
     data.curlType && data.curlType !== "not_sure" ? `Curl type ${data.curlType}` : null,
     data.porosity && data.porosity !== "not sure" ? `${data.porosity} porosity` : null,
@@ -249,9 +250,6 @@ function RoutineContent() {
       : null,
     data.zipCode || null,
   ].filter((chip): chip is string => Boolean(chip));
-
-  const leadingEmpty = data.calendarDays[0]?.weekday ?? 0;
-  const trailingEmpty = (7 - ((leadingEmpty + data.calendarDays.length) % 7)) % 7;
 
   return (
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
@@ -319,48 +317,15 @@ function RoutineContent() {
           )}
         </section>
 
-        {/* SECTION 2 -- 30-day wash day calendar */}
+        {/* SECTION 2 -- rolling 30-day wash day list */}
         <section className="print-page-break mt-12">
           <h2 className="font-serif text-2xl font-semibold text-cream">
-            {data.monthLabel} wash day calendar
+            Your next 30 days — starting {data.startDateLabel}
           </h2>
-          <div className="mt-4 grid grid-cols-7 gap-1.5 sm:gap-2">
-            {["S", "M", "T", "W", "T", "F", "S"].map((label, i) => (
-              <div
-                key={i}
-                className="text-center text-[10px] font-semibold uppercase tracking-wide text-cream/50"
-              >
-                {label}
-              </div>
+          <div className="mt-4 space-y-2">
+            {data.calendarDays.map((washDay) => (
+              <WashDayListItem key={washDay.date} washDay={washDay} />
             ))}
-            {Array.from({ length: leadingEmpty }).map((_, i) => (
-              <div key={`lead-${i}`} />
-            ))}
-            {data.calendarDays.map((day) => (
-              <DayCell key={day.day} day={day} />
-            ))}
-            {Array.from({ length: trailingEmpty }).map((_, i) => (
-              <div key={`trail-${i}`} />
-            ))}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-4 text-xs text-cream/60">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm border-2 border-bronze bg-dark" />
-              Chelating wash
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm bg-dark" />
-              Regular wash
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm border-2 border-green bg-dark" />
-              Protein treatment
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-sand" />
-              Seal ends nightly
-            </span>
           </div>
         </section>
 
@@ -395,7 +360,12 @@ function RoutineContent() {
           </h2>
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {data.products.map((pick) => (
-              <ProductCard key={pick.category} pick={pick} />
+              <ProductCard
+                key={pick.category}
+                pick={pick}
+                curlType={data.curlType}
+                porosity={data.porosity}
+              />
             ))}
           </div>
 

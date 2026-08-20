@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { classifyProductWeight, ProductWeight } from "@/lib/productWeight";
 
 export type Match = {
   ingredient_name: string;
@@ -11,6 +12,7 @@ export type Match = {
 export type ScoreResult = {
   normalizedScore: number;
   matches: Match[];
+  productWeight: ProductWeight;
 };
 
 export function parseIngredients(text: string): string[] {
@@ -200,6 +202,54 @@ export function curlFamily(curlType: string | null): CurlFamily | null {
   if (t.startsWith("3")) return "curly";
   if (t.startsWith("4")) return "coily";
   return null; // "not_sure" or unrecognized -- no adjustment
+}
+
+// ---- Product-weight scoring modifier -----------------------------------
+//
+// Unlike every adjustment above, this isn't a per-ingredient nudge -- it's
+// a single product-level modifier applied once, after the weighted-mean
+// ingredient score is aggregated (see resolveScoreResult below). A product
+// classified as "very_heavy" (see lib/productWeight.ts) is a strong
+// formulation-level mismatch for fine straight hair regardless of how well
+// any individual ingredient scores, and the reverse is true for coily hair
+// needing more moisture/hold than a lightweight formula can deliver.
+const WEIGHT_MODIFIERS: Record<CurlFamily, Record<ProductWeight, number>> = {
+  straight: {
+    ultralight: 5,
+    light: 3,
+    medium: 0,
+    heavy: -10,
+    very_heavy: -20,
+  },
+  wavy: {
+    ultralight: 3,
+    light: 2,
+    medium: 0,
+    heavy: -7,
+    very_heavy: -15,
+  },
+  curly: {
+    ultralight: 0,
+    light: 2,
+    medium: 3,
+    heavy: 0,
+    very_heavy: -5,
+  },
+  coily: {
+    ultralight: -2,
+    light: 0,
+    medium: 3,
+    heavy: 5,
+    very_heavy: 3,
+  },
+};
+
+export function getWeightModifier(
+  weight: ProductWeight,
+  family: CurlFamily | null
+): number {
+  if (!family) return 0; // "not_sure" or unrecognized curl type -- no adjustment
+  return WEIGHT_MODIFIERS[family][weight];
 }
 
 function ratingForScore(score: number): "good" | "neutral" | "caution" | "avoid" {
@@ -653,13 +703,18 @@ async function fetchScoreRows(
 function resolveScoreResult(
   ingredients: PositionedIngredient[],
   scoreRows: ScoreRow[],
-  profile: ScoringProfile
+  profile: ScoringProfile,
+  category: string | null = null
 ): ScoreResult {
   const { scalpCondition, family, climate, waterHardness, porosity, ageRange, hairConcerns } =
     profile;
 
   if (ingredients.length === 0) {
-    return { normalizedScore: 0, matches: [] };
+    return {
+      normalizedScore: 0,
+      matches: [],
+      productWeight: classifyProductWeight([], category ?? ""),
+    };
   }
 
   // Generic (scalp_condition/hair_type both null) rows first, then a row
@@ -768,22 +823,40 @@ function resolveScoreResult(
   // mathematically exceed it, but the cap makes that guarantee explicit.
   const weightedSum = matchList.reduce((acc, m) => acc + m.score * m.weight, 0);
   const weightTotal = matchList.reduce((acc, m) => acc + m.weight, 0);
-  const normalizedScore =
+  const baseScore =
     weightTotal === 0
       ? 0
       : Math.min(100, Math.round((weightedSum / (weightTotal * 10)) * 100));
 
-  return { normalizedScore, matches: matchList };
+  // Product-weight modifier -- see getWeightModifier above. Applied once
+  // here, after aggregation, rather than per-ingredient like every other
+  // adjustment in this function: it's a judgment about the product's
+  // overall formulation, not about any single ingredient's score.
+  const orderedIngredientNames = [...ingredients]
+    .sort((a, b) => a.position - b.position)
+    .map((i) => i.inci_name);
+  const productWeight = classifyProductWeight(orderedIngredientNames, category ?? "");
+  const weightModifier = getWeightModifier(productWeight, family);
+  const normalizedScore = Math.min(100, Math.max(0, baseScore + weightModifier));
+
+  return { normalizedScore, matches: matchList, productWeight };
 }
 
 // Shared by the single-product scoring entry points below -- fetches
 // compatibility_scores for just this ingredient list, then resolves it.
 async function scorePositionedIngredients(
   ingredients: PositionedIngredient[],
-  profile: ScoringProfile
+  profile: ScoringProfile,
+  category: string | null = null
 ): Promise<{ error?: string; result?: ScoreResult }> {
   if (ingredients.length === 0) {
-    return { result: { normalizedScore: 0, matches: [] } };
+    return {
+      result: {
+        normalizedScore: 0,
+        matches: [],
+        productWeight: classifyProductWeight([], category ?? ""),
+      },
+    };
   }
 
   const { data: scoreRows, error } = await fetchScoreRows(
@@ -792,7 +865,9 @@ async function scorePositionedIngredients(
   );
   if (error) return { error };
 
-  return { result: resolveScoreResult(ingredients, scoreRows ?? [], profile) };
+  return {
+    result: resolveScoreResult(ingredients, scoreRows ?? [], profile, category),
+  };
 }
 
 export async function scoreIngredientsText(
@@ -844,7 +919,7 @@ export async function scoreIngredientsText(
     })
   );
 
-  return scorePositionedIngredients(positioned, profile);
+  return scorePositionedIngredients(positioned, profile, null);
 }
 
 // For products from Qoyl's own curated catalog -- reads
@@ -860,11 +935,18 @@ export async function scoreCatalogProduct(
   if ("error" in ctx) return { error: ctx.error };
   const { profile } = ctx;
 
-  const { data: rows, error } = await supabase
-    .from("catalog_product_ingredients")
-    .select("position, ingredients(id, inci_name, common_name)")
-    .eq("product_id", productId)
-    .order("position");
+  const [{ data: rows, error }, { data: productRow }] = await Promise.all([
+    supabase
+      .from("catalog_product_ingredients")
+      .select("position, ingredients(id, inci_name, common_name)")
+      .eq("product_id", productId)
+      .order("position"),
+    supabase
+      .from("catalog_products")
+      .select("categories(slug)")
+      .eq("id", productId)
+      .maybeSingle(),
+  ]);
 
   if (error) {
     return { error: error.message };
@@ -883,7 +965,11 @@ export async function scoreCatalogProduct(
     })
     .filter((i): i is PositionedIngredient => i !== null);
 
-  return scorePositionedIngredients(positioned, profile);
+  const categorySlug =
+    (productRow?.categories as unknown as { slug: string } | { slug: string }[] | null) ?? null;
+  const category = Array.isArray(categorySlug) ? categorySlug[0]?.slug : categorySlug?.slug;
+
+  return scorePositionedIngredients(positioned, profile, category ?? null);
 }
 
 // Batch version of scoreCatalogProduct, for scoring an entire search
@@ -922,16 +1008,29 @@ export async function scoreCatalogProductsForProfile(
 ): Promise<Record<string, { error?: string; result?: ScoreResult }>> {
   if (productIds.length === 0) return {};
 
-  const { data: rows, error: piError } = await supabase
-    .from("catalog_product_ingredients")
-    .select("product_id, position, ingredients(id, inci_name, common_name)")
-    .in("product_id", productIds)
-    .order("position");
+  const [{ data: rows, error: piError }, { data: categoryRows }] = await Promise.all([
+    supabase
+      .from("catalog_product_ingredients")
+      .select("product_id, position, ingredients(id, inci_name, common_name)")
+      .in("product_id", productIds)
+      .order("position"),
+    supabase.from("catalog_products").select("id, categories(slug)").in("id", productIds),
+  ]);
 
   if (piError) {
     return Object.fromEntries(
       productIds.map((id) => [id, { error: piError.message }])
     );
+  }
+
+  const categoryByProduct = new Map<string, string | null>();
+  for (const row of categoryRows ?? []) {
+    const categories = row.categories as unknown as
+      | { slug: string }
+      | { slug: string }[]
+      | null;
+    const slug = Array.isArray(categories) ? categories[0]?.slug : categories?.slug;
+    categoryByProduct.set(row.id, slug ?? null);
   }
 
   const ingredientsByProduct = new Map<string, PositionedIngredient[]>();
@@ -964,7 +1063,8 @@ export async function scoreCatalogProductsForProfile(
       result: resolveScoreResult(
         ingredientsByProduct.get(id) ?? [],
         scoreRows ?? [],
-        profile
+        profile,
+        categoryByProduct.get(id) ?? null
       ),
     };
   }
