@@ -16,6 +16,7 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
   { label: "Co-Wash", slug: "co-wash" },
   { label: "Deep Conditioner", slug: "deep-conditioner" },
   { label: "Leave-In", slug: "leave-in" },
+  { label: "Heat Protectant", slug: "heat-protectant" },
   { label: "Styler", slug: "styler" },
   { label: "Gel", slug: "gel" },
   { label: "Oil", slug: "oil" },

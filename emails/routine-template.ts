@@ -1,4 +1,5 @@
 import { type CurlFamily } from "@/lib/compatibility";
+import { getCategoryGuidanceTips } from "@/lib/categoryGuidance";
 import { formatWashDayLabel, WashDay, WashDayType } from "@/lib/routineCalendar";
 import { RoutineProductPick } from "@/lib/routineProducts";
 import { SeasonalNote } from "@/lib/routineSeasonalNote";
@@ -20,6 +21,7 @@ export type RoutineEmailData = {
   seasonalNote: SeasonalNote;
   dashboardUrl: string;
   searchUrl: string;
+  requestUrl: string;
 };
 
 function escapeHtml(value: string): string {
@@ -147,15 +149,23 @@ function scoreFillClass(score: number): string {
   return "score-fill-r";
 }
 
-function renderProducts(products: RoutineProductPick[], searchUrl: string): string {
+function renderProducts(products: RoutineProductPick[], searchUrl: string, requestUrl: string): string {
   return products
     .map((pick) => {
       if (pick.noProductsYet || !pick.primary) {
+        const labelLower = pick.categoryLabel.toLowerCase();
+        const article = /^[aeiou]/i.test(labelLower) ? "an" : "a";
+        const tips = getCategoryGuidanceTips(pick.category)
+          .map((tip) => `<div class="product-tip">&bull; ${escapeHtml(tip)}</div>`)
+          .join("");
         return `
   <div class="product-card">
     <div class="product-cat">${escapeHtml(pick.categoryLabel)}</div>
-    <div class="product-why">We're still adding ${escapeHtml(pick.categoryLabel.toLowerCase())} products to our database.</div>
-    <a href="${escapeHtml(searchUrl)}?category=${encodeURIComponent(pick.category)}" class="shop-btn">Search our product catalog &rarr;</a>
+    <div class="product-guidance"><strong>We're adding ${escapeHtml(labelLower)} products to our catalog</strong></div>
+    <div class="product-why">In the meantime, look for these key ingredients when shopping for ${article} ${escapeHtml(labelLower)}:</div>
+    ${tips}
+    <a href="${escapeHtml(searchUrl)}?category=${encodeURIComponent(pick.category)}" class="shop-btn">Search our catalog &rarr;</a>
+    <div class="product-alt"><a href="${escapeHtml(requestUrl)}?product=${encodeURIComponent(pick.categoryLabel)}">Request a product evaluation &rarr;</a></div>
   </div>`;
       }
 
@@ -252,6 +262,8 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
 .product-guidance strong{font-weight:600}
 .product-why{font-size:11px;color:#5A4A3A;line-height:1.55;margin-bottom:6px}
 .product-alt{font-size:10px;color:#9C7B5A;margin-top:8px}
+.product-alt a{color:#9C7B5A}
+.product-tip{font-size:11px;color:#5A4A3A;line-height:1.5;margin-top:4px}
 .score-row{display:flex;align-items:center;gap:8px}
 .score-bar{width:80px;height:4px;background:#EDE5D8;border-radius:2px;overflow:hidden}
 .score-fill-g{height:100%;background:#5BA67A;border-radius:2px}
@@ -310,7 +322,7 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
   <div class="section-label">your curated product list</div>
   <div class="section-title">Top picks for your profile</div>
 
-  ${renderProducts(data.products, data.searchUrl)}
+  ${renderProducts(data.products, data.searchUrl, data.requestUrl)}
 
   ${renderSeasonalNote(data.seasonalNote)}
 

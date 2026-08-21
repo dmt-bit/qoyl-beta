@@ -15,6 +15,7 @@ import { renderRoutineEmailHtml } from "@/emails/routine-template";
 const FROM_ADDRESS = "Qoyl <hey@qoyl.live>";
 const DASHBOARD_URL = "qoyl-beta-alpha.vercel.app/dashboard";
 const SEARCH_URL = "https://qoyl.live/search";
+const REQUEST_URL = "https://qoyl.live/request";
 
 // All 12 real curl types -- was `["4a","4b","4c"]` from when this system
 // only served coily subscribers, which silently blanked curlTypeLabel
@@ -118,6 +119,7 @@ export async function sendRoutineEmail(
     seasonalNote,
     dashboardUrl: DASHBOARD_URL,
     searchUrl: SEARCH_URL,
+    requestUrl: REQUEST_URL,
   });
 
   try {

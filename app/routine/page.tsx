@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth-context";
 import { curlFamily, CurlFamily, scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import { ProductWeight, WEIGHT_PILL_CLASSES, WEIGHT_PILL_LABEL, weightFitNote } from "@/lib/productWeight";
 import { WashDay, WashDayType } from "@/lib/routineCalendar";
+import { getCategoryGuidanceTips } from "@/lib/categoryGuidance";
 
 type RoutineStep = {
   title: string;
@@ -353,6 +354,78 @@ function WashCalendarGrid({
   );
 }
 
+// Small bronze bottle/flask outline -- no icon library in this project,
+// so a minimal inline SVG rather than pulling one in for a single glyph.
+function CategoryIcon() {
+  return (
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bronze/15">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        className="h-5 w-5 text-bronze"
+      >
+        <path
+          d="M9 2h6M10 2v5.5L5.5 15a3 3 0 0 0 2.6 4.5h7.8a3 3 0 0 0 2.6-4.5L14 7.5V2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
+function articleFor(word: string): string {
+  return /^[aeiou]/i.test(word) ? "an" : "a";
+}
+
+// Shown instead of a blank/error card when a category has zero scoreable
+// candidates for this profile -- see lib/categoryGuidance.ts for the
+// per-category ingredient tips.
+function PlaceholderCard({ pick }: { pick: ProductPick }) {
+  const labelLower = pick.categoryLabel.toLowerCase();
+  const tips = getCategoryGuidanceTips(pick.category);
+
+  return (
+    <>
+      <div className="mt-3 flex items-start gap-3">
+        <CategoryIcon />
+        <div>
+          <p className="font-serif text-base text-cream">
+            We&apos;re adding {labelLower} products to our catalog
+          </p>
+          <p className="mt-1 text-sm text-cream/60">
+            In the meantime, look for these key ingredients when shopping for{" "}
+            {articleFor(labelLower)} {labelLower}:
+          </p>
+        </div>
+      </div>
+      <ul className="mt-3 space-y-1.5">
+        {tips.map((tip) => (
+          <li key={tip} className="text-xs leading-relaxed text-cream/70">
+            • {tip}
+          </li>
+        ))}
+      </ul>
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+        <Link
+          href={`/search?category=${encodeURIComponent(pick.category)}`}
+          className="print-hide text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+        >
+          Search our catalog →
+        </Link>
+        <Link
+          href={`/request?product=${encodeURIComponent(pick.categoryLabel)}`}
+          className="print-hide text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+        >
+          Request a product evaluation →
+        </Link>
+      </div>
+    </>
+  );
+}
+
 function ProductCard({
   pick,
   curlType,
@@ -374,18 +447,7 @@ function ProductCard({
       </p>
 
       {pick.noProductsYet || !primary ? (
-        <>
-          <p className="mt-3 text-sm text-cream/50">
-            We are still adding {pick.categoryLabel.toLowerCase()} products to our
-            database.
-          </p>
-          <Link
-            href={`/search?category=${encodeURIComponent(pick.category)}`}
-            className="print-hide mt-3 inline-block text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
-          >
-            Search our product catalog →
-          </Link>
-        </>
+        <PlaceholderCard pick={pick} />
       ) : (
         <>
           <div className="mt-3 flex items-start justify-between gap-3">
@@ -500,6 +562,7 @@ function RoutineContent() {
       : null,
     data.zipCode || null,
   ].filter((chip): chip is string => Boolean(chip));
+  const hasPlaceholderCards = data.products.some((pick) => pick.noProductsYet);
 
   return (
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
@@ -559,6 +622,20 @@ function RoutineContent() {
             Updated monthly based on your hair profile and seasonal climate
             changes.
           </p>
+
+          {hasPlaceholderCards && (
+            <p className="mt-4 rounded-lg border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-cream/90">
+              We are actively expanding our product catalog. Some categories show
+              ingredient guidance while we add more products. Check back soon — or{" "}
+              <Link
+                href="/request"
+                className="print-hide underline underline-offset-2 hover:text-cream"
+              >
+                request a specific product evaluation
+              </Link>
+              .
+            </p>
+          )}
 
           {data.childSafetyNote && (
             <p className="mt-4 rounded-lg border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-cream/90">
