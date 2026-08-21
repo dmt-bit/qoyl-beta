@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Collapse from "@/components/Collapse";
 import HairJourneySection from "@/components/HairJourneySection";
+import HairTypeStrip from "@/components/HairTypeStrip";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
 import { ADULT_AGE_RANGE_OPTIONS, formatAdultAgeRange } from "@/lib/ageRange";
@@ -848,7 +849,10 @@ function ProfileForm() {
   }
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-dark font-sans text-cream">
+      <HairTypeStrip tileSize={160} />
+
+      <div className="px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-md">
         <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
           {showForm ? "Hair Profile" : "Your Hair Profile"}
@@ -1581,6 +1585,7 @@ function ProfileForm() {
       </div>
 
       {user && <MyPurchases userId={user.id} />}
+      </div>
     </main>
   );
 }

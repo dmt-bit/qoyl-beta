@@ -1,5 +1,4 @@
 import Link from "next/link";
-import HairTypeStrip from "@/components/HairTypeStrip";
 import MasonryFeed from "@/components/MasonryFeed";
 import { supabase } from "@/lib/supabase";
 
@@ -23,8 +22,6 @@ export default async function Home() {
           </h1>
           <div className="mt-3 h-px w-10 bg-bronze" />
         </div>
-
-        <HairTypeStrip tileSize={160} className="hero-anim-strip mt-12 sm:mt-16" />
 
         <h2 className="hero-anim-headline mt-12 max-w-xs text-center font-serif text-[28px] italic leading-[1.2] text-cream sm:mt-16 sm:max-w-md sm:text-4xl">
           Finally know what your hair actually needs.
