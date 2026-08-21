@@ -4,7 +4,7 @@ import { getSignedHairPhotoUrl } from "@/lib/hairPhotos";
 
 // This route reads no part of the request (no searchParams/headers/
 // cookies), which makes Next.js eligible to statically cache it by
-// default -- confirmed the hard way: it served an empty result forever
+// default - confirmed the hard way: it served an empty result forever
 // after the first (legitimately empty, pre-any-public-photo) request.
 export const dynamic = "force-dynamic";
 
@@ -16,14 +16,14 @@ export type CommunityPhoto = {
   porosity: string | null;
 };
 
-// Public community feed (Part 4) -- deliberately no user names/ids
+// Public community feed (Part 4) - deliberately no user names/ids
 // returned to the client, just hair-type context. hair_profiles isn't
 // embeddable via a PostgREST foreign-key join here (hair_photos.user_id
 // isn't declared as a FK to hair_profiles), so profiles are fetched
 // separately and merged server-side.
 //
 // ?limit= lets callers ask for more than the original 9-photo grid needs
-// -- the home page masonry feed samples from the most recent 20.
+// - the home page masonry feed samples from the most recent 20.
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const limitParam = parseInt(searchParams.get("limit") ?? "9", 10);

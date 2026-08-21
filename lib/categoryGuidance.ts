@@ -1,26 +1,26 @@
 // Ingredient-guidance placeholder content, shown instead of a blank/error
 // card whenever a routine category has zero scoreable candidates for a
-// profile -- either because the catalog genuinely has nothing in that
+// profile - either because the catalog genuinely has nothing in that
 // category yet, or because every candidate got filtered out by
 // isProductAllowed in lib/routineProducts.ts. Split into its own module
 // (no Supabase imports) so both that server-only file and client
-// components like app/routine/page.tsx can import it safely -- importing
+// components like app/routine/page.tsx can import it safely - importing
 // lib/routineProducts.ts itself from a "use client" file would pull its
 // getSupabaseAdmin() (service-role) dependency into the client bundle.
 //
 // "detangler" isn't a live routine category (there's no such slug in
-// FAMILY_ROUTINE_CATEGORIES or the categories table) -- kept here in case
+// FAMILY_ROUTINE_CATEGORIES or the categories table) - kept here in case
 // one gets added later.
 export const CATEGORY_INGREDIENT_TIPS: Record<string, string[]> = {
   "dry-shampoo": [
-    "Starch (Tapioca, Rice, or Corn) — absorbs oil without residue",
-    "Kaolin Clay — gentle oil absorption for fine hair",
-    "Avoid: Talc and heavy silicones — can cause buildup on fine strands",
+    "Starch (Tapioca, Rice, or Corn) - absorbs oil without residue",
+    "Kaolin Clay - gentle oil absorption for fine hair",
+    "Avoid: Talc and heavy silicones - can cause buildup on fine strands",
   ],
   "co-wash": [
-    "Cetearyl Alcohol — conditioning cleansing agent",
-    "Behentrimonium Methosulfate (BTMS) — gentle cleanser and conditioner",
-    "Avoid: Sulfates — co-washes should never contain SLS or SLES",
+    "Cetearyl Alcohol - conditioning cleansing agent",
+    "Behentrimonium Methosulfate (BTMS) - gentle cleanser and conditioner",
+    "Avoid: Sulfates - co-washes should never contain SLS or SLES",
   ],
   detangler: [
     "Slip agents: Cetrimonium Chloride or BTMS for maximum slip",
@@ -28,66 +28,66 @@ export const CATEGORY_INGREDIENT_TIPS: Record<string, string[]> = {
     "Avoid: Heavy proteins if hair is protein-sensitive",
   ],
   "heat-protectant": [
-    "Look for: silicones (Dimethicone, Cyclomethicone) or film-forming agents (PVP, Amodimethicone) that create a protective barrier. For fine straight hair, choose a spray formula over a cream — creams can weigh hair down.",
-    "Avoid: heavy oils as the only heat protection — oils alone do not protect against heat damage above 300°F.",
+    "Look for: silicones (Dimethicone, Cyclomethicone) or film-forming agents (PVP, Amodimethicone) that create a protective barrier. For fine straight hair, choose a spray formula over a cream - creams can weigh hair down.",
+    "Avoid: heavy oils as the only heat protection - oils alone do not protect against heat damage above 300°F.",
   ],
   // Extrapolated in the same style as the four categories above, so "no
   // empty states" holds even if one of the original categories ever
   // legitimately turns up zero candidates for a given profile.
   shampoo: [
-    "Sulfate-free surfactants: Cocamidopropyl Betaine or Sodium Cocoyl Isethionate — cleanses without stripping",
-    "Glycerin or Panthenol — retains moisture during cleansing",
-    "Avoid: Sodium Lauryl Sulfate (SLS) — can be overly drying, especially for curly or coily textures",
+    "Sulfate-free surfactants: Cocamidopropyl Betaine or Sodium Cocoyl Isethionate - cleanses without stripping",
+    "Glycerin or Panthenol - retains moisture during cleansing",
+    "Avoid: Sodium Lauryl Sulfate (SLS) - can be overly drying, especially for curly or coily textures",
   ],
   conditioner: [
-    "Cetyl Alcohol or Cetearyl Alcohol — softens and detangles",
-    "Behentrimonium Chloride — conditioning agent that smooths the cuticle",
-    "Avoid: high alcohol content (Isopropyl, Ethanol) near the top of the list — can dry out strands",
+    "Cetyl Alcohol or Cetearyl Alcohol - softens and detangles",
+    "Behentrimonium Chloride - conditioning agent that smooths the cuticle",
+    "Avoid: high alcohol content (Isopropyl, Ethanol) near the top of the list - can dry out strands",
   ],
   "deep-conditioner": [
-    "Hydrolyzed proteins (Wheat, Silk, or Keratin) — strengthens weakened strands",
-    "Shea Butter or Ceramides — deep moisture and cuticle repair",
-    "Avoid: mineral oil as the primary ingredient — can coat hair without real penetration",
+    "Hydrolyzed proteins (Wheat, Silk, or Keratin) - strengthens weakened strands",
+    "Shea Butter or Ceramides - deep moisture and cuticle repair",
+    "Avoid: mineral oil as the primary ingredient - can coat hair without real penetration",
   ],
   "leave-in": [
-    "Glycerin or Aloe Vera — lightweight, ongoing hydration",
-    "Behentrimonium Methosulfate — eases detangling without buildup",
-    "Avoid: high alcohol content near the top of the ingredient list — can be drying over the day",
+    "Glycerin or Aloe Vera - lightweight, ongoing hydration",
+    "Behentrimonium Methosulfate - eases detangling without buildup",
+    "Avoid: high alcohol content near the top of the ingredient list - can be drying over the day",
   ],
   styler: [
-    "Polyquaternium or PVP — hold without stiffness",
-    "Flaxseed Extract or Xanthan Gum — natural definition and curl clumping",
-    "Avoid: heavy waxes near the top of the ingredient list — can weigh down fine or fragile strands",
+    "Polyquaternium or PVP - hold without stiffness",
+    "Flaxseed Extract or Xanthan Gum - natural definition and curl clumping",
+    "Avoid: heavy waxes near the top of the ingredient list - can weigh down fine or fragile strands",
   ],
   oil: [
-    "Jojoba Oil or Argan Oil — lightweight sealing without heaviness",
-    "Vitamin E (Tocopherol) — antioxidant protection for the hair shaft",
-    "Avoid: Mineral Oil or Petrolatum as the primary ingredient — seals moisture out rather than in",
+    "Jojoba Oil or Argan Oil - lightweight sealing without heaviness",
+    "Vitamin E (Tocopherol) - antioxidant protection for the hair shaft",
+    "Avoid: Mineral Oil or Petrolatum as the primary ingredient - seals moisture out rather than in",
   ],
   gel: [
-    "PVP or Polyquaternium — strong hold without flaking",
-    "Aloe Vera or Flaxseed Extract as a base — hold with less dryness",
-    "Avoid: high alcohol content near the top of the list — can be drying and cause flaking",
+    "PVP or Polyquaternium - strong hold without flaking",
+    "Aloe Vera or Flaxseed Extract as a base - hold with less dryness",
+    "Avoid: high alcohol content near the top of the list - can be drying and cause flaking",
   ],
   "curl-cream": [
-    "Shea Butter or Mango Butter — definition and moisture for curls",
-    "Glycerin — everyday hydration",
-    "Avoid: mineral oil or petrolatum as the primary ingredient on fine or low-porosity hair — can weigh curls down",
+    "Shea Butter or Mango Butter - definition and moisture for curls",
+    "Glycerin - everyday hydration",
+    "Avoid: mineral oil or petrolatum as the primary ingredient on fine or low-porosity hair - can weigh curls down",
   ],
   butter: [
-    "Shea Butter or Mango Butter as the base — rich sealing for high-porosity hair",
-    "A lightweight oil blended in (Jojoba, Grapeseed) — eases application",
-    "Avoid: using butter as a leave-in on low-porosity or fine hair — too heavy without a humectant first",
+    "Shea Butter or Mango Butter as the base - rich sealing for high-porosity hair",
+    "A lightweight oil blended in (Jojoba, Grapeseed) - eases application",
+    "Avoid: using butter as a leave-in on low-porosity or fine hair - too heavy without a humectant first",
   ],
   mousse: [
-    "PVP or Polyquaternium — volumizing hold without residue",
-    "Panthenol — body and softness",
-    "Avoid: heavy silicones — can flatten volume over the course of the day",
+    "PVP or Polyquaternium - volumizing hold without residue",
+    "Panthenol - body and softness",
+    "Avoid: heavy silicones - can flatten volume over the course of the day",
   ],
 };
 
 const GENERIC_INGREDIENT_TIPS = [
-  "Look for ingredients suited to your porosity and curl pattern — humectants for moisture, proteins for strength.",
+  "Look for ingredients suited to your porosity and curl pattern - humectants for moisture, proteins for strength.",
   "Avoid: heavy silicones or sulfates high on the ingredient list if you're prone to buildup.",
 ];
 

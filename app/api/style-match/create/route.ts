@@ -16,7 +16,7 @@ type CreateRequestBody = {
 };
 
 // Creates the style_matches row as soon as a match is confirmed, rather
-// than only once the user takes a concluding action (save/book) -- the
+// than only once the user takes a concluding action (save/book) - the
 // heart/save button on the confirm and results screens needs a real
 // style_match_id to attach saved_styles rows to, and that can happen
 // before the user has decided DIY vs stylist.

@@ -11,7 +11,7 @@ export type HairPhotoResult = {
   takenAt: string;
 };
 
-// GET ?user_id= -- the signed-in user's own photos, newest first, with
+// GET ?user_id= - the signed-in user's own photos, newest first, with
 // freshly-signed URLs (hair-photos is a private bucket).
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
   return NextResponse.json({ photos });
 }
 
-// POST -- upload a new hair photo. Trusts user_id from the body, same
+// POST - upload a new hair photo. Trusts user_id from the body, same
 // pattern as the rest of this codebase's client-triggered server routes.
 export async function POST(request: Request) {
   const body = await request.json();

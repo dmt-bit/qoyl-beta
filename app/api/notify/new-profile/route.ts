@@ -3,7 +3,7 @@ import { sendNotificationEmail } from "@/lib/notify";
 import { getResend } from "@/lib/resend";
 
 // The profile form is a client component, so it can't import lib/notify.ts
-// (and RESEND_API_KEY) directly -- this route is the server-side bridge,
+// (and RESEND_API_KEY) directly - this route is the server-side bridge,
 // called fire-and-forget right after a successful hair_profiles insert.
 export async function POST(request: Request) {
   console.log("[notify/new-profile] route hit");
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   );
 
   const notifyResult = await sendNotificationEmail(
-    `New Qoyl profile — ${val(curl_type)} ${val(porosity)}`,
+    `New Qoyl profile - ${val(curl_type)} ${val(porosity)}`,
     `New hair profile created on Qoyl.
 
 Curl type: ${val(curl_type)}

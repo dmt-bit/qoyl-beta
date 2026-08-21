@@ -40,7 +40,7 @@ export function scoreTier(score: number): "green" | "amber" | "red" {
 
 // Ingredients are listed on a label in descending order of concentration,
 // so position is a proxy for how much of the product it actually makes
-// up -- an ingredient at position 2 matters far more than the same
+// up - an ingredient at position 2 matters far more than the same
 // ingredient at position 22. position is 1-based.
 export function positionWeight(position: number): number {
   if (position <= 5) return 1.3;
@@ -72,7 +72,7 @@ export const RATING_BORDER_CLASSES: Record<string, string> = {
 export type IngredientRow = {
   id: string;
   inci_name: string;
-  // Nullable in the DB -- ingredients auto-created from an unmatched
+  // Nullable in the DB - ingredients auto-created from an unmatched
   // label (see lib/adminProducts.ts's matchIngredientNames) only get an
   // inci_name, not a curated common_name.
   common_name: string | null;
@@ -114,8 +114,8 @@ function bestByOverlap(
 }
 
 // Real ingredient labels (Open Beauty Facts included) almost always embed
-// the common name inside the INCI name -- e.g. "Cocos Nucifera (Coconut)
-// Oil" -- while our ingredients table stores the botanical and common
+// the common name inside the INCI name - e.g. "Cocos Nucifera (Coconut)
+// Oil" - while our ingredients table stores the botanical and common
 // names as separate columns with no parenthetical form at all. An exact
 // match against either column alone misses most real-world labels, so
 // this tries progressively looser tiers: exact -> first word -> substring.
@@ -155,7 +155,7 @@ export function findBestIngredientMatch(
     }
   }
 
-  // Minimum length for either side of a containment check -- short
+  // Minimum length for either side of a containment check - short
   // strings (e.g. "TEA", a common_name for Triethanolamine) will
   // coincidentally appear inside unrelated names (e.g. "CeTEAreth-25"),
   // producing a confident-looking but wrong single-candidate match.
@@ -182,14 +182,14 @@ export function findBestIngredientMatch(
 // fetched but never used. Rather than requiring a new database row for
 // every ingredient x curl-type-family combination, this applies the same
 // kind of relative adjustment already used for climate in lib/travelKit.ts
-// -- a small set of category rules (silicones, heavy butters, sulfates,
+// - a small set of category rules (silicones, heavy butters, sulfates,
 // etc.) nudge the porosity-resolved score/rating for straight/wavy/curly
-// hair. Coily (type 4) is never adjusted -- it's the original, already-
+// hair. Coily (type 4) is never adjusted - it's the original, already-
 // calibrated baseline this whole table was built around.
 //
 // Ingredients added specifically for types 1-3 (see the section-3 seed
 // SQL) carry a real hair_type value on their own compatibility_scores
-// rows instead, which take precedence over these generic rules -- see
+// rows instead, which take precedence over these generic rules - see
 // the hairTypeOverridden set in scoreIngredientsText.
 
 export type CurlFamily = "straight" | "wavy" | "curly" | "coily";
@@ -201,12 +201,12 @@ export function curlFamily(curlType: string | null): CurlFamily | null {
   if (t.startsWith("2")) return "wavy";
   if (t.startsWith("3")) return "curly";
   if (t.startsWith("4")) return "coily";
-  return null; // "not_sure" or unrecognized -- no adjustment
+  return null; // "not_sure" or unrecognized - no adjustment
 }
 
 // ---- Product-weight scoring modifier -----------------------------------
 //
-// Unlike every adjustment above, this isn't a per-ingredient nudge -- it's
+// Unlike every adjustment above, this isn't a per-ingredient nudge - it's
 // a single product-level modifier applied once, after the weighted-mean
 // ingredient score is aggregated (see resolveScoreResult below). A product
 // classified as "very_heavy" (see lib/productWeight.ts) is a strong
@@ -248,7 +248,7 @@ export function getWeightModifier(
   weight: ProductWeight,
   family: CurlFamily | null
 ): number {
-  if (!family) return 0; // "not_sure" or unrecognized curl type -- no adjustment
+  if (!family) return 0; // "not_sure" or unrecognized curl type - no adjustment
   return WEIGHT_MODIFIERS[family][weight];
 }
 
@@ -280,7 +280,7 @@ const HEAVY_BUTTERS = new Set([
   "mangifera indica seed butter",
 ]);
 const SULFATES = new Set(["sodium lauryl sulfate", "sodium laureth sulfate"]);
-// Panthenol, Hydrolyzed Silk -- "increase score for fine straight hair."
+// Panthenol, Hydrolyzed Silk - "increase score for fine straight hair."
 const BODY_BOOSTERS = new Set(["panthenol", "hydrolyzed silk"]);
 const LIGHT_OILS = new Set([
   "vitis vinifera seed oil", // Grapeseed Oil
@@ -310,7 +310,7 @@ function isDryClimate(climate: string | null): boolean {
   return climate === "dry" || climate === "cold-dry";
 }
 
-// Common humectants -- ingredients that work by attracting ambient
+// Common humectants - ingredients that work by attracting ambient
 // moisture into the hair. That mechanism is climate-dependent: humid air
 // gives them moisture to draw in; dry air has none, so the humectant can
 // instead pull moisture back out of the hair and into the (drier)
@@ -325,7 +325,7 @@ const HUMECTANTS = new Set([
 
 // Climate + porosity adjustment for humectants, applied on top of
 // whatever score the DB/curl-type steps already produced. Runs
-// regardless of curl family or hairTypeOverridden -- climate physics
+// regardless of curl family or hairTypeOverridden - climate physics
 // isn't curl-pattern-specific the way the section-3 rules above are, and
 // a DB row scoped to hair_type doesn't already account for it.
 function applyClimateAdjustment(
@@ -343,7 +343,7 @@ function applyClimateAdjustment(
   if (isHumidClimate(climate)) {
     adjustedScore = clampScore(score + 2); // ambient moisture for the humectant to draw in
   } else if (isDryClimate(climate)) {
-    // No ambient moisture to draw in -- the humectant can instead pull
+    // No ambient moisture to draw in - the humectant can instead pull
     // moisture out of the hair shaft. Worse for high porosity hair,
     // which already struggles to retain moisture once it's in.
     const penalty = porosity === "high" ? 4 : porosity === "medium" ? 2 : 1;
@@ -357,7 +357,7 @@ function applyClimateAdjustment(
 // Chelating agents bind the calcium/magnesium ions hard water deposits on
 // the hair shaft; clarifying surfactants (reusing the existing SULFATES
 // set) help strip that same mineral buildup during cleansing. Both
-// matter more in hard water areas -- in soft/moderate water there's
+// matter more in hard water areas - in soft/moderate water there's
 // little buildup to address, so they're left at their DB-resolved score
 // rather than penalized (they're still fine ingredients, just not doing
 // extra work).
@@ -393,12 +393,12 @@ function applyWaterHardnessAdjustment(
 //
 // adult_age_range lives on hair_profiles as its own column, separate from
 // the pre-existing age_range column (child/baby brackets like
-// "0-12 months" -- see supabase/add_adult_age_range.sql). These
+// "0-12 months" - see supabase/add_adult_age_range.sql). These
 // adjustments apply on top of whatever score porosity/curl-type/climate/
 // water-hardness already produced, same layering as
 // applyClimateAdjustment and applyWaterHardnessAdjustment above.
 //
-// 18_25 and 26_35 are "peak hair health years" -- no modifiers, standard
+// 18_25 and 26_35 are "peak hair health years" - no modifiers, standard
 // scoring applies. 46_55's rule set is the base tier that 56_65/65_plus
 // double via midlifeModifier(), plus their own additional rules.
 
@@ -427,7 +427,7 @@ function isPeptide(name: string): boolean {
   return name.includes("peptide");
 }
 
-// The 46_55 rule set, at "one tier" strength -- 56_65/65_plus reuse this
+// The 46_55 rule set, at "one tier" strength - 56_65/65_plus reuse this
 // doubled rather than duplicating each rule.
 function midlifeModifier(name: string, position: number): number {
   let delta = 0;
@@ -486,7 +486,7 @@ function applyAgeAdjustment(
 // ---- Hair-concern scoring adjustments (thinning hair) --------------------
 //
 // hair_concerns is a free-text array on hair_profiles (see
-// CONCERN_OPTIONS in app/profile/page.tsx) -- "thinning" is the value
+// CONCERN_OPTIONS in app/profile/page.tsx) - "thinning" is the value
 // behind the "Thinning hair" checkbox. Applies on top of whatever score
 // porosity/curl-type/climate/water-hardness/age already produced, same
 // layering as applyAgeAdjustment above. Reuses several of that section's
@@ -599,7 +599,7 @@ type ProfileRow = {
   scalp_condition: string | null;
   climate: string | null;
   water_hardness: string | null;
-  // Optional -- not every caller's select includes it (e.g.
+  // Optional - not every caller's select includes it (e.g.
   // lib/travelKitGenerator.ts doesn't apply age-based or concern-based
   // scoring), so these just fall back to no adjustment rather than
   // requiring every caller to be updated.
@@ -610,7 +610,7 @@ type ProfileRow = {
 // Shared by loadScoringProfile (browser, localStorage-driven) and any
 // server-side caller that already has a hair_profiles row in hand (e.g.
 // travel kit generation in the Stripe webhook, which has no browser
-// session/localStorage to read) -- so both paths apply the exact same
+// session/localStorage to read) - so both paths apply the exact same
 // porosity-default/normalization rules instead of two copies drifting
 // apart. climate is intentionally overridable by the caller (e.g. a
 // travel kit scores against the destination's climate, not the user's
@@ -619,7 +619,7 @@ export function buildScoringProfile(
   row: ProfileRow,
   climateOverride?: string | null
 ): ScoringProfile {
-  // porosity is never null in compatibility_scores -- default unknown
+  // porosity is never null in compatibility_scores - default unknown
   // ("not sure") profiles to medium rather than a filter that would
   // never match anything.
   const porosity =
@@ -694,7 +694,7 @@ async function fetchScoreRows(
   return { data: data ?? [] };
 }
 
-// Pure -- given an already-fetched set of compatibility_scores rows
+// Pure - given an already-fetched set of compatibility_scores rows
 // (which may cover more ingredients than just this product's, when
 // called from the batch path below), resolves the specificity tiers,
 // applies the curl-type adjustment, and computes the position-weighted
@@ -719,11 +719,11 @@ function resolveScoreResult(
   }
 
   // Generic (scalp_condition/hair_type both null) rows first, then a row
-  // scoped to the user's scalp condition, then -- most specific -- a row
+  // scoped to the user's scalp condition, then - most specific - a row
   // scoped to their curl-type family (only present for ingredients seeded
   // with real hair_type data). hairTypeOverridden tracks which
   // ingredients got that most-specific row, since those should skip the
-  // generic runtime adjustment below -- the DB value is already precise.
+  // generic runtime adjustment below - the DB value is already precise.
   const bestRowPerIngredient = new Map<string, { score: number; rating: string }>();
   const hairTypeOverridden = new Set<string>();
 
@@ -775,7 +775,7 @@ function resolveScoreResult(
         );
 
     // Climate and water hardness are independent of curl-type/hair-type
-    // scoping -- they apply on top regardless of whether the score above
+    // scoping - they apply on top regardless of whether the score above
     // came from a hair-type-specific DB row or the generic curl-type
     // adjustment.
     ({ score, rating } = applyClimateAdjustment(
@@ -816,11 +816,11 @@ function resolveScoreResult(
     });
   }
 
-  // Weighted mean instead of a simple mean -- an ingredient at position 2
+  // Weighted mean instead of a simple mean - an ingredient at position 2
   // (weight 1.3) counts for more of the final score than the same
   // ingredient would at position 22 (weight 0.6). Still lands on the same
   // 0-100 scale as before since both the numerator and denominator carry
-  // the weight. Capped defensively at 100 -- the weighted mean can't
+  // the weight. Capped defensively at 100 - the weighted mean can't
   // mathematically exceed it, but the cap makes that guarantee explicit.
   const weightedSum = matchList.reduce((acc, m) => acc + m.score * m.weight, 0);
   const weightTotal = matchList.reduce((acc, m) => acc + m.weight, 0);
@@ -829,7 +829,7 @@ function resolveScoreResult(
       ? 0
       : Math.min(100, Math.round((weightedSum / (weightTotal * 10)) * 100));
 
-  // Product-weight modifier -- see getWeightModifier above. Applied once
+  // Product-weight modifier - see getWeightModifier above. Applied once
   // here, after aggregation, rather than per-ingredient like every other
   // adjustment in this function: it's a judgment about the product's
   // overall formulation, not about any single ingredient's score.
@@ -843,7 +843,7 @@ function resolveScoreResult(
   return { normalizedScore, matches: matchList, productWeight };
 }
 
-// Shared by the single-product scoring entry points below -- fetches
+// Shared by the single-product scoring entry points below - fetches
 // compatibility_scores for just this ingredient list, then resolves it.
 async function scorePositionedIngredients(
   ingredients: PositionedIngredient[],
@@ -897,7 +897,7 @@ export async function scoreIngredientsText(
   }
 
   // position is the 1-based index of the ingredient's first appearance in
-  // the (already deduped) parsed list -- labels list ingredients in
+  // the (already deduped) parsed list - labels list ingredients in
   // descending concentration order, so this doubles as a concentration
   // proxy for positionWeight below.
   const matched = new Map<string, IngredientRow>();
@@ -924,7 +924,7 @@ export async function scoreIngredientsText(
   return scorePositionedIngredients(positioned, profile, null);
 }
 
-// For products from Qoyl's own curated catalog -- reads
+// For products from Qoyl's own curated catalog - reads
 // catalog_product_ingredients directly instead of re-parsing label text,
 // so scoring uses the exact ingredient links and positions set during
 // curation (via /admin/products) rather than re-deriving them at score
@@ -978,7 +978,7 @@ export async function scoreCatalogProduct(
 // results list at once (e.g. every result on /search, shown inline
 // without a per-product tap). Loads the hair profile once and fetches
 // catalog_product_ingredients + compatibility_scores in two queries
-// covering every requested product, instead of N round trips each --
+// covering every requested product, instead of N round trips each -
 // important now that scoring runs eagerly for a whole result list
 // rather than lazily for one selected product.
 export async function scoreCatalogProducts(
@@ -996,13 +996,13 @@ export async function scoreCatalogProducts(
 
 // Same as scoreCatalogProducts, but for callers that already have a
 // ScoringProfile in hand instead of a browser session to load one from
-// (e.g. travel kit generation in the Stripe webhook -- no
+// (e.g. travel kit generation in the Stripe webhook - no
 // localStorage/user session exists there, so the caller fetches the
 // hair_profiles row itself via the service-role client and builds the
 // profile with buildScoringProfile()). catalog_products/
 // catalog_product_ingredients/compatibility_scores are all
 // anon-readable, so the plain supabase client works fine server-side
-// for these reads -- only the hair_profiles fetch itself needs the
+// for these reads - only the hair_profiles fetch itself needs the
 // service role, and that happens before this function is called.
 export async function scoreCatalogProductsForProfile(
   productIds: string[],

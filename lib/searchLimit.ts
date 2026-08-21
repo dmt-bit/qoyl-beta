@@ -20,7 +20,7 @@ function isStale(resetAt: string | null): boolean {
   return Date.now() - started > RESET_WINDOW_MS;
 }
 
-// The count/resetAt as stored may be from a previous 24h window --
+// The count/resetAt as stored may be from a previous 24h window -
 // this returns what they effectively are right now, without writing
 // anything back. Reads use this so an expired window shows as reset
 // even before the next search triggers the actual write.
@@ -48,7 +48,7 @@ export function msUntilReset(resetAt: string | null): number | null {
   return remaining > 0 ? remaining : null;
 }
 
-// "6h 23m" / "23m" -- matches the upgrade wall's countdown format.
+// "6h 23m" / "23m" - matches the upgrade wall's countdown format.
 export function formatCountdown(ms: number): string {
   const totalMinutes = Math.max(1, Math.ceil(ms / 60000));
   const hours = Math.floor(totalMinutes / 60);

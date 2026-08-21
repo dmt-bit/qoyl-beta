@@ -47,7 +47,7 @@ function formatMatchDate(iso: string): string {
 }
 
 function formatTravelDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(`${iso}T00:00:00`);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -171,7 +171,7 @@ function QuickActions() {
           Style Match
         </p>
         <p className="mt-1 text-sm text-cream/70">
-          Upload a photo or describe a style — get matching tutorials, a
+          Upload a photo or describe a style - get matching tutorials, a
           scored shopping list, and a local stylist if one&apos;s available.
         </p>
         <span className="mt-3 inline-block text-sm font-semibold text-bronze2">
@@ -250,7 +250,7 @@ function DashboardContent() {
           setIsAdminUser(Boolean(data.isAdmin));
         }
       } catch {
-        // Fail closed -- treat as not subscribed.
+        // Fail closed - treat as not subscribed.
       } finally {
         if (!cancelled) setEntitlementLoading(false);
       }
@@ -463,14 +463,14 @@ function DashboardContent() {
 
         {paymentStatus === "success" && (
           <p className="mt-4 rounded-lg border border-green/40 bg-green/10 px-4 py-3 text-sm text-green">
-            You&apos;re all set — your{" "}
+            You&apos;re all set - your{" "}
             {hasRoutineSubscription ? "monthly routine" : "purchase"} is
             ready.
           </p>
         )}
         {paymentStatus === "cancelled" && (
           <p className="print-hide mt-4 rounded-lg border border-bronze/40 bg-bronze/10 px-4 py-3 text-sm text-cream/80">
-            No worries — you can unlock this anytime.
+            No worries - you can unlock this anytime.
           </p>
         )}
 

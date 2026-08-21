@@ -116,7 +116,7 @@ export default function UpgradeWall({
       </div>
 
       <p className="mt-4 text-[11px] text-cream/40">
-        Or come back tomorrow — your 5 free searches reset every 24 hours.
+        Or come back tomorrow - your 5 free searches reset every 24 hours.
       </p>
     </div>
   );

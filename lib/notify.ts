@@ -1,6 +1,6 @@
 import { getResend } from "@/lib/resend";
 
-// lib/adminNotify.ts (purchase events) sends here too now -- both were
+// lib/adminNotify.ts (purchase events) sends here too now - both were
 // consolidated onto the same inbox.
 const NOTIFY_TO = "hey@qoyl.live";
 const NOTIFY_FROM = "Qoyl <hey@qoyl.live>";
@@ -16,13 +16,13 @@ export type SendNotificationResult =
   | { sent: false; reason: "threw"; error: unknown };
 
 // Fire-and-forget in the sense that a failure here must never throw or
-// block the caller's user-facing action -- but the result is returned
+// block the caller's user-facing action - but the result is returned
 // (not swallowed) so callers can log/inspect it. Resend's SDK does NOT
 // throw on API-level failures (invalid from address, quota limits,
-// etc.) -- it resolves normally with { data: null, error: {...} }. An
+// etc.) - it resolves normally with { data: null, error: {...} }. An
 // earlier version of this function only wrapped the call in try/catch,
 // which only ever catches network/SDK-level throws, so real Resend API
-// rejections were silently swallowed -- send() would resolve, no
+// rejections were silently swallowed - send() would resolve, no
 // exception would fire, and nothing would be logged.
 export async function sendNotificationEmail(
   subject: string,

@@ -1,6 +1,6 @@
 // Derives two hair_profiles fields from a US zip code: climate and
 // water_hardness. Both are heuristic approximations, not precise
-// per-address measurements -- documented at each function so that's
+// per-address measurements - documented at each function so that's
 // obvious to whoever reads this next, not just implied.
 
 export type ClimateZone = "humid" | "dry" | "cold-dry" | "tropical";
@@ -21,7 +21,7 @@ export const WATER_HARDNESS_LABELS: Record<WaterHardness, string> = {
 
 // Standard USPS zip-code-prefix-to-state allocation (the first 3 digits
 // of a US zip code fall within well-known, stable ranges per state).
-// Approximate at the boundaries between neighboring states/prefixes --
+// Approximate at the boundaries between neighboring states/prefixes -
 // acceptable here since this only ever feeds a regional water-hardness
 // bucket, not anything precision-critical.
 const ZIP3_STATE_RANGES: { min: number; max: number; state: string }[] = [

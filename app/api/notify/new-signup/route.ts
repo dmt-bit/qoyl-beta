@@ -3,7 +3,7 @@ import { sendWelcomeEmail } from "@/lib/sendWelcomeEmail";
 import { sendNotificationEmail } from "@/lib/notify";
 
 // /auth is a client component, so it can't import lib/sendWelcomeEmail.ts
-// or lib/notify.ts (and RESEND_API_KEY) directly -- this route is the
+// or lib/notify.ts (and RESEND_API_KEY) directly - this route is the
 // server-side bridge, called fire-and-forget right after a successful
 // supabase.auth.signUp() with no error.
 export async function POST(request: Request) {

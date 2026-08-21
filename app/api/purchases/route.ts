@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   ]);
 
   return NextResponse.json({
-    // Admin bypass folds straight into these two flags -- every caller
+    // Admin bypass folds straight into these two flags - every caller
     // that already gates a feature on hasRoutineSubscription/hasTravelKit
     // gets the bypass for free, no separate admin-only branch needed.
     hasRoutineSubscription:

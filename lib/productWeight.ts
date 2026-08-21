@@ -17,7 +17,7 @@ const RANK_TO_WEIGHT: ProductWeight[] = ["ultralight", "light", "medium", "heavy
 // higher), forces an exact tier (ultralight product types), or caps it at
 // a maximum tier (ingredients can still pull it lower). This runs before
 // step 2/3's ingredient counting because that step, driven purely by
-// top-8 label position, can miss a product entirely -- e.g. Camille
+// top-8 label position, can miss a product entirely - e.g. Camille
 // Rose's Almond Jai Twisting Butter has no classically "heavy"
 // ingredient inside its top 8 (Olive Oil and Castor Oil sit at label
 // positions 11 and 14), so without this, ingredient counting alone would
@@ -76,7 +76,7 @@ const LIGHT_NAME_KEYWORDS = [
   "essence",
 ];
 
-// Word-boundary match, not raw substring -- plain .includes() lets short
+// Word-boundary match, not raw substring - plain .includes() lets short
 // phrases like "hair oil" false-positive inside an unrelated word (found
 // during testing: "Long & Luxe Groh**air oil**" contains "hair oil" as a
 // substring purely by coincidence, which wrongly capped a very_heavy oil
@@ -111,7 +111,7 @@ function nameSignal(productName: string): NameSignal {
   if (matchesMediumSignal(name)) {
     return { kind: "floor", tier: "medium" };
   }
-  // Checked before the generic light-tier list below -- "Setting Spray"/
+  // Checked before the generic light-tier list below - "Setting Spray"/
   // "Dry Shampoo" are more specific than the bare "spray"/"water" words
   // there and must win the match.
   if (ULTRALIGHT_NAME_KEYWORDS.some((k) => containsPhrase(name, k))) {
@@ -164,7 +164,7 @@ function isHeavyIngredient(name: string): boolean {
 
 // Position 1-3 -> 2x weight, 4-6 -> 1.5x, 7-8 -> 1x. Rank is the
 // 1-based position within the top-8 slice (array index + 1), not the raw
-// DB `position` column -- catalog_product_ingredients rows can have gaps
+// DB `position` column - catalog_product_ingredients rows can have gaps
 // (an ingredient dropped during curation leaves its position number
 // unused), so counting by array order is the more faithful reading of
 // "top 8 ingredients" than filtering on `position <= 8`.
@@ -183,11 +183,11 @@ function weightedHeavyCount(ingredientList: string[]): number {
 // Full label length matters when the top 8 has zero heavy-keyword hits:
 // a short, simple label (roughly a dozen ingredients or fewer) with
 // nothing heavy up front is a genuinely minimal, watery formula (e.g.
-// Giovanni Direct Leave-In's ~10-ingredient label -- "ultralight"). A
+// Giovanni Direct Leave-In's ~10-ingredient label - "ultralight"). A
 // longer label with nothing heavy in the top 8 more often just means the
 // named oils/butters are further down the list, diluted by humectants
 // and extracts ahead of them (e.g. Mielle's Pomegranate & Honey Leave-In,
-// 30 ingredients, with named oils starting at position 8) -- "light" is
+// 30 ingredients, with named oils starting at position 8) - "light" is
 // the more honest default there than the single most extreme tier.
 const SIMPLE_FORMULA_MAX_INGREDIENTS = 12;
 
@@ -205,7 +205,7 @@ function tierFromWeightedCount(count: number, totalIngredientCount: number): Pro
 // implies (a deep conditioner/masque is always at least medium) or, for
 // the two capped categories, heavier than the category allows (mousse is
 // always lightweight by nature). This is the final, most-authoritative
-// constraint -- applied after both ingredient counting and the name
+// constraint - applied after both ingredient counting and the name
 // signal above, so it can override either.
 const CATEGORY_WEIGHT_FLOOR: Partial<Record<string, ProductWeight>> = {
   butter: "very_heavy",
@@ -253,7 +253,7 @@ export const WEIGHT_PILL_LABEL: Record<ProductWeight, string> = {
   light: "Lightweight formula",
   medium: "Medium weight",
   heavy: "Rich formula",
-  very_heavy: "Very rich formula — best for coily hair",
+  very_heavy: "Very rich formula - best for coily hair",
 };
 
 export const WEIGHT_PILL_CLASSES: Record<ProductWeight, string> = {
@@ -265,7 +265,7 @@ export const WEIGHT_PILL_CLASSES: Record<ProductWeight, string> = {
 };
 
 // On /search (not routine recommendations, which are already pre-filtered
-// -- see lib/routineProducts.ts), a medium-or-heavier product shown to a
+// - see lib/routineProducts.ts), a medium-or-heavier product shown to a
 // straight/wavy user gets a warning badge instead of the plain weight
 // pill, since a well-scoring individual product can still be a bad
 // formulation-weight match for that hair type.
@@ -281,7 +281,7 @@ export const WEIGHT_WARNING_CLASSES = "bg-amber/20 text-amber";
 
 // Loosely mirrors getWeightModifier's sign in lib/compatibility.ts (a
 // negative modifier means "not a great fit") without importing CurlFamily
-// from there -- compatibility.ts already imports this module, and a
+// from there - compatibility.ts already imports this module, and a
 // reverse import would create a cycle. Used only to decide whether the
 // score-explanation sentence below needs a fit caveat at all.
 const WEIGHT_FIT: Record<CurlFamilyLike, Record<ProductWeight, boolean>> = {
@@ -292,7 +292,7 @@ const WEIGHT_FIT: Record<CurlFamilyLike, Record<ProductWeight, boolean>> = {
 };
 
 // Only returns a sentence when the product's weight is a poor fit for the
-// user's curl family -- a good fit needs no caveat beyond the score itself.
+// user's curl family - a good fit needs no caveat beyond the score itself.
 export function weightFitNote(
   weight: ProductWeight,
   family: CurlFamilyLike | null,
@@ -307,6 +307,6 @@ export function weightFitNote(
   const weightWord = weight === "very_heavy" ? "very heavy" : weight;
 
   return porosityPhrase
-    ? `This product scores well for your ${porosityPhrase} hair but is classified as ${weightWord} — which may not be ideal for your ${hairTypePhrase} hair.`
-    : `This product is classified as ${weightWord} — which may not be ideal for your ${hairTypePhrase} hair.`;
+    ? `This product scores well for your ${porosityPhrase} hair but is classified as ${weightWord} - which may not be ideal for your ${hairTypePhrase} hair.`
+    : `This product is classified as ${weightWord} - which may not be ideal for your ${hairTypePhrase} hair.`;
 }

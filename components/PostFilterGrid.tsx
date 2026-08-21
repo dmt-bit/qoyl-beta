@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { isAdultAgeAtLeast } from "@/lib/ageRange";
 import { TABS, TabKey } from "@/lib/postTabs";
 
-// Tabs that filter on a specific hair_type value -- "coming soon" messaging
+// Tabs that filter on a specific hair_type value - "coming soon" messaging
 // (below) only applies to these, not to "all" or "ingredients".
 const HAIR_TYPE_TABS = new Set<TabKey>([
   "straight",
@@ -29,7 +29,7 @@ function matchesTab(post: Post, tab: TabKey): boolean {
   return post.hair_type === tab;
 }
 
-// Keyword surface for "does this post matter for aging-hair users" -- no
+// Keyword surface for "does this post matter for aging-hair users" - no
 // dedicated post category exists for this, so it's a simple free-text
 // scan rather than a new schema field for what's meant to be a light
 // feed-ordering nudge, not a hard filter.
@@ -95,19 +95,19 @@ export default function PostFilterGrid({
   const [hasScrolledTabs, setHasScrolledTabs] = useState(false);
   const tabScrollRef = useRef<HTMLDivElement>(null);
 
-  // Pre-select "Baby & Kids" for child/baby profiles -- but only once, and
+  // Pre-select "Baby & Kids" for child/baby profiles - but only once, and
   // only if the caller didn't already ask for a specific tab (an explicit
   // initialTab, e.g. from /posts?type=, or a tab the user has since picked
   // themselves) is left alone. Multi-profile support (a single account
   // with more than one hair_profiles row) would need this to key off the
   // currently-selected profile rather than the one-per-user hairProfile
-  // from useAuth() -- this is where that branch would go.
+  // from useAuth() - this is where that branch would go.
   const { hairProfile } = useAuth();
   const hasAutoSelectedTab = useRef(false);
 
   useEffect(() => {
     // Wait for a real (non-null) profile rather than gating on
-    // hairProfileLoading -- that flag starts false before the auth check
+    // hairProfileLoading - that flag starts false before the auth check
     // even begins, so gating on it fired this effect (and permanently
     // marked it done) before the actual fetch ever completed. Signed-out
     // users / users with no saved profile never populate hairProfile, so
@@ -141,7 +141,7 @@ export default function PostFilterGrid({
   );
 
   // For signed-in users 36+ , surface the newest age-relevant post (see
-  // AGE_RELEVANT_KEYWORDS) first in the "All" feed, labeled "For you" --
+  // AGE_RELEVANT_KEYWORDS) first in the "All" feed, labeled "For you" -
   // rather than creating dedicated posts, this just reorders what's
   // already there. Scoped to the unfiltered "All" tab with no active
   // search so it doesn't fight the user's own tab/search choice.
@@ -171,7 +171,7 @@ export default function PostFilterGrid({
   }, [unorderedMatchingPosts, showAgeRelevantSection]);
 
   // posts is already ordered by published_at descending, so this keeps the
-  // newest -- overall for "All", or the newest matching the active tab
+  // newest - overall for "All", or the newest matching the active tab
   // (aside from the age-relevant reorder above, when it applies).
   const filteredPosts =
     limit === null ? matchingPosts : matchingPosts.slice(0, limit);
@@ -208,7 +208,7 @@ export default function PostFilterGrid({
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search the feed — try 'glycerin' or 'porosity'"
+            placeholder="Search the feed - try 'glycerin' or 'porosity'"
             className="w-full rounded-lg border border-bronze/40 bg-dark py-3 pl-10 pr-10 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
           />
           {searchInput && (
@@ -300,12 +300,12 @@ export default function PostFilterGrid({
         </>
       ) : debouncedSearch ? (
         <p className="mt-8 text-sm text-cream/50">
-          No posts found for &apos;{debouncedSearch}&apos; — try a different
+          No posts found for &apos;{debouncedSearch}&apos; - try a different
           search or browse all posts above.
         </p>
       ) : (
         <p className="mt-8 text-sm text-cream/50">
-          No posts yet for this hair type — check back soon. In the
+          No posts yet for this hair type - check back soon. In the
           meantime,{" "}
           <Link
             href="/search"

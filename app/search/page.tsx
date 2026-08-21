@@ -62,7 +62,7 @@ type QoylProductRow = {
   categories: { slug: string } | null;
 };
 
-// catalog_products/catalog_brands -- not "products"/"brands" -- since
+// catalog_products/catalog_brands - not "products"/"brands" - since
 // this Supabase project is shared with qoyl-business, which already has
 // its own brands/products tables for its B2B dashboard with a completely
 // different schema. Keeping qoyl-beta's consumer catalog on separate
@@ -81,12 +81,12 @@ function toQoylProduct(p: QoylProductRow): Product {
   };
 }
 
-// Searches Qoyl's own curated catalog_products table only -- by product
+// Searches Qoyl's own curated catalog_products table only - by product
 // name and by brand name via the catalog_brands join. Two separate
 // queries merged client-side rather than a single .or() filter across
 // the join, since PostgREST's embedded-resource filter syntax is easy to
 // get subtly wrong with arbitrary user input. categoryId, when given,
-// narrows both queries -- e.g. "Leave-In" selected + "Mielle" typed shows
+// narrows both queries - e.g. "Leave-In" selected + "Mielle" typed shows
 // only Mielle leave-ins, not every Mielle product.
 async function fetchQoylProducts(
   query: string,
@@ -125,7 +125,7 @@ async function fetchQoylProducts(
   return Array.from(merged.values()).map(toQoylProduct);
 }
 
-// Category browse with no search term -- every product in the category,
+// Category browse with no search term - every product in the category,
 // ordered by brand then product name (not relevance, since there's no
 // search term to rank against).
 async function fetchProductsByCategory(categoryId: string): Promise<Product[]> {
@@ -187,7 +187,7 @@ function ResultCard({
   const family = curlFamily(curlType);
   const fitNote = productWeight ? weightFitNote(productWeight, family, curlType, porosity) : null;
   // Straight/wavy searchers get a blunter warning instead of the plain
-  // weight label once a product is medium or heavier -- a good ingredient
+  // weight label once a product is medium or heavier - a good ingredient
   // score doesn't mean the formulation weight is a good fit. Routine
   // recommendations don't need this: lib/routineProducts.ts already
   // hard-excludes these before they'd ever be picked.
@@ -339,7 +339,7 @@ function DisclaimerBanner() {
     <div
       className="mb-6 border-l-[3px] border-bronze bg-warm px-4 py-3 font-sans text-[12px] text-dark"
     >
-      Qoyl provides cosmetic ingredient compatibility scores only — not
+      Qoyl provides cosmetic ingredient compatibility scores only - not
       medical advice. Results are based on your hair profile and our
       ingredient database. Individual results may vary. Free users get 5
       product searches per day. Unlock unlimited searches and Style Match
@@ -360,11 +360,11 @@ function SearchPageContent() {
 
   // Anonymous visitors who built a profile without an account (no login,
   // just a hair_profile_id in localStorage) keep the existing "no account
-  // required to try" path -- checked once on mount since localStorage
+  // required to try" path - checked once on mount since localStorage
   // isn't available during the initial server render.
   const [hasLocalProfile, setHasLocalProfile] = useState(false);
   const [localProfileChecked, setLocalProfileChecked] = useState(false);
-  // Only needed for the weight-pill fit note on product cards (Part 5) --
+  // Only needed for the weight-pill fit note on product cards (Part 5) -
   // signed-in users already get porosity/curl_type from useAuth's
   // hairProfile, but anonymous visitors with a localStorage-only profile
   // have no other source for it at the page level.
@@ -396,7 +396,7 @@ function SearchPageContent() {
     authLoading || (Boolean(user) && hairProfileLoading) || !localProfileChecked;
 
   // A plain spinner is fine for a brief check, but must never hang
-  // indefinitely -- after 1s of still resolving, switch to a skeleton
+  // indefinitely - after 1s of still resolving, switch to a skeleton
   // that at least shows the page's shape instead of an open-ended spinner.
   const [showAccessSkeleton, setShowAccessSkeleton] = useState(false);
 
@@ -413,7 +413,7 @@ function SearchPageContent() {
 
   // Search-limit tracking. subscribed/entitlementLoaded cover the
   // "unlimited for active subscribers" carve-out (only ever true for
-  // signed-in users -- checkout requires a user_id, so anonymous users
+  // signed-in users - checkout requires a user_id, so anonymous users
   // can never hold a subscription). searchState is the raw stored
   // count/resetAt (DB-backed for signed-in users, localStorage for
   // anonymous); it's read through effectiveSearchState() everywhere it's
@@ -443,7 +443,7 @@ function SearchPageContent() {
         const data = await res.json();
         if (!cancelled) setSubscribed(Boolean(data.hasRoutineSubscription));
       } catch {
-        // Fail closed -- treat as not subscribed.
+        // Fail closed - treat as not subscribed.
       } finally {
         if (!cancelled) setEntitlementLoaded(true);
       }
@@ -467,7 +467,7 @@ function SearchPageContent() {
         resetAt: hairProfile.daily_search_reset_at,
       });
     } else {
-      // Signed in but hasn't saved a hair profile yet -- there's no row
+      // Signed in but hasn't saved a hair profile yet - there's no row
       // to track the count on, so fall back to the same per-device
       // localStorage tracking anonymous users get until they have one.
       setSearchState(readAnonSearchState());
@@ -516,7 +516,7 @@ function SearchPageContent() {
   const [categorySlug, setCategorySlug] = useState(
     () => searchParams.get("category") ?? null
   );
-  // categories.id per slug, fetched once -- catalog_products only stores
+  // categories.id per slug, fetched once - catalog_products only stores
   // category_id (a FK), so the slug from the URL/pill has to be resolved
   // to a real id before it can be used to filter a query.
   const [categoryIdBySlug, setCategoryIdBySlug] = useState<Record<string, string>>({});
@@ -542,7 +542,7 @@ function SearchPageContent() {
   }
 
   const [hasScrolledCategories, setHasScrolledCategories] = useState(false);
-  // Weight filter pills, item 6 -- "Lightweight"/"Medium"/"Rich" split the
+  // Weight filter pills, item 6 - "Lightweight"/"Medium"/"Rich" split the
   // 5 internal ProductWeight tiers into 3 non-overlapping buckets (the
   // request's own wording for what "Rich" filters to overlapped with
   // "Medium," so this uses the non-overlapping partition implied by the
@@ -556,7 +556,7 @@ function SearchPageContent() {
   const [searchError, setSearchError] = useState<string | null>(null);
 
   const [scoresByCode, setScoresByCode] = useState<Record<string, ScoreState>>({});
-  // Only one result card can be expanded at a time -- expandedCardCode is
+  // Only one result card can be expanded at a time - expandedCardCode is
   // that product's code, or null if every card is collapsed.
   // ingredientsExpanded is the "see all ingredients" sub-toggle inside
   // whichever card is currently expanded; resets whenever the expanded
@@ -575,7 +575,7 @@ function SearchPageContent() {
   const latestRequestRef = useRef("");
 
   // Only counts completed searches for signed-in users, and only until
-  // the survey has been submitted or dismissed once -- after that
+  // the survey has been submitted or dismissed once - after that
   // localStorage flag is set, this is a no-op forever.
   function recordSearchCompletion() {
     if (!user) return;
@@ -590,7 +590,7 @@ function SearchPageContent() {
     }
   }
 
-  // Best-effort analytics logging -- a failure here must never surface to
+  // Best-effort analytics logging - a failure here must never surface to
   // the user or interrupt the actual search/scoring flow.
   async function logProductSearch(product: Product, score: number) {
     try {
@@ -666,7 +666,7 @@ function SearchPageContent() {
     recordSearchCompletion();
   }
 
-  // Keeps the URL in sync with category/query state (item 6) -- runs
+  // Keeps the URL in sync with category/query state (item 6) - runs
   // immediately, separately from the debounced fetch below, so the URL
   // reflects what's typed/selected even before the fetch settles.
   useEffect(() => {
@@ -681,10 +681,10 @@ function SearchPageContent() {
   useEffect(() => {
     const trimmed = query.trim();
 
-    // Neither a category nor a search term -- idle state, no fetch, no
+    // Neither a category nor a search term - idle state, no fetch, no
     // search consumed. Keyed on categorySlug (the UI selection), not
     // categoryId (which only resolves once the categories fetch above
-    // completes) -- otherwise tapping a pill before that fetch finishes
+    // completes) - otherwise tapping a pill before that fetch finishes
     // would be wrongly treated as idle.
     if (!categorySlug && trimmed === "") {
       latestRequestRef.current = "";
@@ -699,12 +699,12 @@ function SearchPageContent() {
       return;
     }
 
-    // A category is selected but its id hasn't resolved yet -- wait
+    // A category is selected but its id hasn't resolved yet - wait
     // rather than fetching with a null categoryId (which would silently
     // run an unfiltered search). Re-fires once categoryIdBySlug loads.
     if (categorySlug && !categoryId) return;
 
-    // Entitlement/search-state haven't loaded yet -- wait rather than
+    // Entitlement/search-state haven't loaded yet - wait rather than
     // checking the limit against stale defaults. The effect re-runs once
     // readyToSearch flips true.
     if (!readyToSearch) return;
@@ -953,7 +953,7 @@ function SearchPageContent() {
           <ul className="mt-2">
             {filteredResults.length === 0 && (
               <p className="mt-4 font-sans text-[12px] text-cream/50">
-                No results match this weight filter yet -- results are still scoring, or none of
+                No results match this weight filter yet - results are still scoring, or none of
                 these products match.
               </p>
             )}
@@ -1030,8 +1030,7 @@ function SearchPageContent() {
                     ))}
                   </div>
                   <p className="pt-1 text-[10px] text-bronze">
-                    Scores reflect cosmetic ingredient compatibility only —
-                    not medical advice.
+                    Scores reflect cosmetic ingredient compatibility only - not medical advice.
                   </p>
                 </div>
               )}

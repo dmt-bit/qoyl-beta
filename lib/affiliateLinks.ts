@@ -53,6 +53,6 @@ export function getAffiliateLink(productName: string, brandName?: string): strin
     }
   }
 
-  // No match — return null
+  // No match - return null
   return null;
 }

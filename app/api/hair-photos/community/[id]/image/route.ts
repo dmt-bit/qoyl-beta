@@ -3,10 +3,10 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { downloadHairPhotoAsBase64 } from "@/lib/hairPhotos";
 
 // Feeds the "Style Match this ->" bridge from the community feed modal
-// into Style Match's photo-input flow -- returns raw base64 instead of a
+// into Style Match's photo-input flow - returns raw base64 instead of a
 // signed URL since Style Match's analyze route needs base64 anyway.
 // Only ever serves photos already flagged is_public=true (re-checked
-// here server-side, not trusted from the client) -- this never exposes
+// here server-side, not trusted from the client) - this never exposes
 // a private photo even if someone guesses/reuses an id.
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   const { data: row } = await getSupabaseAdmin()

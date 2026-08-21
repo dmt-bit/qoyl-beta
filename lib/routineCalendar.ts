@@ -16,7 +16,7 @@ export type WashDay = {
 
 const WINDOW_DAYS = 30;
 
-// Curl type is the primary driver of wash frequency -- sebum takes far
+// Curl type is the primary driver of wash frequency - sebum takes far
 // longer to travel down a coily strand's twists and turns than a
 // straight one, so the *shape* of the hair matters more than porosity
 // alone (porosity/scalp condition now only nudge the curl-type baseline,
@@ -43,7 +43,7 @@ export function getWashFrequencyDays(
 ): { min: number; max: number; recommended: number } {
   const base = (curlType && BASE_FREQUENCY[curlType]) || { min: 7, max: 10 };
 
-  // Porosity modifier -- adjusts within the curl-type range.
+  // Porosity modifier - adjusts within the curl-type range.
   let porosityModifier = 0;
   if (porosity === "high") porosityModifier = -1; // wash more often
   if (porosity === "low") porosityModifier = 1; // wash less often
@@ -73,7 +73,7 @@ function washTypeForOccurrence(
   switch (family) {
     case "straight":
       // Interval is already ~daily/every-other-day for straight hair, so
-      // each activity day IS the wash-count occurrence -- clarify every
+      // each activity day IS the wash-count occurrence - clarify every
       // ~8th (within the 7-10 range), a real full wash roughly every
       // 4th, everything else a co-wash/dry-shampoo refresh.
       if (occurrence % 8 === 0) return "clarify";
@@ -81,7 +81,7 @@ function washTypeForOccurrence(
       return "refresh";
     case "wavy":
       // Between-day refresh entries are inserted separately in
-      // generateWashCalendar below -- this only classifies the actual
+      // generateWashCalendar below - this only classifies the actual
       // wash-cadence days.
       return occurrence % 3 === 0 ? "clarify" : "wash";
     case "curly":
@@ -135,7 +135,7 @@ export function generateWashCalendar(
     });
 
     // Wavy hair's wash-cadence interval (2-5 days) leaves real gap days
-    // that need their own guidance -- unlike straight, whose interval is
+    // that need their own guidance - unlike straight, whose interval is
     // already effectively daily/every-other-day (see
     // washTypeForOccurrence above), so there's no meaningful gap to fill.
     if (family === "wavy") {
@@ -158,7 +158,7 @@ export function generateWashCalendar(
   return washDays;
 }
 
-// "Wednesday, September 3" -- no year, matching the spec's example
+// "Wednesday, September 3" - no year, matching the spec's example
 // format (the 30-day window never spans far enough to need one).
 export function formatWashDayLabel(isoDate: string): string {
   const date = new Date(`${isoDate}T00:00:00`);
@@ -169,7 +169,7 @@ export function formatWashDayLabel(isoDate: string): string {
   });
 }
 
-// "September 3, 2026" -- used for the "starting <date>" header, which
+// "September 3, 2026" - used for the "starting <date>" header, which
 // does need the year since it's read out of context from any specific
 // wash day.
 export function formatStartDateLabel(date: Date): string {

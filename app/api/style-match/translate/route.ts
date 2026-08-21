@@ -12,13 +12,13 @@ const ANTHROPIC_MODEL = "claude-sonnet-4-6";
 // holding up the initial response. Client fires this only when the user
 // has a hair photo on file (app/style-match/page.tsx).
 //
-// Deliberately plain text, not JSON -- a single required sentence needs
+// Deliberately plain text, not JSON - a single required sentence needs
 // no structure to parse, and one less thing that can fail (malformed
 // JSON) on the call that's supposed to be the fast, simple one. This
 // also means the length_gap chip / prep_needed checklist the results
 // screen can render (from an older style_matches row, or if this route
 // changes again later) just won't be populated by new matches going
-// forward -- that's an intentional simplification, not an oversight.
+// forward - that's an intentional simplification, not an oversight.
 export async function POST(request: Request) {
   console.log("[style-match/translate] route hit");
 

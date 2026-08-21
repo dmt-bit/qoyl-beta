@@ -15,7 +15,7 @@ const DESKTOP_CENTER_LINKS = [
 ];
 
 // Menu link labels differ slightly from TABS' own labels ("Straight" vs
-// "Straight Hair") -- built from TABS so the hrefs/keys can't drift out
+// "Straight Hair") - built from TABS so the hrefs/keys can't drift out
 // of sync with lib/postTabs.ts, with the hamburger menu's own wording
 // layered on top.
 const FEED_LABEL_OVERRIDES: Partial<Record<string, string>> = {
@@ -181,7 +181,7 @@ export default function Nav() {
     <nav className="print-hide bg-dark font-sans">
       {/* Mobile: wordmark left, Search a Product + Style Match pills,
           hamburger opens the full-screen menu. Account access lives in
-          that menu now -- no person icon here. */}
+          that menu now - no person icon here. */}
       <div className="flex h-[52px] items-center justify-between px-4 sm:hidden">
         <Link href="/" className="font-serif text-xl italic text-cream">
           Qoyl
@@ -280,7 +280,7 @@ export default function Nav() {
         </div>
       </div>
 
-      {/* Full-screen mobile menu -- always mounted, toggled via
+      {/* Full-screen mobile menu - always mounted, toggled via
           translate-x/opacity so the slide-in transition actually plays. */}
       <div className={`fixed inset-0 z-50 sm:hidden ${menuOpen ? "" : "pointer-events-none"}`}>
         <div

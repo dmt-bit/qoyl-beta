@@ -1,6 +1,6 @@
 // Display order/labels for the category browse pills on /search and the
 // home page. Slugs match the existing `categories` table exactly (see
-// supabase/seed_categories.sql) -- this is just the curated subset/order
+// supabase/seed_categories.sql) - this is just the curated subset/order
 // shown to users, not a copy of the schema. "butter" exists in the table
 // but isn't part of this list, matching what was asked for.
 

@@ -1,6 +1,6 @@
 // Content sourced from the Qoyl privacy policy document (dated July 28,
 // 2026). Rendered as scoped raw HTML/CSS rather than converted to JSX to
-// preserve the legal text exactly as authored -- selectors are scoped
+// preserve the legal text exactly as authored - selectors are scoped
 // under .privacy-doc so they can't leak into the rest of the app (the
 // original document's own bare `body{...}` rule would otherwise override
 // the site-wide dark theme). Font-family declarations reuse the same
@@ -59,7 +59,7 @@ const PRIVACY_CONTENT = `
   <li><strong>Account information:</strong> Your email address and password when you create an account</li>
   <li><strong>Hair profile data:</strong> Curl type, porosity level, scalp condition, strand thickness, zip code, hair concerns, shower filter use, color treatment status, extension use, budget range, and any notes you choose to provide</li>
   <li><strong>Name:</strong> First and last name if you choose to provide them</li>
-  <li><strong>Payment information:</strong> Processed by Stripe. We do not store your full card number — Stripe handles payment data under their own privacy policy</li>
+  <li><strong>Payment information:</strong> Processed by Stripe. We do not store your full card number - Stripe handles payment data under their own privacy policy</li>
   <li><strong>Product evaluation requests:</strong> Product name, brand, where purchased, ingredient list, and email when you submit a product for evaluation</li>
   <li><strong>Survey responses:</strong> Optional feedback you submit through in-app surveys</li>
 </ul>
@@ -72,7 +72,7 @@ const PRIVACY_CONTENT = `
 </ul>
 
 <div class="highlight">
-  <strong>A note on your hair profile data:</strong> Your hair profile is personal and sensitive. We treat it accordingly. We use it exclusively to generate personalized compatibility scores and routine recommendations for you. We never sell individual hair profile data. When we share data with brand partners through our B2B dashboard, it is always aggregated and anonymized — no individual profile is ever identifiable.
+  <strong>A note on your hair profile data:</strong> Your hair profile is personal and sensitive. We treat it accordingly. We use it exclusively to generate personalized compatibility scores and routine recommendations for you. We never sell individual hair profile data. When we share data with brand partners through our B2B dashboard, it is always aggregated and anonymized - no individual profile is ever identifiable.
 </div>
 
 <h2>3. How we use your information</h2>
@@ -105,7 +105,7 @@ const PRIVACY_CONTENT = `
 <h3>For brand intelligence (B2B)</h3>
 <ul>
   <li>Provide brand partners with aggregated, anonymized data about how their products score across different hair profile segments</li>
-  <li>Generate consumer demand signals showing which product types and ingredients are most searched — never tied to individual users</li>
+  <li>Generate consumer demand signals showing which product types and ingredients are most searched - never tied to individual users</li>
 </ul>
 
 <h2>4. How we share your information</h2>
@@ -114,7 +114,7 @@ const PRIVACY_CONTENT = `
 
 <h3>Service providers</h3>
 <ul>
-  <li><strong>Supabase:</strong> Our database provider — stores your account, hair profile, and app data</li>
+  <li><strong>Supabase:</strong> Our database provider - stores your account, hair profile, and app data</li>
   <li><strong>Stripe:</strong> Payment processing for subscriptions and one-time purchases</li>
   <li><strong>Vercel:</strong> Hosts the Qoyl application</li>
   <li><strong>Resend:</strong> Email delivery for routine emails and notifications</li>
@@ -122,7 +122,7 @@ const PRIVACY_CONTENT = `
 </ul>
 
 <h3>Brand partners (B2B dashboard)</h3>
-<p>Brands who subscribe to our intelligence dashboard see aggregated, anonymized data about how products in their category score across different hair profile segments. This data never identifies individual users. For example, a brand may see "34% of high-porosity users in humid climates scored your product below 50" — but never which specific users those are.</p>
+<p>Brands who subscribe to our intelligence dashboard see aggregated, anonymized data about how products in their category score across different hair profile segments. This data never identifies individual users. For example, a brand may see "34% of high-porosity users in humid climates scored your product below 50" - but never which specific users those are.</p>
 
 <h3>Legal requirements</h3>
 <p>We may disclose your information if required by law, court order, or to protect the safety of our users or the public.</p>
@@ -153,10 +153,10 @@ const PRIVACY_CONTENT = `
 <p>If you are located in the European Economic Area, you have rights including access, rectification, erasure, restriction of processing, and data portability. Our legal basis for processing your data is your consent (given when you create an account and hair profile) and the performance of our contract with you (delivering the service you signed up for). To exercise your rights, contact us at <a href="mailto:hey@qoyl.live">hey@qoyl.live</a>.</p>
 
 <h2>7. Security</h2>
-<p>We use industry-standard security practices to protect your data, including encrypted connections (HTTPS), row-level security on our database ensuring users can only access their own data, and secure third-party payment processing through Stripe. No system is perfectly secure — if you believe your account has been compromised, contact us immediately at <a href="mailto:hey@qoyl.live">hey@qoyl.live</a>.</p>
+<p>We use industry-standard security practices to protect your data, including encrypted connections (HTTPS), row-level security on our database ensuring users can only access their own data, and secure third-party payment processing through Stripe. No system is perfectly secure - if you believe your account has been compromised, contact us immediately at <a href="mailto:hey@qoyl.live">hey@qoyl.live</a>.</p>
 
 <h2>8. Children's privacy</h2>
-<p>Qoyl is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you believe we have inadvertently collected information from a child under 13, contact us at <a href="mailto:hey@qoyl.live">hey@qoyl.live</a> and we will delete it promptly. Qoyl does provide hair care content and recommendations relevant to babies and children — this content is directed at parents and caregivers, not children themselves.</p>
+<p>Qoyl is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you believe we have inadvertently collected information from a child under 13, contact us at <a href="mailto:hey@qoyl.live">hey@qoyl.live</a> and we will delete it promptly. Qoyl does provide hair care content and recommendations relevant to babies and children - this content is directed at parents and caregivers, not children themselves.</p>
 
 <h2>9. Third-party links</h2>
 <p>Qoyl's product search results and recommendations include links to third-party retailers and affiliate shopping platforms including Shopper.com, Ulta Beauty, and Sephora. These sites have their own privacy policies and we are not responsible for their practices. We recommend reviewing the privacy policy of any third-party site you visit through our links.</p>
@@ -188,7 +188,7 @@ const PRIVACY_CONTENT = `
 `;
 
 export const metadata = {
-  title: "Privacy Policy — Qoyl",
+  title: "Privacy Policy - Qoyl",
 };
 
 export default function PrivacyPage() {

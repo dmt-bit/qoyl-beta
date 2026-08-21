@@ -24,17 +24,17 @@ const STRAIGHT_ROUTINE: RoutineStep[] = [
   {
     title: "1. Cleanse",
     description:
-      "Clarify regularly -- straight hair's flat cuticle lets oil travel down the shaft fast, so buildup shows up sooner than on other textures.",
+      "Clarify regularly - straight hair's flat cuticle lets oil travel down the shaft fast, so buildup shows up sooner than on other textures.",
   },
   {
     title: "2. Condition",
     description:
-      "Apply a lightweight conditioner from mid-length to ends only -- conditioner at the root just adds weight and can flatten volume.",
+      "Apply a lightweight conditioner from mid-length to ends only - conditioner at the root just adds weight and can flatten volume.",
   },
   {
     title: "3. Moisturize & Seal",
     description:
-      "Avoid heavy products at the roots -- anything rich enough to seal moisture on other textures will usually look greasy and limp on straight hair.",
+      "Avoid heavy products at the roots - anything rich enough to seal moisture on other textures will usually look greasy and limp on straight hair.",
   },
   {
     title: "4. Style",
@@ -57,12 +57,12 @@ const WAVY_ROUTINE: RoutineStep[] = [
   {
     title: "3. Moisturize & Seal",
     description:
-      "Scrunch in a curl cream or mousse while hair is soaking wet -- this is what actually shapes and holds the wave pattern as it dries.",
+      "Scrunch in a curl cream or mousse while hair is soaking wet - this is what actually shapes and holds the wave pattern as it dries.",
   },
   {
     title: "4. Style",
     description:
-      "Diffuse or air dry without touching -- disturbing wavy hair as it dries is one of the most common causes of frizz.",
+      "Diffuse or air dry without touching - disturbing wavy hair as it dries is one of the most common causes of frizz.",
   },
 ];
 
@@ -70,7 +70,7 @@ const CURLY_ROUTINE: RoutineStep[] = [
   {
     title: "1. Cleanse",
     description:
-      "Co-wash or use a gentle, sulfate-free shampoo -- curly hair is naturally drier than straighter textures and tolerates less stripping.",
+      "Co-wash or use a gentle, sulfate-free shampoo - curly hair is naturally drier than straighter textures and tolerates less stripping.",
   },
   {
     title: "2. Condition",
@@ -80,16 +80,16 @@ const CURLY_ROUTINE: RoutineStep[] = [
   {
     title: "3. Moisturize & Seal",
     description:
-      "Apply your styler on soaking wet hair -- curls hold definition best when product goes on before any water evaporates.",
+      "Apply your styler on soaking wet hair - curls hold definition best when product goes on before any water evaporates.",
   },
   {
     title: "4. Style",
     description:
-      "Diffuse or air dry -- minimal disturbance while drying keeps the curl pattern intact and reduces frizz.",
+      "Diffuse or air dry - minimal disturbance while drying keeps the curl pattern intact and reduces frizz.",
   },
 ];
 
-// A simple rules-based routine generator -- a first-pass placeholder
+// A simple rules-based routine generator - a first-pass placeholder
 // algorithm, not a curated content system. Easy to swap out for
 // something more sophisticated later without touching callers.
 //
@@ -97,7 +97,7 @@ const CURLY_ROUTINE: RoutineStep[] = [
 // what matters most for those textures is the overall approach, not
 // porosity-driven variation. Coily (type 4) and unset/"not sure" curl
 // types keep the original porosity-driven logic below completely
-// unchanged -- that's the well-calibrated, original behavior this
+// unchanged - that's the well-calibrated, original behavior this
 // function was built around.
 function withExtensionCare(
   steps: RoutineStep[],
@@ -172,19 +172,19 @@ export function getBasicRoutineSteps(
     porosity === "low"
       ? "Clarify every 2-3 washes to prevent buildup on tightly-bound cuticles."
       : porosity === "high"
-      ? "Use a moisturizing, sulfate-free cleanser -- open cuticles lose moisture fast."
+      ? "Use a moisturizing, sulfate-free cleanser - open cuticles lose moisture fast."
       : "A gentle sulfate-free cleanser works well at this porosity.";
 
   const condition =
     porosity === "low"
       ? "Deep condition with heat (a warm cap or hooded dryer) to help product penetrate resistant cuticles."
       : porosity === "high"
-      ? "Alternate moisture and protein deep conditioners -- gappy cuticles need both hydration and reinforcement."
+      ? "Alternate moisture and protein deep conditioners - gappy cuticles need both hydration and reinforcement."
       : "A weekly deep conditioner keeps moisture balanced.";
 
   const moisturize =
     porosity === "low"
-      ? "Layer light, water-based leave-ins -- heavy creams and butters tend to sit on top rather than absorb."
+      ? "Layer light, water-based leave-ins - heavy creams and butters tend to sit on top rather than absorb."
       : porosity === "high"
       ? "Seal with a rich butter or oil right after your leave-in to lock moisture into the open cuticle."
       : "The LOC or LCO method (liquid, oil/cream, cream/oil) works well here.";
@@ -234,8 +234,8 @@ export function generateCalendar(
       day,
       isWashDay,
       note: isWashDay
-        ? "Full wash day -- cleanse, condition, moisturize, seal, and style."
-        : "Refresh day -- mist with water or a diluted leave-in and re-seal ends.",
+        ? "Full wash day - cleanse, condition, moisturize, seal, and style."
+        : "Refresh day - mist with water or a diluted leave-in and re-seal ends.",
     });
   }
 

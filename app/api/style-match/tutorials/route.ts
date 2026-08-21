@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 // posts' RLS policy ("Allow anon select", supabase/create_posts.sql)
-// only grants the anon role read access, not authenticated -- so a
+// only grants the anon role read access, not authenticated - so a
 // signed-in user's browser client (which sends their session JWT and is
 // evaluated as authenticated, not anon) gets zero rows back from a
 // direct client-side query. That's a pre-existing gap affecting other
 // features too (e.g. the dashboard's "From the Qoyl feed" section is
-// silently empty for every signed-in user) -- out of scope to fix here,
+// silently empty for every signed-in user) - out of scope to fix here,
 // so this route sidesteps it the same way app/api/style-match/stylists
 // does: read with the service-role key server-side instead.
 export async function GET(request: Request) {

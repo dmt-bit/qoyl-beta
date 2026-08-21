@@ -17,7 +17,7 @@ type CompleteRequestBody = {
 // (see that file for why match creation and completion are two separate
 // calls) with the results data and DIY/stylist choice, then sends the
 // hey@qoyl.live notification. user_id is trusted from the request body
-// rather than a validated session -- same trust model as
+// rather than a validated session - same trust model as
 // app/api/purchases/route.ts.
 export async function POST(request: Request) {
   console.log("[style-match/complete] route hit");
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     : "Unknown";
 
   const notifyResult = await sendNotificationEmail(
-    `New style match — ${detected_style} for ${profile?.curl_type ?? "unknown curl type"}`,
+    `New style match - ${detected_style} for ${profile?.curl_type ?? "unknown curl type"}`,
     `Detected style: ${detected_style}
 Input type: ${row.input_type}
 

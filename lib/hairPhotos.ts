@@ -23,10 +23,10 @@ export function mimeForPath(path: string): string {
   return MIME_BY_EXTENSION[ext] ?? "image/jpeg";
 }
 
-// hair-photos is a private bucket -- every read and write goes through
+// hair-photos is a private bucket - every read and write goes through
 // server-side routes using the service-role key rather than a storage
 // RLS policy (see supabase/hair_photos.sql for why). photo_url in the
-// hair_photos table stores this raw storage path, not a URL -- signed
+// hair_photos table stores this raw storage path, not a URL - signed
 // URLs are generated on demand since they expire.
 export async function uploadHairPhoto(
   userId: string,

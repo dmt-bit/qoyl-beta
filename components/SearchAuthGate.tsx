@@ -10,17 +10,17 @@ const COPY: Record<
   anonymous: {
     headline: "Your score is waiting.",
     subheadline:
-      "Qoyl scores products against your specific hair profile — curl type, porosity, scalp condition, and climate. Build your free profile first and every search result becomes personal.",
+      "Qoyl scores products against your specific hair profile - curl type, porosity, scalp condition, and climate. Build your free profile first and every search result becomes personal.",
   },
   "no-profile": {
     headline: "One more step before you search.",
     subheadline:
-      "You're signed in — now tell us about your hair so we can personalize your scores.",
+      "You're signed in - now tell us about your hair so we can personalize your scores.",
   },
 };
 
 // Shown in place of the search UI whenever there's no hair profile to
-// score against yet -- for a signed-out visitor (variant "anonymous") or
+// score against yet - for a signed-out visitor (variant "anonymous") or
 // a signed-in user who hasn't saved a profile (variant "no-profile").
 // Both funnel to /profile; the anonymous variant also offers a sign-in
 // path for a returning user who already has an account.

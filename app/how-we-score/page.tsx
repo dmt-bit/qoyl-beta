@@ -12,21 +12,21 @@ const SCORE_RANGES = [
     label: "Strong match",
     borderClass: "border-green",
     badgeClass: "bg-green text-dark",
-    body: "This product's ingredient profile aligns well with your hair's needs. The key ingredients score positively for your porosity level and hair type, and we didn't flag anything that commonly causes problems for your specific profile. This doesn't mean it will work perfectly — individual responses vary — but the ingredient science supports it.",
+    body: "This product's ingredient profile aligns well with your hair's needs. The key ingredients score positively for your porosity level and hair type, and we didn't flag anything that commonly causes problems for your specific profile. This doesn't mean it will work perfectly - individual responses vary - but the ingredient science supports it.",
   },
   {
     range: "40–69",
     label: "Proceed with caution",
     borderClass: "border-amber",
     badgeClass: "bg-amber text-dark",
-    body: "This product has a mixed ingredient profile for your hair. Some ingredients score well, others are flagged as potential concerns for your porosity or hair type. Read the ingredient breakdown before purchasing — the caution flags will tell you exactly what to watch for.",
+    body: "This product has a mixed ingredient profile for your hair. Some ingredients score well, others are flagged as potential concerns for your porosity or hair type. Read the ingredient breakdown before purchasing - the caution flags will tell you exactly what to watch for.",
   },
   {
     range: "0–39",
     label: "Not recommended for your profile",
     borderClass: "border-red",
     badgeClass: "bg-red text-cream",
-    body: "Several ingredients in this product are flagged as problematic for your specific hair profile. That doesn't mean the product is bad — it may work beautifully for someone with different porosity or curl type. But the ingredient science suggests it's worth exploring other options first.",
+    body: "Several ingredients in this product are flagged as problematic for your specific hair profile. That doesn't mean the product is bad - it may work beautifully for someone with different porosity or curl type. But the ingredient science suggests it's worth exploring other options first.",
   },
 ];
 
@@ -37,7 +37,7 @@ const SCORE_VARIABLES = [
   },
   {
     title: "Porosity",
-    body: "Porosity is the single most important variable in our scoring. It determines whether an ingredient actually enters your hair shaft or sits on top of it. Low porosity hair resists absorption — heavy humectants and butters can build up. High porosity hair absorbs quickly but loses moisture just as fast — it needs sealants and protein to hold moisture in.",
+    body: "Porosity is the single most important variable in our scoring. It determines whether an ingredient actually enters your hair shaft or sits on top of it. Low porosity hair resists absorption - heavy humectants and butters can build up. High porosity hair absorbs quickly but loses moisture just as fast - it needs sealants and protein to hold moisture in.",
   },
   {
     title: "Scalp condition",
@@ -53,11 +53,11 @@ const SCORE_VARIABLES = [
   },
   {
     title: "Water hardness (from your zip code)",
-    body: "Hard water deposits calcium and magnesium on the hair shaft, blocking moisture and making products less effective. We factor your local water hardness into how we score chelating agents and clarifying ingredients — if you're in a hard water city, we weight those ingredients more favorably.",
+    body: "Hard water deposits calcium and magnesium on the hair shaft, blocking moisture and making products less effective. We factor your local water hardness into how we score chelating agents and clarifying ingredients - if you're in a hard water city, we weight those ingredients more favorably.",
   },
   {
     title: "Age range",
-    body: "Hair texture, density, scalp oil production, and protein tolerance all change with age. We apply age-aware scoring adjustments — particularly for users over 35 who may be experiencing hormonal-related texture changes, thinning, or increased scalp sensitivity. Older age ranges receive higher scores for scalp-stimulating and strengthening ingredients and lower scores for heavy proteins and harsh surfactants.",
+    body: "Hair texture, density, scalp oil production, and protein tolerance all change with age. We apply age-aware scoring adjustments - particularly for users over 35 who may be experiencing hormonal-related texture changes, thinning, or increased scalp sensitivity. Older age ranges receive higher scores for scalp-stimulating and strengthening ingredients and lower scores for heavy proteins and harsh surfactants.",
   },
 ];
 
@@ -81,7 +81,7 @@ export default function HowWeScorePage() {
           compatibility score is calculated.
         </p>
 
-        {/* SECTION 1 -- What the score means */}
+        {/* SECTION 1 - What the score means */}
         <section className="mt-14">
           <SectionLabel>What the score means</SectionLabel>
           <h2 className="mt-3 font-serif text-2xl font-semibold leading-snug text-cream sm:text-3xl">
@@ -112,7 +112,7 @@ export default function HowWeScorePage() {
           </div>
         </section>
 
-        {/* SECTION 2 -- What goes into your score */}
+        {/* SECTION 2 - What goes into your score */}
         <section className="mt-14">
           <SectionLabel>What goes into your score</SectionLabel>
           <h2 className="mt-3 font-serif text-2xl font-semibold text-cream sm:text-3xl">
@@ -139,7 +139,7 @@ export default function HowWeScorePage() {
           </div>
         </section>
 
-        {/* SECTION 3 -- How ingredient scores are calculated */}
+        {/* SECTION 3 - How ingredient scores are calculated */}
         <section className="mt-14">
           <SectionLabel>How ingredient scores are calculated</SectionLabel>
           <h2 className="mt-3 font-serif text-2xl font-semibold text-cream sm:text-3xl">
@@ -153,7 +153,7 @@ export default function HowWeScorePage() {
               on a 0–10 scale for low, medium, and high porosity hair
               separately. A score of 8–10 means the ingredient is
               well-suited for that porosity level. A score of 4–7 is
-              neutral — present but not a significant help or harm. A score
+              neutral - present but not a significant help or harm. A score
               of 0–3 means the ingredient is commonly problematic for that
               porosity level.
             </p>
@@ -161,7 +161,7 @@ export default function HowWeScorePage() {
               Your product&apos;s compatibility score is calculated by
               matching every ingredient in the product against our database,
               applying your porosity score to each match, and weighting by
-              ingredient position — an ingredient listed first is present in
+              ingredient position - an ingredient listed first is present in
               higher concentration than one listed last, so it carries more
               weight in the final score.
             </p>
@@ -174,7 +174,7 @@ export default function HowWeScorePage() {
           </div>
         </section>
 
-        {/* SECTION 4 -- What our scores don't tell you */}
+        {/* SECTION 4 - What our scores don't tell you */}
         <section className="mt-14">
           <SectionLabel>What our scores don&apos;t tell you</SectionLabel>
           <h2 className="mt-3 font-serif text-2xl font-semibold text-cream sm:text-3xl">
@@ -183,7 +183,7 @@ export default function HowWeScorePage() {
 
           <div className="mt-5 space-y-4 text-sm leading-relaxed text-cream/80">
             <p>
-              Qoyl scores cosmetic compatibility — not medical outcomes. Our
+              Qoyl scores cosmetic compatibility - not medical outcomes. Our
               scores reflect ingredient-level data and hair science, not
               clinical trials or guaranteed results. Individual responses to
               ingredients vary based on factors we don&apos;t capture:
@@ -194,7 +194,7 @@ export default function HowWeScorePage() {
               A high score means the ingredient profile aligns with your
               hair&apos;s needs. It doesn&apos;t guarantee the product will
               work for you. A low score means the ingredient profile raises
-              concerns for your profile — it doesn&apos;t mean the product
+              concerns for your profile - it doesn&apos;t mean the product
               is dangerous or won&apos;t work for anyone.
             </p>
             <p>
@@ -206,7 +206,7 @@ export default function HowWeScorePage() {
           </div>
         </section>
 
-        {/* SECTION 5 -- Our commitment to independence */}
+        {/* SECTION 5 - Our commitment to independence */}
         <section className="mt-14">
           <SectionLabel>Our commitment to independence</SectionLabel>
           <h2 className="mt-3 font-serif text-2xl font-semibold text-cream sm:text-3xl">
@@ -217,7 +217,7 @@ export default function HowWeScorePage() {
             <p>
               Every score on Qoyl is generated by our algorithm from the
               product&apos;s ingredient list and your hair profile. Brand
-              partners who access our B2B dashboard see their scores — they
+              partners who access our B2B dashboard see their scores - they
               don&apos;t influence them. Affiliate relationships with
               retailers do not affect compatibility scores. A product that
               scores 34 will always score 34 for your profile, regardless of

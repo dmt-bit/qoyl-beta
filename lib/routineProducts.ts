@@ -16,27 +16,27 @@ import type { ProductWeight } from "@/lib/productWeight";
 // (there was no real product/brand catalog when it was first built).
 // catalog_products/catalog_brands/catalog_product_ingredients exist now
 // (the same tables /search, travel kits, and the home feed's product
-// spotlight cards already score against) -- this reuses that exact
+// spotlight cards already score against) - this reuses that exact
 // scoring engine (scoreCatalogProductsForProfile) instead of duplicating
 // it, and returns real product + brand names.
 
 type RoutineCategorySlot = {
   slug: string;
   label: string;
-  // "Mousse or Light Hold Gel" / "Curl Cream or Styler" -- if the primary
+  // "Mousse or Light Hold Gel" / "Curl Cream or Styler" - if the primary
   // slug has zero ranked candidates, try this slug instead before giving
   // up on the slot entirely. Primary and fallback are never combined into
   // one query: whichever one actually produces results supplies BOTH the
   // primary and alternate pick, so the two are always the same category.
   fallbackSlug?: string;
   fallbackLabel?: string;
-  // Only include this slot for the given profile -- e.g. coily's Butter
+  // Only include this slot for the given profile - e.g. coily's Butter
   // slot only makes sense for high porosity hair.
   include?: (ctx: { porosity: string }) => boolean;
 };
 
 // Used only when curl_type is unset/unrecognized (curlFamily() returns
-// null) -- every real family below has its own fully custom list.
+// null) - every real family below has its own fully custom list.
 const FALLBACK_CATEGORIES: RoutineCategorySlot[] = [
   { slug: "shampoo", label: "Shampoo" },
   { slug: "conditioner", label: "Conditioner" },
@@ -46,7 +46,7 @@ const FALLBACK_CATEGORIES: RoutineCategorySlot[] = [
   { slug: "oil", label: "Oil" },
 ];
 
-// Curl-family-specific recommendation lists -- straight/wavy no longer
+// Curl-family-specific recommendation lists - straight/wavy no longer
 // share the coily-centric "Sealing Oil"/"Styler"/curl-cream categories
 // that never applied to them; curly/coily keep the categories that
 // actually match how those textures are cared for.
@@ -57,7 +57,7 @@ const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
     { slug: "conditioner", label: "Conditioner" },
     { slug: "deep-conditioner", label: "Deep Conditioner" },
     { slug: "heat-protectant", label: "Heat Protectant" },
-    // Replaces "Sealing Oil" entirely -- see isProductAllowed below for
+    // Replaces "Sealing Oil" entirely - see isProductAllowed below for
     // the lightweight-only (ultralight/light) filter that goes with it.
     { slug: "oil", label: "Finishing Serum" },
   ],
@@ -98,7 +98,7 @@ function routineCategoriesForFamily(
   return slots.filter((slot) => !slot.include || slot.include({ porosity }));
 }
 
-// Candidate pool size per category -- large enough to give the scorer a
+// Candidate pool size per category - large enough to give the scorer a
 // real spread to rank without fetching the entire catalog on every
 // routine load.
 const CANDIDATE_POOL_SIZE = 25;
@@ -110,7 +110,7 @@ export type RoutineProductCandidate = {
   weight: ProductWeight;
   why: string;
   // Precomputed for the email (plain HTML, no client component to run
-  // ShopButton's logic) -- the web page instead renders <ShopButton
+  // ShopButton's logic) - the web page instead renders <ShopButton
   // productName brandName /> directly, which resolves the same link.
   affiliateLink: string | null;
 };
@@ -121,7 +121,7 @@ export type RoutineProductPick = {
   primary: RoutineProductCandidate | null;
   alternate: RoutineProductCandidate | null;
   // True when this category has no catalog products with scoreable
-  // ingredient data yet -- the UI/email should show the ingredient-
+  // ingredient data yet - the UI/email should show the ingredient-
   // guidance placeholder (see CATEGORY_INGREDIENT_TIPS below) instead of
   // product cards.
   noProductsYet: boolean;
@@ -135,7 +135,7 @@ export type RoutineProductPick = {
 export { getCategoryGuidanceTips } from "@/lib/categoryGuidance";
 
 // Format words that mean "this is a cream/butter/yogurt," independent of
-// how the product happens to be filed in the category table -- catalog
+// how the product happens to be filed in the category table - catalog
 // curation can lag or miscategorize (see Almond Jai Twisting Butter,
 // filed under "styler" until this was reported), so the name check is a
 // backstop for the category-based exclusion below, not a substitute.
@@ -145,7 +145,7 @@ const HEAVY_FORMAT_NAME_PATTERN = /butter|pudding|souffl[eé]|whip|yogurt|yoghur
 const THINNING_EXCLUDE_NAME_PATTERN = /growth cream|groyogurt|hair food/i;
 
 // Hard weight/format exclusions layered on top of the scoring modifier in
-// lib/compatibility.ts's getWeightModifier -- a heavy product can still
+// lib/compatibility.ts's getWeightModifier - a heavy product can still
 // out-score lighter alternatives on ingredients alone, so these override
 // scoring entirely rather than leaving it to compete.
 function isProductAllowed(
@@ -156,7 +156,7 @@ function isProductAllowed(
   const { weight, categorySlug, productName } = candidate;
   const isHeavyFormat = HEAVY_FORMAT_NAME_PATTERN.test(productName);
 
-  // Thinning hair overrides curl-type rules entirely -- never very_heavy
+  // Thinning hair overrides curl-type rules entirely - never very_heavy
   // anywhere, never heavy in a leave-in or styler, and a styler pick must
   // be a gel/mousse/light-spray, never a cream/butter/yogurt formula,
   // regardless of hair type.
@@ -171,7 +171,7 @@ function isProductAllowed(
 
   // very_heavy is already excluded everywhere for straight/wavy below,
   // and heavy is already excluded from leave-in/styler for straight and
-  // from everywhere but deep-conditioner for wavy -- so the weight-based
+  // from everywhere but deep-conditioner for wavy - so the weight-based
   // halves of "deep-conditioner AND very_heavy" / "leave-in or styler AND
   // heavy-or-very_heavy" are already covered by those per-family rules
   // further down. What's left to add here is the category/name backstop.
@@ -181,7 +181,7 @@ function isProductAllowed(
   }
 
   // Straight's "oil" slot is relabeled "Finishing Serum" and is meant to
-  // read as shine/frizz control, not moisture sealing -- so it's
+  // read as shine/frizz control, not moisture sealing - so it's
   // restricted to ultralight/light formulas only, not just preferred via
   // scoring.
   if (family === "straight" && categorySlug === "oil") {
@@ -204,7 +204,7 @@ function isProductAllowed(
     return true;
   }
 
-  // curly: very_heavy is only excluded from shampoo/leave-in -- deep
+  // curly: very_heavy is only excluded from shampoo/leave-in - deep
   // conditioner and styler/curl-cream allow any weight (styler even
   // prefers heavier formulas for definition, via the scoring modifier).
   if (weight === "very_heavy" && (categorySlug === "shampoo" || categorySlug === "leave-in")) {
@@ -242,42 +242,42 @@ function generateWhyCopy(
 
     // "oil" is relabeled "Finishing Serum" for straight (see
     // FAMILY_ROUTINE_CATEGORIES) but the underlying category_id/slug is
-    // still "oil" -- "finishing-serum" is kept as an alias in case a
+    // still "oil" - "finishing-serum" is kept as an alias in case a
     // distinct category slug is ever added.
     case "finishing-serum":
     case "oil":
       if (family === "straight") {
-        return `Finishing serum for ${curlTypeLabel} hair — apply 1-2 drops to dry hair at ends only for shine and frizz control. Avoid roots entirely.`;
+        return `Finishing serum for ${curlTypeLabel} hair - apply 1-2 drops to dry hair at ends only for shine and frizz control. Avoid roots entirely.`;
       }
       if (family === "curly") {
-        return `Lightweight oil for ${porosity} porosity ${curlTypeLabel} hair — apply to ends for shine and to smooth flyaways without weighing curls down.`;
+        return `Lightweight oil for ${porosity} porosity ${curlTypeLabel} hair - apply to ends for shine and to smooth flyaways without weighing curls down.`;
       }
       if (hasThinning) {
-        return `Scalp-nourishing formula — massage into scalp to stimulate circulation. Lightweight enough to use without weighing down thinning strands.`;
+        return `Scalp-nourishing formula - massage into scalp to stimulate circulation. Lightweight enough to use without weighing down thinning strands.`;
       }
-      return `Sealing oil appropriate for ${porosity} porosity ${curlTypeLabel} hair — apply to ends after styling to lock in moisture.`;
+      return `Sealing oil appropriate for ${porosity} porosity ${curlTypeLabel} hair - apply to ends after styling to lock in moisture.`;
 
     case "conditioner":
       if (family === "straight") {
-        return `Apply to mid-lengths and ends only on ${curlTypeLabel} hair — never at the roots. Rinse thoroughly. Conditioner at the scalp causes the flat, oily look within hours on straight hair.`;
+        return `Apply to mid-lengths and ends only on ${curlTypeLabel} hair - never at the roots. Rinse thoroughly. Conditioner at the scalp causes the flat, oily look within hours on straight hair.`;
       }
-      return `Recommended for ${porosity} porosity ${curlTypeLabel} hair — use weekly for 10-15 minutes then rinse thoroughly. The formula weight is appropriate for occasional deep treatment without risking buildup on fine strands.`;
+      return `Recommended for ${porosity} porosity ${curlTypeLabel} hair - use weekly for 10-15 minutes then rinse thoroughly. The formula weight is appropriate for occasional deep treatment without risking buildup on fine strands.`;
 
     case "deep-conditioner":
       if (family === "straight") {
-        return `Use once a month on ${curlTypeLabel} hair — not weekly. Apply to mid-lengths and ends only, leave for 10-15 minutes under a shower cap, rinse thoroughly. Monthly deep conditioning prevents damage without over-softening fine strands.`;
+        return `Use once a month on ${curlTypeLabel} hair - not weekly. Apply to mid-lengths and ends only, leave for 10-15 minutes under a shower cap, rinse thoroughly. Monthly deep conditioning prevents damage without over-softening fine strands.`;
       }
       if (family === "wavy") {
-        return `Recommended for ${porosity} porosity ${curlTypeLabel} hair — use monthly for 10-15 minutes then rinse thoroughly. The formula weight is appropriate for occasional deep treatment without risking buildup on wavy strands.`;
+        return `Recommended for ${porosity} porosity ${curlTypeLabel} hair - use monthly for 10-15 minutes then rinse thoroughly. The formula weight is appropriate for occasional deep treatment without risking buildup on wavy strands.`;
       }
-      return `Strong match for ${porosity} porosity ${curlTypeLabel} hair — apply generously and use heat for maximum penetration.`;
+      return `Strong match for ${porosity} porosity ${curlTypeLabel} hair - apply generously and use heat for maximum penetration.`;
 
     case "leave-in":
       if (hasThinning) {
-        return `Lightweight enough for thinning ${curlTypeLabel} hair — won't weigh down fine strands while providing moisture. Apply sparingly to mid-lengths and ends only, avoid roots.`;
+        return `Lightweight enough for thinning ${curlTypeLabel} hair - won't weigh down fine strands while providing moisture. Apply sparingly to mid-lengths and ends only, avoid roots.`;
       }
       if (family === "straight") {
-        return `Appropriate weight for ${curlTypeLabel} straight hair — apply to damp hair focusing on ends only to avoid root heaviness.`;
+        return `Appropriate weight for ${curlTypeLabel} straight hair - apply to damp hair focusing on ends only to avoid root heaviness.`;
       }
       return `Scores well for ${porosity} porosity ${curlTypeLabel} hair based on ingredient compatibility and formula weight.`;
 
@@ -285,23 +285,23 @@ function generateWhyCopy(
       return `Gentle enough for regular use on ${porosity} porosity ${curlTypeLabel} hair without stripping natural oils.`;
 
     case "co-wash":
-      return `Cleansing conditioner appropriate for ${porosity} porosity ${curlTypeLabel} hair — cleanses gently without sulfates, ideal for a lighter wash day.`;
+      return `Cleansing conditioner appropriate for ${porosity} porosity ${curlTypeLabel} hair - cleanses gently without sulfates, ideal for a lighter wash day.`;
 
     case "styler":
     case "gel":
     case "curl-cream":
     case "mousse":
       if (family === "straight") {
-        return `Lightweight hold appropriate for ${curlTypeLabel} fine hair — provides structure without weighing strands down.`;
+        return `Lightweight hold appropriate for ${curlTypeLabel} fine hair - provides structure without weighing strands down.`;
       }
       return `Good hold and definition for ${curlTypeLabel} ${porosity} porosity hair.`;
 
     case "butter":
-      return `Rich sealing formula for ${porosity} porosity ${curlTypeLabel} hair — apply to ends to lock in moisture and protect against breakage.`;
+      return `Rich sealing formula for ${porosity} porosity ${curlTypeLabel} hair - apply to ends to lock in moisture and protect against breakage.`;
 
     default:
       console.warn(
-        `generateWhyCopy: no specific copy branch for category "${category}" -- using generic fallback.`
+        `generateWhyCopy: no specific copy branch for category "${category}" - using generic fallback.`
       );
       return `Scores well for ${porosity} porosity ${curlTypeLabel} hair based on ingredient compatibility and formula weight.`;
   }
@@ -321,7 +321,7 @@ function brandNameOf(row: CandidateRow): string {
 // Shared by getRoutineProductPicks (primary + alternate, /routine page)
 // and getRoutineProducts (primary only, routine email) so both stay in
 // sync with a single query/scoring pass per category. Always returns
-// candidates from exactly one category_id -- callers building a pick from
+// candidates from exactly one category_id - callers building a pick from
 // this result get primary/alternate from the same category by
 // construction, never mixed.
 async function rankCategoryProducts(
@@ -361,7 +361,7 @@ async function rankCategoryProducts(
   return candidates
     .map((row) => {
       const result = scores[row.id]?.result;
-      // No linked ingredient data for this product yet -- can't produce a
+      // No linked ingredient data for this product yet - can't produce a
       // real score or a grounded "why," so it's not a usable candidate
       // rather than a false 0.
       if (!result || result.matches.length === 0) return null;
@@ -417,7 +417,7 @@ export async function getRoutineProductPicks(
   );
   const categoryIds = await loadCategoryIds(allSlugs);
 
-  // Categories x a candidates fetch + a scoring pass each -- run
+  // Categories x a candidates fetch + a scoring pass each - run
   // concurrently rather than one at a time, both for responsiveness and
   // to stay well under Vercel Hobby's ~10s function timeout.
   const results = await Promise.all(
@@ -429,7 +429,7 @@ export async function getRoutineProductPicks(
       let usedSlug = slot.slug;
       let usedLabel = slot.label;
 
-      // Primary category came up empty -- try the fallback (e.g. "Mousse"
+      // Primary category came up empty - try the fallback (e.g. "Mousse"
       // -> "Light Hold Gel"). Primary and alternate always end up coming
       // from whichever one slug actually produced results, never mixed.
       if (ranked.length === 0 && slot.fallbackSlug) {
@@ -463,7 +463,7 @@ export async function getRoutineProductPicks(
   return results;
 }
 
-// Single-pick version for the routine email -- same ranking, just the
+// Single-pick version for the routine email - same ranking, just the
 // top product per category instead of primary + alternate.
 export async function getRoutineProducts(
   porosity: string | null,
@@ -479,7 +479,7 @@ export type AvoidIngredient = {
   reason: string | null;
 };
 
-// Lowest-scoring ingredients for the user's porosity -- unrelated to the
+// Lowest-scoring ingredients for the user's porosity - unrelated to the
 // product-recommendation bug above (this has always been legitimately
 // ingredient-based: "avoid ingredients," not "here's a product"). Left
 // as-is.

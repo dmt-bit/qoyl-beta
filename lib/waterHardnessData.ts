@@ -1,8 +1,8 @@
 // Static water-hardness classification by zip code prefix, replacing the
-// earlier state-level lookup (a whole state is a poor proxy -- Chicago
+// earlier state-level lookup (a whole state is a poor proxy - Chicago
 // and downstate Illinois don't share a water source, let alone a
 // hardness level). This is a sparse table of specific, well-documented
-// metro areas from published municipal water quality reports -- not
+// metro areas from published municipal water quality reports - not
 // full national zip3 coverage. Anything not explicitly listed here
 // falls back to "moderate", which lib/compatibility.ts's scoring
 // treats as a no-op (same as soft): an area we have no real data for
@@ -12,7 +12,7 @@
 // definitive bucket since the type only allows one: Boston (021-022)
 // went to "soft" (MWRA's reservoir-sourced surface water is well
 // documented as soft); the SF Bay Area (940-948) went to "moderate"
-// instead -- that range spans multiple water districts with genuinely
+// instead - that range spans multiple water districts with genuinely
 // mixed hardness (SF proper's Hetch Hetchy supply is soft, but South
 // Bay/Peninsula draws more from harder groundwater), so "moderate" is
 // the safer average across it rather than picking one extreme.

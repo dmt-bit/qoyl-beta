@@ -9,11 +9,11 @@ export type StylistResult = {
   bookingUrl: string | null;
 };
 
-// stylist_accounts is qoyl-business's table (shared Supabase project) --
+// stylist_accounts is qoyl-business's table (shared Supabase project) -
 // it holds contact_name/email/phone/stripe_customer_id/etc, none of
 // which Style Match has any business exposing. Reading it here with the
 // service-role key and returning only this hand-picked subset avoids
-// ever needing an RLS policy or GRANT on the shared table -- see
+// ever needing an RLS policy or GRANT on the shared table - see
 // supabase/create_style_match.sql for the fuller story.
 export async function GET(request: Request) {
   console.log("[style-match/stylists] route hit");

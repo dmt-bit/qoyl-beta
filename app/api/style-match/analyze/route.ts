@@ -6,10 +6,10 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 export const dynamic = "force-dynamic";
 
 // 25s: enough headroom for a single-image call even on a slow response,
-// well under Pro's ceiling. Harmless on Hobby -- that plan hard-caps at
+// well under Pro's ceiling. Harmless on Hobby - that plan hard-caps at
 // 10s regardless of what's set here, which is exactly why the real fix
 // is keeping this call fast (smaller image, shorter prompt, and no
-// current-hair-photo image in this call at all -- see
+// current-hair-photo image in this call at all - see
 // app/api/style-match/translate/route.ts for that part now).
 export const maxDuration = 25;
 
@@ -23,7 +23,7 @@ const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
 };
 
 // Uploaded with the service-role key rather than the user's own session
-// so this works with no storage RLS policy on the bucket at all -- the
+// so this works with no storage RLS policy on the bucket at all - the
 // bucket ("style-match-images") is public-read, so the resulting URL is
 // usable directly by the client and stored on style_matches/saved_styles.
 // Best-effort: a failure here must not fail the whole analysis, since
@@ -59,13 +59,13 @@ const SUPPORTED_IMAGE_TYPES = new Set([
   "image/webp",
 ]);
 
-// Shortened deliberately -- fewer/shorter fields means less output for
+// Shortened deliberately - fewer/shorter fields means less output for
 // the model to generate, which is a direct, significant chunk of total
 // response time. current_to_desired_translation/length_gap/prep_needed
 // used to live here too, but that meant every request with a current
 // hair photo attached the photo AND asked for more output in the same
 // call. That's now a separate, tiny, image-free follow-up call fired
-// after this one returns -- see app/api/style-match/translate/route.ts.
+// after this one returns - see app/api/style-match/translate/route.ts.
 function buildAnalysisInstructions(opts: {
   colorMatch: boolean;
   translateForHairType: boolean;
@@ -88,7 +88,7 @@ function buildAnalysisInstructions(opts: {
   }
   if (opts.translateForHairType) {
     fields.push(
-      `"hair_type_translation": "how this translates onto ${opts.curlType ?? "the user's"} hair -- 1-2 sentences max"`
+      `"hair_type_translation": "how this translates onto ${opts.curlType ?? "the user's"} hair - 1-2 sentences max"`
     );
   }
 
@@ -111,7 +111,7 @@ type DetectedStyle = {
 };
 
 // Claude sometimes wraps JSON in a ```json ... ``` fence despite being
-// told not to -- strip that before parsing rather than fail on it.
+// told not to - strip that before parsing rather than fail on it.
 function parseDetectedStyle(rawText: string): DetectedStyle | null {
   const stripped = rawText
     .trim()
@@ -130,7 +130,7 @@ function parseDetectedStyle(rawText: string): DetectedStyle | null {
 export async function POST(request: Request) {
   console.log("[style-match/analyze] route hit");
   console.log("[style-match/analyze] ANTHROPIC_API_KEY present:", !!process.env.ANTHROPIC_API_KEY);
-  // First 10 chars only -- enough to confirm the right key is loaded
+  // First 10 chars only - enough to confirm the right key is loaded
   // (e.g. "sk-ant-api...") without exposing the rest in logs.
   console.log("[style-match/analyze] ANTHROPIC_API_KEY prefix:", process.env.ANTHROPIC_API_KEY?.slice(0, 10));
 
@@ -231,7 +231,7 @@ export async function POST(request: Request) {
       method: "POST",
       headers: {
         // .trim() guards against a trailing newline/space from pasting
-        // the key into Vercel's env var UI -- an invalid header value
+        // the key into Vercel's env var UI - an invalid header value
         // makes fetch() throw before the request is even sent, which
         // otherwise shows up here as an opaque "couldn't reach the
         // service" with no indication it was ever about the key.
@@ -241,7 +241,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         model: ANTHROPIC_MODEL,
-        // Lower than the original 1024 on purpose -- this schema is
+        // Lower than the original 1024 on purpose - this schema is
         // short enough that 1024 was never being used, just giving the
         // model room to ramble. Capping it tighter nudges faster
         // generation too.
@@ -288,7 +288,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ...detected, image_url: imageUrl });
   } catch (err) {
     // JSON.stringify(err) on a real Error yields "{}" (message/stack
-    // aren't own-enumerable properties) -- log err.message/err.stack
+    // aren't own-enumerable properties) - log err.message/err.stack
     // explicitly too, or this tells you nothing beyond "something threw."
     console.error("[style-match/analyze] Anthropic API error:", JSON.stringify(err));
     console.error(

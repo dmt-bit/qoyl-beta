@@ -3,7 +3,7 @@ export type CityState = {
   stateAbbreviation: string;
 };
 
-// Best-effort only -- this runs inside a webhook handler, so a slow or
+// Best-effort only - this runs inside a webhook handler, so a slow or
 // down external API must never block or fail the email send. Falls back
 // to null on any error, timeout, or missing zip code.
 export async function lookupCityState(

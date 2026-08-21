@@ -33,7 +33,7 @@ function escapeHtml(value: string): string {
 
 // "wash"/"chelate"/"protein" mean different things depending on curl
 // family (a wavy "wash" day is a sulfate-free shampoo day; a coily
-// "wash" day is a regular wash inside the chelate/protein cycle) --
+// "wash" day is a regular wash inside the chelate/protein cycle) -
 // mirrors app/routine/page.tsx's washTypeLabel/washTypeMiniRoutine.
 const DEFAULT_WASH_TAG_LABEL: Record<WashDayType, string> = {
   chelate: "Chelating",
@@ -84,7 +84,7 @@ function washMiniRoutine(type: WashDayType, family: CurlFamily | null): string {
 function washItemHtml(date: string, washType: WashDayType, family: CurlFamily | null): string {
   return `
   <div class="wash-item ${washType}">
-    <div class="wash-item-date">${escapeHtml(formatWashDayLabel(date))} &mdash; ${washTagLabel(washType, family)}</div>
+    <div class="wash-item-date">${escapeHtml(formatWashDayLabel(date))} - ${washTagLabel(washType, family)}</div>
     <div class="wash-item-routine">${escapeHtml(washMiniRoutine(washType, family))}</div>
   </div>`;
 }
@@ -96,7 +96,7 @@ function renderWashDayList(calendarDays: WashDay[], family: CurlFamily | null): 
 }
 
 // Straight-hair subscribers wash near-daily, so a rolling 30-day list is
-// the wrong shape for their email -- a genuine 7-day week, including
+// the wrong shape for their email - a genuine 7-day week, including
 // explicit "Rest day" rows for any day with no scheduled activity, reads
 // far better than 20-30 stacked list rows. calendarDays[0] is always
 // today (see generateWashCalendar), so the week is built from there
@@ -119,7 +119,7 @@ function renderWeeklySchedule(calendarDays: WashDay[], family: CurlFamily | null
       const label = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
       rows.push(`
   <div class="wash-item rest">
-    <div class="wash-item-date">${escapeHtml(label)} &mdash; Rest day</div>
+    <div class="wash-item-date">${escapeHtml(label)} - Rest day</div>
     <div class="wash-item-routine">No hair care needed today.</div>
   </div>`);
     }
@@ -220,7 +220,7 @@ export function renderRoutineEmailHtml(data: RoutineEmailData): string {
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Your Qoyl Routine — Next 30 Days</title>
+<title>Your Qoyl Routine - Next 30 Days</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
@@ -290,7 +290,7 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
 </div>
 
 <div class="hero">
-  <div class="hero-name">${escapeHtml(data.firstName)} &mdash; your next 30 days.</div>
+  <div class="hero-name">${escapeHtml(data.firstName)} - your next 30 days.</div>
   <div class="hero-sub">Built for your hair. Updated every month.</div>
   <div class="chips">${renderChips(data)}</div>
 </div>
@@ -313,7 +313,7 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
   <div class="rule"></div>
 
   <div class="section-label">your wash day routine</div>
-  <div class="section-title">Step by step &mdash; every wash day</div>
+  <div class="section-title">Step by step - every wash day</div>
 
   ${renderSteps(data.steps)}
 
@@ -333,7 +333,7 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
   <div class="footer-text">
     ${escapeHtml(data.firstName)} &middot; Monthly Routine Subscriber<br/>
     Built from your ${data.curlTypeLabel ? escapeHtml(data.curlTypeLabel) + " " : ""}${data.porosityLabel ? escapeHtml(data.porosityLabel) + " porosity " : ""}profile${data.cityStateLabel ? " &middot; " + escapeHtml(data.cityStateLabel) : ""}${data.waterHardnessLabel ? " &middot; " + escapeHtml(data.waterHardnessLabel) : ""}<br/>
-    Questions about your routine? Reply to this email &mdash; hey@qoyl.live<br/>
+    Questions about your routine? Reply to this email - hey@qoyl.live<br/>
     Manage your subscription at ${escapeHtml(data.dashboardUrl)}
   </div>
 </div>

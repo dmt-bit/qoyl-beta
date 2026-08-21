@@ -26,7 +26,7 @@ export type StyleShoppingList = {
 };
 
 // Amazon/Target/Sally Beauty links below are search-result URLs, not
-// specific product pages -- there's no real product catalog/affiliate
+// specific product pages - there's no real product catalog/affiliate
 // feed for these static categories (fake hair, tools, generic
 // accessories), so a search link is the honest option rather than
 // fabricating a specific ASIN/product page that may not exist or may
@@ -181,7 +181,7 @@ function buildFakeHairOptions(
 }
 
 // Deep Match's "longer than my current hair, include extension options"
-// answer -- a different concept from requires_fake_hair (which is about
+// answer - a different concept from requires_fake_hair (which is about
 // the *style itself* needing added hair, e.g. box braids). This is about
 // reaching extra length regardless of style, so the options differ:
 // clip-ins/tape-ins for a natural-hair-plus-length look, or a full

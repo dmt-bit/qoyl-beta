@@ -15,7 +15,7 @@ const TESTIMONIALS = [
   {
     stars: 5,
     review:
-      "I've been natural for 6 years and never understood why products would work for a few weeks and then stop. Qoyl told me it was the glycerin in my leave-in — I live in Chicago and it was pulling moisture out during winter. Game changer.",
+      "I've been natural for 6 years and never understood why products would work for a few weeks and then stop. Qoyl told me it was the glycerin in my leave-in - I live in Chicago and it was pulling moisture out during winter. Game changer.",
     name: "Amara T.",
     hairType: "4b, high porosity · Chicago",
   },
@@ -29,7 +29,7 @@ const TESTIMONIALS = [
   {
     stars: 5,
     review:
-      "I searched my holy grail conditioner and got a 91/100. Then I searched the one that's been making my hair feel like straw — 34/100. I literally screamed. This is exactly what we needed.",
+      "I searched my holy grail conditioner and got a 91/100. Then I searched the one that's been making my hair feel like straw - 34/100. I literally screamed. This is exactly what we needed.",
     name: "Nadia R.",
     hairType: "4a, medium porosity · Atlanta",
   },
@@ -125,7 +125,7 @@ export default function Testimonials() {
             href="/profile"
             className="inline-flex items-center justify-center rounded-lg bg-bronze px-6 py-4 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
           >
-            Try Qoyl free — no credit card needed →
+            Try Qoyl free - no credit card needed →
           </Link>
         </div>
       </div>

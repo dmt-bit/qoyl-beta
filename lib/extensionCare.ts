@@ -12,8 +12,8 @@ export function getExtensionCareGuidance(
     : "Cleanse your scalp directly at the part lines with a diluted shampoo, and focus moisture and sealing on your natural hair and edges rather than the extension hair itself. Avoid excess tension at the hairline, and don't leave a style in longer than recommended for your extension type.";
 
   const why = hasWig
-    ? "Why: it's easy to neglect the hair underneath a wig since it's out of sight -- your natural hair still needs the same moisture and cleansing it always did."
-    : "Why: braids, weaves, and locs put continuous tension on the hairline and can hide buildup at the scalp -- protecting the edges and keeping the scalp clean prevents breakage and traction alopecia.";
+    ? "Why: it's easy to neglect the hair underneath a wig since it's out of sight - your natural hair still needs the same moisture and cleansing it always did."
+    : "Why: braids, weaves, and locs put continuous tension on the hairline and can hide buildup at the scalp - protecting the edges and keeping the scalp clean prevents breakage and traction alopecia.";
 
   return {
     title: "Extension & Protective Style Care",

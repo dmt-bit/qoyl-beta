@@ -16,7 +16,7 @@ const PLATFORM_LABEL: Record<string, string> = {
 };
 
 // source_platform is meant for repost attribution ("originally on TikTok")
-// and is often left blank for original-video posts -- there's no "source"
+// and is often left blank for original-video posts - there's no "source"
 // to attribute when the video is Qoyl's own. Detecting the embed platform
 // from the video_url itself means the embed still renders correctly even
 // when source_platform isn't set.
@@ -84,7 +84,7 @@ function VideoEmbed({
     );
   }
 
-  // No embed support yet for other platforms (instagram/twitter) -- link
+  // No embed support yet for other platforms (instagram/twitter) - link
   // out rather than show a broken embed.
   return (
     <a

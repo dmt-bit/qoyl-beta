@@ -35,7 +35,7 @@ export type FeedCard =
   | { feedId: string; type: "style"; style: StyleRow };
 
 // What the long-press action sheet needs to act on, regardless of which
-// card type triggered it -- keeps the sheet itself (and its save/share
+// card type triggered it - keeps the sheet itself (and its save/share
 // logic) in one place in MasonryFeed rather than duplicated per card.
 export type SheetTarget = {
   cardType: FeedCard["type"];
@@ -49,12 +49,12 @@ export type SheetTarget = {
 // Registers a capture-phase click interceptor that handles two cases
 // before the card's own bubble-phase click/nav handler (Next's <Link>
 // attaches its client-side navigation the same way) ever sees the click:
-//   1. The hold timer fired (long press) -- stop the click outright so it
+//   1. The hold timer fired (long press) - stop the click outright so it
 //      never also triggers a normal tap.
 //   2. The tap is otherwise gated (signed out, or signed in with no hair
-//      profile) -- stop the click and open the auth gate sheet instead of
-//      navigating. Long presses are NOT gated -- only normal taps are, per
-//      spec -- so this check only runs once the long-press branch above
+//      profile) - stop the click and open the auth gate sheet instead of
+//      navigating. Long presses are NOT gated - only normal taps are, per
+//      spec - so this check only runs once the long-press branch above
 //      has ruled itself out.
 // A pointer move cancels the hold timer, since a drag/scroll shouldn't be
 // mistaken for a hold.
@@ -78,7 +78,7 @@ export function useCardTap({
   }
 
   return {
-    // Anchors are natively draggable -- a held press that the browser
+    // Anchors are natively draggable - a held press that the browser
     // interprets as the start of a drag gesture cancels the pending
     // pointerup/click sequence outright, which silently ate the long
     // press on external (target="_blank") product-card links during
@@ -210,7 +210,7 @@ export function EditorialMasonryCard({
     <Link href={`/posts/${post.slug}`} className={CARD_CLASS} {...longPress}>
       {post.hero_image_url ? (
         <>
-          {/* Plain <img>, not next/image -- masonry needs the browser's
+          {/* Plain <img>, not next/image - masonry needs the browser's
               natural intrinsic aspect ratio per image, and next/image
               requires a known width/height (or a sized ancestor for
               `fill`) that this feed doesn't have ahead of render. */}
@@ -349,7 +349,7 @@ export function ProductMasonryCard({
   );
 
   // No affiliate link resolved for this brand yet (see
-  // lib/affiliateLinks.ts's curated fallback table) -- rather than a dead
+  // lib/affiliateLinks.ts's curated fallback table) - rather than a dead
   // tap, route into the existing product search instead of leaving the
   // card unclickable.
   if (isExternal) {
@@ -419,14 +419,14 @@ export function ActionSheet({
   target: SheetTarget | null;
   onClose: () => void;
   showToast: (message: string) => void;
-  // Owned by the caller (MasonryFeed), not this component -- hideCardType()
+  // Owned by the caller (MasonryFeed), not this component - hideCardType()
   // alone only persists to localStorage; the caller also needs to update
   // its own hiddenTypes state so the change takes effect immediately
   // instead of only after a reload re-reads localStorage.
   onNotInterested: (cardType: FeedCard["type"]) => void;
 }) {
   // A real long-press-then-release also dispatches a trailing synthetic
-  // click at the same screen point once the sheet is open -- without
+  // click at the same screen point once the sheet is open - without
   // this, that click lands on the backdrop below and immediately closes
   // the sheet it just opened. Ignoring backdrop clicks for a brief
   // window after mount absorbs that click-through.
@@ -453,7 +453,7 @@ export function ActionSheet({
       try {
         await navigator.share({ title: target!.title, url: target!.shareUrl });
       } catch {
-        // User cancelled the native share sheet -- not an error.
+        // User cancelled the native share sheet - not an error.
       }
     } else if (navigator.clipboard) {
       await navigator.clipboard.writeText(target!.shareUrl);
@@ -468,11 +468,11 @@ export function ActionSheet({
     onClose();
   }
 
-  // Portaled to document.body -- the feed section's ancestor .fade-up-block
+  // Portaled to document.body - the feed section's ancestor .fade-up-block
   // (see globals.css) runs a scroll-triggered CSS animation on `transform`,
   // which per spec makes it the containing block for any `position: fixed`
   // descendant. Left un-portaled, this sheet renders "fixed" relative to
-  // that (large, scrolled) ancestor box instead of the real viewport --
+  // that (large, scrolled) ancestor box instead of the real viewport -
   // visually broken/mispositioned rather than covering the screen.
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60" onClick={handleBackdropClick}>
@@ -532,14 +532,14 @@ export function ActionSheet({
 // Swipe-down-to-dismiss: tracks the drag delta on the sheet itself and
 // translates it live; releasing past the threshold closes the sheet,
 // otherwise it snaps back. A tap outside the sheet (the backdrop) also
-// dismisses it -- unlike ActionSheet, there's no long-press-release race
+// dismisses it - unlike ActionSheet, there's no long-press-release race
 // here (this sheet only ever opens from a single ordinary tap, never a
 // held one), so no opened-at debounce is needed on the backdrop.
 
 const SWIPE_DISMISS_THRESHOLD = 80;
 const FEED_SCROLL_POS_KEY = "qoyl_feed_scroll_y";
 
-// Both gates' CTAs navigate away to /profile or /auth -- MasonryFeed
+// Both gates' CTAs navigate away to /profile or /auth - MasonryFeed
 // fully unmounts on that route change and remounts fresh on the way
 // back, which would otherwise drop the user at the top of the feed
 // instead of back near the gate they just cleared.
@@ -582,7 +582,7 @@ export function AuthGateSheet({ open, onClose }: { open: boolean; onClose: () =>
     dragStartY.current = null;
   }
 
-  // Portaled to document.body for the same reason as ActionSheet above --
+  // Portaled to document.body for the same reason as ActionSheet above -
   // otherwise this "fixed" backdrop is positioned relative to the feed's
   // animated .fade-up-block ancestor instead of the real viewport.
   return createPortal(
@@ -636,11 +636,11 @@ export function ScrollGateCard({ needsProfileOnly }: { needsProfileOnly: boolean
     <div className="mt-1 flex h-[280px] w-full flex-col items-center justify-center rounded-xl border border-bronze/30 bg-gradient-to-b from-[#1C1612] to-[#2C2420] px-6 text-center">
       <LockIcon />
       <h3 className="mt-3 font-serif text-[22px] leading-snug text-cream">
-        {needsProfileOnly ? "One more step — tell us about your hair." : "Your feed is waiting."}
+        {needsProfileOnly ? "One more step - tell us about your hair." : "Your feed is waiting."}
       </h3>
       {!needsProfileOnly && (
         <p className="mt-2 font-sans text-[12px] leading-relaxed text-muted">
-          Create a free profile to unlock your full personalized feed — product scores, style
+          Create a free profile to unlock your full personalized feed - product scores, style
           inspo, and hair tips matched to your specific texture.
         </p>
       )}
@@ -667,7 +667,7 @@ export function ScrollGateCard({ needsProfileOnly }: { needsProfileOnly: boolean
 // ---- localStorage-backed "save" / "not interested" -------------------------
 //
 // No bookmarks table exists for posts/products (only saved_styles does,
-// used for real style-card saves below) -- see the SQL note in the PR/
+// used for real style-card saves below) - see the SQL note in the PR/
 // commit for why this stays client-only rather than adding one for what
 // was scoped as a presentation-layer change.
 

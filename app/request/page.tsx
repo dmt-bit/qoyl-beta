@@ -67,7 +67,7 @@ function RequestForm() {
             Request received
           </h1>
           <p className="mt-4 text-sm text-cream/70">
-            Got it — we&apos;ll evaluate{" "}
+            Got it - we&apos;ll evaluate{" "}
             <span className="text-cream">{productName}</span> and email you
             the results within 48 hours.
           </p>
@@ -146,7 +146,7 @@ function RequestForm() {
               htmlFor="ingredient-list"
               className="font-serif text-lg text-bronze2"
             >
-              Paste the ingredient list if you have it — this helps us
+              Paste the ingredient list if you have it - this helps us
               evaluate faster
             </label>
             <textarea

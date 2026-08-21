@@ -2,12 +2,12 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 // Server-only client using the service role key, which bypasses Row
 // Level Security. Only import this from server-side code (API routes,
-// Server Components) -- never from a "use client" component, since the
+// Server Components) - never from a "use client" component, since the
 // key must never reach the browser bundle.
 let adminClient: SupabaseClient | null = null;
 
 // Lazily instantiated so builds/page-data collection succeed even when
-// SUPABASE_SERVICE_ROLE_KEY isn't set yet -- supabase-js throws
+// SUPABASE_SERVICE_ROLE_KEY isn't set yet - supabase-js throws
 // immediately on construction if the key is empty, and that must not
 // happen at module load time (e.g. import-time evaluation during
 // `next build`).
@@ -25,7 +25,7 @@ export function getSupabaseAdmin(): SupabaseClient {
     adminClient = createClient(supabaseUrl, serviceRoleKey, {
       global: {
         // Route Handlers run under Next.js's patched fetch, which caches
-        // GET requests by default -- without this, supabase-js's REST
+        // GET requests by default - without this, supabase-js's REST
         // calls get silently cached at the fetch layer, independent of
         // any `export const dynamic` on the route itself. Confirmed the
         // hard way: app/api/hair-photos/community/route.ts served a

@@ -29,7 +29,7 @@ const SWIMMING_OPTIONS: { value: string; label: string }[] = [
 ];
 
 const PROTECTIVE_STYLE_OPTIONS: { value: string; label: string }[] = [
-  { value: "none", label: "No — wearing my natural hair" },
+  { value: "none", label: "No - wearing my natural hair" },
   { value: "braids_twists", label: "Braids or twists" },
   { value: "weave_sew_in", label: "Weave or sew-in" },
   { value: "wig", label: "Wig" },
@@ -38,33 +38,33 @@ const PROTECTIVE_STYLE_OPTIONS: { value: string; label: string }[] = [
 ];
 
 const HAIR_PRIORITY_OPTIONS: { value: string; label: string }[] = [
-  { value: "low_maintenance", label: "Low maintenance — keep it simple" },
+  { value: "low_maintenance", label: "Low maintenance - keep it simple" },
   {
     value: "moisture",
-    label: "Moisture retention — my hair gets dry when I travel",
+    label: "Moisture retention - my hair gets dry when I travel",
   },
   {
     value: "definition",
-    label: "Definition and styling — I want my hair to look great",
+    label: "Definition and styling - I want my hair to look great",
   },
   {
     value: "scalp_health",
-    label: "Scalp health — focus on keeping my scalp fresh",
+    label: "Scalp health - focus on keeping my scalp fresh",
   },
 ];
 
 function labelFor(options: { value: string; label: string }[], value: string | null) {
-  return options.find((o) => o.value === value)?.label ?? value ?? "—";
+  return options.find((o) => o.value === value)?.label ?? value ?? "-";
 }
 
 function formatDate(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   const d = new Date(`${iso}T00:00:00`);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-// <input type="month"> gives "2026-10" -- converts to the human-readable
+// <input type="month"> gives "2026-10" - converts to the human-readable
 // "October 2026" that's actually stored/displayed.
 function formatMonthInputValue(value: string): string {
   const d = new Date(`${value}-01T00:00:00`);
@@ -80,7 +80,7 @@ function formatTripDateRange(
   travelMonth: string | null
 ): string {
   if (travelMonth) return travelMonth;
-  if (!departureDate && !returnDate) return "—";
+  if (!departureDate && !returnDate) return "-";
   return `${formatDate(departureDate)} to ${formatDate(returnDate)}`;
 }
 
@@ -190,7 +190,7 @@ function LandingView({
 
         {cancelled && (
           <p className="mt-4 text-sm text-cream/60">
-            No worries — you can build your kit anytime.
+            No worries - you can build your kit anytime.
           </p>
         )}
         {error && <p className="mt-4 text-sm text-red">{error}</p>}
@@ -200,7 +200,7 @@ function LandingView({
           onClick={onBuildClick}
           className="mx-auto mt-8 flex h-[52px] w-full max-w-sm items-center justify-center rounded-full bg-bronze px-6 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 sm:w-auto sm:px-10"
         >
-          Build my travel kit — $4.99 →
+          Build my travel kit - $4.99 →
         </button>
 
         <p className="mt-4 text-xs text-cream/50">
@@ -429,12 +429,12 @@ function SurveyView({
                 Review your trip
               </h2>
               <p className="mt-3 text-sm text-cream/80">
-                Your trip to {destination || "—"} ·{" "}
+                Your trip to {destination || "-"} ·{" "}
                 {dateMode === "exact"
                   ? formatTripDateRange(departureDate || null, returnDate || null, null)
                   : formatTripDateRange(null, null, travelMonthInput ? formatMonthInputValue(travelMonthInput) : null)}{" "}
                 ·{" "}
-                {CLIMATE_LABELS[climate ?? ""] ?? "—"} ·{" "}
+                {CLIMATE_LABELS[climate ?? ""] ?? "-"} ·{" "}
                 {labelFor(SWIMMING_OPTIONS, swimming)} ·{" "}
                 {labelFor(PROTECTIVE_STYLE_OPTIONS, protectiveStyle)}
               </p>
@@ -453,7 +453,7 @@ function SurveyView({
                 disabled={submitting}
                 className="mt-6 w-full rounded-lg bg-bronze py-4 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
               >
-                {submitting ? "Please wait..." : "Get my travel kit — $4.99 →"}
+                {submitting ? "Please wait..." : "Get my travel kit - $4.99 →"}
               </button>
             </div>
           )}
@@ -624,7 +624,7 @@ function KitView({
             )}
             <p className="text-sm text-cream/70">
               {pollExhausted
-                ? "Your kit is being prepared — check back in a moment or refresh this page. We have also sent your kit to your email."
+                ? "Your kit is being prepared - check back in a moment or refresh this page. We have also sent your kit to your email."
                 : kit.status === "pending_payment"
                 ? "Building your kit..."
                 : "Finalizing your kit..."}
@@ -655,7 +655,7 @@ function KitView({
         )}
 
         <p className="mt-6 text-xs text-cream/50">
-          Your kit is a curated digital guide — click each link to purchase
+          Your kit is a curated digital guide - click each link to purchase
           directly from the brand or retailer. All products are
           independently evaluated by Qoyl with no brand partnerships
           influencing recommendations.
@@ -727,19 +727,19 @@ function TravelPageContent() {
 
   // Set right before an explicit "start a new trip" action (Plan another
   // trip / Build my travel kit) so the auto-detection effect below never
-  // fights that choice -- e.g. clearing ?kit= from the URL after clicking
+  // fights that choice - e.g. clearing ?kit= from the URL after clicking
   // "Plan another trip" would otherwise re-trigger this effect, which
   // would then re-select the most recent active kit and silently bounce
   // the user right back to the kit view they just tried to leave.
   const skipAutoKitRef = useRef(false);
 
   // Resolves which kit (if any) to show. Two cases:
-  //  - ?kit=<id> present (dashboard's "View kit" link, the Stripe success
+  // - ?kit=<id> present (dashboard's "View kit" link, the Stripe success
   //    redirect, or the trip switcher below): load that exact row
-  //    regardless of status -- right after the Stripe redirect the
+  //    regardless of status - right after the Stripe redirect the
   //    webhook may not have flipped it to 'active' yet, and KitView
   //    already renders a "still being generated" note for that case.
-  //  - No ?kit= (a bare /travel visit): look up the user's active kits
+  // - No ?kit= (a bare /travel visit): look up the user's active kits
   //    and default to the most recent one by created_at, so a returning
   //    user sees their kit immediately instead of the landing page.
   // Either way, the full list of active kits is loaded too, so the "view
@@ -752,7 +752,7 @@ function TravelPageContent() {
       return;
     }
     // ?new=true (the dashboard's "Plan another trip" link) always starts
-    // a fresh survey, bypassing auto-detection entirely -- same intent
+    // a fresh survey, bypassing auto-detection entirely - same intent
     // as clicking "Plan another trip" from the kit view itself.
     if (forceNewParam) {
       skipAutoKitRef.current = true;
@@ -806,7 +806,7 @@ function TravelPageContent() {
   }, [kitIdParam, user, authLoading, forceNewParam]);
 
   // Right after the Stripe success redirect, the webhook that flips
-  // status to 'active' and fills in products may not have landed yet --
+  // status to 'active' and fills in products may not have landed yet -
   // without this, the page just sits on "still being generated" forever
   // until the user manually refreshes. Polls the same row every 2s (up
   // to 10 tries) while it's showing but not ready, and updates `kit` in
@@ -865,7 +865,7 @@ function TravelPageContent() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pendingKitId, setPendingKitId] = useState<string | null>(null);
 
-  // Climate is fully auto-detected from the destination text now -- no
+  // Climate is fully auto-detected from the destination text now - no
   // manual override exists, so this is the single source of truth for
   // `climate` rather than just a suggestion. Falls back to "humid" (the
   // most common classification, per classifyClimateFromState's own
@@ -934,7 +934,7 @@ function TravelPageContent() {
       if (!travelKitId) {
         // Single server-side route saves the row (service role client,
         // never subject to a client RLS session) and sends the admin
-        // notification atomically -- see app/api/travel-kits/route.ts.
+        // notification atomically - see app/api/travel-kits/route.ts.
         // Awaited, since the returned id is required for Stripe
         // checkout below, unlike a pure side-effect notification.
         const saveRes = await fetch("/api/travel-kits", {
@@ -973,7 +973,7 @@ function TravelPageContent() {
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       if (isAdminUser) {
-        // Admin bypass -- runs the exact same activation logic Stripe's
+        // Admin bypass - runs the exact same activation logic Stripe's
         // webhook would run after payment, just without Stripe. See
         // app/api/travel-kits/admin-activate/route.ts.
         const activateRes = await fetch("/api/travel-kits/admin-activate", {

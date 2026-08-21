@@ -8,12 +8,12 @@ import { KNOWN_STATE_CODES, classifyClimateFromState } from "@/lib/climateData";
 // lookup against real climate data:
 //   1. If the text contains a recognizable US state abbreviation, reuse
 //      the exact same state->climate table the zip-code-based profile
-//      detection already uses (lib/climateData.ts) -- keeps the two
+//      detection already uses (lib/climateData.ts) - keeps the two
 //      forms of climate detection in this app consistent with each
 //      other.
 //   2. Otherwise, check a small curated list of major international
 //      travel destinations, grouped by climate.
-//   3. Otherwise, return null -- the UI falls back to asking the user
+//   3. Otherwise, return null - the UI falls back to asking the user
 //      to pick a climate manually rather than silently guessing.
 const KNOWN_STATE_CODE_SET = new Set(KNOWN_STATE_CODES);
 

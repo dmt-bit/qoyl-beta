@@ -3,7 +3,7 @@ import Stripe from "stripe";
 let stripeClient: Stripe | null = null;
 
 // Lazily instantiated so builds/page-data collection succeed even when
-// STRIPE_SECRET_KEY isn't set yet -- the Stripe SDK throws immediately on
+// STRIPE_SECRET_KEY isn't set yet - the Stripe SDK throws immediately on
 // construction if the key is empty, and that must not happen at module
 // load time (e.g. import-time evaluation during `next build`).
 export function getStripe(): Stripe {
@@ -32,7 +32,7 @@ export const STRIPE_PRODUCTS: Record<
   routine_subscription: {
     name: "Qoyl Monthly Routine",
     // Passed as subscription_data.description below (shows on the
-    // subscription/invoices in Stripe) -- NOT the same as what the
+    // subscription/invoices in Stripe) - NOT the same as what the
     // customer sees on the Checkout page itself. That page's product
     // name/description comes from the Product object attached to
     // STRIPE_ROUTINE_PRICE_ID in the Stripe Dashboard, which this

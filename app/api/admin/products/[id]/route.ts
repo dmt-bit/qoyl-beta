@@ -66,7 +66,7 @@ export async function PATCH(
   };
 
   // Re-parsing the ingredient list replaces product_ingredients entirely
-  // rather than merging -- positions shift whenever the list changes, so
+  // rather than merging - positions shift whenever the list changes, so
   // a partial merge would leave stale/incorrect position values behind.
   if (ingredient_list_raw !== undefined) {
     const normalizedNames = ingredient_list_raw

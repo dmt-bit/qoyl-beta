@@ -8,7 +8,7 @@ import { formatTripDatesForNotification } from "@/lib/tripDates";
 // route is the server-side bridge for the survey step: it saves the
 // trip details and sends the admin notification as one atomic
 // server-side action, using the service role client so the insert never
-// depends on the caller's RLS session -- eliminates the "notified but
+// depends on the caller's RLS session - eliminates the "notified but
 // not saved" split that a client-side insert + separate notify call
 // could previously drift into (e.g. a stale cached bundle only doing
 // one half of the flow).
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
 
   const travelKitId = data.id;
 
-  // Best-effort enrichment -- a lookup failure here must never block the
+  // Best-effort enrichment - a lookup failure here must never block the
   // notification itself. Everything the recipient needs to manually
   // build the kit if automation hasn't run yet: who the user is, their
   // hair profile, and the full survey.
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
   }
 
   const notifyResult = await sendNotificationEmail(
-    `New travel kit survey submitted — ${destination}`,
+    `New travel kit survey submitted - ${destination}`,
     `New travel kit survey submitted on Qoyl.
 
 === Travel Kit Row ===
@@ -127,7 +127,7 @@ Hair priority: ${hair_priority ?? "Not set"}
 Submitted at: ${new Date().toISOString()}
 
 === Payment status ===
-Pending — payment not yet completed. User is being directed to Stripe
+Pending - payment not yet completed. User is being directed to Stripe
 now. If this notification arrives without a follow-up "Travel kit
 purchased and generated" email, look up travel_kits.id ${travelKitId}
 in Supabase and use the details above to build their kit manually.`

@@ -47,7 +47,7 @@ export default function AuthPage() {
         return;
       }
 
-      // Fire-and-forget -- never awaited, never shown to the user, and
+      // Fire-and-forget - never awaited, never shown to the user, and
       // must not delay the info message/redirect below. Server-side
       // bridge (see app/api/notify/new-signup/route.ts) since this is a
       // client component and can't import lib/sendWelcomeEmail.ts /
@@ -136,7 +136,7 @@ export default function AuthPage() {
 
           {resetSent ? (
             <p className="mt-8 text-sm text-green">
-              Check your email — we sent you a password reset link.
+              Check your email - we sent you a password reset link.
             </p>
           ) : (
             <form onSubmit={handleResetSubmit} className="mt-8 space-y-5">

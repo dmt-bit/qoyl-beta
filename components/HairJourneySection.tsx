@@ -13,7 +13,7 @@ type HairPhoto = {
 };
 
 // hair_photos.hair_length has a live CHECK constraint accepting only
-// these lowercase/snake_case values -- confirmed by testing against the
+// these lowercase/snake_case values - confirmed by testing against the
 // live table (not visible via schema introspection, which only shows
 // column types/defaults, not check constraints). Labels are what's
 // actually shown to the user.

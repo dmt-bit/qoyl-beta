@@ -8,7 +8,7 @@ const FROM_ADDRESS = "Qoyl <hey@qoyl.live>";
 // the design is approved.
 const PREVIEW_TO = "hey@qoyl.live";
 
-// Only fires for new signups going forward -- there is no retroactive
+// Only fires for new signups going forward - there is no retroactive
 // send for accounts created before this existed. A re-engagement email
 // for those existing users should be sent manually via Resend's
 // broadcast feature or Beehiiv, not backfilled through this function.
@@ -112,7 +112,7 @@ export async function sendWelcomeEmail(
       html,
     });
 
-    // TEMPORARY preview send -- see PREVIEW_TO comment above. A failure
+    // TEMPORARY preview send - see PREVIEW_TO comment above. A failure
     // here must never affect the real welcome email's result, so it's
     // logged but not folded into the function's return value.
     const previewResult = await resend.emails.send({

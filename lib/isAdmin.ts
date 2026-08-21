@@ -1,7 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
 // ADMIN_EMAILS is server-only (no NEXT_PUBLIC_ prefix), so this is never
-// readable from client code -- calling it in a "use client" component
+// readable from client code - calling it in a "use client" component
 // just always returns false, which is the safe failure mode.
 export function isAdmin(email: string | null | undefined): boolean {
   if (!email) return false;
@@ -9,7 +9,7 @@ export function isAdmin(email: string | null | undefined): boolean {
   return adminEmails.includes(email.toLowerCase());
 }
 
-// For routes/functions that only have a user_id, not a verified email --
+// For routes/functions that only have a user_id, not a verified email -
 // looks the email up server-side via the service-role auth API rather
 // than trusting a client-supplied email string. Trusting a raw email
 // query param here would let anyone grant themselves the bypass just by

@@ -59,7 +59,7 @@ body {
 /* ---- Signature motion -------------------------------------------------
    Hero load sequence (home page only): wordmark fades in, the hair-type
    strip slides in from the right, then headline and CTA fade up in
-   sequence -- each stage timed via animation-delay so they read as one
+   sequence - each stage timed via animation-delay so they read as one
    continuous reveal, not four separate animations. */
 @keyframes hero-fade-in {
   from {
@@ -108,7 +108,7 @@ body {
 }
 
 /* Slow fade-up used on content blocks throughout the site as they enter
-   the viewport. Pure CSS via the scroll-driven animation-timeline API --
+   the viewport. Pure CSS via the scroll-driven animation-timeline API -
    degrades gracefully (content simply renders visible, no animation) in
    browsers that don't support it yet (e.g. Safari). */
 @keyframes fade-up-on-scroll {
@@ -129,7 +129,7 @@ body {
   }
 }
 
-/* Step transition for the /travel multi-step survey -- runs on mount of
+/* Step transition for the /travel multi-step survey - runs on mount of
    each step (the caller re-keys the step container so React remounts it
    on every step change, retriggering this animation). */
 @keyframes fade-step-in {
@@ -146,7 +146,7 @@ body {
   animation: fade-step-in 0.25s ease-out both;
 }
 
-/* Long-press action sheet on the home feed's masonry cards -- slides up
+/* Long-press action sheet on the home feed's masonry cards - slides up
    from the bottom, iOS share-sheet style. */
 @keyframes slide-up-sheet {
   from {
@@ -195,7 +195,7 @@ body {
     border-color: #999 !important;
   }
 
-  /* Preserve the calendar's clarify/protein color coding -- otherwise
+  /* Preserve the calendar's clarify/protein color coding - otherwise
      the blanket `main * { border-color: #999 }` above turns every wash
      type's border the same gray, losing the legend's meaning. Selector
      specificity (two classes) beats `main *` (one element) regardless

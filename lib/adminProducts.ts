@@ -3,7 +3,7 @@ import { findBestIngredientMatch, IngredientRow } from "@/lib/compatibility";
 
 // Splits a raw ingredient list on commas and normalizes each entry's
 // capitalization to Title Case, while leaving likely acronyms (BTMS,
-// BTMS-50, DL-Panthenol's "DL") alone -- title-casing those would turn
+// BTMS-50, DL-Panthenol's "DL") alone - title-casing those would turn
 // them into unrecognizable strings.
 function normalizeIngredientName(raw: string): string {
   const trimmed = raw.trim().replace(/\s+/g, " ");
@@ -46,7 +46,7 @@ function slugify(name: string): string {
 // Resolves the "Other (type your own)" brand flow on the admin product
 // form: if a free-typed brand name was submitted, look it up
 // case-insensitively and reuse it if it already exists, otherwise create
-// it -- so the same brand typed twice (e.g. by two different admins)
+// it - so the same brand typed twice (e.g. by two different admins)
 // never produces two rows. Falls back to the plain selected brand_id
 // when no new name was submitted.
 export async function resolveBrandId(
@@ -80,7 +80,7 @@ export async function resolveBrandId(
 }
 
 export type MatchIngredientNamesResult = {
-  // Number of entries on the label (positions), not deduped -- what "Y"
+  // Number of entries on the label (positions), not deduped - what "Y"
   // means in the "X of Y ingredients matched" summary.
   totalCount: number;
   // Entries that resolved to an existing ingredients/aliases row.
@@ -89,7 +89,7 @@ export type MatchIngredientNamesResult = {
   // row created for them.
   createdCount: number;
   createdNames: string[];
-  // Every row to insert into catalog_product_ingredients -- both the
+  // Every row to insert into catalog_product_ingredients - both the
   // genuinely-matched ones and the newly-created ones, so nothing on the
   // label is left unlinked.
   linkRows: { ingredient_id: string; position: number }[];
@@ -99,7 +99,7 @@ export type MatchIngredientNamesResult = {
 // aliases tables (same tiered matcher used by the live scoring flow in
 // lib/compatibility.ts). Anything that matches nothing gets a new,
 // minimal ingredients row (inci_name only, no chemistry data) created and
-// linked automatically -- flagged back to the caller as "created" rather
+// linked automatically - flagged back to the caller as "created" rather
 // than left unlinked, since /admin/products' product library relies on
 // compatibility_scores presence (not link presence) to signal real
 // curation quality: a freshly auto-created ingredient has no
@@ -121,7 +121,7 @@ export async function matchIngredientNames(
   }
 
   const positionById = new Map<string, number>();
-  // Deduped by lowercased name -- a label that repeats an ingredient
+  // Deduped by lowercased name - a label that repeats an ingredient
   // string should only create one new ingredients row for it.
   const unmatchedByKey = new Map<string, { name: string; position: number }>();
 

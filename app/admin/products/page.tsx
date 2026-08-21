@@ -61,7 +61,7 @@ const EMPTY_FORM: ProductFormValues = {
 
 const OTHER_BRAND_VALUE = "__other__";
 
-// Blank means "no brand selected," which is allowed -- only "Other" with
+// Blank means "no brand selected," which is allowed - only "Other" with
 // nothing typed is a real validation error.
 function getBrandValidationError(values: ProductFormValues): string | null {
   if (values.brand_id === OTHER_BRAND_VALUE && !values.custom_brand_name.trim()) {
@@ -121,7 +121,7 @@ function ProductForm({
   onCancel?: () => void;
 }) {
   // Re-sort on every render rather than trusting callers/the API to
-  // hand back an already-sorted list -- cheap for a brand-count list
+  // hand back an already-sorted list - cheap for a brand-count list
   // this small, and guarantees newly-added brands slot in alphabetically
   // instead of trailing at the end.
   const sortedBrands = [...brands].sort((a, b) => a.name.localeCompare(b.name));
@@ -376,7 +376,7 @@ export default function AdminProductsPage() {
       createdNames: data.createdNames ?? [],
     });
     setAddForm(EMPTY_FORM);
-    // Brand/category names on the new row aren't returned by POST --
+    // Brand/category names on the new row aren't returned by POST -
     // refresh from the list endpoint so they render correctly.
     loadProducts(password);
   }
@@ -435,7 +435,7 @@ export default function AdminProductsPage() {
       createdNames: data.createdNames ?? [],
     });
     // Stay open (rather than collapsing back to view mode) so the match
-    // summary below the form is visible -- same pattern as Add.
+    // summary below the form is visible - same pattern as Add.
     loadProducts(password);
   }
 
@@ -596,7 +596,7 @@ export default function AdminProductsPage() {
                           {ingredientCount} ingredient
                           {ingredientCount === 1 ? "" : "s"} · Match rate:{" "}
                           {product.match_rate === null
-                            ? "—"
+                            ? "-"
                             : `${product.match_rate}%`}{" "}
                           · Added {formatDate(product.created_at)}
                         </p>

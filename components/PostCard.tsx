@@ -45,7 +45,7 @@ export default function PostCard({
   const isVideo = post.content_type === "original-video";
   const isRepost = post.content_type === "repost";
 
-  // Compact -- used by /dashboard's "recently viewed" style rows --
+  // Compact - used by /dashboard's "recently viewed" style rows -
   // keeps its original small-horizontal-card look, untouched.
   if (compact) {
     return (

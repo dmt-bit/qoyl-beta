@@ -15,7 +15,7 @@ type CommunityPhoto = {
 
 // Bridges a tapped community photo into Style Match's photo-input flow
 // across a full page navigation (sessionStorage, read on mount by
-// app/style-match/page.tsx) -- simpler than adding a global store for a
+// app/style-match/page.tsx) - simpler than adding a global store for a
 // single one-shot value.
 export const COMMUNITY_PREFILL_KEY = "styleMatchCommunityPrefill";
 

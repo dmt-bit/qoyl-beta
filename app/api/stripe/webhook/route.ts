@@ -74,7 +74,7 @@ export async function POST(request: Request) {
           console.error("Failed to insert user_purchases row:", error);
         } else {
           await sendAdminNotification(
-            `New Qoyl purchase — ${purchaseRow.product_type}`,
+            `New Qoyl purchase - ${purchaseRow.product_type}`,
             `product_type: ${purchaseRow.product_type}\n` +
               `user_id: ${purchaseRow.user_id}\n` +
               `stripe_customer_id: ${purchaseRow.stripe_customer_id ?? "none"}\n` +
@@ -128,13 +128,13 @@ export async function POST(request: Request) {
               session.id
             );
             routineEmailStatus =
-              "Automated routine email NOT sent — no customer email on the Stripe session. Send manually.";
+              "Automated routine email NOT sent - no customer email on the Stripe session. Send manually.";
           } else {
-            // Never let an email failure fail the webhook -- the purchase
+            // Never let an email failure fail the webhook - the purchase
             // row above is already recorded, and Stripe would otherwise
             // retry this event and re-run everything. sendRoutineEmail
             // returns a result rather than only throwing, since Resend
-            // doesn't throw on API-level rejections -- checking the
+            // doesn't throw on API-level rejections - checking the
             // result (not just catching) is what actually catches those.
             try {
               const routineResult = await sendRoutineEmail(userId, recipientEmail);
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
                   userId,
                   routineResult
                 );
-                routineEmailStatus = `Automated routine email FAILED to send (${routineResult.reason}) — see server logs. Send manually.`;
+                routineEmailStatus = `Automated routine email FAILED to send (${routineResult.reason}) - see server logs. Send manually.`;
               }
             } catch (emailError) {
               console.error(
@@ -153,12 +153,12 @@ export async function POST(request: Request) {
                 emailError
               );
               routineEmailStatus =
-                "Automated routine email FAILED to send — see server logs. Send manually.";
+                "Automated routine email FAILED to send - see server logs. Send manually.";
             }
           }
 
           await sendNotificationEmail(
-            "New routine subscriber — action needed",
+            "New routine subscriber - action needed",
             `Someone just subscribed to the Qoyl Monthly Routine.
 
 User ID: ${userId}

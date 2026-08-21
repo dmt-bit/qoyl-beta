@@ -97,7 +97,7 @@ function matchesStyleSearch(style: StyleRow, term: string): boolean {
 // Builds the mixed feed for the active tab: interleaves product/community/
 // style cards into the editorial post stream at fixed intervals (every 4th
 // post gets a product, every 6th a community photo, every 8th a style
-// card), or -- for the two dedicated tabs -- returns just that one card
+// card), or - for the two dedicated tabs - returns just that one card
 // type as a browsable feed of its own. Cards whose type has been marked
 // "not interested" (see MasonryCards.tsx's localStorage helpers) are
 // dropped before interleaving, not just visually hidden.
@@ -122,7 +122,7 @@ function buildComposedFeed({
 
   if (activeTab === "community") {
     if (hiddenTypes.has("community")) return [];
-    // No searchable title/caption surfaced on these cards -- a search
+    // No searchable title/caption surfaced on these cards - a search
     // term simply empties this tab rather than pretending to match.
     if (term) return [];
     return communityPhotos.map((photo) => ({ feedId: `community-${photo.id}`, type: "community", photo }));
@@ -204,7 +204,7 @@ function LoadingDots() {
 }
 
 // Cards visible before a signed-out (or profile-less) user hits the
-// scroll gate -- comfortably inside the first infinite-scroll page, so
+// scroll gate - comfortably inside the first infinite-scroll page, so
 // the gate never has to wait on a network round trip to appear.
 const SCROLL_GATE_AFTER = 8;
 
@@ -214,11 +214,11 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
 
   // Mirrors the resolvingAccess pattern used on /style-match and
   // elsewhere: don't decide gating until we actually know whether
-  // there's a session, and (if so) whether its hair profile has loaded --
+  // there's a session, and (if so) whether its hair profile has loaded -
   // otherwise a genuinely signed-in user flashes a gate for a frame on
   // every load.
   //
-  // The two gates key off different conditions -- #9 (tap gate) is
+  // The two gates key off different conditions - #9 (tap gate) is
   // titled "login required," so it only fires for a genuinely signed-out
   // visitor; a signed-in user with no hair profile yet can still read
   // and tap around normally. #10 (scroll gate) explicitly covers both
@@ -233,7 +233,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
 
   // Restores the scroll position saved when the user left for /profile or
   // /auth from a gate CTA, once they're back here and actually past the
-  // gate -- not on every mount, so a still-gated user (e.g. bounced back
+  // gate - not on every mount, so a still-gated user (e.g. bounced back
   // without finishing sign-up) doesn't get scrolled past content they
   // can't see yet.
   useEffect(() => {
@@ -278,7 +278,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
     return () => clearTimeout(id);
   }, [searchInput]);
 
-  // Community photos -- most recent 20 public uploads, shuffled once per
+  // Community photos - most recent 20 public uploads, shuffled once per
   // load so the handful mixed into the main feed aren't always the same
   // few. The dedicated Community tab still shows the full fetched set.
   useEffect(() => {
@@ -294,7 +294,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
     };
   }, []);
 
-  // Style inspo -- the curated public library (not saved_styles, which
+  // Style inspo - the curated public library (not saved_styles, which
   // holds individual users' own uploaded match photos and isn't meant to
   // be shown to other users). Capped to 3 here per the "2-3 cards" spec.
   useEffect(() => {
@@ -310,7 +310,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
     };
   }, []);
 
-  // Product spotlights -- a pool of verified catalog products, ranked by
+  // Product spotlights - a pool of verified catalog products, ranked by
   // compatibility score for the signed-in user's porosity (same scoring
   // engine as /search and travel kits). Signed-out or no saved profile
   // falls back to the most recently added verified products.
@@ -359,7 +359,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
         posts,
         activeTab,
         search: debouncedSearch,
-        // Only the top 4 feed the "every 4th post" interleave -- the
+        // Only the top 4 feed the "every 4th post" interleave - the
         // Shop tab below still gets the full ranked list.
         products: activeTab === "shop" ? scoredProducts : scoredProducts.slice(0, 4),
         communityPhotos,
@@ -374,7 +374,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
   }, [activeTab, debouncedSearch]);
 
   // Once a gated user has scrolled past SCROLL_GATE_AFTER cards, the feed
-  // stops revealing more entirely -- capped right there regardless of
+  // stops revealing more entirely - capped right there regardless of
   // visibleCount/infinite scroll, with the gate card taking the place of
   // card #9 onward until they sign in (or, if signed in, finish their
   // hair profile).
@@ -405,7 +405,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
 
   async function handleSaveStyle(style: StyleRow) {
     if (!user) {
-      saveLocalBookmark("community", style.id); // signed out -- local only, still gets a "Saved" toast
+      saveLocalBookmark("community", style.id); // signed out - local only, still gets a "Saved" toast
       return;
     }
     await supabase.from("saved_styles").insert({
@@ -416,7 +416,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
 
   const [sendingCommunityMatch, setSendingCommunityMatch] = useState(false);
 
-  // Mirrors CommunityGrid.tsx's own handler exactly -- same sessionStorage
+  // Mirrors CommunityGrid.tsx's own handler exactly - same sessionStorage
   // bridge (there's no File object for a community photo, it's downloaded
   // server-side as base64) and the same "?fromCommunity=1" flag that
   // app/style-match/page.tsx already reads on mount.
@@ -437,7 +437,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
     <div>
       <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-bronze">The feed</p>
 
-      {/* Search -- Pinterest-style pill, sits above the sticky tabs */}
+      {/* Search - Pinterest-style pill, sits above the sticky tabs */}
       <div className="relative mt-4">
         <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
           <SearchIcon />
@@ -455,7 +455,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
         />
       </div>
 
-      {/* Filter tabs -- sticky under the nav (52px) while scrolling */}
+      {/* Filter tabs - sticky under the nav (52px) while scrolling */}
       <div className="sticky top-[52px] z-20 -mx-4 mt-4 bg-dark px-4 py-2 sm:mx-0 sm:px-0">
         <div className="relative">
           <div
@@ -557,14 +557,14 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
         </div>
       ) : debouncedSearch ? (
         <p className="mt-8 text-sm text-cream/50">
-          No results for &apos;{debouncedSearch}&apos; — try a different search or browse a tab above.
+          No results for &apos;{debouncedSearch}&apos; - try a different search or browse a tab above.
         </p>
       ) : activeTab === "community" ? (
         <p className="mt-8 text-sm text-cream/50">
           Be the first to share your hair journey. Add public photos on your profile page →
         </p>
       ) : (
-        <p className="mt-8 text-sm text-cream/50">No posts yet for this tab — check back soon.</p>
+        <p className="mt-8 text-sm text-cream/50">No posts yet for this tab - check back soon.</p>
       )}
 
       <ActionSheet
@@ -579,7 +579,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
 
       <AuthGateSheet open={showAuthGateSheet} onClose={() => setShowAuthGateSheet(false)} />
 
-      {/* Community photo full-screen modal + toast -- portaled to
+      {/* Community photo full-screen modal + toast - portaled to
           document.body for the same reason as the sheets in
           MasonryCards.tsx: the feed's .fade-up-block ancestor runs a
           transform-based CSS animation, which makes it the containing

@@ -8,7 +8,7 @@ export function formatTripDatesForNotification(
   travelMonth: string | null
 ): string {
   if (travelMonth) {
-    return `Travel month: ${travelMonth} — exact dates not provided`;
+    return `Travel month: ${travelMonth} - exact dates not provided`;
   }
 
   if (departureDate && returnDate) {

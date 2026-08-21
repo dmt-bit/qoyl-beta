@@ -1,11 +1,11 @@
 // Shared across the profile form (pill options), compatibility scoring's
 // age modifiers, routine step age-aware guidance, the dashboard chip, and
-// home feed personalization -- one ordering/label source so "and above"
+// home feed personalization - one ordering/label source so "and above"
 // comparisons and display formatting can't drift between them.
 //
 // This describes hair_profiles.adult_age_range, which is deliberately a
 // separate column/concept from the pre-existing age_range column (child/
-// baby brackets like "0-12 months", "13+") -- see
+// baby brackets like "0-12 months", "13+") - see
 // supabase/add_adult_age_range.sql.
 
 export const ADULT_AGE_RANGE_OPTIONS = [
@@ -41,7 +41,7 @@ export function isAdultAgeRange(
 }
 
 // Null for both an unset profile and the "Prefer not to say" choice
-// (which saves null, not a sentinel string) -- callers that need to show
+// (which saves null, not a sentinel string) - callers that need to show
 // a chip only for a real answer can just check truthiness of the result.
 export function formatAdultAgeRange(
   value: string | null | undefined
@@ -50,7 +50,7 @@ export function formatAdultAgeRange(
 }
 
 // True when ageRange is at or above threshold in the adult bracket order
-// -- e.g. isAdultAgeAtLeast("56_65", "36_45") -> true. Used to layer "and
+// - e.g. isAdultAgeAtLeast("56_65", "36_45") -> true. Used to layer "and
 // above" guidance without repeating the ordering at every call site.
 export function isAdultAgeAtLeast(
   ageRange: string | null | undefined,

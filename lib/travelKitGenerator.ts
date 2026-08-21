@@ -21,7 +21,7 @@ export type GenerateTravelKitInput = {
 };
 
 // Deterministic category selection so the kit always covers the trip's
-// actual needs instead of a fixed generic 5 -- a base of
+// actual needs instead of a fixed generic 5 - a base of
 // shampoo/conditioner/leave-in (every trip needs these), then up to two
 // more slots driven by swimming exposure, protective style, and hair
 // priority, backfilled with sensible defaults if fewer than 5 signals
@@ -29,7 +29,7 @@ export type GenerateTravelKitInput = {
 function pickCategories(input: GenerateTravelKitInput): string[] {
   const categories = new Set<string>(["shampoo", "conditioner", "leave-in"]);
 
-  // Chlorine/salt water calls for a clarifying/chelating product --
+  // Chlorine/salt water calls for a clarifying/chelating product -
   // "treatment" is where those ingredients (citric acid, EDTA, sodium
   // phytate) live in the catalog, same as the hard-water scoring boost
   // elsewhere in the app.
@@ -74,10 +74,10 @@ function pickCategories(input: GenerateTravelKitInput): string[] {
 }
 
 const CLIMATE_REASON: Record<string, string> = {
-  humid: "Humidity control for your destination — helps fight frizz without weighing hair down.",
-  tropical: "Built for tropical humidity and heat — lightweight moisture without buildup.",
-  dry: "Extra sealing for a dry climate — locks in moisture your hair will lose faster there.",
-  "cold-dry": "Protein and sealant support for cold, dry air — helps prevent breakage.",
+  humid: "Humidity control for your destination - helps fight frizz without weighing hair down.",
+  tropical: "Built for tropical humidity and heat - lightweight moisture without buildup.",
+  dry: "Extra sealing for a dry climate - locks in moisture your hair will lose faster there.",
+  "cold-dry": "Protein and sealant support for cold, dry air - helps prevent breakage.",
 };
 
 function buildReason(
@@ -110,7 +110,7 @@ function buildReason(
   return parts.join(" ");
 }
 
-// Server-side only -- fetches the user's hair profile via the service
+// Server-side only - fetches the user's hair profile via the service
 // role client (no browser session/localStorage exists in the Stripe
 // webhook this runs from), scores real catalog products against it
 // (climate overridden to the trip's destination climate rather than the

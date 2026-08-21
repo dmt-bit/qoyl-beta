@@ -55,14 +55,14 @@ export async function POST(request: Request) {
   const hasIngredientList = Boolean(ingredientList && ingredientList.trim());
 
   const notifyResult = await sendNotificationEmail(
-    `Product evaluation request — ${productName}`,
+    `Product evaluation request - ${productName}`,
     `Someone requested a product evaluation on Qoyl.
 
 Product: ${productName}
 Brand: ${brandName}
 Where purchased: ${wherePurchased || "Not provided"}
 Requester email: ${email}
-Ingredient list provided: ${hasIngredientList ? "Yes — see below" : "No"}
+Ingredient list provided: ${hasIngredientList ? "Yes - see below" : "No"}
 
 ${hasIngredientList ? ingredientList : ""}
 

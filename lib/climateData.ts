@@ -1,4 +1,4 @@
-// Static climate classification by zip code -- replaces an earlier
+// Static climate classification by zip code - replaces an earlier
 // version of this feature that called wttr.in for live weather and
 // derived climate from same-day conditions (which meant results shifted
 // with the weather and could misclassify a normally-dry city on a rare
@@ -6,7 +6,7 @@
 //
 // Important about how this table was actually built: the request that
 // produced it asked for a real NOAA 30-year-normals + Census zip-to-
-// county crosswalk join. That's not something this environment can do --
+// county crosswalk join. That's not something this environment can do -
 // there's no network access here to download and process those
 // datasets. What's here instead is a hand-curated approximation at the
 // state level (with a few explicit sub-state overrides for well-known
@@ -14,7 +14,7 @@
 // state is bucketed into one of the four climate zones using general,
 // well-established climate knowledge, following the same humid/
 // tropical/dry/cold-dry definitions and worked examples given in the
-// original request. It's a reasonable, stable approximation -- not a
+// original request. It's a reasonable, stable approximation - not a
 // literal join of the named federal datasets, and it inherits all the
 // coarseness that implies (a single bucket per state is obviously wrong
 // for large, climatically diverse states; the overrides list below only
@@ -22,20 +22,20 @@
 
 import { ClimateZone, stateFromZipCode } from "@/lib/locationFactors";
 
-// Checked before the state-level default -- for regions where a whole
+// Checked before the state-level default - for regions where a whole
 // state's default bucket would be misleading for a large, well-known
 // population center within it.
 const ZIP3_CLIMATE_OVERRIDES: { min: number; max: number; climate: ClimateZone }[] = [
-  // Chicago metro -- cold, often-dry winters are when glycerin actually
+  // Chicago metro - cold, often-dry winters are when glycerin actually
   // causes problems for hair, so cold-dry is the more useful
   // classification here than Illinois's statewide humid-summers default.
   { min: 606, max: 608, climate: "cold-dry" },
-  // Houston / Galveston -- Gulf Coast humidity, not Texas's statewide dry
+  // Houston / Galveston - Gulf Coast humidity, not Texas's statewide dry
   // default.
   { min: 770, max: 779, climate: "humid" },
 ];
 
-// One bucket per state -- a simplification for large states (Texas,
+// One bucket per state - a simplification for large states (Texas,
 // California, Alaska) whose climate varies far more than a single label
 // can capture, but consistent with the coarse 4-bucket system this
 // feeds. States not in this list (a couple of small/edge territories)
@@ -119,7 +119,7 @@ export function classifyClimateFromZip(zip: string): ClimateZone | null {
   return STATE_CLIMATE[state] ?? "humid";
 }
 
-// Every state/territory code this table recognizes -- used by
+// Every state/territory code this table recognizes - used by
 // lib/destinationClimate.ts to check whether a free-text travel
 // destination (e.g. "Miami, FL") contains a real state abbreviation
 // before trusting a match, rather than duplicating this list.

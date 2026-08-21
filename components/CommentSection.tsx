@@ -85,7 +85,7 @@ export default function CommentSection({
     setSubmitting(false);
 
     if (insertError || !data) {
-      // insertError was previously discarded here -- a failure (missing
+      // insertError was previously discarded here - a failure (missing
       // table, RLS rejection, constraint violation) was indistinguishable
       // from any other failure in both the UI and the server logs.
       console.error("Failed to insert post_comments row:", insertError);
@@ -97,7 +97,7 @@ export default function CommentSection({
     setBody("");
     setSubmitted(true);
 
-    // Fire-and-forget -- never shown to the user, never blocks the UI.
+    // Fire-and-forget - never shown to the user, never blocks the UI.
     fetch("/api/notify/new-comment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

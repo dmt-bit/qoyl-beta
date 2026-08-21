@@ -17,7 +17,7 @@ const DASHBOARD_URL = "qoyl-beta-alpha.vercel.app/dashboard";
 const SEARCH_URL = "https://qoyl.live/search";
 const REQUEST_URL = "https://qoyl.live/request";
 
-// All 12 real curl types -- was `["4a","4b","4c"]` from when this system
+// All 12 real curl types - was `["4a","4b","4c"]` from when this system
 // only served coily subscribers, which silently blanked curlTypeLabel
 // (and everything derived from it: chips, the weekly/list view choice)
 // for every straight/wavy/curly subscriber.

@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
 
             {success ? (
               <p className="mt-8 text-sm text-green">
-                Password updated — you&apos;re all set.
+                Password updated - you&apos;re all set.
               </p>
             ) : (
               <form

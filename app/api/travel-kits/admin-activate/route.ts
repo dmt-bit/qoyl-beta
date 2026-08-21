@@ -3,7 +3,7 @@ import { activateTravelKit } from "@/lib/activateTravelKit";
 import { isAdmin } from "@/lib/isAdmin";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 
-// Admin-only bypass for the travel kit paywall -- skips Stripe checkout
+// Admin-only bypass for the travel kit paywall - skips Stripe checkout
 // entirely and runs the exact same activation logic the webhook runs
 // after a real payment (see lib/activateTravelKit.ts). Verifies admin
 // status server-side from the user's actual account (not a client-

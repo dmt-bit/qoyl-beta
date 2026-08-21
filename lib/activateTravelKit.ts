@@ -5,7 +5,7 @@ import { sendTravelKitEmail } from "@/lib/sendTravelKitEmail";
 import { formatTripDatesForNotification } from "@/lib/tripDates";
 
 // Shared by the real Stripe webhook (app/api/stripe/webhook/route.ts)
-// and the admin bypass (app/api/travel-kits/admin-activate/route.ts) --
+// and the admin bypass (app/api/travel-kits/admin-activate/route.ts) -
 // same generation/activation/notification logic either way, so the two
 // paths can't quietly drift apart. `source` only changes what shows up
 // in the internal notification email, not the kit itself.
@@ -70,7 +70,7 @@ export async function activateTravelKit({
 
   if (!recipientEmail) {
     console.error("Missing recipient email for travel kit email:", travelKitId);
-    travelEmailStatus = "Confirmation email NOT sent — no recipient email available.";
+    travelEmailStatus = "Confirmation email NOT sent - no recipient email available.";
   } else {
     try {
       await sendTravelKitEmail({
@@ -86,7 +86,7 @@ export async function activateTravelKit({
       });
     } catch (emailError) {
       console.error("Failed to send travel kit email:", travelKitId, emailError);
-      travelEmailStatus = "Confirmation email FAILED to send — see server logs.";
+      travelEmailStatus = "Confirmation email FAILED to send - see server logs.";
     }
   }
 
@@ -94,8 +94,8 @@ export async function activateTravelKit({
   const amountLine = source === "admin_bypass" ? "Amount: $0 (admin bypass, no payment)" : "Amount: $4.99";
 
   await sendNotificationEmail(
-    `${subjectPrefix}Travel kit purchased — ${travelKitRow.destination}`,
-    `Travel kit ${source === "admin_bypass" ? "generated via admin bypass (no payment)" : "purchased and generated"} — ${travelKitRow.destination} for ${userId}.
+    `${subjectPrefix}Travel kit purchased - ${travelKitRow.destination}`,
+    `Travel kit ${source === "admin_bypass" ? "generated via admin bypass (no payment)" : "purchased and generated"} - ${travelKitRow.destination} for ${userId}.
 
 User ID: ${userId}
 Customer email: ${recipientEmail ?? "Unknown"}

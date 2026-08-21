@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { sendNotificationEmail } from "@/lib/notify";
 
 // CommentSection is a client component, so it can't import lib/notify.ts
-// (and RESEND_API_KEY) directly -- this route is the server-side bridge,
+// (and RESEND_API_KEY) directly - this route is the server-side bridge,
 // called fire-and-forget right after a successful post_comments insert.
-// Note: this route only sends the admin email notification -- it never
+// Note: this route only sends the admin email notification - it never
 // inserts the comment itself, so it can't be the cause of a comment
 // failing to post. See components/CommentSection.tsx, which inserts
 // directly into post_comments via the Supabase client.

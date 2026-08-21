@@ -7,7 +7,7 @@ export type YouTubeVideoResult = {
   thumbnailUrl: string;
 };
 
-// Server-side proxy -- YOUTUBE_API_KEY must never reach the browser
+// Server-side proxy - YOUTUBE_API_KEY must never reach the browser
 // bundle, so /style-match calls this route instead of the YouTube Data
 // API directly.
 export async function GET(request: Request) {
@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     if (!color) {
       return NextResponse.json({ error: "color is required for mode=color." }, { status: 400 });
     }
-    // Deep Match's Color tab -- exact template from the spec.
+    // Deep Match's Color tab - exact template from the spec.
     query = [color, "hair color tutorial", curlType, "natural hair"]
       .filter(Boolean)
       .join(" ");

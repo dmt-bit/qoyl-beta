@@ -23,62 +23,62 @@ function normalizeCurlType(curlType: string | null): CurlType {
 }
 
 const CURL_TYPE_DETANGLE: Record<CurlType, string> = {
-  "4a": "Finger-detangle or use a wide-tooth comb from ends to roots -- your looser coil pattern separates fairly easily.",
+  "4a": "Finger-detangle or use a wide-tooth comb from ends to roots - your looser coil pattern separates fairly easily.",
   "4b": "Finger-detangle first, then follow with a wide-tooth comb from ends to roots to avoid disrupting your curl pattern.",
-  "4c": "Finger-detangle in small sections before reaching for a comb -- your tighter zigzag pattern is the most prone to breakage at this step, so patience here saves length.",
+  "4c": "Finger-detangle in small sections before reaching for a comb - your tighter zigzag pattern is the most prone to breakage at this step, so patience here saves length.",
 };
 
 const CURL_TYPE_DEFINITION: Record<CurlType, string> = {
-  "4a": "A little product goes a long way on your looser curl pattern -- start light and layer up if you need more hold.",
+  "4a": "A little product goes a long way on your looser curl pattern - start light and layer up if you need more hold.",
   "4b": "Use a medium amount of product and distribute it in sections to reach every curl without overloading your roots.",
   "4c": "Your curl pattern shrinks the most, so apply product generously in small sections while hair is still soaking wet, before shrinkage locks moisture out.",
 };
 
 function chelateBody(waterHardness: string | null): string {
   if (waterHardness === "hard") {
-    return "Use a chelating shampoo first, then your regular shampoo. Hard water leaves mineral deposits that build up on the hair shaft every wash -- clearing them monthly keeps your other products working the way they're supposed to.";
+    return "Use a chelating shampoo first, then your regular shampoo. Hard water leaves mineral deposits that build up on the hair shaft every wash - clearing them monthly keeps your other products working the way they're supposed to.";
   }
   return "Use a chelating or clarifying shampoo first, then your regular shampoo. This clears product buildup and environmental residue that a regular shampoo alone won't fully remove.";
 }
 
 function chelateWhy(waterHardness: string | null): string {
   if (waterHardness === "hard") {
-    return "Why: mineral buildup from hard water coats the cuticle and blocks moisture from getting in -- chelating removes it.";
+    return "Why: mineral buildup from hard water coats the cuticle and blocks moisture from getting in - chelating removes it.";
   }
-  return "Why: buildup coats the cuticle over time and blocks moisture from getting in -- a monthly chelating wash clears the slate.";
+  return "Why: buildup coats the cuticle over time and blocks moisture from getting in - a monthly chelating wash clears the slate.";
 }
 
 const POROSITY_PRE_POO: Record<Porosity, RoutineStep> = {
   low: {
-    title: "Pre-poo -- 20 minutes before washing",
+    title: "Pre-poo - 20 minutes before washing",
     body: "Apply a lightweight oil like jojoba or grapeseed to dry hair in sections. Cover with a plastic cap and gentle heat if you have it (a warm towel works). Your cuticle resists moisture, so warmth helps the oil get past that resistant outer layer.",
-    why: "Why: low porosity hair's tight cuticle resists absorption -- a light oil and a little heat give the shampoo something to work with instead of just sitting on top.",
+    why: "Why: low porosity hair's tight cuticle resists absorption - a light oil and a little heat give the shampoo something to work with instead of just sitting on top.",
   },
   medium: {
-    title: "Pre-poo -- 20-30 minutes before washing",
-    body: "Apply a light-to-medium oil like sweet almond or grapeseed oil to dry hair in sections. Cover with a plastic cap. No heat needed -- your cuticle is balanced enough to let it absorb on its own.",
+    title: "Pre-poo - 20-30 minutes before washing",
+    body: "Apply a light-to-medium oil like sweet almond or grapeseed oil to dry hair in sections. Cover with a plastic cap. No heat needed - your cuticle is balanced enough to let it absorb on its own.",
     why: "Why: a short pre-poo protects your baseline moisture during cleansing without the extra step of adding heat.",
   },
   high: {
-    title: "Pre-poo -- 30 minutes before washing",
+    title: "Pre-poo - 30 minutes before washing",
     body: "Apply Jamaican black castor oil or olive oil to dry hair in sections. Cover with a plastic cap. The oil barrier prevents moisture loss during cleansing.",
-    why: "Why: high porosity cuticles strip easily during shampoo -- pre-pooing protects your baseline moisture.",
+    why: "Why: high porosity cuticles strip easily during shampoo - pre-pooing protects your baseline moisture.",
   },
 };
 
 const POROSITY_DEEP_CONDITION: Record<Porosity, RoutineStep> = {
   low: {
-    title: "Deep condition -- with heat, every wash day",
+    title: "Deep condition - with heat, every wash day",
     body: "Apply generously to soaking wet hair. Cover with a plastic cap and sit under a hooded dryer or heated cap for 20-30 minutes. Rinse with warm, not cold, water.",
-    why: "Why: heat is what opens your resistant cuticle enough to let moisture in at all -- skip it and most of the product just sits on the surface.",
+    why: "Why: heat is what opens your resistant cuticle enough to let moisture in at all - skip it and most of the product just sits on the surface.",
   },
   medium: {
-    title: "Deep condition -- every wash day",
+    title: "Deep condition - every wash day",
     body: "Apply generously to soaking wet hair. Cover with a plastic cap for 15-20 minutes; add heat if you have it on hand, but it isn't essential. Rinse with cool water to help hold moisture in.",
     why: "Why: your cuticle absorbs and retains moisture fairly evenly, so a shorter deep condition is enough most weeks.",
   },
   high: {
-    title: "Deep condition -- with heat, every wash day",
+    title: "Deep condition - with heat, every wash day",
     body: "Apply generously to soaking wet hair. Cover with a plastic cap and sit under a hooded dryer or heated cap for 30 minutes. Rinse with cool water.",
     why: "Why: heat forces moisture into high porosity gaps. The cool rinse temporarily seals the cuticle to hold it in.",
   },
@@ -87,7 +87,7 @@ const POROSITY_DEEP_CONDITION: Record<Porosity, RoutineStep> = {
 const POROSITY_LEAVE_IN: Record<Porosity, { method: string; body: string; why: string }> = {
   low: {
     method: "LOC method",
-    body: "Leave-in conditioner first, then a lightweight oil, then a cream moisturizer last. For low porosity hair, LOC works better than LCO -- the oil traps the liquid underneath before the heavier cream seals everything on top.",
+    body: "Leave-in conditioner first, then a lightweight oil, then a cream moisturizer last. For low porosity hair, LOC works better than LCO - the oil traps the liquid underneath before the heavier cream seals everything on top.",
     why: "Why: your cuticle is tight and slow to let anything in, so sealing in what little moisture gets through matters more than layering in more product.",
   },
   medium: {
@@ -97,7 +97,7 @@ const POROSITY_LEAVE_IN: Record<Porosity, { method: string; body: string; why: s
   },
   high: {
     method: "LCO method",
-    body: "Leave-in conditioner first, then cream moisturizer, then sealing oil last. For high porosity hair, LCO is more effective than LOC -- the cream fills cuticle gaps before the oil seals.",
+    body: "Leave-in conditioner first, then cream moisturizer, then sealing oil last. For high porosity hair, LCO is more effective than LOC - the cream fills cuticle gaps before the oil seals.",
     why: "Why: layering in this order creates three moisture barriers instead of one.",
   },
 };
@@ -108,7 +108,7 @@ const POROSITY_SEAL_OIL: Record<Porosity, string> = {
   high: "castor oil or shea butter",
 };
 
-// Coily (4a/4b/4c) routine -- the original porosity + curl-type + water-
+// Coily (4a/4b/4c) routine - the original porosity + curl-type + water-
 // hardness driven generator this file was built around. Kept exactly as
 // it was; only the entry point below now routes to it by curl family
 // instead of always running it.
@@ -127,7 +127,7 @@ function generateCoilySteps(
   return [
     prePoo,
     {
-      title: "Clarify or chelate -- Week 1 only",
+      title: "Clarify or chelate - Week 1 only",
       body: chelateBody(waterHardness),
       why: chelateWhy(waterHardness),
     },
@@ -137,12 +137,12 @@ function generateCoilySteps(
       why: deepCondition.why,
     },
     {
-      title: `Leave-in -- ${leaveIn.method} on soaking wet hair`,
+      title: `Leave-in - ${leaveIn.method} on soaking wet hair`,
       body: `${leaveIn.body} ${CURL_TYPE_DEFINITION[c]}`,
       why: leaveIn.why,
     },
     {
-      title: "Seal ends -- every single night",
+      title: "Seal ends - every single night",
       body: `Apply ${POROSITY_SEAL_OIL[p]} to your ends before bed. Cover with a satin bonnet or satin pillowcase. This is your most important length retention habit.`,
       why: "Why: ends are the oldest, driest part of your hair. Nightly sealing is the difference between retaining length and constantly trimming.",
     },
@@ -150,14 +150,14 @@ function generateCoilySteps(
 }
 
 // Straight/wavy/curly (types 1-3) and the "not sure" fallback are fixed
-// step lists rather than porosity/water-hardness driven -- unlike coily,
+// step lists rather than porosity/water-hardness driven - unlike coily,
 // no per-porosity or per-water-hardness copy was specified for these, so
 // each family gets one routine. Every step in a family shares that
 // family's single key-principle "why," since that's the only rationale
 // given for these lists (coily's per-step "why" copy doesn't apply here).
 
 const STRAIGHT_WHY =
-  "Why: sebum travels fastest down straight, fine strands -- daily care that respects roots vs. lengths and stays lightweight keeps hair looking fresh instead of flat, oily, or heat-damaged.";
+  "Why: sebum travels fastest down straight, fine strands - daily care that respects roots vs. lengths and stays lightweight keeps hair looking fresh instead of flat, oily, or heat-damaged.";
 
 const STRAIGHT_STEPS: RoutineStep[] = [
   {
@@ -171,13 +171,13 @@ const STRAIGHT_STEPS: RoutineStep[] = [
     why: STRAIGHT_WHY,
   },
   {
-    title: "Conditioner -- mid-lengths and ends only",
-    body: "Never apply to roots or scalp -- this causes the flat, oily look within hours.",
+    title: "Conditioner - mid-lengths and ends only",
+    body: "Never apply to roots or scalp - this causes the flat, oily look within hours.",
     why: STRAIGHT_WHY,
   },
   {
     title: "Heat styling protection",
-    body: "Apply heat protectant before any blow dry or flat iron. Fine straight hair burns at lower temperatures than coily hair -- keep tools at 300-350°F maximum.",
+    body: "Apply heat protectant before any blow dry or flat iron. Fine straight hair burns at lower temperatures than coily hair - keep tools at 300-350°F maximum.",
     why: STRAIGHT_WHY,
   },
   {
@@ -188,7 +188,7 @@ const STRAIGHT_STEPS: RoutineStep[] = [
 ];
 
 const WAVY_WHY =
-  "Why: wavy hair forms its pattern through moisture and technique on soaking wet hair -- disturbing it once dry (brushing, touching, rough drying) breaks the wave into frizz.";
+  "Why: wavy hair forms its pattern through moisture and technique on soaking wet hair - disturbing it once dry (brushing, touching, rough drying) breaks the wave into frizz.";
 
 const WAVY_STEPS: RoutineStep[] = [
   {
@@ -208,7 +208,7 @@ const WAVY_STEPS: RoutineStep[] = [
   },
   {
     title: "Style on soaking wet hair",
-    body: "Apply curl cream or mousse while hair is dripping wet. Scrunch upward -- do not rake through.",
+    body: "Apply curl cream or mousse while hair is dripping wet. Scrunch upward - do not rake through.",
     why: WAVY_WHY,
   },
   {
@@ -224,11 +224,11 @@ const WAVY_STEPS: RoutineStep[] = [
 ];
 
 const CURLY_WHY =
-  "Why: curly hair needs consistent moisture and definition -- the wash day technique determines how curls clump and how long the style lasts.";
+  "Why: curly hair needs consistent moisture and definition - the wash day technique determines how curls clump and how long the style lasts.";
 
 const CURLY_STEPS: RoutineStep[] = [
   {
-    title: "Cleanse -- sulfate-free or co-wash",
+    title: "Cleanse - sulfate-free or co-wash",
     body: "Sulfate-free shampoo or co-wash to cleanse.",
     why: CURLY_WHY,
   },
@@ -238,12 +238,12 @@ const CURLY_STEPS: RoutineStep[] = [
     why: CURLY_WHY,
   },
   {
-    title: "Deep condition -- weekly",
+    title: "Deep condition - weekly",
     body: "Deep condition weekly.",
     why: CURLY_WHY,
   },
   {
-    title: "Style -- leave-in and curl cream, soaking wet",
+    title: "Style - leave-in and curl cream, soaking wet",
     body: "Apply leave-in and curl cream on soaking wet hair, working in sections.",
     why: CURLY_WHY,
   },
@@ -253,18 +253,18 @@ const CURLY_STEPS: RoutineStep[] = [
     why: CURLY_WHY,
   },
   {
-    title: "Dry -- diffuse or air dry",
+    title: "Dry - diffuse or air dry",
     body: "Diffuse or air dry.",
     why: CURLY_WHY,
   },
   {
-    title: "Refresh -- day 2-3",
+    title: "Refresh - day 2-3",
     body: "Refresh with water and a small amount of leave-in on day 2-3.",
     why: CURLY_WHY,
   },
 ];
 
-// Used when curl_type is "not sure"/"not_sure", unset, or unrecognized --
+// Used when curl_type is "not sure"/"not_sure", unset, or unrecognized -
 // curlFamily() returns null in all of those cases. Medium-porosity,
 // texture-agnostic guidance rather than a full 5-7 step routine, since
 // there's no curl-type or porosity signal to personalize further.
@@ -278,7 +278,7 @@ const GENERIC_FALLBACK_STEPS: RoutineStep[] = [
     why: GENERIC_FALLBACK_WHY,
   },
   {
-    title: "Deep condition -- weekly",
+    title: "Deep condition - weekly",
     body: "Deep condition weekly.",
     why: GENERIC_FALLBACK_WHY,
   },
@@ -288,13 +288,13 @@ const GENERIC_FALLBACK_STEPS: RoutineStep[] = [
     why: GENERIC_FALLBACK_WHY,
   },
   {
-    title: "Seal ends -- nightly",
+    title: "Seal ends - nightly",
     body: "Seal ends nightly.",
     why: GENERIC_FALLBACK_WHY,
   },
 ];
 
-// Additive, like getChildSafetyStep -- appends age-aware notes on top of
+// Additive, like getChildSafetyStep - appends age-aware notes on top of
 // the underlying curl-type/porosity routine rather than rewriting it.
 // Each threshold's note stacks on top of the ones below it (a 65_plus
 // profile gets all three), since each addresses a different, still-
@@ -306,7 +306,7 @@ export function getAgeAwareRoutineStep(
 
   if (isAdultAgeAtLeast(ageRange, "36_45")) {
     notes.push(
-      "As hair changes with age, pay attention to signs of thinning or texture changes. Scalp massage during wash day stimulates circulation. Consider adding rosemary oil to your routine -- clinical studies show it performs comparably to minoxidil for some types of hair thinning."
+      "As hair changes with age, pay attention to signs of thinning or texture changes. Scalp massage during wash day stimulates circulation. Consider adding rosemary oil to your routine - clinical studies show it performs comparably to minoxidil for some types of hair thinning."
     );
   }
   if (isAdultAgeAtLeast(ageRange, "46_55")) {
@@ -316,7 +316,7 @@ export function getAgeAwareRoutineStep(
   }
   if (ageRange === "65_plus") {
     notes.push(
-      "Hair becomes more fragile with age -- avoid harsh physical manipulation, use a wide-tooth comb only, and prioritize moisture and ceramide-rich products. Protective styling reduces mechanical stress on fragile strands."
+      "Hair becomes more fragile with age - avoid harsh physical manipulation, use a wide-tooth comb only, and prioritize moisture and ceramide-rich products. Protective styling reduces mechanical stress on fragile strands."
     );
   }
 
@@ -325,11 +325,11 @@ export function getAgeAwareRoutineStep(
   return {
     title: "Age-Aware Care",
     body: notes.join(" "),
-    why: "Why: hair texture, density, and scalp health shift with age -- these adjustments help your routine keep pace.",
+    why: "Why: hair texture, density, and scalp health shift with age - these adjustments help your routine keep pace.",
   };
 }
 
-// Additive, same pattern as getChildSafetyStep/getAgeAwareRoutineStep --
+// Additive, same pattern as getChildSafetyStep/getAgeAwareRoutineStep -
 // appended when "thinning" is one of the user's selected hair_concerns
 // (see CONCERN_OPTIONS in app/profile/page.tsx), regardless of curl type
 // or age.

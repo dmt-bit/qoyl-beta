@@ -30,7 +30,7 @@ const HOW_IT_WORKS_STEPS = [
   {
     title: "Get your personalized score",
     description:
-      "See exactly which ingredients work for your hair, which ones are risky, and why — based on your variables, not someone else's.",
+      "See exactly which ingredients work for your hair, which ones are risky, and why - based on your variables, not someone else's.",
   },
 ];
 
@@ -57,7 +57,7 @@ const HAIR_TYPE_STRIP = [
 
 // Home isn't instantiated with props by anything (it's a route, not a
 // reusable component), so this stands in for the "prop that defaults to
-// null" ask -- swap in a real Cloudinary URL here once one exists, and
+// null" ask - swap in a real Cloudinary URL here once one exists, and
 // the placeholder below is replaced automatically.
 const STYLE_MATCH_IMAGE_URL: string | null = null;
 
@@ -71,7 +71,7 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-dark font-sans text-cream">
-      {/* 1. HERO -- unchanged */}
+      {/* 1. HERO - unchanged */}
       <section className="relative flex h-[85vh] flex-col items-center justify-center overflow-hidden bg-dark px-4 sm:h-[90vh]">
         <div className="hero-anim-wordmark flex flex-col items-center">
           <h1 className="text-center font-serif text-5xl italic text-cream sm:text-6xl">
@@ -112,7 +112,7 @@ export default async function Home() {
         </Link>
       </section>
 
-      {/* 2. STYLE MATCH PROMO -- warm cream, full contrast from the hero */}
+      {/* 2. STYLE MATCH PROMO - warm cream, full contrast from the hero */}
       <section className="fade-up-block bg-warm px-4 py-[60px] sm:px-6 sm:py-24">
         <div className="mx-auto flex max-w-5xl flex-col items-start gap-10 lg:flex-row lg:items-center lg:gap-16">
           <div className="w-full text-left lg:w-1/2">
@@ -126,8 +126,7 @@ export default async function Home() {
             </h2>
             <p className="mt-4 text-sm leading-[1.8] text-[#5A4A3A]">
               Upload any photo of a hairstyle you want. Style Match finds tutorials,
-              builds your complete shopping list, and connects you with a local stylist —
-              all matched to your hair profile.
+              builds your complete shopping list, and connects you with a local stylist - all matched to your hair profile.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-2">
@@ -169,7 +168,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 3. THE FEED -- dark returns after the cream Style Match section.
+      {/* 3. THE FEED - dark returns after the cream Style Match section.
           MasonryFeed already renders its own "The feed" eyebrow. */}
       <div className="fade-up-block border-b border-bronze/20 bg-dark px-4 py-12 sm:px-6">
         <div className="mx-auto max-w-5xl">
@@ -177,7 +176,7 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* 4. PRODUCT SEARCH CTA -- pure white, maximum contrast */}
+      {/* 4. PRODUCT SEARCH CTA - pure white, maximum contrast */}
       <section className="fade-up-block bg-white px-4 py-12 text-center sm:px-6 sm:py-20">
         <div className="mx-auto max-w-5xl">
           <p className="text-xs font-semibold uppercase tracking-[0.15em] text-bronze">
@@ -228,7 +227,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 5. HOW IT WORKS -- lighter cream, single timeline (no duplicate mobile/desktop blocks) */}
+      {/* 5. HOW IT WORKS - lighter cream, single timeline (no duplicate mobile/desktop blocks) */}
       <section className="fade-up-block bg-cream px-4 py-12 sm:px-6 sm:py-16">
         <div className="mx-auto max-w-2xl">
           <div className="relative space-y-10 pl-8">
@@ -246,7 +245,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 6. MISSION STRIP -- unchanged, back to dark */}
+      {/* 6. MISSION STRIP - unchanged, back to dark */}
       <section className="fade-up-block relative overflow-hidden border-b border-bronze/20 bg-dark px-4 py-16 text-center sm:px-6">
         <span
           aria-hidden
@@ -256,7 +255,7 @@ export default async function Home() {
         </span>
         <div className="relative z-10 mx-auto max-w-2xl">
           <p className="font-serif text-lg italic leading-snug text-cream sm:text-3xl sm:not-italic sm:font-medium">
-            &quot;The hair science your curls — and waves, and coils — have
+            &quot;The hair science your curls - and waves, and coils - have
             always deserved.&quot;
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
@@ -272,7 +271,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 7. REVIEWS -- cream (Testimonials.tsx), final contrast before the dark footer */}
+      {/* 7. REVIEWS - cream (Testimonials.tsx), final contrast before the dark footer */}
       <Testimonials />
     </main>
   );

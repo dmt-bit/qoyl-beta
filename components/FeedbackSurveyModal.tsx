@@ -13,10 +13,10 @@ const Q1_OPTIONS = [
 ];
 
 const Q2_OPTIONS = [
-  "Yes, absolutely — that would be really convenient",
+  "Yes, absolutely - that would be really convenient",
   "Maybe, depending on price and shipping",
-  "No preference — I don't mind going to another site",
-  "No — I prefer to shop on retailer sites I already trust",
+  "No preference - I don't mind going to another site",
+  "No - I prefer to shop on retailer sites I already trust",
 ];
 
 function OptionButton({
@@ -113,7 +113,7 @@ export default function FeedbackSurveyModal({
 
         {submitted ? (
           <p className="mt-4 text-sm text-cream/80">
-            Thank you — this genuinely shapes what we build next.
+            Thank you - this genuinely shapes what we build next.
           </p>
         ) : (
           <div className="mt-4 space-y-6">
@@ -137,7 +137,7 @@ export default function FeedbackSurveyModal({
             <div>
               <p className="text-sm text-cream/80">
                 Would you want to buy recommended products directly on Qoyl
-                in one checkout — without leaving the app?
+                in one checkout - without leaving the app?
               </p>
               <div className="mt-3 space-y-2">
                 {Q2_OPTIONS.map((opt) => (

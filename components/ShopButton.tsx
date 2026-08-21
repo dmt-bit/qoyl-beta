@@ -24,7 +24,7 @@ export default function ShopButton({
     );
   }
 
-  // No brand site to link to -- always give the user a working path to
+  // No brand site to link to - always give the user a working path to
   // find the product rather than a dead end.
   const searchQuery = [productName, brandName].filter(Boolean).join(" ");
 

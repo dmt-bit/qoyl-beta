@@ -1,5 +1,5 @@
 // Shared by PostFilterGrid.tsx (client component) and app/posts/page.tsx
-// (server component) -- kept in a plain module with no "use client"
+// (server component) - kept in a plain module with no "use client"
 // directive, since a client component's exports (even plain functions/
 // constants) become opaque client references when imported into server
 // code, which broke isTabKey() being called server-side in app/posts/page.tsx.

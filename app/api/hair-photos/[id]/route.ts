@@ -12,7 +12,7 @@ async function verifyOwnership(id: string, userId: string) {
   return data;
 }
 
-// PATCH -- toggle is_public (the only field the profile UI edits after
+// PATCH - toggle is_public (the only field the profile UI edits after
 // creation).
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const body = await request.json();

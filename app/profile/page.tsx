@@ -222,7 +222,7 @@ type CurlTypeOption = {
   image: string;
 };
 
-// Image URLs are Cloudinary-hosted (f_auto,q_auto -- format/quality
+// Image URLs are Cloudinary-hosted (f_auto,q_auto - format/quality
 // auto-negotiated per request, no explicit extension needed).
 const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
   {
@@ -573,7 +573,7 @@ function ProfileForm() {
     useAuth();
 
   // A saved profile (hairProfile is only ever populated for signed-in
-  // users -- see auth-context.tsx) opens in a read-only view. "unlocked"
+  // users - see auth-context.tsx) opens in a read-only view. "unlocked"
   // flips to true only after the 30-day check in handleConfirmUpdate
   // passes, which is what actually reveals the editable form below.
   const [unlocked, setUnlocked] = useState(false);
@@ -583,11 +583,11 @@ function ProfileForm() {
   const showForm = !hairProfile || unlocked;
 
   // isAdmin() (lib/isAdmin.ts) reads ADMIN_EMAILS, which has no
-  // NEXT_PUBLIC_ prefix and is deliberately server-only -- calling it
+  // NEXT_PUBLIC_ prefix and is deliberately server-only - calling it
   // directly from this client component would just always return false.
   // /api/purchases already does this exact check server-side (via
   // isAdminUserId, which looks the email up itself rather than trusting
-  // a client-supplied one) and returns an `isAdmin` flag -- same bridge
+  // a client-supplied one) and returns an `isAdmin` flag - same bridge
   // app/travel/page.tsx uses for its own admin bypass.
   const [isAdminUser, setIsAdminUser] = useState(false);
 
@@ -614,7 +614,7 @@ function ProfileForm() {
     setLockMessage(null);
 
     // Admins skip the confirmation modal and the 30-day cooldown
-    // entirely -- straight to the editable form.
+    // entirely - straight to the editable form.
     if (isAdminUser) {
       setUnlocked(true);
       return;
@@ -708,7 +708,7 @@ function ProfileForm() {
     setEmail((prev) => prev || user.email || "");
   }, [user, hairProfile, hairProfileLoading]);
 
-  // Both are pure, static, offline lookups keyed off the zip code -- no
+  // Both are pure, static, offline lookups keyed off the zip code - no
   // network call, so no loading state or debounce needed. Recomputed
   // live as the user types; null (hides the chips) until zipCode is a
   // plausible 5-digit value.
@@ -749,7 +749,7 @@ function ProfileForm() {
     setError(null);
     setSubmitting(true);
 
-    // Captured before the save below -- hairProfile reflects the profile
+    // Captured before the save below - hairProfile reflects the profile
     // as it existed prior to this submission, so this is only true for a
     // genuine first-time save, not the 30-day-locked "update my profile"
     // flow (which reuses this same handler via upsert).
@@ -815,7 +815,7 @@ function ProfileForm() {
       setSuccess(true);
 
       if (isNewProfile) {
-        // Fire-and-forget -- never awaited, never shown to the user, and
+        // Fire-and-forget - never awaited, never shown to the user, and
         // must not delay the redirect below.
         fetch("/api/notify/new-profile", {
           method: "POST",
@@ -861,7 +861,7 @@ function ProfileForm() {
 
         {isAdminUser && (
           <span className="mt-3 inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-dark">
-            Admin — unlimited edits
+            Admin - unlimited edits
           </span>
         )}
 
@@ -1210,7 +1210,7 @@ function ProfileForm() {
               <InfoTooltip
                 label="Porosity"
                 illustrationSrc="/illustrations/porosity_guide.svg"
-                description="Do the float test — drop a clean strand in water. Floats = low porosity. Sinks slowly = medium. Sinks fast = high porosity. For straight hair, porosity affects how well your hair holds color and responds to treatments — not just moisture."
+                description="Do the float test - drop a clean strand in water. Floats = low porosity. Sinks slowly = medium. Sinks fast = high porosity. For straight hair, porosity affects how well your hair holds color and responds to treatments - not just moisture."
               />
             </p>
             <div className="mt-3 grid grid-cols-2 gap-3">
@@ -1267,7 +1267,7 @@ function ProfileForm() {
               <InfoTooltip
                 label="Strand Thickness"
                 illustrationSrc="/illustrations/strand_thickness_guide.svg"
-                description="Pull out one strand and hold it between your fingers. Compare it to a piece of thread — thinner, same, or thicker?"
+                description="Pull out one strand and hold it between your fingers. Compare it to a piece of thread - thinner, same, or thicker?"
               />
             </p>
             <div className="mt-3 grid grid-cols-2 gap-3">
@@ -1334,7 +1334,7 @@ function ProfileForm() {
               Hair Concerns
               <InfoTooltip
                 label="Hair Concerns"
-                description="Select everything that applies — the more you tell us, the more specific your evaluations will be."
+                description="Select everything that applies - the more you tell us, the more specific your evaluations will be."
               />
             </p>
             <div className="mt-3 grid grid-cols-2 gap-3">
@@ -1573,7 +1573,7 @@ function ProfileForm() {
         </form>
         )}
 
-        {/* Deliberately outside the showForm/summary split above -- hair
+        {/* Deliberately outside the showForm/summary split above - hair
             photos aren't part of the 30-day-locked profile fields, so
             they must stay reachable regardless of whether the rest of
             the profile is currently editable. */}

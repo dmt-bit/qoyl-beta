@@ -4,7 +4,7 @@ const SCORE_EXAMPLE_ROWS = [
   { name: "Glycerin", rating: "Caution in dry climates", borderClass: "border-amber" },
 ];
 
-// The mock "Curl Defining Cream, 87" score card -- shown wherever we want
+// The mock "Curl Defining Cream, 87" score card - shown wherever we want
 // to preview what a personalized score looks like before the user has
 // one (home page hero, and the /search sign-up gate). "light" is for
 // placement on a white/cream section (home page's product search CTA);

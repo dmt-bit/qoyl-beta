@@ -74,7 +74,7 @@ type PageState =
 type ResultTab = "tutorials" | "color" | "shopping" | "stylist";
 
 // Vibe/length tags for the inspo browse filters (Part 5). The `styles`
-// table has no vibe/length columns -- this is editorial curation keyed
+// table has no vibe/length columns - this is editorial curation keyed
 // by slug, not a derived/algorithmic attribute, so it's kept as a small
 // local map rather than pretending it's a real database filter. Falls
 // back to an empty tag set (never filtered out) for any style not in
@@ -122,7 +122,7 @@ const LENGTH_OPTIONS = ["Short", "Medium", "Long"];
 
 // Matches supabase/create_style_match.sql's seeded rows exactly, so the
 // browse experience is identical whether or not the styles table has
-// data -- this is only the true fallback if that table is ever emptied.
+// data - this is only the true fallback if that table is ever emptied.
 const STATIC_STYLES: StyleRow[] = [
   { id: "static-box-braids", name: "Box Braids", slug: "box-braids", description: "Classic protective braided style.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: true, estimated_time: "4-8 hours", difficulty: "intermediate" },
   { id: "static-knotless-braids", name: "Knotless Braids", slug: "knotless-braids", description: "Braids without the tension of a knot base.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: true, estimated_time: "5-9 hours", difficulty: "intermediate" },
@@ -315,7 +315,7 @@ function SelectableCard({
 }
 
 // Resizes to maxSize on the longest side and re-encodes as JPEG at 0.8
-// quality before the image ever leaves the browser -- a smaller request
+// quality before the image ever leaves the browser - a smaller request
 // body is a direct, sizable chunk of the analyze route's total time
 // (upload + Anthropic's own image processing both scale with size).
 // Always outputs image/jpeg regardless of the source format.
@@ -327,7 +327,7 @@ function resizeImageToBase64(
     const objectUrl = URL.createObjectURL(file);
     const canvas = document.createElement("canvas");
     // window.Image, not the next/image import shadowing `Image` in this
-    // file -- this needs the real DOM constructor.
+    // file - this needs the real DOM constructor.
     const img = new window.Image();
     img.onload = () => {
       const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
@@ -383,7 +383,7 @@ function UpgradeWallContent({ userId, userEmail }: { userId: string; userEmail: 
       <h1 className="font-serif text-[28px] font-semibold text-cream">Unlock unlimited Style Match</h1>
       <p className="mt-2 text-sm text-cream/70">
         Your first match is free. Upgrade to the Qoyl routine subscription for unlimited style
-        matches, your personalized monthly routine, and a curated product list — all in one.
+        matches, your personalized monthly routine, and a curated product list - all in one.
       </p>
       <p className="mt-3 text-sm text-cream/70">
         Add your hair photos to your profile and Style Match will use them to show you
@@ -392,7 +392,7 @@ function UpgradeWallContent({ userId, userEmail }: { userId: string; userEmail: 
 
       <ul className="mt-6 space-y-2.5">
         {[
-          "Unlimited Style Match — photo or text, any style, any time",
+          "Unlimited Style Match - photo or text, any style, any time",
           "30-day personalized wash day calendar",
           "Monthly curated product list scored for your hair",
         ].map((b) => (
@@ -453,7 +453,7 @@ function StyleMatchContent() {
         const data = await res.json();
         if (!cancelled) setSubscribed(Boolean(data.hasRoutineSubscription));
       } catch {
-        // Fail closed -- treat as not subscribed.
+        // Fail closed - treat as not subscribed.
       } finally {
         if (!cancelled) setEntitlementLoaded(true);
       }
@@ -468,10 +468,10 @@ function StyleMatchContent() {
   const showUpgradeWall = entitlementLoaded && !resolvingAccess && !canRunMatch;
   const [justUsedFreeMatch, setJustUsedFreeMatch] = useState(false);
 
-  // Whether the user has any hair photo on file -- drives the "add a
+  // Whether the user has any hair photo on file - drives the "add a
   // hair photo" nudge on the landing screen, and whether the background
   // translation call fires after analyze() resolves (see analyze()
-  // below). The analyze call itself never touches hair photos anymore --
+  // below). The analyze call itself never touches hair photos anymore -
   // that used to slow down every request with a current photo attached,
   // which is the whole reason it moved to a separate, optional,
   // image-free follow-up call.
@@ -501,14 +501,14 @@ function StyleMatchContent() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [textDescription, setTextDescription] = useState("");
 
-  // Pre-fill from a saved style ("Match this style ->", Part 4) -- fills
+  // Pre-fill from a saved style ("Match this style ->", Part 4) - fills
   // the text input but doesn't auto-submit, unlike inspo cards below.
   useEffect(() => {
     const prefill = searchParams.get("prefill");
     if (prefill) setTextDescription(prefill);
   }, [searchParams]);
 
-  // Pre-fill from a community photo's "Style Match this ->" button --
+  // Pre-fill from a community photo's "Style Match this ->" button -
   // there's no File object for these (the image came from another
   // user's storage object, downloaded server-side as base64), so it's
   // carried across the navigation via sessionStorage instead.
@@ -523,12 +523,12 @@ function StyleMatchContent() {
       setPrefilledImage(parsed);
       setImagePreviewUrl(`data:${parsed.mediaType};base64,${parsed.base64}`);
     } catch {
-      // Malformed/stale sessionStorage value -- ignore, user can still
+      // Malformed/stale sessionStorage value - ignore, user can still
       // upload a photo normally.
     }
   }, [searchParams]);
 
-  // Style survey state -- every match goes through this now (Part 2)
+  // Style survey state - every match goes through this now (Part 2)
   const [deepStep, setDeepStep] = useState(1);
   const [colorMatch, setColorMatch] = useState<boolean | null>(null);
   const [lengthDifference, setLengthDifference] = useState<LengthDifference | null>(null);
@@ -621,7 +621,7 @@ function StyleMatchContent() {
 
       if (!res.ok) {
         // data.detail is server debug info (see app/api/style-match/
-        // analyze/route.ts) -- appended when present so the actual
+        // analyze/route.ts) - appended when present so the actual
         // failure is visible without needing to check server logs.
         const base = data.error ?? "Couldn't analyze this style. Please try again.";
         setError(data.detail ? `${base} (${data.detail})` : base);
@@ -631,7 +631,7 @@ function StyleMatchContent() {
 
       setDetected(data as DetectedStyle);
 
-      // Fired after the fast, image-only analyze call above resolves --
+      // Fired after the fast, image-only analyze call above resolves -
       // not awaited, so it never delays showing results. Only when a
       // hair photo is on file, since that's the only thing this
       // translation is for. Updates `detected` in place when it lands,
@@ -659,7 +659,7 @@ function StyleMatchContent() {
 
       // Free-match gate: only the first match for a non-subscriber
       // consumes/increments the counter. Mirrors app/search/page.tsx's
-      // daily_search_count update -- a direct client-side update against
+      // daily_search_count update - a direct client-side update against
       // the signed-in user's own hair_profiles row.
       if (!subscribed && styleMatchCount < 1 && user) {
         setJustUsedFreeMatch(true);
@@ -673,7 +673,7 @@ function StyleMatchContent() {
 
       // Create the style_matches row now (not only once the user saves/
       // books) so the heart/save button on the confirm screen has a real
-      // id to attach to -- see app/api/style-match/create/route.ts.
+      // id to attach to - see app/api/style-match/create/route.ts.
       if (user) {
         try {
           const createRes = await fetch("/api/style-match/create", {
@@ -704,7 +704,7 @@ function StyleMatchContent() {
     } catch (err) {
       // A bare network failure and a Vercel platform-level timeout
       // (function killed mid-request, no response body) look identical
-      // to fetch() -- both just throw. Logging the actual error at
+      // to fetch() - both just throw. Logging the actual error at
       // least tells us which one it was next time this happens.
       console.error("[style-match] analyze request failed:", err);
       setError("Couldn't reach the style analysis service. Please try again.");
@@ -735,7 +735,7 @@ function StyleMatchContent() {
     analyze({ input_type: "text", text: textDescription, ...deepFields }, "text");
   }
 
-  // Every style match now goes through the full survey -- always route
+  // Every style match now goes through the full survey - always route
   // to it instead of analyzing directly.
   function handlePrimarySubmit() {
     setDeepStep(1);
@@ -747,7 +747,7 @@ function StyleMatchContent() {
     else handleSubmitText();
   }
 
-  // Results tab data loading -- unchanged from before, plus the new
+  // Results tab data loading - unchanged from before, plus the new
   // Color tab's YouTube search + "find a colorist" Maps link.
   useEffect(() => {
     if (pageState !== "results" || !detected || !hairProfile) return;
@@ -883,7 +883,7 @@ function StyleMatchContent() {
     }
   }
 
-  // Heart/save button (Part 4) -- available as soon as matchId exists
+  // Heart/save button (Part 4) - available as soon as matchId exists
   // (right after confirm), independent of the DIY/stylist "complete"
   // action above.
   async function handleToggleSave() {
@@ -1194,12 +1194,12 @@ function StyleMatchContent() {
                   Are you trying to achieve the hair color in this photo too?
                 </h2>
                 <div className="mt-4 space-y-3">
-                  <SelectableCard label="Yes — include color tutorials" selected={colorMatch === true} onClick={() => setColorMatch(true)} />
-                  <SelectableCard label="No — just the style" selected={colorMatch === false} onClick={() => setColorMatch(false)} />
+                  <SelectableCard label="Yes - include color tutorials" selected={colorMatch === true} onClick={() => setColorMatch(true)} />
+                  <SelectableCard label="No - just the style" selected={colorMatch === false} onClick={() => setColorMatch(false)} />
                 </div>
                 {colorMatch === true && (
                   <p className="mt-4 rounded-lg border-l-2 border-bronze bg-amber/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
-                    Color work — especially bleaching or significant color changes — can cause
+                    Color work - especially bleaching or significant color changes - can cause
                     serious damage without professional help. We will include color tutorial
                     videos in your results, but we strongly recommend consulting a licensed
                     colorist for any chemical color services.
@@ -1269,11 +1269,11 @@ function StyleMatchContent() {
               <div className="mt-4">
                 <h2 className="font-serif text-2xl font-semibold text-cream">Does this style involve added hair?</h2>
                 <div className="mt-4 space-y-3">
-                  <SelectableCard label="No — natural hair only" selected={involvesExtensions === "none"} onClick={() => setInvolvesExtensions("none")} />
+                  <SelectableCard label="No - natural hair only" selected={involvesExtensions === "none"} onClick={() => setInvolvesExtensions("none")} />
                   <SelectableCard label="Braiding hair" selected={involvesExtensions === "braiding_hair"} onClick={() => setInvolvesExtensions("braiding_hair")} />
                   <SelectableCard label="Sew-in or weave" selected={involvesExtensions === "sew_in"} onClick={() => setInvolvesExtensions("sew_in")} />
                   <SelectableCard label="Wig" selected={involvesExtensions === "wig"} onClick={() => setInvolvesExtensions("wig")} />
-                  <SelectableCard label="Not sure — help me figure it out" selected={involvesExtensions === "not_sure"} onClick={() => setInvolvesExtensions("not_sure")} />
+                  <SelectableCard label="Not sure - help me figure it out" selected={involvesExtensions === "not_sure"} onClick={() => setInvolvesExtensions("not_sure")} />
                 </div>
                 <button
                   type="button"
@@ -1298,7 +1298,7 @@ function StyleMatchContent() {
                     onClick={() => setTranslateForHairType(true)}
                   />
                   <SelectableCard
-                    label="Show me this style as it is — I understand it may look different on my hair"
+                    label="Show me this style as it is - I understand it may look different on my hair"
                     selected={translateForHairType === false}
                     onClick={() => setTranslateForHairType(false)}
                   />
@@ -1386,7 +1386,7 @@ function StyleMatchContent() {
                 onClick={resetToLanding}
                 className="flex-1 rounded-lg border border-bronze/40 py-3 text-sm font-semibold text-cream/80 transition-colors hover:border-bronze"
               >
-                Not quite — try again
+                Not quite - try again
               </button>
             </div>
           </div>
@@ -1515,7 +1515,7 @@ function StyleMatchContent() {
                         </a>
                       ))}
                     </div>
-                    <p className="mt-3 text-[10px] text-cream/40">Videos from YouTube — not affiliated with Qoyl.</p>
+                    <p className="mt-3 text-[10px] text-cream/40">Videos from YouTube - not affiliated with Qoyl.</p>
                   </div>
                 )}
 
@@ -1529,8 +1529,8 @@ function StyleMatchContent() {
               <div className="mt-6 space-y-6">
                 <div className="rounded-lg border-l-[3px] border-bronze bg-amber/10 px-4 py-3">
                   <p className="text-sm font-medium leading-relaxed text-cream/90">
-                    Professional recommendation: Color services — especially lightening or
-                    bleaching — should be done by a licensed colorist. DIY color on textured hair
+                    Professional recommendation: Color services - especially lightening or
+                    bleaching - should be done by a licensed colorist. DIY color on textured hair
                     carries significant risk of damage. The tutorials below are for reference.
                     Please consult a professional.
                   </p>

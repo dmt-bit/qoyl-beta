@@ -66,13 +66,13 @@ const SCALP_LABELS: Record<string, string> = {
 
 const FREQUENCY_EXPLANATION: Record<CurlFamily, string> = {
   straight:
-    "Sebum travels faster down straight hair strands — more frequent washing keeps your scalp healthy and hair looking fresh. This is normal for your hair type.",
+    "Sebum travels faster down straight hair strands - more frequent washing keeps your scalp healthy and hair looking fresh. This is normal for your hair type.",
   wavy:
-    "Sebum travels fairly quickly down wavy strands, just not as fast as straight hair — washing every few days keeps your scalp balanced without stripping your wave pattern. This is normal for your hair type.",
+    "Sebum travels fairly quickly down wavy strands, just not as fast as straight hair - washing every few days keeps your scalp balanced without stripping your wave pattern. This is normal for your hair type.",
   curly:
-    "Your curl pattern slows sebum travel down the hair shaft compared to straighter textures — going longer between washes protects your curls' natural moisture. Focus your between-wash routine on sealing and protecting.",
+    "Your curl pattern slows sebum travel down the hair shaft compared to straighter textures - going longer between washes protects your curls' natural moisture. Focus your between-wash routine on sealing and protecting.",
   coily:
-    "Your curl pattern slows sebum travel down the hair shaft — less frequent washing protects your hair's natural moisture. Focus your between-wash routine on sealing and protecting.",
+    "Your curl pattern slows sebum travel down the hair shaft - less frequent washing protects your hair's natural moisture. Focus your between-wash routine on sealing and protecting.",
 };
 
 function stepProductCategory(title: string): string {
@@ -88,7 +88,7 @@ function stepProductCategory(title: string): string {
 // ---- Calendar grid (Part 2: restores a real month-grid visual instead
 // of the rolling list) -----------------------------------------------
 //
-// Wash-date math itself is untouched -- this only changes how the
+// Wash-date math itself is untouched - this only changes how the
 // already-computed WashDay[] is displayed, mapping each entry onto
 // full calendar-month grids instead of a flat list.
 
@@ -109,7 +109,7 @@ const CALENDAR_WINDOW_DAYS = 30;
 
 type MonthMeta = { year: number; month: number; label: string };
 
-// Mirrors the given month-detection snippet (today -> today+30) -- used
+// Mirrors the given month-detection snippet (today -> today+30) - used
 // only to decide which month grid(s) to render. Which individual days
 // fall inside the real 30-day wash window is a separate, day-accurate
 // check (windowStartIso/windowEndIso in WashCalendarGrid below).
@@ -149,7 +149,7 @@ type WashCellStyle = {
   labelClass: string;
 };
 
-// "clarify"/"chelate" render identically (bronze border -- clarifying
+// "clarify"/"chelate" render identically (bronze border - clarifying
 // and chelating washes read the same on the calendar), as do
 // "wash"/"full_wash" (plain dark, no border).
 function washDayCellStyle(type: WashDayType): WashCellStyle {
@@ -225,9 +225,9 @@ function DayCell({
     );
   }
 
-  // Within the window but not a wash day -- coily's routine explicitly
+  // Within the window but not a wash day - coily's routine explicitly
   // calls for nightly ends-sealing on every non-wash day (see
-  // lib/routineSteps.ts's "Seal ends -- every single night" step), so
+  // lib/routineSteps.ts's "Seal ends - every single night" step), so
   // that family gets a bronze "seal ends" dot; no other family's
   // between-wash days are tied to one mandatory nightly action, so they
   // read as a plain muted rest-day dot.
@@ -354,7 +354,7 @@ function WashCalendarGrid({
   );
 }
 
-// Small bronze bottle/flask outline -- no icon library in this project,
+// Small bronze bottle/flask outline - no icon library in this project,
 // so a minimal inline SVG rather than pulling one in for a single glyph.
 function CategoryIcon() {
   return (
@@ -381,7 +381,7 @@ function articleFor(word: string): string {
 }
 
 // Shown instead of a blank/error card when a category has zero scoreable
-// candidates for this profile -- see lib/categoryGuidance.ts for the
+// candidates for this profile - see lib/categoryGuidance.ts for the
 // per-category ingredient tips.
 function PlaceholderCard({ pick }: { pick: ProductPick }) {
   const labelLower = pick.categoryLabel.toLowerCase();
@@ -577,7 +577,7 @@ function RoutineContent() {
           <div className="print-hide mb-6 flex items-start justify-between gap-4 rounded-lg bg-bronze px-4 py-3">
             <p className="text-sm text-dark">
               Your routine is ready. We will send your personalized monthly
-              routine to your email within 24 hours. Bookmark this page — it
+              routine to your email within 24 hours. Bookmark this page - it
               updates every month.
             </p>
             <button
@@ -591,7 +591,7 @@ function RoutineContent() {
           </div>
         )}
 
-        {/* SECTION 1 -- Personal header */}
+        {/* SECTION 1 - Personal header */}
         <section>
           <div className="flex items-start justify-between gap-4">
             <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
@@ -626,7 +626,7 @@ function RoutineContent() {
           {hasPlaceholderCards && (
             <p className="mt-4 rounded-lg border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-cream/90">
               We are actively expanding our product catalog. Some categories show
-              ingredient guidance while we add more products. Check back soon — or{" "}
+              ingredient guidance while we add more products. Check back soon - or{" "}
               <Link
                 href="/request"
                 className="print-hide underline underline-offset-2 hover:text-cream"
@@ -644,10 +644,10 @@ function RoutineContent() {
           )}
         </section>
 
-        {/* SECTION 2 -- 30-day wash calendar */}
+        {/* SECTION 2 - 30-day wash calendar */}
         <section className="print-page-break mt-12">
           <h2 className="font-serif text-2xl font-semibold text-cream">
-            Your next 30 days — starting {data.startDateLabel}
+            Your next 30 days - starting {data.startDateLabel}
           </h2>
 
           <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -662,7 +662,7 @@ function RoutineContent() {
           <WashCalendarGrid calendarDays={data.calendarDays} family={family} />
         </section>
 
-        {/* SECTION 3 -- Personalized routine steps */}
+        {/* SECTION 3 - Personalized routine steps */}
         <section className="print-page-break mt-12">
           <h2 className="font-serif text-2xl font-semibold text-cream">
             Your personalized routine
@@ -686,7 +686,7 @@ function RoutineContent() {
           </div>
         </section>
 
-        {/* SECTION 4 -- Curated product list */}
+        {/* SECTION 4 - Curated product list */}
         <section className="print-page-break mt-12">
           <h2 className="font-serif text-2xl font-semibold text-cream">
             Your curated product list
@@ -709,7 +709,7 @@ function RoutineContent() {
               </h3>
               {data.profileFor === "baby" && (
                 <p className="mt-1 text-sm text-cream/70">
-                  Extra caution for an infant profile -- these are flagged
+                  Extra caution for an infant profile - these are flagged
                   more broadly than for an adult profile.
                 </p>
               )}
@@ -743,7 +743,7 @@ function RoutineContent() {
           </Link>
         </section>
 
-        {/* SECTION 5 -- Download */}
+        {/* SECTION 5 - Download */}
         <section className="print-hide mt-12">
           <button
             type="button"
