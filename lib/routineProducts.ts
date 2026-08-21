@@ -20,9 +20,33 @@ import type { ProductWeight } from "@/lib/productWeight";
 // scoring engine (scoreCatalogProductsForProfile) instead of duplicating
 // it, and returns real product + brand names.
 
+// Groups routine categories the same way the calendar groups wash days,
+// so the product list can be displayed under matching section dividers
+// (and so "what to use today" can pick the right section for the day's
+// wash type).
+export type RoutineSection = "clarify" | "regular" | "protein" | "between" | "styling";
+
+type CandidateFilter = {
+  // Keep only candidates whose name contains one of these substrings
+  // (case-insensitive) or whose brand exactly matches one of `brands`.
+  nameKeywords?: string[];
+  brands?: string[];
+};
+
 type RoutineCategorySlot = {
-  slug: string;
+  slug: string; // real categories.slug used for the DB query
   label: string;
+  section: RoutineSection;
+  // Overrides the identifier used for RoutineProductPick.category (the
+  // guidance-lookup / grouping key) when it needs to differ from the
+  // real DB slug -- e.g. "clarifying-shampoo" and regular "shampoo" both
+  // query category_id="shampoo" but need to read as separate categories
+  // everywhere else (guidance placeholder, section grouping, why-copy).
+  pickCategory?: string;
+  // Free-text query appended to the placeholder card's "search our
+  // catalog" link, since pickCategory itself isn't a real, searchable
+  // category slug for these two.
+  searchQuery?: string;
   // "Mousse or Light Hold Gel" / "Curl Cream or Styler" - if the primary
   // slug has zero ranked candidates, try this slug instead before giving
   // up on the slot entirely. Primary and fallback are never combined into
@@ -33,60 +57,150 @@ type RoutineCategorySlot = {
   // Only include this slot for the given profile - e.g. coily's Butter
   // slot only makes sense for high porosity hair.
   include?: (ctx: { porosity: string }) => boolean;
+  // Restricts the candidate pool to (nameKeywords OR brands) before
+  // scoring/ranking -- used for "Clarifying Shampoo" (a name-filtered
+  // view of the shampoo category, not its own DB category).
+  onlyMatching?: CandidateFilter;
+  // Excludes candidates matching (nameKeywords OR brands) -- used so
+  // "Shampoo (regular)" doesn't also surface the clarifying shampoos
+  // that "Clarifying Shampoo" already claimed.
+  excludeMatching?: CandidateFilter;
+  // Soft ranking nudge, not a hard filter -- brands to surface first
+  // among otherwise similar scores (e.g. Aphogee/Olaplex for protein
+  // treatments). Doesn't change the displayed score, only sort order.
+  priorityBrand?: (name: string, brand: string) => boolean;
+};
+
+const CLARIFY_NAME_KEYWORDS = ["clarif", "chelat", "detox", "cleanse", "purif", "reset", "deep clean"];
+const CLARIFY_BRANDS = ["malibu c"];
+
+const PROTEIN_NAME_KEYWORDS = [
+  "protein",
+  "bond",
+  "repair",
+  "reconstruct",
+  "strengthen",
+  "keratin",
+  "peptide",
+];
+// "SheaMoisture Manuka Honey line" specifically, not every SheaMoisture
+// product -- everything else in the priority list is brand-wide.
+function isPriorityProteinBrand(productName: string, brandName: string): boolean {
+  const brand = brandName.toLowerCase();
+  if (["aphogee", "olaplex", "briogeo", "joico"].includes(brand)) return true;
+  return brand === "sheamoisture" && productName.toLowerCase().includes("manuka");
+}
+
+const CLARIFYING_SHAMPOO_SLOT: RoutineCategorySlot = {
+  slug: "shampoo",
+  pickCategory: "clarifying-shampoo",
+  label: "Clarifying / Chelating Shampoo",
+  section: "clarify",
+  searchQuery: "clarifying",
+  onlyMatching: { nameKeywords: CLARIFY_NAME_KEYWORDS, brands: CLARIFY_BRANDS },
+};
+
+function regularShampooSlot(): RoutineCategorySlot {
+  return {
+    slug: "shampoo",
+    label: "Shampoo",
+    section: "regular",
+    excludeMatching: { nameKeywords: CLARIFY_NAME_KEYWORDS, brands: CLARIFY_BRANDS },
+  };
+}
+
+const PROTEIN_TREATMENT_SLOT: RoutineCategorySlot = {
+  slug: "treatment",
+  pickCategory: "protein-treatment",
+  label: "Protein Treatment",
+  section: "protein",
+  searchQuery: "protein",
+  onlyMatching: { nameKeywords: PROTEIN_NAME_KEYWORDS },
+  priorityBrand: isPriorityProteinBrand,
 };
 
 // Used only when curl_type is unset/unrecognized (curlFamily() returns
 // null) - every real family below has its own fully custom list.
 const FALLBACK_CATEGORIES: RoutineCategorySlot[] = [
-  { slug: "shampoo", label: "Shampoo" },
-  { slug: "conditioner", label: "Conditioner" },
-  { slug: "deep-conditioner", label: "Deep Conditioner" },
-  { slug: "leave-in", label: "Leave-In Conditioner" },
-  { slug: "styler", label: "Styler" },
-  { slug: "oil", label: "Oil" },
+  { slug: "shampoo", label: "Shampoo", section: "regular" },
+  { slug: "conditioner", label: "Conditioner", section: "regular" },
+  { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
+  { slug: "leave-in", label: "Leave-In Conditioner", section: "styling" },
+  { slug: "styler", label: "Styler", section: "styling" },
+  { slug: "oil", label: "Oil", section: "styling" },
 ];
 
-// Curl-family-specific recommendation lists - straight/wavy no longer
-// share the coily-centric "Sealing Oil"/"Styler"/curl-cream categories
-// that never applied to them; curly/coily keep the categories that
-// actually match how those textures are cared for.
+// Curl-family-specific recommendation lists, grouped into the same five
+// sections the calendar's wash days fall into (clarify/regular/protein/
+// between/styling) so the product list reads as one system with the
+// calendar above it, not an unrelated grid of cards.
 const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
   straight: [
-    { slug: "shampoo", label: "Shampoo" },
-    { slug: "dry-shampoo", label: "Dry Shampoo" },
-    { slug: "conditioner", label: "Conditioner" },
-    { slug: "deep-conditioner", label: "Deep Conditioner" },
-    { slug: "heat-protectant", label: "Heat Protectant" },
+    CLARIFYING_SHAMPOO_SLOT,
+    regularShampooSlot(),
+    { slug: "conditioner", label: "Conditioner", section: "regular" },
+    { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
+    PROTEIN_TREATMENT_SLOT,
+    { slug: "dry-shampoo", label: "Dry Shampoo", section: "between" },
+    { slug: "heat-protectant", label: "Heat Protectant", section: "styling" },
     // Replaces "Sealing Oil" entirely - see isProductAllowed below for
     // the lightweight-only (ultralight/light) filter that goes with it.
-    { slug: "oil", label: "Finishing Serum" },
+    { slug: "oil", label: "Finishing Serum", section: "styling" },
   ],
   wavy: [
-    { slug: "shampoo", label: "Shampoo" },
-    { slug: "co-wash", label: "Co-Wash" },
-    { slug: "conditioner", label: "Conditioner" },
-    { slug: "deep-conditioner", label: "Deep Conditioner" },
-    { slug: "leave-in", label: "Leave-In Conditioner" },
-    { slug: "mousse", label: "Mousse", fallbackSlug: "gel", fallbackLabel: "Light Hold Gel" },
-    { slug: "heat-protectant", label: "Heat Protectant" },
+    CLARIFYING_SHAMPOO_SLOT,
+    regularShampooSlot(),
+    { slug: "conditioner", label: "Conditioner", section: "regular" },
+    { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
+    PROTEIN_TREATMENT_SLOT,
+    { slug: "co-wash", label: "Co-Wash", section: "between" },
+    {
+      slug: "mousse",
+      label: "Mousse",
+      fallbackSlug: "gel",
+      fallbackLabel: "Light Hold Gel",
+      section: "styling",
+    },
+    { slug: "heat-protectant", label: "Heat Protectant", section: "styling" },
+    { slug: "oil", label: "Finishing Serum", section: "styling" },
   ],
   curly: [
-    { slug: "shampoo", label: "Shampoo" },
-    { slug: "conditioner", label: "Conditioner" },
-    { slug: "deep-conditioner", label: "Deep Conditioner" },
-    { slug: "leave-in", label: "Leave-In Conditioner" },
-    { slug: "curl-cream", label: "Curl Cream", fallbackSlug: "styler", fallbackLabel: "Styler" },
-    { slug: "gel", label: "Gel" },
-    { slug: "oil", label: "Oil" },
+    CLARIFYING_SHAMPOO_SLOT,
+    regularShampooSlot(),
+    { slug: "conditioner", label: "Conditioner", section: "regular" },
+    { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
+    PROTEIN_TREATMENT_SLOT,
+    { slug: "leave-in", label: "Leave-In Conditioner", section: "styling" },
+    {
+      slug: "curl-cream",
+      label: "Curl Cream",
+      fallbackSlug: "styler",
+      fallbackLabel: "Styler",
+      section: "styling",
+    },
+    { slug: "oil", label: "Oil", section: "styling" },
   ],
   coily: [
-    { slug: "shampoo", label: "Shampoo" },
-    { slug: "deep-conditioner", label: "Deep Conditioner" },
-    { slug: "leave-in", label: "Leave-In Conditioner" },
-    { slug: "curl-cream", label: "Curl Cream", fallbackSlug: "styler", fallbackLabel: "Styler" },
-    { slug: "gel", label: "Gel" },
-    { slug: "oil", label: "Sealing Oil" },
-    { slug: "butter", label: "Butter", include: ({ porosity }) => porosity === "high" },
+    CLARIFYING_SHAMPOO_SLOT,
+    regularShampooSlot(),
+    { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
+    PROTEIN_TREATMENT_SLOT,
+    { slug: "leave-in", label: "Leave-In Conditioner", section: "styling" },
+    {
+      slug: "curl-cream",
+      label: "Curl Cream",
+      fallbackSlug: "styler",
+      fallbackLabel: "Styler",
+      section: "styling",
+    },
+    { slug: "gel", label: "Gel", section: "styling" },
+    { slug: "oil", label: "Sealing Oil", section: "styling" },
+    {
+      slug: "butter",
+      label: "Butter",
+      section: "styling",
+      include: ({ porosity }) => porosity === "high",
+    },
   ],
 };
 
@@ -116,13 +230,19 @@ export type RoutineProductCandidate = {
 };
 
 export type RoutineProductPick = {
-  category: string; // slug, e.g. "deep-conditioner"
+  category: string; // display/guidance key, e.g. "clarifying-shampoo"
   categoryLabel: string;
+  section: RoutineSection;
+  // Real categories.slug + optional free-text query for the "search our
+  // catalog" link -- category above isn't always a real, searchable slug
+  // (clarifying-shampoo/protein-treatment aren't).
+  searchCategorySlug: string;
+  searchQuery: string | null;
   primary: RoutineProductCandidate | null;
   alternate: RoutineProductCandidate | null;
   // True when this category has no catalog products with scoreable
   // ingredient data yet - the UI/email should show the ingredient-
-  // guidance placeholder (see CATEGORY_INGREDIENT_TIPS below) instead of
+  // guidance placeholder (see lib/categoryGuidance.ts) instead of
   // product cards.
   noProductsYet: boolean;
 };
@@ -214,10 +334,10 @@ function isProductAllowed(
 }
 
 // Product-type + hair-type aware, not a generic ingredient blurb.
-// Rewritten as a real switch (was cascading ifs) specifically so every
-// category has its own explicit branch and a miss is loud (the default
-// branch below logs a warning) instead of silently falling through to
-// another category's copy.
+// Keyed by pickCategory (not the raw DB slug), so "clarifying-shampoo"
+// and "protein-treatment" get their own dedicated copy instead of
+// reusing regular shampoo's "gentle enough for regular use" framing,
+// which would be actively wrong advice for a chelating shampoo.
 function generateWhyCopy(
   productName: string,
   category: string,
@@ -231,6 +351,12 @@ function generateWhyCopy(
   const curlTypeLabel = curlType && curlType !== "not_sure" ? curlType : "your";
 
   switch (category) {
+    case "clarifying-shampoo":
+      return `Clarifying formula for ${porosity} porosity ${curlTypeLabel} hair - use only on your chelating wash day, not every wash. Removes buildup and hard water minerals that block your other products from working.`;
+
+    case "protein-treatment":
+      return `Strengthening treatment for ${porosity} porosity ${curlTypeLabel} hair - use only on your designated protein day. Overuse causes brittleness.`;
+
     case "heat-protectant":
       return `Essential for ${curlTypeLabel} hair before any heat styling. Apply evenly to damp hair before blow drying or flat ironing. Look for silicones or film-formers that create a barrier between your hair and the heat tool.`;
 
@@ -240,13 +366,13 @@ function generateWhyCopy(
       }
       return `Extends your style between wash days by absorbing scalp oil at the roots. Apply to roots only, massage in, then brush or shake out excess.`;
 
-    // "oil" is relabeled "Finishing Serum" for straight (see
+    // "oil" is relabeled "Finishing Serum" for straight/wavy (see
     // FAMILY_ROUTINE_CATEGORIES) but the underlying category_id/slug is
     // still "oil" - "finishing-serum" is kept as an alias in case a
     // distinct category slug is ever added.
     case "finishing-serum":
     case "oil":
-      if (family === "straight") {
+      if (family === "straight" || family === "wavy") {
         return `Finishing serum for ${curlTypeLabel} hair - apply 1-2 drops to dry hair at ends only for shine and frizz control. Avoid roots entirely.`;
       }
       if (family === "curly") {
@@ -318,6 +444,14 @@ function brandNameOf(row: CandidateRow): string {
   return brand?.name ?? "Unknown brand";
 }
 
+function matchesFilter(name: string, brandName: string, filter: CandidateFilter): boolean {
+  const n = name.toLowerCase();
+  const b = brandName.toLowerCase();
+  if (filter.nameKeywords?.some((k) => n.includes(k))) return true;
+  if (filter.brands?.some((br) => b === br)) return true;
+  return false;
+}
+
 // Shared by getRoutineProductPicks (primary + alternate, /routine page)
 // and getRoutineProducts (primary only, routine email) so both stay in
 // sync with a single query/scoring pass per category. Always returns
@@ -327,20 +461,34 @@ function brandNameOf(row: CandidateRow): string {
 async function rankCategoryProducts(
   categorySlug: string,
   categoryId: string,
+  pickCategory: string,
   porosity: string,
   curlType: string | null,
-  hairConcerns: string[] | null
+  hairConcerns: string[] | null,
+  slot: RoutineCategorySlot
 ): Promise<RoutineProductCandidate[]> {
   const admin = getSupabaseAdmin();
 
-  const { data: candidates } = await admin
+  const { data: rawCandidates } = await admin
     .from("catalog_products")
     .select("id, name, catalog_brands(name)")
     .eq("category_id", categoryId)
     .order("created_at", { ascending: false })
     .limit(CANDIDATE_POOL_SIZE);
 
-  if (!candidates || candidates.length === 0) return [];
+  let candidates = rawCandidates ?? [];
+  if (slot.onlyMatching) {
+    candidates = candidates.filter((row) =>
+      matchesFilter(row.name, brandNameOf(row), slot.onlyMatching!)
+    );
+  }
+  if (slot.excludeMatching) {
+    candidates = candidates.filter(
+      (row) => !matchesFilter(row.name, brandNameOf(row), slot.excludeMatching!)
+    );
+  }
+
+  if (candidates.length === 0) return [];
 
   const profile = buildScoringProfile({
     curl_type: curlType,
@@ -383,7 +531,7 @@ async function rankCategoryProducts(
         weight: result.productWeight,
         why: generateWhyCopy(
           row.name,
-          categorySlug,
+          pickCategory,
           curlType,
           profile.porosity,
           result.productWeight,
@@ -393,7 +541,15 @@ async function rankCategoryProducts(
       };
     })
     .filter((c): c is RoutineProductCandidate => c !== null)
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => {
+      // Priority brands sort first among themselves by score, then
+      // everyone else by score -- a soft nudge, not a hard override, and
+      // the displayed score itself is never altered.
+      const aPriority = slot.priorityBrand?.(a.productName, a.brandName) ?? false;
+      const bPriority = slot.priorityBrand?.(b.productName, b.brandName) ?? false;
+      if (aPriority !== bPriority) return aPriority ? -1 : 1;
+      return b.score - a.score;
+    });
 }
 
 async function loadCategoryIds(slugs: string[]): Promise<Map<string, string>> {
@@ -422,9 +578,18 @@ export async function getRoutineProductPicks(
   // to stay well under Vercel Hobby's ~10s function timeout.
   const results = await Promise.all(
     slots.map(async (slot) => {
+      const pickCategory = slot.pickCategory ?? slot.slug;
       const primaryId = categoryIds.get(slot.slug);
       let ranked = primaryId
-        ? await rankCategoryProducts(slot.slug, primaryId, normalizedPorosity, curlType, hairConcerns)
+        ? await rankCategoryProducts(
+            slot.slug,
+            primaryId,
+            pickCategory,
+            normalizedPorosity,
+            curlType,
+            hairConcerns,
+            slot
+          )
         : [];
       let usedSlug = slot.slug;
       let usedLabel = slot.label;
@@ -438,9 +603,11 @@ export async function getRoutineProductPicks(
           ? await rankCategoryProducts(
               slot.fallbackSlug,
               fallbackId,
+              slot.fallbackSlug,
               normalizedPorosity,
               curlType,
-              hairConcerns
+              hairConcerns,
+              slot
             )
           : [];
         if (fallbackRanked.length > 0) {
@@ -451,8 +618,11 @@ export async function getRoutineProductPicks(
       }
 
       return {
-        category: usedSlug,
+        category: usedSlug === slot.slug ? pickCategory : usedSlug,
         categoryLabel: usedLabel,
+        section: slot.section,
+        searchCategorySlug: usedSlug,
+        searchQuery: usedSlug === slot.slug ? slot.searchQuery ?? null : null,
         primary: ranked[0] ?? null,
         alternate: ranked[1] ?? null,
         noProductsYet: ranked.length === 0,

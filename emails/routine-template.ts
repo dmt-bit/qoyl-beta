@@ -1,5 +1,10 @@
 import { type CurlFamily } from "@/lib/compatibility";
-import { getCategoryGuidanceTips } from "@/lib/categoryGuidance";
+import {
+  categoryNote,
+  getCategoryGuidanceTips,
+  ROUTINE_SECTION_LABEL,
+  ROUTINE_SECTION_ORDER,
+} from "@/lib/categoryGuidance";
 import { formatWashDayLabel, WashDay, WashDayType } from "@/lib/routineCalendar";
 import { RoutineProductPick } from "@/lib/routineProducts";
 import { SeasonalNote } from "@/lib/routineSeasonalNote";
@@ -149,31 +154,42 @@ function scoreFillClass(score: number): string {
   return "score-fill-r";
 }
 
-function renderProducts(products: RoutineProductPick[], searchUrl: string, requestUrl: string): string {
-  return products
-    .map((pick) => {
-      if (pick.noProductsYet || !pick.primary) {
-        const labelLower = pick.categoryLabel.toLowerCase();
-        const article = /^[aeiou]/i.test(labelLower) ? "an" : "a";
-        const tips = getCategoryGuidanceTips(pick.category)
-          .map((tip) => `<div class="product-tip">&bull; ${escapeHtml(tip)}</div>`)
-          .join("");
-        return `
+function renderProductCard(
+  pick: RoutineProductPick,
+  searchUrl: string,
+  requestUrl: string,
+  family: CurlFamily | null
+): string {
+  const note = categoryNote(pick.category, family);
+  const noteHtml = note ? `<div class="product-note">${escapeHtml(note)}</div>` : "";
+
+  if (pick.noProductsYet || !pick.primary) {
+    const labelLower = pick.categoryLabel.toLowerCase();
+    const article = /^[aeiou]/i.test(labelLower) ? "an" : "a";
+    const tips = getCategoryGuidanceTips(pick.category)
+      .map((tip) => `<div class="product-tip">&bull; ${escapeHtml(tip)}</div>`)
+      .join("");
+    const searchHref = `${escapeHtml(searchUrl)}?category=${encodeURIComponent(pick.searchCategorySlug)}${
+      pick.searchQuery ? `&q=${encodeURIComponent(pick.searchQuery)}` : ""
+    }`;
+    return `
   <div class="product-card">
     <div class="product-cat">${escapeHtml(pick.categoryLabel)}</div>
+    ${noteHtml}
     <div class="product-guidance"><strong>We're adding ${escapeHtml(labelLower)} products to our catalog</strong></div>
     <div class="product-why">In the meantime, look for these key ingredients when shopping for ${article} ${escapeHtml(labelLower)}:</div>
     ${tips}
-    <a href="${escapeHtml(searchUrl)}?category=${encodeURIComponent(pick.category)}" class="shop-btn">Search our catalog &rarr;</a>
+    <a href="${searchHref}" class="shop-btn">Search our catalog &rarr;</a>
     <div class="product-alt"><a href="${escapeHtml(requestUrl)}?product=${encodeURIComponent(pick.categoryLabel)}">Request a product evaluation &rarr;</a></div>
   </div>`;
-      }
+  }
 
-      const { primary, alternate } = pick;
+  const { primary, alternate } = pick;
 
-      return `
+  return `
   <div class="product-card">
     <div class="product-cat">${escapeHtml(pick.categoryLabel)}</div>
+    ${noteHtml}
     <div class="product-guidance"><strong>${escapeHtml(primary.productName)}</strong> &middot; ${escapeHtml(primary.brandName)}</div>
     <div class="product-why">${escapeHtml(primary.why)}</div>
     <div class="score-row">
@@ -183,8 +199,25 @@ function renderProducts(products: RoutineProductPick[], searchUrl: string, reque
     <a href="${escapeHtml(primary.affiliateLink ?? `${searchUrl}?q=${encodeURIComponent(primary.productName)}`)}" class="shop-btn">Shop this product &rarr;</a>
     ${alternate ? `<div class="product-alt">Alternate: ${escapeHtml(alternate.productName)} &middot; ${escapeHtml(alternate.brandName)} &middot; ${alternate.score}/100</div>` : ""}
   </div>`;
-    })
-    .join("");
+}
+
+// Grouped under the same bronze section labels/order as the web page's
+// product-list dividers (ROUTINE_SECTION_ORDER/ROUTINE_SECTION_LABEL from
+// lib/categoryGuidance.ts), skipping any section with zero picks.
+function renderProducts(
+  products: RoutineProductPick[],
+  searchUrl: string,
+  requestUrl: string,
+  family: CurlFamily | null
+): string {
+  return ROUTINE_SECTION_ORDER.map((section) => {
+    const picks = products.filter((pick) => pick.section === section);
+    if (picks.length === 0) return "";
+    const cards = picks.map((pick) => renderProductCard(pick, searchUrl, requestUrl, family)).join("");
+    return `
+  <div class="product-section-label">${escapeHtml(ROUTINE_SECTION_LABEL[section])}</div>
+  ${cards}`;
+  }).join("");
 }
 
 function renderSeasonalNote(seasonalNote: SeasonalNote): string {
@@ -256,6 +289,9 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
 .step-title{font-size:13px;font-weight:600;color:#1C1612;margin-bottom:3px}
 .step-body{font-size:12px;color:#5A4A3A;line-height:1.6}
 .step-why{font-size:11px;color:#9C7B5A;background:#F5F0EA;padding:2px 8px;border-radius:4px;display:inline-block;margin-top:4px}
+.product-section-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9C7B5A;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #EDE5D8}
+.product-section-label:first-child{margin-top:0}
+.product-note{font-size:11px;color:#9C7B5A;background:#F5F0EA;line-height:1.5;padding:6px 8px;border-radius:4px;margin-bottom:6px}
 .product-card{background:#FDFAF8;border:1px solid #EDE5D8;border-radius:8px;padding:12px;margin-bottom:8px}
 .product-cat{font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9C7B5A;margin-bottom:4px}
 .product-guidance{font-size:13px;color:#1C1612;line-height:1.5;margin-bottom:6px}
@@ -322,7 +358,7 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
   <div class="section-label">your curated product list</div>
   <div class="section-title">Top picks for your profile</div>
 
-  ${renderProducts(data.products, data.searchUrl, data.requestUrl)}
+  ${renderProducts(data.products, data.searchUrl, data.requestUrl, data.family)}
 
   ${renderSeasonalNote(data.seasonalNote)}
 

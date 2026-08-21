@@ -1,3 +1,5 @@
+import { type CurlFamily } from "@/lib/compatibility";
+
 // Ingredient-guidance placeholder content, shown instead of a blank/error
 // card whenever a routine category has zero scoreable candidates for a
 // profile - either because the catalog genuinely has nothing in that
@@ -12,6 +14,14 @@
 // FAMILY_ROUTINE_CATEGORIES or the categories table) - kept here in case
 // one gets added later.
 export const CATEGORY_INGREDIENT_TIPS: Record<string, string[]> = {
+  "clarifying-shampoo": [
+    "Look for: EDTA, Citric Acid, or Sodium Phytate as chelating agents.",
+    "Malibu C Hard Water Wellness Shampoo is the gold standard for hard water cities like Chicago.",
+  ],
+  "protein-treatment": [
+    "Look for: Hydrolyzed Keratin, Hydrolyzed Wheat Protein, or Hydrolyzed Silk as active protein ingredients.",
+    "Avoid products where protein is the last ingredient - it needs to be in the top 10 to be effective.",
+  ],
   "dry-shampoo": [
     "Starch (Tapioca, Rice, or Corn) - absorbs oil without residue",
     "Kaolin Clay - gentle oil absorption for fine hair",
@@ -93,4 +103,51 @@ const GENERIC_INGREDIENT_TIPS = [
 
 export function getCategoryGuidanceTips(categorySlug: string): string[] {
   return CATEGORY_INGREDIENT_TIPS[categorySlug] ?? GENERIC_INGREDIENT_TIPS;
+}
+
+// Mirrors lib/routineProducts.ts's RoutineSection - redefined locally
+// (rather than imported) for the same reason as CATEGORY_INGREDIENT_TIPS
+// above: this module must stay free of the getSupabaseAdmin() import
+// chain so "use client" components can pull it in safely. Order and
+// wording here are the single source of truth for both the web page's
+// section dividers/calendar legend and the email template's grouping.
+export type RoutineSection = "clarify" | "regular" | "protein" | "between" | "styling";
+
+export const ROUTINE_SECTION_ORDER: RoutineSection[] = [
+  "clarify",
+  "regular",
+  "protein",
+  "between",
+  "styling",
+];
+
+export const ROUTINE_SECTION_LABEL: Record<RoutineSection, string> = {
+  clarify: "Clarifying wash day",
+  regular: "Regular wash day",
+  protein: "Protein treatment day",
+  between: "Between wash days",
+  styling: "Styling",
+};
+
+// Fixed contextual copy for the two "use only on this specific day"
+// categories -- shown in addition to each product's own generated why-
+// copy, not instead of it. Shared by app/routine/page.tsx and
+// emails/routine-template.ts so the web and email framing stay in sync.
+export function categoryNote(category: string, family: CurlFamily | null): string | null {
+  if (category === "clarifying-shampoo") {
+    return "Use this only on your chelating wash day - not every wash. It removes buildup and hard water minerals that block your other products from working.";
+  }
+  if (category === "protein-treatment") {
+    if (family === "straight" || family === "wavy") {
+      return "Fine straight and wavy hair needs lighter protein treatments - look for hydrolyzed proteins rather than heavy reconstructors. Olaplex No. 3 or a bond repair treatment works better than a thick protein masque for 1a-2c hair.";
+    }
+    if (family === "coily") {
+      return "4a-4c coily hair benefits from stronger protein treatments quarterly. Aphogee Two Step Protein Treatment is the most effective option for significantly damaged or color-treated coily hair.";
+    }
+    // curly isn't called out explicitly in the spec this copy is based
+    // on -- a middle ground between straight/wavy's "lighter" note and
+    // coily's "stronger, quarterly" note.
+    return "3a-3c curly hair does well with a balanced protein treatment monthly - not as light as straight/wavy needs, not as intensive as coily requires.";
+  }
+  return null;
 }

@@ -9,7 +9,13 @@ import { useAuth } from "@/lib/auth-context";
 import { curlFamily, CurlFamily, scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import { ProductWeight, WEIGHT_PILL_CLASSES, WEIGHT_PILL_LABEL, weightFitNote } from "@/lib/productWeight";
 import { WashDay, WashDayType } from "@/lib/routineCalendar";
-import { getCategoryGuidanceTips } from "@/lib/categoryGuidance";
+import {
+  categoryNote,
+  getCategoryGuidanceTips,
+  ROUTINE_SECTION_LABEL,
+  ROUTINE_SECTION_ORDER,
+  type RoutineSection,
+} from "@/lib/categoryGuidance";
 
 type RoutineStep = {
   title: string;
@@ -29,6 +35,9 @@ type ProductCandidate = {
 type ProductPick = {
   category: string;
   categoryLabel: string;
+  section: RoutineSection;
+  searchCategorySlug: string;
+  searchQuery: string | null;
   primary: ProductCandidate | null;
   alternate: ProductCandidate | null;
   noProductsYet: boolean;
@@ -63,6 +72,45 @@ const SCALP_LABELS: Record<string, string> = {
   sensitive: "Sensitive scalp",
   "dandruff-prone": "Dandruff-prone scalp",
 };
+
+// Same color coding as the calendar's DayCell/CalendarLegend below, so a
+// user can see e.g. a green-bordered date and know exactly which product
+// section to scroll to. Labels/order come from lib/categoryGuidance.ts,
+// the shared source of truth also used by emails/routine-template.ts;
+// only the Tailwind dot styling is web-specific and stays local.
+const SECTION_DOT_CLASS: Record<RoutineSection, string> = {
+  clarify: "border-2 border-bronze bg-dark",
+  regular: "bg-dark",
+  protein: "border-2 border-green bg-dark",
+  between: "bg-bronze",
+  styling: "bg-bronze2",
+};
+const SECTION_META: Record<RoutineSection, { label: string; dotClass: string }> =
+  Object.fromEntries(
+    ROUTINE_SECTION_ORDER.map((section) => [
+      section,
+      { label: ROUTINE_SECTION_LABEL[section], dotClass: SECTION_DOT_CLASS[section] },
+    ])
+  ) as Record<RoutineSection, { label: string; dotClass: string }>;
+const SECTION_ORDER = ROUTINE_SECTION_ORDER;
+
+// Maps a calendar wash day directly onto the product section(s) relevant
+// to it -- styling products apply after any actual wash, so wash days
+// pull in the styling section too; a between-wash day (dry
+// shampoo/co-wash) stands alone.
+function sectionsForWashType(type: WashDayType): RoutineSection[] {
+  if (type === "chelate" || type === "clarify") return ["clarify", "styling"];
+  if (type === "protein") return ["protein", "styling"];
+  if (type === "refresh") return ["between"];
+  return ["regular", "styling"];
+}
+
+function todayLabelForWashType(type: WashDayType): string {
+  if (type === "chelate" || type === "clarify") return "Clarifying wash day";
+  if (type === "protein") return "Protein treatment day";
+  if (type === "refresh") return "Between wash day";
+  return "Regular wash day";
+}
 
 const FREQUENCY_EXPLANATION: Record<CurlFamily, string> = {
   straight:
@@ -289,24 +337,29 @@ function MonthCalendar({
   );
 }
 
+// Matches the product list's section-divider colors/wording 1:1 (see
+// SECTION_META above) -- a green-bordered date on the calendar should
+// point straight at the "Protein treatment day" section below it.
 function CalendarLegend({ family }: { family: CurlFamily | null }) {
-  const items: { swatchClass: string; label: string }[] = [
-    { swatchClass: "border-2 border-bronze bg-dark", label: "Clarifying wash" },
-    { swatchClass: "bg-dark", label: "Regular wash" },
-    { swatchClass: "border-2 border-green bg-dark", label: "Protein treatment" },
+  const items: { swatchClass: string; label: string; dot?: boolean }[] = [
+    { swatchClass: SECTION_META.clarify.dotClass, label: SECTION_META.clarify.label },
+    { swatchClass: SECTION_META.regular.dotClass, label: SECTION_META.regular.label },
+    { swatchClass: SECTION_META.protein.dotClass, label: SECTION_META.protein.label },
     family === "coily"
-      ? { swatchClass: "bg-bronze", label: "Seal ends tonight" }
-      : { swatchClass: "bg-muted", label: "Rest day" },
+      ? { swatchClass: "bg-bronze", label: "Seal ends tonight", dot: true }
+      : { swatchClass: "bg-muted", label: "Rest day", dot: true },
   ];
   if (family === "straight" || family === "wavy") {
-    items.push({ swatchClass: "bg-[#2C2420]", label: "Refresh / co-wash day" });
+    items.push({ swatchClass: SECTION_META.between.dotClass, label: SECTION_META.between.label, dot: true });
   }
 
   return (
     <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-cream/60">
       {items.map((item) => (
         <span key={item.label} className="flex items-center gap-1.5">
-          <span className={`h-2.5 w-2.5 shrink-0 rounded-sm ${item.swatchClass}`} />
+          <span
+            className={`h-2.5 w-2.5 shrink-0 ${item.dot ? "rounded-full" : "rounded-sm"} ${item.swatchClass}`}
+          />
           {item.label}
         </span>
       ))}
@@ -410,7 +463,9 @@ function PlaceholderCard({ pick }: { pick: ProductPick }) {
       </ul>
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
         <Link
-          href={`/search?category=${encodeURIComponent(pick.category)}`}
+          href={`/search?category=${encodeURIComponent(pick.searchCategorySlug)}${
+            pick.searchQuery ? `&q=${encodeURIComponent(pick.searchQuery)}` : ""
+          }`}
           className="print-hide text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
         >
           Search our catalog →
@@ -439,12 +494,18 @@ function ProductCard({
   const fitNote = primary
     ? weightFitNote(primary.weight, curlFamily(curlType), curlType, porosity)
     : null;
+  const note = categoryNote(pick.category, curlFamily(curlType));
 
   return (
     <div className="rounded-xl border border-bronze/30 p-5">
       <p className="text-xs font-semibold uppercase tracking-wide text-bronze2">
         {pick.categoryLabel}
       </p>
+      {note && (
+        <p className="mt-1.5 rounded-md bg-bronze/10 px-2.5 py-1.5 text-xs leading-relaxed text-bronze2">
+          {note}
+        </p>
+      )}
 
       {pick.noProductsYet || !primary ? (
         <PlaceholderCard pick={pick} />
@@ -491,6 +552,61 @@ function ProductCard({
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// Bronze label + hairline rule between product-list groups - wording and
+// color match SECTION_META / CalendarLegend above 1:1.
+function SectionDivider({ section }: { section: RoutineSection }) {
+  return (
+    <div className="col-span-full mt-6 flex items-center gap-3 first:mt-0">
+      <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-bronze">
+        {SECTION_META[section].label}
+      </span>
+      <span className="h-px flex-1 bg-bronze/20" />
+    </div>
+  );
+}
+
+// "What to use today" - checks today's entry in the generated wash
+// calendar (always calendarDays[0], see generateWashCalendar) and shows
+// only the product(s) relevant to that specific day, so a user doesn't
+// have to scroll the full list every morning.
+function TodayProducts({ data }: { data: RoutineData }) {
+  const todayWash = data.calendarDays[0];
+
+  if (!todayWash) {
+    return (
+      <div className="print-hide mb-10 rounded-xl border border-bronze/30 bg-bronze/5 p-5">
+        <span className="inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-dark">
+          Today is a rest day
+        </span>
+        <p className="mt-3 text-sm text-cream/60">No wash products needed today.</p>
+      </div>
+    );
+  }
+
+  const label = todayLabelForWashType(todayWash.washType);
+  const relevantSections = sectionsForWashType(todayWash.washType);
+  const todaysPicks = data.products.filter((pick) => relevantSections.includes(pick.section));
+
+  return (
+    <div className="print-hide mb-10 rounded-xl border border-bronze/30 bg-bronze/5 p-5">
+      <span className="inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-dark">
+        Today is a {label}
+      </span>
+      <p className="mt-3 text-sm font-medium text-cream/80">Your products for today:</p>
+      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {todaysPicks.map((pick) => (
+          <ProductCard
+            key={`today-${pick.category}`}
+            pick={pick}
+            curlType={data.curlType}
+            porosity={data.porosity}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -691,15 +807,29 @@ function RoutineContent() {
           <h2 className="font-serif text-2xl font-semibold text-cream">
             Your curated product list
           </h2>
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {data.products.map((pick) => (
-              <ProductCard
-                key={pick.category}
-                pick={pick}
-                curlType={data.curlType}
-                porosity={data.porosity}
-              />
-            ))}
+
+          <div className="mt-4">
+            <TodayProducts data={data} />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {SECTION_ORDER.map((section) => {
+              const picks = data.products.filter((pick) => pick.section === section);
+              if (picks.length === 0) return null;
+              return (
+                <div key={section} className="col-span-full grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <SectionDivider section={section} />
+                  {picks.map((pick) => (
+                    <ProductCard
+                      key={pick.category}
+                      pick={pick}
+                      curlType={data.curlType}
+                      porosity={data.porosity}
+                    />
+                  ))}
+                </div>
+              );
+            })}
           </div>
 
           {data.avoidIngredients.length > 0 && (
