@@ -59,7 +59,8 @@ const HAIR_TYPE_STRIP = [
 // reusable component), so this stands in for the "prop that defaults to
 // null" ask - swap in a real Cloudinary URL here once one exists, and
 // the placeholder below is replaced automatically.
-const STYLE_MATCH_IMAGE_URL: string | null = null;
+const STYLE_MATCH_IMAGE_URL: string | null =
+  "https://res.cloudinary.com/kumxntij/image/upload/v1787276711/pexels-casa-rio-beauty-salon-2162626170-38421531.jpg";
 
 export default async function Home() {
   const { data: posts } = await supabase
@@ -114,7 +115,7 @@ export default async function Home() {
 
       {/* 2. STYLE MATCH PROMO - warm cream, full contrast from the hero */}
       <section className="fade-up-block bg-warm px-4 py-[60px] sm:px-6 sm:py-24">
-        <div className="mx-auto flex max-w-5xl flex-col items-start gap-10 lg:flex-row lg:items-center lg:gap-16">
+        <div className="mx-auto flex max-w-5xl flex-col items-start gap-10 lg:flex-row lg:items-stretch lg:gap-16">
           <div className="w-full text-left lg:w-1/2">
             <span className="inline-block rounded-full border border-bronze px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-bronze">
               New
@@ -148,15 +149,15 @@ export default async function Home() {
             </Link>
           </div>
 
-          <div className="mx-auto w-full max-w-[280px] lg:mx-0 lg:w-1/2">
-            <div className="relative h-[320px] w-[280px] max-w-full overflow-hidden rounded-2xl bg-[#1C1612]">
+          <div className="w-full lg:w-1/2">
+            <div className="relative h-[280px] w-full overflow-hidden rounded-xl bg-[#1C1612] lg:h-full lg:min-h-[360px]">
               {STYLE_MATCH_IMAGE_URL ? (
                 <Image
                   src={STYLE_MATCH_IMAGE_URL}
                   alt="Style Match example"
                   fill
-                  sizes="280px"
-                  className="object-cover"
+                  sizes="(min-width: 1024px) 50vw, 100vw"
+                  className="object-cover object-top"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center">
