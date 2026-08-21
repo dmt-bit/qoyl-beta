@@ -45,7 +45,6 @@ const DEFAULT_WASH_TAG_LABEL: Record<WashDayType, string> = {
   wash: "Regular wash",
   protein: "Protein",
   clarify: "Clarifying",
-  full_wash: "Full wash",
   refresh: "Refresh",
 };
 
@@ -61,12 +60,14 @@ function washTagLabel(type: WashDayType, family: CurlFamily | null): string {
 const FAMILY_MINI_ROUTINE: Record<CurlFamily, Partial<Record<WashDayType, string>>> = {
   straight: {
     clarify: "Clarifying shampoo → Conditioner (ends only) → Style",
-    full_wash: "Gentle shampoo → Conditioner (ends only) → Style",
+    wash: "Gentle shampoo → Conditioner (ends only) → Style",
+    protein: "Protein treatment → Gentle shampoo → Conditioner (ends only) → Style",
     refresh: "Co-wash or dry shampoo at the roots",
   },
   wavy: {
     clarify: "Clarifying shampoo → Condition → Scrunch style soaking wet",
     wash: "Sulfate-free shampoo → Condition → Scrunch style soaking wet",
+    protein: "Protein treatment → Sulfate-free shampoo → Condition → Scrunch style soaking wet",
     refresh: "Mist with water → Scrunch",
   },
   curly: {
@@ -278,7 +279,6 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
 .wash-item.chelate{border-left-color:#9C7B5A}
 .wash-item.protein{border-left-color:#5BA67A}
 .wash-item.clarify{border-left-color:#9C7B5A}
-.wash-item.full_wash{border-left-color:#1C1612}
 .wash-item.refresh{background:transparent;border-color:transparent;border-left-color:#D4C4AD;padding:6px 12px}
 .wash-item.rest{background:transparent;border-style:dashed;border-color:#EDE5D8;border-left-color:#EDE5D8}
 .wash-item-date{font-size:12px;font-weight:600;color:#1C1612}

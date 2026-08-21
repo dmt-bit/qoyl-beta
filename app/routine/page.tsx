@@ -190,19 +190,24 @@ function buildMonthCells(year: number, month: number): DayCellData[] {
   return cells;
 }
 
-type WashCellStyle = {
-  cellClass: string;
-  numberClass: string;
-  label: string;
-  labelClass: string;
-};
+type WashCellStyle =
+  | { kind: "filled"; cellClass: string; numberClass: string; label: string; labelClass: string }
+  | { kind: "dot"; dotClass: string };
 
 // "clarify"/"chelate" render identically (bronze border - clarifying
-// and chelating washes read the same on the calendar), as do
-// "wash"/"full_wash" (plain dark, no border).
-function washDayCellStyle(type: WashDayType): WashCellStyle {
+// and chelating washes read the same on the calendar), as does "protein"
+// (green border) - these are the notable, infrequent events for every
+// family and always get the full filled-cell treatment.
+//
+// Straight hair washes near-daily, so its "wash"/"refresh" days would
+// otherwise paint the whole grid solid dark - those two render as a
+// small dot instead (bronze for an actual wash, muted for a refresh),
+// letting the clarify/protein cells actually stand out. Every other
+// family keeps the original filled-cell "wash"/"refresh" treatment.
+function washDayCellStyle(type: WashDayType, family: CurlFamily | null): WashCellStyle {
   if (type === "chelate" || type === "clarify") {
     return {
+      kind: "filled",
       cellClass: "cal-cell-clarify bg-dark border-2 border-bronze",
       numberClass: "text-cream",
       label: "Clarify",
@@ -211,6 +216,7 @@ function washDayCellStyle(type: WashDayType): WashCellStyle {
   }
   if (type === "protein") {
     return {
+      kind: "filled",
       cellClass: "cal-cell-protein bg-dark border-2 border-green",
       numberClass: "text-cream",
       label: "Protein",
@@ -218,14 +224,18 @@ function washDayCellStyle(type: WashDayType): WashCellStyle {
     };
   }
   if (type === "refresh") {
+    if (family === "straight") return { kind: "dot", dotClass: "bg-muted" };
     return {
+      kind: "filled",
       cellClass: "cal-cell-refresh bg-[#2C2420]",
       numberClass: "text-bronze2",
       label: "Refresh",
       labelClass: "text-bronze2",
     };
   }
+  if (family === "straight") return { kind: "dot", dotClass: "bg-bronze" };
   return {
+    kind: "filled",
     cellClass: "cal-cell-wash bg-dark",
     numberClass: "text-cream",
     label: "Wash",
@@ -251,7 +261,16 @@ function DayCell({
   ) : null;
 
   if (washDay) {
-    const style = washDayCellStyle(washDay.washType);
+    const style = washDayCellStyle(washDay.washType, family);
+    if (style.kind === "dot") {
+      return (
+        <div className="relative flex min-h-[40px] flex-col items-center justify-center rounded-md">
+          {todayMarker}
+          <span className="font-sans text-xs text-cream/70">{cell.day}</span>
+          <span className={`mt-0.5 h-1 w-1 rounded-full ${style.dotClass}`} />
+        </div>
+      );
+    }
     return (
       <div
         className={`relative flex min-h-[40px] flex-col items-center justify-center rounded-md ${style.cellClass}`}

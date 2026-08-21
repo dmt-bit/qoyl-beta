@@ -5,7 +5,6 @@ export type WashDayType =
   | "wash"
   | "protein"
   | "clarify"
-  | "full_wash"
   | "refresh";
 
 export type WashDay = {
@@ -43,47 +42,66 @@ export function getWashFrequencyDays(
 ): { min: number; max: number; recommended: number } {
   const base = (curlType && BASE_FREQUENCY[curlType]) || { min: 7, max: 10 };
 
-  // Porosity modifier - adjusts within the curl-type range.
+  // Porosity modifier - adjusts the recommended interval only.
   let porosityModifier = 0;
   if (porosity === "high") porosityModifier = -1; // wash more often
   if (porosity === "low") porosityModifier = 1; // wash less often
 
-  // Scalp modifier.
+  // Scalp modifier - also recommended-only.
   let scalpModifier = 0;
   if (scalpCondition === "oily") scalpModifier = -1;
   if (scalpCondition === "dry") scalpModifier = 1;
 
-  const recommended = Math.round(
-    (base.min + base.max) / 2 + porosityModifier + scalpModifier
+  // min/max are the displayed curl-type base range and never shift with
+  // porosity/scalp - applying the modifier to both used to be able to
+  // collapse the range to a single number (e.g. 1b + oily produced
+  // "every 1-1 days"). Only `recommended` (the actual interval used to
+  // generate the calendar below) is nudged, clamped to a real minimum of
+  // one day.
+  const recommended = Math.max(
+    1,
+    Math.round((base.min + base.max) / 2 + porosityModifier + scalpModifier)
   );
 
   return {
-    min: Math.max(1, base.min + porosityModifier + scalpModifier),
-    max: base.max + porosityModifier + scalpModifier,
-    recommended: Math.max(1, recommended),
+    min: base.min,
+    max: base.max,
+    recommended,
   };
 }
 
-// occurrence is 1-indexed (1st activity day, 2nd, ...), matching "every
-// 8th"/"every 4th" the way a person would actually count.
+// Straight hair washes most/every day, so its cycle counts actual washes
+// (not calendar days) - clarify every 7th wash, protein every 14th, wash
+// otherwise. Previously this used occurrence % 8 / % 4 against calendar-day
+// offsets, which mislabeled most daily wash days as "refresh" and never
+// produced a protein day at all.
+const STRAIGHT_WASH_CYCLE: WashDayType[] = [
+  "wash", "wash", "wash", "wash", "wash", "wash",
+  "clarify",
+  "wash", "wash", "wash", "wash", "wash", "wash",
+  "protein",
+];
+
+// Same idea for wavy, just less frequent: clarify every 5th wash, protein
+// every 10th.
+const WAVY_WASH_CYCLE: WashDayType[] = [
+  "wash", "wash", "wash", "wash",
+  "clarify",
+  "wash", "wash", "wash", "wash",
+  "protein",
+];
+
+// occurrence is 1-indexed (1st wash, 2nd wash, ...), matching "every
+// 7th"/"every 4th" the way a person would actually count washes.
 function washTypeForOccurrence(
   family: CurlFamily | null,
   occurrence: number
 ): WashDayType {
   switch (family) {
     case "straight":
-      // Interval is already ~daily/every-other-day for straight hair, so
-      // each activity day IS the wash-count occurrence - clarify every
-      // ~8th (within the 7-10 range), a real full wash roughly every
-      // 4th, everything else a co-wash/dry-shampoo refresh.
-      if (occurrence % 8 === 0) return "clarify";
-      if (occurrence % 4 === 0) return "full_wash";
-      return "refresh";
+      return STRAIGHT_WASH_CYCLE[(occurrence - 1) % STRAIGHT_WASH_CYCLE.length];
     case "wavy":
-      // Between-day refresh entries are inserted separately in
-      // generateWashCalendar below - this only classifies the actual
-      // wash-cadence days.
-      return occurrence % 3 === 0 ? "clarify" : "wash";
+      return WAVY_WASH_CYCLE[(occurrence - 1) % WAVY_WASH_CYCLE.length];
     case "curly":
       if (occurrence % 4 === 0) return "chelate";
       if (occurrence % 3 === 0) return "protein";
@@ -134,11 +152,14 @@ export function generateWashCalendar(
       washType: washTypeForOccurrence(family, occurrence),
     });
 
-    // Wavy hair's wash-cadence interval (2-5 days) leaves real gap days
-    // that need their own guidance - unlike straight, whose interval is
-    // already effectively daily/every-other-day (see
-    // washTypeForOccurrence above), so there's no meaningful gap to fill.
-    if (family === "wavy") {
+    // Straight and wavy hair's wash-cadence interval (1-5 days) can leave
+    // real gap days that need their own guidance - fill with `interval -
+    // 1` refresh days between each wash (zero when interval is 1, i.e. a
+    // daily washer, so no refresh days show up for them at all). Curly and
+    // coily intervals run 4-21 days and deliberately have no refresh
+    // entries - their non-wash days render as plain rest/seal-ends dots
+    // instead (see app/routine/page.tsx's DayCell).
+    if (family === "straight" || family === "wavy") {
       for (
         let gapOffset = offset + 1;
         gapOffset < Math.min(offset + interval, WINDOW_DAYS);
