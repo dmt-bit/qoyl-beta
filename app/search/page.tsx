@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import FeedbackSurveyModal from "@/components/FeedbackSurveyModal";
+import HairTypeStrip from "@/components/HairTypeStrip";
 import SearchAuthGate from "@/components/SearchAuthGate";
 import ShopButton from "@/components/ShopButton";
 import UpgradeWall from "@/components/UpgradeWall";
@@ -823,7 +824,10 @@ function SearchPageContent() {
         });
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-dark font-sans text-cream">
+      <HairTypeStrip tileSize={120} />
+
+      <div className="px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-md">
         <DisclaimerBanner />
 
@@ -1037,6 +1041,7 @@ function SearchPageContent() {
             </div>
           </div>
         )}
+      </div>
       </div>
 
       {showSurvey && (

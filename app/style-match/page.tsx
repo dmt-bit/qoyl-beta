@@ -202,6 +202,53 @@ function UploadIcon() {
   );
 }
 
+const STYLE_MATCH_FEATURE_PILLS = ["Tutorials", "Shopping list", "Stylist match"];
+
+// Full-bleed promotional hero, shown only on the initial landing screen -
+// gives /style-match its own compelling entry point instead of dropping
+// straight into a form. Moved here from the home page, which now only
+// links to /style-match rather than promoting it inline.
+function StyleMatchPromoHero() {
+  return (
+    <div className="relative">
+      <div className="relative h-[420px] w-full overflow-hidden bg-dark sm:h-[480px]">
+        <Image
+          src="https://res.cloudinary.com/kumxntij/image/upload/v1787276711/pexels-casa-rio-beauty-salon-2162626170-38421531.jpg"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-top"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-dark/70 via-dark/10 to-dark" />
+
+        <div className="absolute inset-x-0 top-6 flex justify-center">
+          <p className="font-serif text-2xl italic text-cream">Qoyl</p>
+        </div>
+
+        <div className="absolute inset-x-0 bottom-6 px-6 text-center">
+          <h2 className="font-serif text-[28px] leading-tight text-cream">
+            Show us the style.
+          </h2>
+          <p className="font-serif text-[28px] italic leading-tight text-cream">
+            We will build your plan.
+          </p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap justify-center gap-2 px-4 py-6">
+        {STYLE_MATCH_FEATURE_PILLS.map((pill) => (
+          <span
+            key={pill}
+            className="rounded-full border border-bronze/40 px-3 py-1.5 text-xs font-medium text-bronze2"
+          >
+            {pill}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function DemoSection() {
   return (
     <div className="mt-8">
@@ -983,7 +1030,10 @@ function StyleMatchContent() {
   }
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-dark font-sans text-cream">
+      {pageState === "landing" && <StyleMatchPromoHero />}
+
+      <div className="px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-2xl">
         {pageState === "landing" && (
           <>
@@ -1701,6 +1751,7 @@ function StyleMatchContent() {
             )}
           </div>
         )}
+      </div>
       </div>
 
       {toast && <Toast message={toast} />}
