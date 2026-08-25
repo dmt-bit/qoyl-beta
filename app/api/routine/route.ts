@@ -6,7 +6,7 @@ import {
   generateWashCalendar,
   getWashFrequencyDays,
 } from "@/lib/routineCalendar";
-import { generateRoutineSteps } from "@/lib/routineSteps";
+import { generateAdditionalRoutineNotes, generateRoutineStepsByWashType } from "@/lib/routineSteps";
 import {
   getRoutineProductPicks,
   getProtectiveStyleProductPicks,
@@ -81,22 +81,9 @@ export async function GET(request: Request) {
   // 'extensions' profile the "natural hair under wig" section is just
   // this same routine (see spec: "Same as natural hair routine based on
   // their curl type and porosity").
-  const [calendarDays, steps, products, avoidIngredients] = await Promise.all([
+  const [calendarDays, stepsByWashType, products, avoidIngredients] = await Promise.all([
     Promise.resolve(generateWashCalendar(now, curlType, porosity, scalpCondition)),
-    Promise.resolve(
-      generateRoutineSteps(
-        curlType,
-        porosity,
-        profile?.water_hardness ?? null,
-        profile?.extensions ?? null,
-        profile?.extension_type ?? null,
-        profile?.extension_care ?? null,
-        profileFor,
-        profile?.adult_age_range ?? null,
-        profile?.hair_concerns ?? null,
-        colorTreated
-      )
-    ),
+    Promise.resolve(generateRoutineStepsByWashType(curlType)),
     getRoutineProductPicks(
       porosity,
       curlType,
@@ -106,6 +93,16 @@ export async function GET(request: Request) {
     ),
     getIngredientsToAvoid(porosity, avoidLimit),
   ]);
+
+  const additionalNotes = generateAdditionalRoutineNotes(
+    profile?.extensions ?? null,
+    profile?.extension_type ?? null,
+    profile?.extension_care ?? null,
+    profileFor,
+    profile?.adult_age_range ?? null,
+    profile?.hair_concerns ?? null,
+    colorTreated
+  );
 
   // Only fetched when the protective-style routine actually needs to be
   // shown ('extensions' or 'both') - 'natural_hair' and unset profiles
@@ -160,7 +157,8 @@ export async function GET(request: Request) {
     profileFor,
     childSafetyNote: getChildSafetyNote(profileFor),
     calendarDays,
-    steps,
+    stepsByWashType,
+    additionalNotes,
     products,
     avoidIngredients,
     colorTreated,

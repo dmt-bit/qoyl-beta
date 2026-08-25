@@ -8,7 +8,7 @@ import {
 import { formatWashDayLabel, WashDay, WashDayType } from "@/lib/routineCalendar";
 import { RoutineProductPick } from "@/lib/routineProducts";
 import { SeasonalNote } from "@/lib/routineSeasonalNote";
-import { RoutineStep } from "@/lib/routineSteps";
+import { RoutineStepDetail } from "@/lib/routineSteps";
 
 export type RoutineEmailData = {
   firstName: string;
@@ -21,7 +21,11 @@ export type RoutineEmailData = {
   waterHardnessLabel: string | null; // e.g. "hard water"
   washFrequency: { min: number; max: number; recommended: number };
   calendarDays: WashDay[];
-  steps: RoutineStep[];
+  // Regular wash day's full step sequence only - the day the subscriber
+  // will use most frequently. The other three (clarifying/protein/
+  // between) live on the /routine page itself; the email isn't the
+  // place for all four full sequences.
+  regularWashDaySteps: RoutineStepDetail[];
   products: RoutineProductPick[];
   seasonalNote: SeasonalNote;
   dashboardUrl: string;
@@ -133,7 +137,7 @@ function renderWeeklySchedule(calendarDays: WashDay[], family: CurlFamily | null
   return `<div class="wash-list">${rows.join("")}</div>`;
 }
 
-function renderSteps(steps: RoutineStep[]): string {
+function renderSteps(steps: RoutineStepDetail[]): string {
   return steps
     .map(
       (step, i) => `
@@ -142,7 +146,8 @@ function renderSteps(steps: RoutineStep[]): string {
     <div>
       <div class="step-title">${escapeHtml(step.title)}</div>
       <div class="step-body">${escapeHtml(step.body)}</div>
-      <div class="step-why">${escapeHtml(step.why)}</div>
+      ${step.timerMinutes ? `<div class="step-timer">&#9200; Set a timer for ${escapeHtml(step.timerMinutes)}</div>` : ""}
+      ${step.why ? `<div class="step-why">Why: ${escapeHtml(step.why)}</div>` : ""}
     </div>
   </div>`
     )
@@ -289,6 +294,9 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
 .step-title{font-size:13px;font-weight:600;color:#1C1612;margin-bottom:3px}
 .step-body{font-size:12px;color:#5A4A3A;line-height:1.6}
 .step-why{font-size:11px;color:#9C7B5A;background:#F5F0EA;padding:2px 8px;border-radius:4px;display:inline-block;margin-top:4px}
+.step-timer{font-size:11px;color:#1C1612;margin-top:4px}
+.section-note{font-size:11px;color:#9C7B5A;margin-bottom:16px}
+.section-note a{color:#9C7B5A}
 .product-section-label{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#9C7B5A;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #EDE5D8}
 .product-section-label:first-child{margin-top:0}
 .product-note{font-size:11px;color:#9C7B5A;background:#F5F0EA;line-height:1.5;padding:6px 8px;border-radius:4px;margin-bottom:6px}
@@ -349,9 +357,10 @@ body{background:#F0EBE3;font-family:Arial,sans-serif;padding:20px}
   <div class="rule"></div>
 
   <div class="section-label">your wash day routine</div>
-  <div class="section-title">Step by step - every wash day</div>
+  <div class="section-title">Step by step - regular wash day</div>
+  <div class="section-note">Clarifying, protein treatment, and between-wash routines are on your <a href="${escapeHtml(data.dashboardUrl)}">Qoyl dashboard</a>.</div>
 
-  ${renderSteps(data.steps)}
+  ${renderSteps(data.regularWashDaySteps)}
 
   <div class="rule"></div>
 

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Collapse from "@/components/Collapse";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
+import { getAffiliateLink } from "@/lib/affiliateLinks";
 import { curlFamily, CurlFamily, scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import { ProductWeight, WEIGHT_PILL_CLASSES, WEIGHT_PILL_LABEL, weightFitNote } from "@/lib/productWeight";
 import { WashDay, WashDayType } from "@/lib/routineCalendar";
@@ -23,6 +24,7 @@ import {
   priceTierFor,
 } from "@/lib/priceContext";
 import { PROTECTIVE_STYLE_DAY_LABEL } from "@/lib/protectiveStyleRoutine";
+import type { RoutineStepDetail, WashDayKey, WashDaySteps } from "@/lib/routineSteps";
 
 type RoutineStep = {
   title: string;
@@ -70,7 +72,8 @@ type RoutineData = {
   profileFor: string | null;
   childSafetyNote: string | null;
   calendarDays: WashDay[];
-  steps: RoutineStep[];
+  stepsByWashType: WashDaySteps[];
+  additionalNotes: RoutineStep[];
   products: ProductPick[];
   avoidIngredients: AvoidIngredient[];
   colorTreated: string | null;
@@ -156,16 +159,6 @@ const FREQUENCY_EXPLANATION: Record<CurlFamily, string> = {
   coily:
     "Your curl pattern slows sebum travel down the hair shaft - less frequent washing protects your hair's natural moisture. Focus your between-wash routine on sealing and protecting.",
 };
-
-function stepProductCategory(title: string): string {
-  const t = title.toLowerCase();
-  if (t.includes("pre-poo")) return "Pre-poo treatment";
-  if (t.includes("clarify") || t.includes("chelate")) return "Chelating shampoo";
-  if (t.includes("deep condition")) return "Deep conditioner";
-  if (t.includes("leave-in")) return "Leave-in conditioner";
-  if (t.includes("seal")) return "Sealing oil";
-  return "Styling product";
-}
 
 // ---- Calendar grid (Part 2: restores a real month-grid visual instead
 // of the rolling list) -----------------------------------------------
@@ -807,6 +800,123 @@ function ProtectiveStyleSection({ data }: { data: RoutineData }) {
   );
 }
 
+function ClockIcon() {
+  return (
+    <svg className="h-3.5 w-3.5 shrink-0 text-bronze" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <circle cx="12" cy="12" r="9" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5V12l3 2" />
+    </svg>
+  );
+}
+
+// Colors/borders mirror SECTION_META/CalendarLegend above, so a wash
+// day's color reads the same whether it's the calendar, the product
+// list dividers, or this accordion header.
+const WASH_DAY_ACCORDION_STYLE: Record<WashDayKey, { border: string; label: string }> = {
+  clarifying: { border: "border-bronze", label: "text-bronze" },
+  regular: { border: "border-bronze/20", label: "text-cream" },
+  protein: { border: "border-green", label: "text-green" },
+  between: { border: "border-cream/20", label: "text-cream/60" },
+};
+
+// One step within a wash-day accordion - bronze-circled number,
+// Cormorant Garamond title, DM Sans body, an optional timer line (clock
+// icon), an optional bronze "why" callout, and - when the step names a
+// product category the user has a curated pick for - a direct link to
+// that pick so they don't have to scroll down to SECTION 4 to find it.
+function StepDetailRow({
+  step,
+  index,
+  products,
+}: {
+  step: RoutineStepDetail;
+  index: number;
+  products: ProductPick[];
+}) {
+  const pick = step.productCategory
+    ? products.find((p) => p.category === step.productCategory) ?? null
+    : null;
+  const primary = pick?.primary ?? null;
+  const viewLink = primary ? getAffiliateLink(primary.productName, primary.brandName) : null;
+
+  return (
+    <div className="flex gap-4">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bronze font-serif text-sm font-semibold text-dark">
+        {index + 1}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-serif text-base text-cream">{step.title}</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-cream/70">{step.body}</p>
+
+        {step.timerMinutes && (
+          <p className="mt-2 flex items-center gap-1.5 text-xs text-bronze2">
+            <ClockIcon />
+            Set a timer for {step.timerMinutes}
+          </p>
+        )}
+
+        {step.why && (
+          <p className="mt-2 rounded-md bg-bronze/10 px-2.5 py-1.5 text-xs leading-relaxed text-bronze2">
+            {step.why}
+          </p>
+        )}
+
+        {pick && primary && (
+          <p className="mt-2 text-xs text-cream/60">
+            Your {pick.categoryLabel.toLowerCase()}: {primary.productName} - {primary.score}/100 for your profile
+            {viewLink && (
+              <>
+                {" "}
+                <a
+                  href={viewLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="print-hide font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+                >
+                  View product →
+                </a>
+              </>
+            )}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WashDayAccordion({
+  washDay,
+  products,
+  defaultOpen,
+}: {
+  washDay: WashDaySteps;
+  products: ProductPick[];
+  defaultOpen: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  const style = WASH_DAY_ACCORDION_STYLE[washDay.key];
+
+  return (
+    <div className={`rounded-xl border p-5 ${style.border}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <span className={`font-serif text-xl font-semibold ${style.label}`}>{washDay.label}</span>
+        <span className={`shrink-0 text-sm transition-transform ${open ? "rotate-180" : ""} text-cream/50`}>
+          ▼
+        </span>
+      </button>
+      <Collapse show={open}>
+        {washDay.steps.map((step, i) => (
+          <StepDetailRow key={`${washDay.key}-${step.title}`} step={step} index={i} products={products} />
+        ))}
+      </Collapse>
+    </div>
+  );
+}
+
 function RoutineContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1029,28 +1139,35 @@ function RoutineContent() {
           <WashCalendarGrid calendarDays={data.calendarDays} family={family} />
         </section>
 
-        {/* SECTION 3 - Personalized routine steps */}
+        {/* SECTION 3 - Your wash day routine: four collapsible sequences,
+            one per wash-day type. Regular is open by default since it's
+            the day the user will hit most often. */}
         <section className="print-page-break mt-12">
           <h2 className="font-serif text-2xl font-semibold text-cream">
-            Your personalized routine
+            Your wash day routine
           </h2>
-          <div className="mt-4 space-y-6">
-            {data.steps.map((step, i) => (
-              <div key={step.title} className="flex gap-4">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bronze font-serif text-sm font-semibold text-dark">
-                  {i + 1}
-                </div>
-                <div>
-                  <p className="font-serif text-lg text-cream">{step.title}</p>
-                  <p className="mt-1 text-sm text-cream/70">{step.body}</p>
-                  <p className="mt-2 text-xs text-cream/50">{step.why}</p>
-                  <span className="mt-2 inline-block rounded-full border border-bronze/40 px-2.5 py-0.5 text-[11px] text-bronze2">
-                    {stepProductCategory(step.title)}
-                  </span>
-                </div>
-              </div>
+          <div className="mt-4 space-y-4">
+            {data.stepsByWashType.map((washDay) => (
+              <WashDayAccordion
+                key={washDay.key}
+                washDay={washDay}
+                products={data.products}
+                defaultOpen={washDay.key === "regular"}
+              />
             ))}
           </div>
+
+          {data.additionalNotes.length > 0 && (
+            <div className="mt-6 space-y-4">
+              {data.additionalNotes.map((note) => (
+                <div key={note.title} className="rounded-xl border border-bronze/30 p-5">
+                  <p className="font-serif text-lg text-cream">{note.title}</p>
+                  <p className="mt-1 text-sm text-cream/70">{note.body}</p>
+                  <p className="mt-2 text-xs text-cream/50">{note.why}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* SECTION 4 - Curated product list */}

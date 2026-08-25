@@ -6,7 +6,7 @@ import {
   generateWashCalendar,
   getWashFrequencyDays,
 } from "@/lib/routineCalendar";
-import { generateRoutineSteps } from "@/lib/routineSteps";
+import { generateRoutineStepsByWashType } from "@/lib/routineSteps";
 import { getRoutineProducts } from "@/lib/routineProducts";
 import { generateSeasonalNote } from "@/lib/routineSeasonalNote";
 import { lookupCityState } from "@/lib/zipLookup";
@@ -85,17 +85,9 @@ export async function sendRoutineEmail(
     getRoutineProducts(profile.porosity, profile.curl_type, profile.hair_concerns),
   ]);
 
-  const steps = generateRoutineSteps(
-    profile.curl_type,
-    profile.porosity,
-    profile.water_hardness,
-    null,
-    null,
-    null,
-    null,
-    profile.adult_age_range,
-    profile.hair_concerns
-  );
+  const regularWashDaySteps =
+    generateRoutineStepsByWashType(profile.curl_type).find((w) => w.key === "regular")
+      ?.steps ?? [];
   const seasonalNote = generateSeasonalNote(profile.zip_code, now);
 
   const firstName = profile.first_name?.trim() || "there";
@@ -114,7 +106,7 @@ export async function sendRoutineEmail(
     waterHardnessLabel:
       profile.water_hardness === "hard" ? "hard water" : null,
     calendarDays,
-    steps,
+    regularWashDaySteps,
     products,
     seasonalNote,
     dashboardUrl: DASHBOARD_URL,
