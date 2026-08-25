@@ -157,6 +157,12 @@ function buildComposedFeed({
   const communityQueue = [...sideCommunity];
   const styleQueue = [...sideStyles];
 
+  // The first 2 cards are guaranteed plain editorial posts, never a
+  // product/community/style card - none of the intervals below (4/6/8)
+  // divide 1 or 2, so an interleaved extra can only ever land at
+  // position 3 or later. Deliberate: with no hero to orient a new
+  // visitor anymore, the very first thing they see should read as
+  // content, not commerce.
   const composed: FeedCard[] = [];
   let editorialCount = 0;
 
@@ -435,34 +441,41 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
 
   return (
     <div>
-      <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-bronze">The feed</p>
-
-      {/* Search - Pinterest-style pill, sits above the sticky tabs */}
-      <div className="relative mt-4">
-        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
-          <SearchIcon />
-        </span>
-        <input
-          type="text"
-          value={searchInput}
-          onChange={(e) => setSearchInput(e.target.value)}
-          onFocus={() => setSearchFocused(true)}
-          onBlur={() => setSearchFocused(false)}
-          placeholder="Search hair tips, styles, ingredients..."
-          className={`h-10 w-full rounded-full bg-[#2C2420] pl-10 pr-4 font-sans text-sm text-cream placeholder:text-cream/40 focus:outline-none ${
-            searchFocused ? "ring-1 ring-bronze" : ""
-          }`}
-        />
-      </div>
-
-      {/* Filter tabs - sticky under the nav (52px) while scrolling */}
-      <div className="sticky top-[52px] z-20 -mx-4 mt-4 bg-dark px-4 py-2 sm:mx-0 sm:px-0">
+      {/* Search + filter tabs - one sticky unit pinned to the very top
+          of the page (no top nav on the home page to offset for
+          anymore - see components/Nav.tsx's home-only side rail). */}
+      <div className="sticky top-0 z-20 -mx-4 bg-dark px-4 pt-3 sm:mx-0 sm:px-0">
+        {/* Search - Pinterest-style pill */}
         <div className="relative">
+          <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
+            <SearchIcon />
+          </span>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            placeholder="Search hair tips, styles, ingredients..."
+            className={`h-10 w-full rounded-full bg-[#2C2420] pl-10 pr-4 font-sans text-sm text-cream placeholder:text-cream/40 focus:outline-none ${
+              searchFocused ? "ring-1 ring-bronze" : ""
+            }`}
+          />
+        </div>
+
+        {/* Filter tabs, with a small "Qoyl" watermark leading the row -
+            the only brand presence left on mobile now that the top nav
+            is gone here. */}
+        <div className="relative mt-3 pb-2">
           <div
             ref={tabScrollRef}
             onScroll={() => setHasScrolledTabs(true)}
-            className="no-scrollbar flex gap-1 overflow-x-auto"
+            className="no-scrollbar flex items-center gap-1 overflow-x-auto"
           >
+            <span className="mr-2 flex shrink-0 items-center gap-2">
+              <span className="font-serif text-sm italic text-bronze">Qoyl</span>
+              <span className="h-3 w-px bg-bronze/40" />
+            </span>
             {TABS.map((tab) => {
               const isActive = tab.key === activeTab;
               return (

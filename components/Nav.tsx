@@ -81,6 +81,160 @@ function CloseIcon() {
   );
 }
 
+function PersonIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-cream">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+    </svg>
+  );
+}
+
+function CompassIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-cream">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 9l-3.5 1.5L10 14l3.5-1.5L15 9z" />
+    </svg>
+  );
+}
+
+function CalendarIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-cream">
+      <rect x="3.75" y="5.25" width="16.5" height="15" rx="1.5" />
+      <path strokeLinecap="round" d="M3.75 9.75h16.5M8.25 3v3.75M15.75 3v3.75" />
+    </svg>
+  );
+}
+
+function GridIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-cream">
+      <rect x="3.75" y="3.75" width="6.5" height="6.5" rx="1" />
+      <rect x="13.75" y="3.75" width="6.5" height="6.5" rx="1" />
+      <rect x="3.75" y="13.75" width="6.5" height="6.5" rx="1" />
+      <rect x="13.75" y="13.75" width="6.5" height="6.5" rx="1" />
+    </svg>
+  );
+}
+
+// The slim (mobile) / expanded (desktop) side rail shown only on the
+// home page, replacing the top nav entirely there - every other page
+// keeps the top nav bars below unchanged. Reuses the same menuOpen
+// state/full-screen menu markup as the top nav's hamburger, so the
+// mobile rail's grid icon opens the exact same overlay.
+function HomeSideNavMobile({ onOpenMenu }: { onOpenMenu: () => void }) {
+  return (
+    <div
+      className="fixed bottom-0 left-0 top-0 z-50 flex w-10 flex-col items-center gap-5 border-r border-bronze/40 bg-[#1C1612]/70 pt-3 backdrop-blur-md sm:hidden"
+    >
+      <Link href="/" aria-label="Home" className="font-serif text-lg text-bronze">
+        Q
+      </Link>
+      <Link href="/search" aria-label="Search a product" className="flex items-center justify-center p-1">
+        <SearchIcon size={17} />
+      </Link>
+      <Link href="/style-match" aria-label="Style Match" className="flex items-center justify-center p-1">
+        <SparkleIcon size={17} className="text-cream" />
+      </Link>
+      <Link href="/dashboard" aria-label="Profile" className="flex items-center justify-center p-1">
+        <PersonIcon size={17} />
+      </Link>
+      <Link href="/travel" aria-label="Travel" className="flex items-center justify-center p-1">
+        <CompassIcon size={17} />
+      </Link>
+      <button
+        type="button"
+        onClick={onOpenMenu}
+        aria-label="Open menu"
+        className="flex items-center justify-center p-1"
+      >
+        <GridIcon size={17} />
+      </button>
+    </div>
+  );
+}
+
+function HomeSideNavDesktop({
+  user,
+  hasRoutineSubscription,
+  pathname,
+}: {
+  user: unknown;
+  hasRoutineSubscription: boolean;
+  pathname: string;
+}) {
+  return (
+    <div className="fixed bottom-0 left-0 top-0 z-50 hidden w-[200px] flex-col overflow-y-auto border-r border-bronze/40 bg-[#1C1612]/80 backdrop-blur-md sm:flex">
+      <Link href="/" className="px-6 py-6 font-serif text-2xl italic text-cream">
+        Qoyl
+      </Link>
+
+      <div className="flex flex-col gap-1 px-3">
+        <SideNavLink href="/search" label="Search a Product" icon={<SearchIcon size={16} />} pathname={pathname} />
+        <SideNavLink href="/style-match" label="Style Match" icon={<SparkleIcon size={16} className="text-cream" />} pathname={pathname} />
+        <SideNavLink href="/profile" label="My Profile" icon={<PersonIcon size={16} />} pathname={pathname} />
+        <SideNavLink href="/travel" label="Travel Kit" icon={<CompassIcon size={16} />} pathname={pathname} />
+        <SideNavLink href="/dashboard" label="Dashboard" icon={<GridIcon size={16} />} pathname={pathname} />
+        {hasRoutineSubscription && (
+          <SideNavLink href="/routine" label="My Routine" icon={<CalendarIcon size={16} />} pathname={pathname} />
+        )}
+      </div>
+
+      <p className="px-6 pb-2 pt-6 text-[10px] font-semibold uppercase tracking-[0.15em] text-bronze">
+        The Feed
+      </p>
+      <div className="flex flex-col gap-1 px-3 pb-6">
+        {TABS.map((tab) => (
+          <Link
+            key={tab.key}
+            href={tab.key === "all" ? "/posts" : `/posts?type=${tab.key}`}
+            className="rounded-lg px-3 py-2 text-sm text-cream/70 transition-colors hover:bg-[#2C2420] hover:text-cream"
+          >
+            {FEED_LABEL_OVERRIDES[tab.key] ?? tab.label}
+          </Link>
+        ))}
+      </div>
+
+      {!user && (
+        <div className="mt-auto px-3 pb-6">
+          <Link
+            href="/auth"
+            className="block rounded-lg px-3 py-2 text-sm font-medium text-bronze2 transition-colors hover:text-cream"
+          >
+            Sign in
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SideNavLink({
+  href,
+  label,
+  icon,
+  pathname,
+}: {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+  pathname: string;
+}) {
+  const active = isLinkActive(pathname, href);
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+        active ? "bg-[#2C2420] text-cream" : "text-cream/70 hover:bg-[#2C2420]/60 hover:text-cream"
+      }`}
+    >
+      {icon}
+      {label}
+    </Link>
+  );
+}
+
 function StyleMatchPill() {
   return (
     <Link
@@ -177,8 +331,27 @@ export default function Nav() {
     setMenuOpen(false);
   }
 
+  // The home page ("/") replaces the top nav entirely with a persistent
+  // left side rail (slim icon strip on mobile, expanded panel on
+  // desktop) - see HomeSideNavMobile/HomeSideNavDesktop above. Every
+  // other page keeps the top nav bars below exactly as they were.
+  const isHome = pathname === "/";
+
   return (
     <nav className="print-hide bg-dark font-sans">
+      {isHome && (
+        <>
+          <HomeSideNavMobile onOpenMenu={() => setMenuOpen(true)} />
+          <HomeSideNavDesktop
+            user={user}
+            hasRoutineSubscription={hasRoutineSubscription}
+            pathname={pathname}
+          />
+        </>
+      )}
+
+      {!isHome && (
+      <>
       {/* Mobile: wordmark left, Search a Product + Style Match pills,
           hamburger opens the full-screen menu. Account access lives in
           that menu now - no person icon here. */}
@@ -279,9 +452,13 @@ export default function Nav() {
           </div>
         </div>
       </div>
+      </>
+      )}
 
       {/* Full-screen mobile menu - always mounted, toggled via
-          translate-x/opacity so the slide-in transition actually plays. */}
+          translate-x/opacity so the slide-in transition actually plays.
+          Reused on the home page too - the mobile side rail's grid icon
+          opens this exact same overlay. */}
       <div className={`fixed inset-0 z-50 sm:hidden ${menuOpen ? "" : "pointer-events-none"}`}>
         <div
           onClick={closeMenu}
