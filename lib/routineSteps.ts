@@ -275,10 +275,10 @@ const CURLY_CHELATING: RoutineStepDetail[] = [
   ),
   step(
     "Detangle - critical step",
-    "Apply conditioner generously to one section of wet hair. Using a wide tooth comb, detangle from ends to roots - never from roots to ends. Work through each knot gently. Repeat for all sections.",
+    "Apply detangler or conditioner generously to one section of wet hair. Using a wide tooth comb, detangle from ends to roots - never from roots to ends. Work through each knot gently. Repeat for all sections.",
     "Curly hair tangles significantly when wet. Detangling with conditioner slip prevents breakage. Always ends to roots - starting at roots causes knots to pack tighter.",
     null,
-    "conditioner"
+    "detangler"
   ),
   step(
     "Deep conditioner with heat",
@@ -425,7 +425,7 @@ const COILY_CHELATING: RoutineStepDetail[] = [
     "Apply conditioner or detangler generously to one wet section. Start with fingers to separate large knots, then use a wide tooth comb from ends to roots. Work through knots patiently - never force a comb through a knot. Repeat for all sections.",
     "4b and 4c hair has the tightest curl pattern and shrinks significantly when wet, causing severe tangling. This step prevents the breakage that causes slow hair growth.",
     null,
-    "conditioner"
+    "detangler"
   ),
   step(
     "Deep conditioner with heat",

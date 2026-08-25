@@ -154,6 +154,10 @@ const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
     CLARIFYING_SHAMPOO_SLOT,
     regularShampooSlot(),
     { slug: "conditioner", label: "Conditioner", section: "regular" },
+    // Optional for wavy (unlike curly/coily, where it's required) - see
+    // the "Optional" framing baked into its categoryNote copy in
+    // lib/categoryGuidance.ts.
+    { slug: "detangler", label: "Detangler", section: "regular" },
     { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
     PROTEIN_TREATMENT_SLOT,
     { slug: "co-wash", label: "Co-Wash", section: "between" },
@@ -171,6 +175,9 @@ const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
     CLARIFYING_SHAMPOO_SLOT,
     regularShampooSlot(),
     { slug: "conditioner", label: "Conditioner", section: "regular" },
+    // Required for curly (detangling happens during/after conditioning)
+    // - positioned between conditioner and deep conditioner.
+    { slug: "detangler", label: "Detangler", section: "regular" },
     { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
     PROTEIN_TREATMENT_SLOT,
     { slug: "leave-in", label: "Leave-In Conditioner", section: "styling" },
@@ -186,6 +193,10 @@ const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
   coily: [
     CLARIFYING_SHAMPOO_SLOT,
     regularShampooSlot(),
+    // One of the most critical product types for 4c hair - positioned
+    // right after the shampoo slots, prominently ahead of everything
+    // else.
+    { slug: "detangler", label: "Detangler", section: "regular" },
     { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
     PROTEIN_TREATMENT_SLOT,
     { slug: "leave-in", label: "Leave-In Conditioner", section: "styling" },

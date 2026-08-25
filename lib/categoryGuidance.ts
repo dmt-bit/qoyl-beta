@@ -10,9 +10,6 @@ import { type CurlFamily } from "@/lib/compatibility";
 // lib/routineProducts.ts itself from a "use client" file would pull its
 // getSupabaseAdmin() (service-role) dependency into the client bundle.
 //
-// "detangler" isn't a live routine category (there's no such slug in
-// FAMILY_ROUTINE_CATEGORIES or the categories table) - kept here in case
-// one gets added later.
 export const CATEGORY_INGREDIENT_TIPS: Record<string, string[]> = {
   "clarifying-shampoo": [
     "Look for: EDTA, Citric Acid, or Sodium Phytate as chelating agents.",
@@ -33,9 +30,10 @@ export const CATEGORY_INGREDIENT_TIPS: Record<string, string[]> = {
     "Avoid: Sulfates - co-washes should never contain SLS or SLES",
   ],
   detangler: [
-    "Slip agents: Cetrimonium Chloride or BTMS for maximum slip",
-    "Humectants: Glycerin or Panthenol for moisture while detangling",
-    "Avoid: Heavy proteins if hair is protein-sensitive",
+    "Slip agents: Cetrimonium Chloride or BTMS-50 - provide the slip needed to move a comb through knots without breakage",
+    "Humectants: Glycerin or Panthenol - add moisture to the hair while detangling, reducing friction",
+    "Avoid: Drying alcohols (Alcohol Denat, Isopropyl Alcohol) - strip moisture and cause more tangling",
+    "Popular options to search: Kinky-Curly Knot Today, Tgin Moisture Rich Sulfate Free Conditioner, Mielle Mongongo Oil Hydrating Conditioner",
   ],
   "heat-protectant": [
     "Look for: silicones (Dimethicone, Cyclomethicone) or film-forming agents (PVP, Amodimethicone) that create a protective barrier. For fine straight hair, choose a spray formula over a cream - creams can weigh hair down.",
@@ -148,6 +146,23 @@ export function categoryNote(category: string, family: CurlFamily | null): strin
     // on -- a middle ground between straight/wavy's "lighter" note and
     // coily's "stronger, quarterly" note.
     return "3a-3c curly hair does well with a balanced protein treatment monthly - not as light as straight/wavy needs, not as intensive as coily requires.";
+  }
+  if (category === "detangler") {
+    // Leads with the short "label" framing from the spec this was built
+    // from, then the full usage instructions - one bronze note box
+    // rather than two separate UI elements, since every other category
+    // note here is a single string too (this module is shared with the
+    // email template, which renders these as plain text).
+    if (family === "curly") {
+      return "For detangling on wash day. Apply to wet hair in sections before or during conditioning. Work from ends to roots with a wide tooth comb. Never detangle dry curly hair.";
+    }
+    if (family === "coily") {
+      return "Essential for wash day detangling. Apply generously to wet sectioned hair. Use fingers first to separate large knots, then a wide tooth comb from ends to roots. Never skip this step - detangling dry coily hair causes significant breakage.";
+    }
+    if (family === "wavy") {
+      return "Optional - use on wash day if you experience tangles during conditioning.";
+    }
+    return null;
   }
   return null;
 }

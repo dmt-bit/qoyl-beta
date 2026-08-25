@@ -455,7 +455,35 @@ function WashCalendarGrid({
 
 // Small bronze bottle/flask outline - no icon library in this project,
 // so a minimal inline SVG rather than pulling one in for a single glyph.
-function CategoryIcon() {
+// Wide-tooth comb, specifically for the detangler placeholder - every
+// other category keeps the generic bottle/flask icon below.
+function CombIcon() {
+  return (
+    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bronze/15">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        className="h-5 w-5 text-bronze"
+      >
+        <path
+          d="M4 3v18M4 3h13a3 3 0 0 1 3 3v0"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M7 8h13M7 12h13M7 16h13"
+          strokeLinecap="round"
+        />
+      </svg>
+    </div>
+  );
+}
+
+function CategoryIcon({ category }: { category?: string }) {
+  if (category === "detangler") return <CombIcon />;
+
   return (
     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-bronze/15">
       <svg
@@ -489,7 +517,7 @@ function PlaceholderCard({ pick }: { pick: ProductPick }) {
   return (
     <>
       <div className="mt-3 flex items-start gap-3">
-        <CategoryIcon />
+        <CategoryIcon category={pick.category} />
         <div>
           <p className="font-serif text-base text-cream">
             We&apos;re adding {labelLower} products to our catalog
@@ -520,7 +548,7 @@ function PlaceholderCard({ pick }: { pick: ProductPick }) {
           href={`/request?product=${encodeURIComponent(pick.categoryLabel)}`}
           className="print-hide text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
         >
-          Request a product evaluation →
+          Request {articleFor(labelLower)} {labelLower} evaluation →
         </Link>
       </div>
     </>
@@ -877,6 +905,31 @@ function StepDetailRow({
                 </a>
               </>
             )}
+          </p>
+        )}
+
+        {/* Detangler is new enough to the catalog that "no real pick
+            yet" is a live case worth its own message, rather than
+            silently showing nothing - other product-linked steps keep
+            the silent fallback above. */}
+        {step.productCategory === "detangler" && pick && !primary && (
+          <p className="mt-2 text-xs text-cream/60">
+            No detangler in your list yet -{" "}
+            <Link
+              href={`/search?category=${encodeURIComponent(pick.searchCategorySlug)}${
+                pick.searchQuery ? `&q=${encodeURIComponent(pick.searchQuery)}` : ""
+              }`}
+              className="print-hide font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+            >
+              search our catalog
+            </Link>{" "}
+            or{" "}
+            <Link
+              href={`/request?product=${encodeURIComponent(pick.categoryLabel)}`}
+              className="print-hide font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+            >
+              request an evaluation →
+            </Link>
           </p>
         )}
       </div>
