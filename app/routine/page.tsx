@@ -16,6 +16,13 @@ import {
   ROUTINE_SECTION_ORDER,
   type RoutineSection,
 } from "@/lib/categoryGuidance";
+import {
+  isBudgetActive,
+  PRICE_TIER_CLASSES,
+  PRICE_TIER_LABEL,
+  priceTierFor,
+} from "@/lib/priceContext";
+import { PROTECTIVE_STYLE_DAY_LABEL } from "@/lib/protectiveStyleRoutine";
 
 type RoutineStep = {
   title: string;
@@ -30,6 +37,8 @@ type ProductCandidate = {
   weight: ProductWeight;
   why: string;
   affiliateLink: string | null;
+  priceUsd: number | null;
+  containsSulfates: boolean;
 };
 
 type ProductPick = {
@@ -41,6 +50,7 @@ type ProductPick = {
   primary: ProductCandidate | null;
   alternate: ProductCandidate | null;
   noProductsYet: boolean;
+  budgetAlternate: ProductCandidate | null;
 };
 
 type AvoidIngredient = {
@@ -63,6 +73,30 @@ type RoutineData = {
   steps: RoutineStep[];
   products: ProductPick[];
   avoidIngredients: AvoidIngredient[];
+  colorTreated: string | null;
+  budgetRange: string | null;
+  routineFocus: string | null;
+  protectiveStyleType: string | null;
+  focusNote: string | null;
+  protectiveStyle: ProtectiveStyleData | null;
+};
+
+type ProtectiveStyleDay = {
+  date: string;
+  weekday: number;
+  dayType: "scalp_wash" | "moisturize" | "retwist";
+};
+
+type ProtectiveStyleData = {
+  styleType: "braids" | "locs" | "wigs";
+  styleLabel: string;
+  frequency: { min: number; max: number; recommended: number } | null;
+  calendarDays: ProtectiveStyleDay[];
+  products: ProductPick[];
+  accessories: { label: string; note: string }[];
+  routineNote: string | null;
+  wigWashNote: string | null;
+  wigScalpCareNote: string | null;
 };
 
 const SCALP_LABELS: Record<string, string> = {
@@ -500,20 +534,37 @@ function PlaceholderCard({ pick }: { pick: ProductPick }) {
   );
 }
 
+// Price-tier chip + score/weight pills for a single candidate - shared
+// between the primary pick and the budget-friendly alternate below it.
+function PriceTierChip({ priceUsd }: { priceUsd: number | null }) {
+  if (priceUsd == null) return null;
+  const tier = priceTierFor(priceUsd);
+  return (
+    <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${PRICE_TIER_CLASSES[tier]}`}>
+      {PRICE_TIER_LABEL[tier]}
+    </span>
+  );
+}
+
 function ProductCard({
   pick,
   curlType,
   porosity,
+  budgetRange,
+  colorTreated,
 }: {
   pick: ProductPick;
   curlType: string | null;
   porosity: string | null;
+  budgetRange: string | null;
+  colorTreated: boolean;
 }) {
-  const { primary, alternate } = pick;
+  const { primary, alternate, budgetAlternate } = pick;
   const fitNote = primary
     ? weightFitNote(primary.weight, curlFamily(curlType), curlType, porosity)
     : null;
   const note = categoryNote(pick.category, curlFamily(curlType));
+  const budgetActive = isBudgetActive(budgetRange);
 
   return (
     <div className="rounded-xl border border-bronze/30 p-5">
@@ -548,10 +599,16 @@ function ProductCard({
               >
                 {WEIGHT_PILL_LABEL[primary.weight]}
               </span>
+              {budgetActive && <PriceTierChip priceUsd={primary.priceUsd} />}
             </div>
           </div>
           <p className="mt-1 text-sm text-cream/70">{primary.why}</p>
           {fitNote && <p className="mt-1 text-xs text-cream/50">{fitNote}</p>}
+          {colorTreated && primary.containsSulfates && (
+            <p className="mt-1.5 rounded-md bg-amber/10 px-2.5 py-1.5 text-xs leading-relaxed text-amber">
+              Contains sulfates - may fade color faster. Consider a sulfate-free alternative.
+            </p>
+          )}
           <ShopButton
             productName={primary.productName}
             brandName={primary.brandName}
@@ -567,6 +624,21 @@ function ProductCard({
                 </span>
                 <span className="ml-2 text-cream/50">{alternate.score}/100</span>
               </p>
+            </div>
+          )}
+
+          {budgetActive && budgetAlternate && (
+            <div className="mt-4 border-t border-bronze/20 pt-3">
+              <p className="text-xs text-cream/70">
+                This scores highest for your hair. For a budget-friendly alternative:
+              </p>
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-xs text-cream/80">
+                  {budgetAlternate.productName} · {budgetAlternate.brandName}
+                  <span className="ml-2 text-cream/50">{budgetAlternate.score}/100</span>
+                </span>
+                <PriceTierChip priceUsd={budgetAlternate.priceUsd} />
+              </div>
             </div>
           )}
         </>
@@ -623,10 +695,115 @@ function TodayProducts({ data }: { data: RoutineData }) {
             pick={pick}
             curlType={data.curlType}
             porosity={data.porosity}
+            budgetRange={data.budgetRange}
+            colorTreated={data.colorTreated === "yes"}
           />
         ))}
       </div>
     </div>
+  );
+}
+
+// Braids/locs get a simple date list rather than the natural-hair
+// month-grid calendar - the day types (scalp wash/moisturize/retwist)
+// aren't porosity-driven and don't need the same visual treatment as
+// the wash-type calendar above. Wigs have no calendar at all - cadence
+// is wear-based, not date-based (see wigWashNote).
+function ProtectiveStyleCalendarList({ days }: { days: ProtectiveStyleDay[] }) {
+  if (days.length === 0) return null;
+
+  const DAY_TYPE_CLASSES: Record<ProtectiveStyleDay["dayType"], string> = {
+    scalp_wash: "border-bronze text-bronze2",
+    moisturize: "border-bronze/30 text-cream/60",
+    retwist: "border-green text-green",
+  };
+
+  return (
+    <div className="mt-4 space-y-1.5">
+      {days.map((day) => (
+        <div
+          key={`${day.date}-${day.dayType}`}
+          className={`flex items-center justify-between rounded-md border-l-4 bg-[#2C2420] px-3 py-2 ${DAY_TYPE_CLASSES[day.dayType]}`}
+        >
+          <span className="text-sm text-cream">
+            {new Date(`${day.date}T00:00:00`).toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+            })}
+          </span>
+          <span className="text-xs font-medium">{PROTECTIVE_STYLE_DAY_LABEL[day.dayType]}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ProtectiveStyleSection({ data }: { data: RoutineData }) {
+  const style = data.protectiveStyle;
+  if (!style) return null;
+
+  return (
+    <>
+      <section className="print-page-break mt-12">
+        <h2 className="font-serif text-2xl font-semibold text-cream">
+          Your {style.styleLabel.toLowerCase()} care routine
+        </h2>
+
+        {style.frequency && (
+          <span className="mt-3 inline-block rounded-full bg-bronze/20 px-3 py-1 text-xs font-medium text-bronze2">
+            Wash every {style.frequency.min}-{style.frequency.max} days
+          </span>
+        )}
+        {style.wigWashNote && (
+          <p className="mt-3 text-sm text-cream/70">{style.wigWashNote}</p>
+        )}
+        {style.routineNote && (
+          <p className="mt-4 rounded-lg border-l-2 border-bronze bg-warm/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
+            {style.routineNote}
+          </p>
+        )}
+        {style.wigScalpCareNote && (
+          <p className="mt-4 rounded-lg border-l-2 border-bronze bg-warm/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
+            {style.wigScalpCareNote}
+          </p>
+        )}
+
+        <ProtectiveStyleCalendarList days={style.calendarDays} />
+      </section>
+
+      <section className="print-page-break mt-12">
+        <h2 className="font-serif text-2xl font-semibold text-cream">
+          {style.styleLabel} products
+        </h2>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {style.products.map((pick) => (
+            <ProductCard
+              key={pick.category}
+              pick={pick}
+              curlType={data.curlType}
+              porosity={data.porosity}
+              budgetRange={data.budgetRange}
+              colorTreated={data.colorTreated === "yes"}
+            />
+          ))}
+        </div>
+
+        {style.accessories.length > 0 && (
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {style.accessories.map((accessory) => (
+              <div key={accessory.label} className="rounded-xl border border-bronze/30 p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-bronze2">
+                  Accessory
+                </p>
+                <p className="mt-3 font-serif text-lg text-cream">{accessory.label}</p>
+                <p className="mt-1 text-sm text-cream/70">{accessory.note}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
   );
 }
 
@@ -639,6 +816,10 @@ function RoutineContent() {
   const [status, setStatus] = useState<"loading" | "ready">("loading");
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const [showDisclaimer, setShowDisclaimer] = useState(false);
+  // Only meaningful when routineFocus === "both" - the natural-hair and
+  // protective-style routines are then shown as two tabs instead of both
+  // stacked on one page.
+  const [activeTab, setActiveTab] = useState<"natural" | "protective">("natural");
 
   const showWelcome = searchParams.get("welcome") === "true" && !welcomeDismissed;
 
@@ -698,6 +879,22 @@ function RoutineContent() {
     data.zipCode || null,
   ].filter((chip): chip is string => Boolean(chip));
   const hasPlaceholderCards = data.products.some((pick) => pick.noProductsYet);
+
+  // Visibility rules for the natural-hair vs. protective-style routine
+  // content, per routine_focus:
+  // - 'natural_hair' (or unset): natural only.
+  // - 'extensions': protective-style only, EXCEPT wigs, which always
+  //   pairs wig care with the natural-hair-under-wig section (same data
+  //   as the ordinary natural routine) - not a tab, both stacked.
+  // - 'both': both routines exist, but only one shows at a time via
+  //   the activeTab toggle rendered below.
+  const isBothFocus = data.routineFocus === "both";
+  const isExtensionsOnlyFocus = data.routineFocus === "extensions";
+  const isWigUnderExtensions = isExtensionsOnlyFocus && data.protectiveStyleType === "wigs";
+  const naturalRoutineApplies = !isExtensionsOnlyFocus || isWigUnderExtensions;
+  const protectiveRoutineApplies = Boolean(data.protectiveStyle);
+  const showNaturalRoutine = isBothFocus ? activeTab === "natural" : naturalRoutineApplies;
+  const showProtectiveRoutine = isBothFocus ? activeTab === "protective" : protectiveRoutineApplies;
 
   return (
     <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
@@ -777,8 +974,43 @@ function RoutineContent() {
               {data.childSafetyNote}
             </p>
           )}
+
+          {data.focusNote && (
+            <p className="mt-4 rounded-lg border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-cream/90">
+              {data.focusNote}
+            </p>
+          )}
         </section>
 
+        {isBothFocus && data.protectiveStyle && (
+          <div className="print-hide mt-8 flex gap-2 border-b border-bronze/20">
+            <button
+              type="button"
+              onClick={() => setActiveTab("natural")}
+              className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === "natural"
+                  ? "border-bronze text-cream"
+                  : "border-transparent text-cream/50 hover:text-cream/80"
+              }`}
+            >
+              My Natural Hair
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("protective")}
+              className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+                activeTab === "protective"
+                  ? "border-bronze text-cream"
+                  : "border-transparent text-cream/50 hover:text-cream/80"
+              }`}
+            >
+              My {data.protectiveStyle.styleLabel} Care
+            </button>
+          </div>
+        )}
+
+        {showNaturalRoutine && (
+        <>
         {/* SECTION 2 - 30-day wash calendar */}
         <section className="print-page-break mt-12">
           <h2 className="font-serif text-2xl font-semibold text-cream">
@@ -844,6 +1076,8 @@ function RoutineContent() {
                       pick={pick}
                       curlType={data.curlType}
                       porosity={data.porosity}
+                      budgetRange={data.budgetRange}
+                      colorTreated={data.colorTreated === "yes"}
                     />
                   ))}
                 </div>
@@ -891,6 +1125,10 @@ function RoutineContent() {
             How is this score calculated? →
           </Link>
         </section>
+        </>
+        )}
+
+        {showProtectiveRoutine && <ProtectiveStyleSection data={data} />}
 
         {/* SECTION 5 - Download */}
         <section className="print-hide mt-12">

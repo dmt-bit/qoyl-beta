@@ -124,7 +124,7 @@ export async function generateTravelKitProducts(
 
   const { data: profileRow, error: profileError } = await admin
     .from("hair_profiles")
-    .select("curl_type, porosity, scalp_condition, climate, water_hardness")
+    .select("curl_type, porosity, scalp_condition, climate, water_hardness, color_treated")
     .eq("user_id", input.userId)
     .maybeSingle();
 

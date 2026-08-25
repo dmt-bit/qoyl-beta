@@ -194,6 +194,19 @@ export function findBestIngredientMatch(
 
 export type CurlFamily = "straight" | "wavy" | "curly" | "coily";
 
+// hair_profiles.color_treated is a real Postgres boolean column, but
+// the profile form's local state (and every hand-written check across
+// the app, including the client-side `hairProfile.color_treated ===
+// "yes"` reads in app/search/page.tsx) treats it as a "yes"/"no" string
+// - that convention works fine while the value only ever lives in
+// React state between button clicks, but breaks the instant it round-
+// trips through a real Supabase select, which returns an actual JS
+// boolean. This tolerates both representations everywhere color_treated
+// is read from a live DB row.
+export function isColorTreatedYes(value: string | boolean | null | undefined): boolean {
+  return value === "yes" || value === true;
+}
+
 export function curlFamily(curlType: string | null): CurlFamily | null {
   if (!curlType) return null;
   const t = curlType.trim().toLowerCase();
@@ -525,6 +538,99 @@ function applyThinningHairAdjustment(
   return { score: adjusted, rating: ratingForScore(adjusted) };
 }
 
+// ---- Color-treated hair scoring adjustments -----------------------------
+//
+// color_treated on hair_profiles is a "yes"/"no" string, not a real
+// boolean (matches app/profile/page.tsx's form state). The porosity
+// override that makes color-treated hair score against a higher-porosity
+// tier's compatibility_scores rows lives in buildScoringProfile above -
+// this section is only the additional per-ingredient nudges layered on
+// top of that, same pattern as applyAgeAdjustment/
+// applyThinningHairAdjustment.
+//
+// Reuses SULFATE_FREE_CLEANSERS, CERAMIDES, and PANTHENOL from earlier
+// sections rather than redefining narrower duplicate sets - those already
+// cover (and slightly exceed) the specific ingredients named in the spec
+// this was built from.
+const BOND_REPAIR_INGREDIENTS = new Set([
+  "bis-aminopropyl dimethicone",
+  "maleic acid",
+  "crotonyl-vinyl pyrrolidone",
+]);
+const OLAPLEX_ACTIVE = new Set(["bis-aminopropyl diglycol dimaleate"]);
+// SLS/SLES are the existing SULFATES set; ALS (Ammonium Lauryl Sulfate)
+// only matters for this color-fade rule, so it's added on top rather
+// than widening SULFATES itself (which other sections key off for their
+// own, unrelated reasons).
+const COLOR_FADING_SULFATES = new Set(
+  Array.from(SULFATES).concat("ammonium lauryl sulfate")
+);
+// No pH field exists anywhere in the ingredients table - this is a
+// curated set of common high-pH/alkaline haircare ingredients (the kind
+// used as pH adjusters or in chemical processing) rather than a derived
+// value, since none is available.
+const HIGH_PH_INGREDIENTS = new Set([
+  "ammonium hydroxide",
+  "sodium hydroxide",
+  "potassium hydroxide",
+  "guanidine carbonate",
+  "triethanolamine",
+]);
+// Direct-dye/color-depositing pigments (e.g. purple-shampoo actives) -
+// penalized for any color-treated user here, since there's no product
+// metadata anywhere describing which specific shade a product deposits
+// to compare against the user's own color_type.
+const COLOR_DEPOSITING_PIGMENTS = new Set([
+  "hc blue no. 2",
+  "basic blue 99",
+  "acid violet 43",
+]);
+
+function isHydrolyzedProtein(name: string): boolean {
+  return name.startsWith("hydrolyzed");
+}
+
+export function isSulfate(inciName: string): boolean {
+  return COLOR_FADING_SULFATES.has(inciName.trim().toLowerCase());
+}
+
+function applyColorTreatedAdjustment(
+  inciName: string,
+  colorTreated: boolean,
+  alreadyHighPorosity: boolean,
+  score: number,
+  rating: string
+): { score: number; rating: string } {
+  if (!colorTreated) return { score, rating };
+
+  const name = inciName.trim().toLowerCase();
+  let delta = 0;
+
+  if (
+    SULFATE_FREE_CLEANSERS.has(name) ||
+    BOND_REPAIR_INGREDIENTS.has(name) ||
+    OLAPLEX_ACTIVE.has(name) ||
+    isHydrolyzedProtein(name) ||
+    CERAMIDES.has(name) ||
+    PANTHENOL.has(name)
+  ) {
+    delta += 2;
+  }
+
+  // "If high -> keep as high but increase the penalty on ingredients
+  // that cause further damage" - there's no higher porosity tier left
+  // to bump to, so the damage-causing ingredients (sulfates/high-pH) get
+  // an extra point of penalty instead, on top of the standard -2.
+  const damagePenalty = alreadyHighPorosity ? 3 : 2;
+  if (COLOR_FADING_SULFATES.has(name)) delta -= damagePenalty;
+  if (HIGH_PH_INGREDIENTS.has(name)) delta -= damagePenalty;
+  if (COLOR_DEPOSITING_PIGMENTS.has(name)) delta -= 2;
+
+  if (delta === 0) return { score, rating };
+  const adjusted = clampScore(score + delta);
+  return { score: adjusted, rating: ratingForScore(adjusted) };
+}
+
 function applyCurlTypeAdjustment(
   inciName: string,
   family: CurlFamily | null,
@@ -591,6 +697,13 @@ export type ScoringProfile = {
   family: CurlFamily | null;
   ageRange: string | null;
   hairConcerns: string[] | null;
+  colorTreated: boolean;
+  // True only when color-treated AND the profile's own selected porosity
+  // (before the one-level-up override below) was already "high" - used
+  // to apply an extra ingredient penalty for further-damaging
+  // ingredients, since there's no higher tier left to bump to. See
+  // applyColorTreatedAdjustment.
+  colorTreatedAlreadyHighPorosity: boolean;
 };
 
 type ProfileRow = {
@@ -605,7 +718,22 @@ type ProfileRow = {
   // requiring every caller to be updated.
   adult_age_range?: string | null;
   hair_concerns?: string[] | null;
+  // Really a Postgres boolean in the DB, but the profile form's local
+  // state passes "yes"/"no" strings - see isColorTreatedYes above.
+  color_treated?: string | boolean | null;
 };
+
+// low -> medium -> high, one step up. Bleached/color-treated hair is
+// almost always more porous than the user's natural starting point
+// (the cuticle is chemically opened during processing), so scoring runs
+// against the *next* porosity tier's compatibility_scores rows entirely
+// - not just a flat ingredient bump - since porosity drives which DB
+// row is fetched in the first place (see fetchScoreRows below).
+function bumpPorosityForColorTreatment(porosity: string): string {
+  if (porosity === "low") return "medium";
+  if (porosity === "medium") return "high";
+  return "high"; // already high - nowhere higher to go
+}
 
 // Shared by loadScoringProfile (browser, localStorage-driven) and any
 // server-side caller that already has a hair_profiles row in hand (e.g.
@@ -622,10 +750,15 @@ export function buildScoringProfile(
   // porosity is never null in compatibility_scores - default unknown
   // ("not sure") profiles to medium rather than a filter that would
   // never match anything.
-  const porosity =
+  const naturalPorosity =
     row.porosity === "not sure" || row.porosity === "not_sure" || !row.porosity
       ? "medium"
       : row.porosity;
+
+  const colorTreated = isColorTreatedYes(row.color_treated);
+  const porosity = colorTreated
+    ? bumpPorosityForColorTreatment(naturalPorosity)
+    : naturalPorosity;
 
   return {
     climate: climateOverride !== undefined ? climateOverride : row.climate,
@@ -635,6 +768,8 @@ export function buildScoringProfile(
     family: curlFamily(row.curl_type),
     ageRange: row.adult_age_range ?? null,
     hairConcerns: row.hair_concerns ?? null,
+    colorTreated,
+    colorTreatedAlreadyHighPorosity: colorTreated && naturalPorosity === "high",
   };
 }
 
@@ -651,7 +786,7 @@ async function loadScoringProfile(): Promise<
   const { data: profile, error: profileError } = await supabase
     .from("hair_profiles")
     .select(
-      "curl_type, porosity, scalp_condition, strand_thickness, climate, water_hardness, adult_age_range, hair_concerns"
+      "curl_type, porosity, scalp_condition, strand_thickness, climate, water_hardness, adult_age_range, hair_concerns, color_treated"
     )
     .eq("id", profileId)
     .single();
@@ -707,8 +842,17 @@ function resolveScoreResult(
   category: string | null = null,
   productName: string | null = null
 ): ScoreResult {
-  const { scalpCondition, family, climate, waterHardness, porosity, ageRange, hairConcerns } =
-    profile;
+  const {
+    scalpCondition,
+    family,
+    climate,
+    waterHardness,
+    porosity,
+    ageRange,
+    hairConcerns,
+    colorTreated,
+    colorTreatedAlreadyHighPorosity,
+  } = profile;
 
   if (ingredients.length === 0) {
     return {
@@ -803,6 +947,13 @@ function resolveScoreResult(
       ingredient.inci_name,
       hairConcerns,
       ingredient.position,
+      score,
+      rating
+    ));
+    ({ score, rating } = applyColorTreatedAdjustment(
+      ingredient.inci_name,
+      colorTreated,
+      colorTreatedAlreadyHighPorosity,
       score,
       rating
     ));

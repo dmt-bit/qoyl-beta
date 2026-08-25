@@ -12,6 +12,8 @@ import UpgradeWall from "@/components/UpgradeWall";
 import { useAuth } from "@/lib/auth-context";
 import {
   curlFamily,
+  isColorTreatedYes,
+  isSulfate,
   Match,
   RATING_BORDER_CLASSES,
   ScoreResult,
@@ -21,6 +23,12 @@ import {
   scoreTier,
 } from "@/lib/compatibility";
 import { CATEGORY_LABEL_BY_SLUG, PRODUCT_CATEGORIES } from "@/lib/productCategories";
+import {
+  isBudgetActive,
+  PRICE_TIER_CLASSES,
+  PRICE_TIER_LABEL,
+  priceTierFor,
+} from "@/lib/priceContext";
 import {
   isWeightWarningTier,
   WEIGHT_PILL_CLASSES,
@@ -52,6 +60,7 @@ type Product = {
   catalogProductId: string;
   imageUrl: string | null;
   categorySlug: string | null;
+  priceUsd: number | null;
 };
 
 type QoylProductRow = {
@@ -61,6 +70,7 @@ type QoylProductRow = {
   image_url: string | null;
   catalog_brands: { name: string } | null;
   categories: { slug: string } | null;
+  price_usd: number | null;
 };
 
 // catalog_products/catalog_brands - not "products"/"brands" - since
@@ -69,7 +79,7 @@ type QoylProductRow = {
 // different schema. Keeping qoyl-beta's consumer catalog on separate
 // tables avoids colliding with that.
 const QOYL_PRODUCT_SELECT =
-  "id, name, barcode, image_url, catalog_brands(name), categories(slug)";
+  "id, name, barcode, image_url, catalog_brands(name), categories(slug), price_usd";
 
 function toQoylProduct(p: QoylProductRow): Product {
   return {
@@ -79,6 +89,7 @@ function toQoylProduct(p: QoylProductRow): Product {
     catalogProductId: p.id,
     imageUrl: p.image_url,
     categorySlug: p.categories?.slug ?? null,
+    priceUsd: p.price_usd,
   };
 }
 
@@ -169,6 +180,8 @@ function ResultCard({
   onToggleIngredients,
   curlType,
   porosity,
+  budgetRange,
+  colorTreated,
 }: {
   product: Product;
   scoreState: ScoreState | undefined;
@@ -178,6 +191,8 @@ function ResultCard({
   onToggleIngredients: (e: React.MouseEvent) => void;
   curlType: string | null;
   porosity: string | null;
+  budgetRange: string | null;
+  colorTreated: boolean;
 }) {
   const matches = scoreState?.status === "done" ? scoreState.result.matches : [];
   const preview = matches.slice(0, 4);
@@ -193,6 +208,10 @@ function ResultCard({
   // recommendations don't need this: lib/routineProducts.ts already
   // hard-excludes these before they'd ever be picked.
   const showWeightWarning = productWeight ? isWeightWarningTier(productWeight, family) : false;
+  const budgetActive = isBudgetActive(budgetRange);
+  const priceTier = product.priceUsd != null ? priceTierFor(product.priceUsd) : null;
+  const containsSulfates =
+    scoreState?.status === "done" ? matches.some((m) => isSulfate(m.ingredient_name)) : false;
 
   return (
     <li className="border-b border-[#2C2420]">
@@ -272,10 +291,22 @@ function ResultCard({
                   >
                     {showWeightWarning ? WEIGHT_WARNING_LABEL : WEIGHT_PILL_LABEL[productWeight]}
                   </span>
+                  {budgetActive && priceTier && (
+                    <span
+                      className={`inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-medium ${PRICE_TIER_CLASSES[priceTier]}`}
+                    >
+                      {PRICE_TIER_LABEL[priceTier]}
+                    </span>
+                  )}
                 </div>
                 {fitNote && (
                   <p className="mt-1.5 font-sans text-[11px] leading-snug text-cream/60">
                     {fitNote}
+                  </p>
+                )}
+                {colorTreated && containsSulfates && (
+                  <p className="mt-1.5 rounded-md bg-amber/10 px-2 py-1.5 font-sans text-[11px] leading-snug text-amber">
+                    Contains sulfates - may fade color faster. Consider a sulfate-free alternative.
                   </p>
                 )}
                 <div>
@@ -372,6 +403,9 @@ function SearchPageContent() {
   const [localProfileHairInfo, setLocalProfileHairInfo] = useState<{
     porosity: string | null;
     curl_type: string | null;
+    budget_range: string | null;
+    // Really a Postgres boolean - see isColorTreatedYes.
+    color_treated: string | boolean | null;
   } | null>(null);
 
   useEffect(() => {
@@ -382,7 +416,7 @@ function SearchPageContent() {
     if (profileId) {
       supabase
         .from("hair_profiles")
-        .select("porosity, curl_type")
+        .select("porosity, curl_type, budget_range, color_treated")
         .eq("id", profileId)
         .single()
         .then(({ data }) => {
@@ -972,6 +1006,10 @@ function SearchPageContent() {
                 onToggleIngredients={toggleIngredients}
                 curlType={user ? hairProfile?.curl_type ?? null : localProfileHairInfo?.curl_type ?? null}
                 porosity={user ? hairProfile?.porosity ?? null : localProfileHairInfo?.porosity ?? null}
+                budgetRange={user ? hairProfile?.budget_range ?? null : localProfileHairInfo?.budget_range ?? null}
+                colorTreated={isColorTreatedYes(
+                  user ? hairProfile?.color_treated : localProfileHairInfo?.color_treated
+                )}
               />
             ))}
           </ul>

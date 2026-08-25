@@ -345,6 +345,24 @@ export function getThinningHairRoutineStep(
   };
 }
 
+// Additive, same pattern as getAgeAwareRoutineStep/
+// getThinningHairRoutineStep - appended when color_treated is "yes"
+// (see app/profile/page.tsx's colorTreated state), regardless of curl
+// type or porosity. The scoring-side effects of color treatment (the
+// porosity override and per-ingredient nudges) live in
+// lib/compatibility.ts; this is just the routine-step guidance half.
+export function getColorTreatedRoutineStep(
+  colorTreated: string | null
+): RoutineStep | null {
+  if (colorTreated !== "yes") return null;
+
+  return {
+    title: "Color-Treated Hair Care",
+    body: "Wash with cool or cold water only - hot water opens the cuticle and accelerates color fade. Use a color-safe sulfate-free shampoo exclusively. Deep condition every wash day, not weekly - color treatment removes moisture and protein with every process.",
+    why: "Why: color treatment chemically opens the cuticle, so color-treated hair loses moisture and protein - and fades - faster than your natural state.",
+  };
+}
+
 export function generateRoutineSteps(
   curlType: string | null,
   porosity: string | null,
@@ -354,7 +372,8 @@ export function generateRoutineSteps(
   extensionCare: string | null = null,
   profileFor: string | null = null,
   adultAgeRange: string | null = null,
-  hairConcerns: string[] | null = null
+  hairConcerns: string[] | null = null,
+  colorTreated: string | null = null
 ): RoutineStep[] {
   const family = curlFamily(curlType);
 
@@ -382,6 +401,11 @@ export function generateRoutineSteps(
   const thinningHairStep = getThinningHairRoutineStep(hairConcerns);
   if (thinningHairStep) {
     steps = [...steps, thinningHairStep];
+  }
+
+  const colorTreatedStep = getColorTreatedRoutineStep(colorTreated);
+  if (colorTreatedStep) {
+    steps = [...steps, colorTreatedStep];
   }
 
   return steps;

@@ -9,6 +9,10 @@ import { useAuth } from "@/lib/auth-context";
 import { formatAdultAgeRange } from "@/lib/ageRange";
 import { getChildSafetyNote } from "@/lib/childSafety";
 import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
+import {
+  protectiveStyleTypeFromExtensionType,
+  PROTECTIVE_STYLE_LABEL,
+} from "@/lib/protectiveStyleRoutine";
 import { getBasicRoutineSteps, RoutineStep } from "@/lib/routine";
 import { supabase } from "@/lib/supabase";
 
@@ -61,6 +65,19 @@ const SCALP_LABELS: Record<string, string> = {
   "dandruff-prone": "Dandruff-prone scalp",
 };
 
+function routineFocusChipLabel(
+  routineFocus: string | null,
+  extensionType: string[] | null
+): string | null {
+  if (routineFocus === "natural_hair") return "Natural hair focus";
+  if (routineFocus === "both") return "Both routines";
+  if (routineFocus === "extensions") {
+    const styleType = protectiveStyleTypeFromExtensionType(extensionType);
+    return styleType ? `${PROTECTIVE_STYLE_LABEL[styleType]} care focus` : "Protective style focus";
+  }
+  return null;
+}
+
 function ProfileChips() {
   const { hairProfile } = useAuth();
   if (!hairProfile) return null;
@@ -77,6 +94,7 @@ function ProfileChips() {
       : null,
     hairProfile.zip_code || null,
     formatAdultAgeRange(hairProfile.adult_age_range),
+    routineFocusChipLabel(hairProfile.routine_focus, hairProfile.extension_type),
   ].filter((chip): chip is string => Boolean(chip));
 
   if (chips.length === 0) return null;

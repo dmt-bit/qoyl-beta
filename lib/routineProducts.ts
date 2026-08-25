@@ -3,9 +3,12 @@ import { getAffiliateLink } from "@/lib/affiliateLinks";
 import {
   buildScoringProfile,
   curlFamily,
+  isSulfate,
   scoreCatalogProductsForProfile,
   type CurlFamily,
 } from "@/lib/compatibility";
+import { budgetMaxUsd, isBudgetActive } from "@/lib/priceContext";
+import type { ProtectiveStyleType } from "@/lib/protectiveStyleRoutine";
 import type { ProductWeight } from "@/lib/productWeight";
 
 // Real product recommendations for the routine (paid /routine page + its
@@ -227,6 +230,13 @@ export type RoutineProductCandidate = {
   // ShopButton's logic) - the web page instead renders <ShopButton
   // productName brandName /> directly, which resolves the same link.
   affiliateLink: string | null;
+  priceUsd: number | null;
+  // True if any of the product's scored ingredients matched
+  // lib/compatibility.ts's isSulfate() - drives the color-treated
+  // sulfate warning on the product card, independent of the score
+  // itself (a sulfate can still score fine overall while being worth
+  // flagging specifically for color-treated hair).
+  containsSulfates: boolean;
 };
 
 export type RoutineProductPick = {
@@ -245,6 +255,12 @@ export type RoutineProductPick = {
   // guidance placeholder (see lib/categoryGuidance.ts) instead of
   // product cards.
   noProductsYet: boolean;
+  // Set only when budget filtering is active (see lib/priceContext.ts)
+  // and `primary` costs more than the user's budget ceiling - the
+  // highest-scoring candidate that IS within budget, shown alongside
+  // primary rather than replacing it (primary always stays the top
+  // pick regardless of price, per spec).
+  budgetAlternate: RoutineProductCandidate | null;
 };
 
 // Ingredient-guidance placeholder content lives in lib/categoryGuidance.ts
@@ -357,6 +373,22 @@ function generateWhyCopy(
     case "protein-treatment":
       return `Strengthening treatment for ${porosity} porosity ${curlTypeLabel} hair - use only on your designated protein day. Overuse causes brittleness.`;
 
+    // Protective-style picks (braids/locs/wigs) aren't porosity-driven,
+    // so their copy skips the porosity/curl-type framing every other
+    // case here uses.
+    case "diluted-leave-in":
+      return `A diluted leave-in in an applicator bottle reaches your scalp through the style without disturbing it - apply directly to the scalp between braids or twists.`;
+    case "braid-spray":
+      return `A lightweight water-based spray for daily moisture - mist your scalp and the length of your braids or twists without saturating them.`;
+    case "loc-shampoo":
+      return `Residue-free formula - buildup from a regular shampoo can trap moisture inside a loc and lead to mildew or "loc rot," so a clarifying or residue-free wash matters more here than for loose hair.`;
+    case "wig-shampoo":
+      return `Formulated specifically for wig fibers rather than a scalp - sulfate-free for human hair wigs, gentle enough for synthetic fibers too.`;
+    case "wig-conditioner":
+      return `For human hair wigs only - synthetic fibers don't absorb conditioner the way human hair does and can end up looking greasy or matted instead.`;
+    case "wig-detangler":
+      return `A leave-in detangling spray keeps wig fibers slipping smoothly through a comb, reducing shedding and fiber damage between wears.`;
+
     case "heat-protectant":
       return `Essential for ${curlTypeLabel} hair before any heat styling. Apply evenly to damp hair before blow drying or flat ironing. Look for silicones or film-formers that create a barrier between your hair and the heat tool.`;
 
@@ -437,6 +469,7 @@ type CandidateRow = {
   id: string;
   name: string;
   catalog_brands: { name: string } | { name: string }[] | null;
+  price_usd: number | null;
 };
 
 function brandNameOf(row: CandidateRow): string {
@@ -465,16 +498,30 @@ async function rankCategoryProducts(
   porosity: string,
   curlType: string | null,
   hairConcerns: string[] | null,
-  slot: RoutineCategorySlot
+  slot: RoutineCategorySlot,
+  colorTreated: boolean
 ): Promise<RoutineProductCandidate[]> {
   const admin = getSupabaseAdmin();
 
-  const { data: rawCandidates } = await admin
+  const { data: rawCandidates, error: candidatesError } = await admin
     .from("catalog_products")
-    .select("id, name, catalog_brands(name)")
+    .select("id, name, catalog_brands(name), price_usd")
     .eq("category_id", categoryId)
     .order("created_at", { ascending: false })
     .limit(CANDIDATE_POOL_SIZE);
+
+  // A query error here (e.g. price_usd not existing yet in a given
+  // environment) used to silently produce an empty candidate list -
+  // every category would show "no products yet" for every user with no
+  // way to tell why. Logging loudly so a schema drift like that is
+  // immediately visible in server logs instead of looking like an empty
+  // catalog.
+  if (candidatesError) {
+    console.error(
+      `[routineProducts] catalog_products query failed for category "${categorySlug}":`,
+      candidatesError.message
+    );
+  }
 
   let candidates = rawCandidates ?? [];
   if (slot.onlyMatching) {
@@ -497,6 +544,7 @@ async function rankCategoryProducts(
     climate: null,
     water_hardness: null,
     hair_concerns: hairConcerns,
+    color_treated: colorTreated ? "yes" : "no",
   });
 
   const scores = await scoreCatalogProductsForProfile(
@@ -538,6 +586,8 @@ async function rankCategoryProducts(
           hairConcerns
         ),
         affiliateLink: getAffiliateLink(row.name, brandName),
+        priceUsd: row.price_usd ?? null,
+        containsSulfates: result.matches.some((m) => isSulfate(m.ingredient_name)),
       };
     })
     .filter((c): c is RoutineProductCandidate => c !== null)
@@ -562,8 +612,12 @@ async function loadCategoryIds(slugs: string[]): Promise<Map<string, string>> {
 export async function getRoutineProductPicks(
   porosity: string | null,
   curlType: string | null = null,
-  hairConcerns: string[] | null = null
+  hairConcerns: string[] | null = null,
+  colorTreated: boolean = false,
+  budgetRange: string | null = null
 ): Promise<RoutineProductPick[]> {
+  const budgetActive = isBudgetActive(budgetRange);
+  const maxUsd = budgetMaxUsd(budgetRange);
   const normalizedPorosity = porosity ?? "medium";
   const family = curlFamily(curlType);
   const slots = routineCategoriesForFamily(family, normalizedPorosity);
@@ -588,7 +642,8 @@ export async function getRoutineProductPicks(
             normalizedPorosity,
             curlType,
             hairConcerns,
-            slot
+            slot,
+            colorTreated
           )
         : [];
       let usedSlug = slot.slug;
@@ -607,7 +662,8 @@ export async function getRoutineProductPicks(
               normalizedPorosity,
               curlType,
               hairConcerns,
-              slot
+              slot,
+              colorTreated
             )
           : [];
         if (fallbackRanked.length > 0) {
@@ -617,15 +673,27 @@ export async function getRoutineProductPicks(
         }
       }
 
+      const primary = ranked[0] ?? null;
+      // Highest-scoring candidate within budget, only when primary is
+      // both priced and over the user's ceiling - ranked is already
+      // score-sorted, so the first match here is also the highest-
+      // scoring in-budget option. Never replaces primary; the spec is
+      // explicit that the top score always shows regardless of price.
+      const budgetAlternate =
+        budgetActive && primary?.priceUsd != null && primary.priceUsd > maxUsd
+          ? ranked.find((c) => c.priceUsd != null && c.priceUsd <= maxUsd) ?? null
+          : null;
+
       return {
         category: usedSlug === slot.slug ? pickCategory : usedSlug,
         categoryLabel: usedLabel,
         section: slot.section,
         searchCategorySlug: usedSlug,
         searchQuery: usedSlug === slot.slug ? slot.searchQuery ?? null : null,
-        primary: ranked[0] ?? null,
+        primary,
         alternate: ranked[1] ?? null,
         noProductsYet: ranked.length === 0,
+        budgetAlternate,
       };
     })
   );
@@ -638,9 +706,183 @@ export async function getRoutineProductPicks(
 export async function getRoutineProducts(
   porosity: string | null,
   curlType: string | null = null,
-  hairConcerns: string[] | null = null
+  hairConcerns: string[] | null = null,
+  colorTreated: boolean = false,
+  budgetRange: string | null = null
 ): Promise<RoutineProductPick[]> {
-  return getRoutineProductPicks(porosity, curlType, hairConcerns);
+  return getRoutineProductPicks(porosity, curlType, hairConcerns, colorTreated, budgetRange);
+}
+
+// ---- Protective-style product picks (braids/locs/wigs) -----------------
+//
+// Reuses the exact same ranking/scoring/placeholder machinery as the
+// natural-hair categories above (rankCategoryProducts/loadCategoryIds),
+// against a different slot list keyed by protective style type instead
+// of curl family, and against real *existing* categories (shampoo,
+// conditioner, leave-in, oil, gel, styler) with name-keyword filters
+// rather than inventing a dozen new single-purpose categories that
+// would start out with zero tagged products either way.
+//
+// For wigs this only covers the wig-care section - the natural-hair-
+// under-wig section is just the ordinary getRoutineProductPicks output
+// (same curl-type/porosity routine as any other profile), composed by
+// the caller (app/api/routine/route.ts).
+const PROTECTIVE_STYLE_CATEGORIES: Record<ProtectiveStyleType, RoutineCategorySlot[]> = {
+  braids: [
+    {
+      slug: "leave-in",
+      pickCategory: "diluted-leave-in",
+      label: "Diluted Leave-In (Applicator Bottle)",
+      section: "regular",
+      searchQuery: "leave-in",
+      excludeMatching: { nameKeywords: ["spray"] },
+    },
+    {
+      slug: "leave-in",
+      pickCategory: "braid-spray",
+      label: "Braid Spray",
+      section: "styling",
+      searchQuery: "spray",
+      onlyMatching: { nameKeywords: ["spray"] },
+    },
+    {
+      slug: "oil",
+      label: "Lightweight Scalp Oil",
+      section: "regular",
+      onlyMatching: { nameKeywords: ["jojoba", "grapeseed"] },
+    },
+    {
+      slug: "shampoo",
+      label: "Sulfate-Free Scalp Shampoo",
+      section: "regular",
+      onlyMatching: { nameKeywords: ["sulfate-free", "sulfate free"] },
+    },
+    {
+      slug: "styler",
+      label: "Edge Control",
+      section: "styling",
+      onlyMatching: { nameKeywords: ["edge"] },
+    },
+  ],
+  locs: [
+    {
+      slug: "shampoo",
+      pickCategory: "loc-shampoo",
+      label: "Residue-Free Shampoo",
+      section: "regular",
+      searchQuery: "residue-free",
+      onlyMatching: { nameKeywords: ["residue-free", "residue free", "clarif"] },
+    },
+    // Doubles as both "scalp oil for between wash days" and "lightweight
+    // loc oil" from the spec - there's no ingredient-level signal to
+    // meaningfully split those into two distinct picks from the same
+    // underlying "oil" category.
+    { slug: "oil", label: "Loc & Scalp Oil", section: "regular" },
+    { slug: "gel", label: "Retwist Gel/Cream", section: "styling" },
+  ],
+  wigs: [
+    {
+      slug: "shampoo",
+      pickCategory: "wig-shampoo",
+      label: "Wig Shampoo",
+      section: "regular",
+      searchQuery: "wig",
+      onlyMatching: { nameKeywords: ["wig"] },
+    },
+    {
+      slug: "conditioner",
+      pickCategory: "wig-conditioner",
+      label: "Wig Conditioner",
+      section: "regular",
+      searchQuery: "wig",
+      onlyMatching: { nameKeywords: ["wig"] },
+    },
+    {
+      slug: "leave-in",
+      pickCategory: "wig-detangler",
+      label: "Wig Detangler Spray",
+      section: "styling",
+      searchQuery: "detangler",
+      onlyMatching: { nameKeywords: ["detangl"] },
+    },
+  ],
+};
+
+// Accessories aren't real scored catalog products (no ingredients to
+// score), so they're a flat static list instead of going through
+// rankCategoryProducts.
+export const PROTECTIVE_STYLE_ACCESSORIES: Record<
+  ProtectiveStyleType,
+  { label: string; note: string }[]
+> = {
+  braids: [
+    {
+      label: "Satin Bonnet or Pillowcase",
+      note: "Protects your braids and scalp moisture overnight.",
+    },
+  ],
+  locs: [],
+  wigs: [
+    {
+      label: "Wig Stand",
+      note: "Keeps your wig's shape between wears and makes it easier to detangle and style.",
+    },
+  ],
+};
+
+export async function getProtectiveStyleProductPicks(
+  styleType: ProtectiveStyleType,
+  colorTreated: boolean = false,
+  budgetRange: string | null = null
+): Promise<RoutineProductPick[]> {
+  const slots = PROTECTIVE_STYLE_CATEGORIES[styleType];
+  const budgetActive = isBudgetActive(budgetRange);
+  const maxUsd = budgetMaxUsd(budgetRange);
+
+  const allSlugs = Array.from(new Set(slots.map((s) => s.slug)));
+  const categoryIds = await loadCategoryIds(allSlugs);
+
+  const results = await Promise.all(
+    slots.map(async (slot) => {
+      const pickCategory = slot.pickCategory ?? slot.slug;
+      const categoryId = categoryIds.get(slot.slug);
+      // Protective-style picks aren't porosity/curl-type driven - "medium"
+      // is just the porosity fetchScoreRows needs to run at all, not a
+      // real signal about the wearer's natural hair.
+      const ranked = categoryId
+        ? await rankCategoryProducts(
+            slot.slug,
+            categoryId,
+            pickCategory,
+            "medium",
+            null,
+            null,
+            slot,
+            colorTreated
+          )
+        : [];
+
+      const primary = ranked[0] ?? null;
+      const budgetAlternate =
+        budgetActive && primary?.priceUsd != null && primary.priceUsd > maxUsd
+          ? ranked.find((c) => c.priceUsd != null && c.priceUsd <= maxUsd) ?? null
+          : null;
+
+      return {
+        category: pickCategory,
+        categoryLabel: slot.label,
+        section: slot.section,
+        searchCategorySlug: slot.slug,
+        searchQuery: slot.searchQuery ?? null,
+        primary,
+        alternate: ranked[1] ?? null,
+        noProductsYet: ranked.length === 0,
+        budgetAlternate,
+      };
+    })
+  );
+
+  return results;
 }
 
 export type AvoidIngredient = {

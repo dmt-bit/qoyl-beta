@@ -10,7 +10,12 @@ import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
 import { ADULT_AGE_RANGE_OPTIONS, formatAdultAgeRange } from "@/lib/ageRange";
 import { classifyClimateFromZip } from "@/lib/climateData";
+import { isColorTreatedYes } from "@/lib/compatibility";
 import { CLIMATE_LABELS, WATER_HARDNESS_LABELS } from "@/lib/locationFactors";
+import {
+  protectiveStyleTypeFromExtensionType,
+  PROTECTIVE_STYLE_LABEL,
+} from "@/lib/protectiveStyleRoutine";
 import { waterHardnessFromZip } from "@/lib/waterHardnessData";
 import { supabase } from "@/lib/supabase";
 
@@ -387,10 +392,16 @@ const EXTENSION_TYPE_OPTIONS = [
   { value: "other", label: "Other" },
 ];
 const BUDGET_OPTIONS = [
-  { value: "under_30", label: "Under $30/month" },
-  { value: "30_60", label: "$30-60/month" },
-  { value: "60_100", label: "$60-100/month" },
-  { value: "100_plus", label: "$100+/month" },
+  { value: "under_25", label: "Under $25" },
+  { value: "25_50", label: "$25 to $50" },
+  { value: "50_100", label: "$50 to $100" },
+  { value: "over_100", label: "Over $100" },
+  { value: "no_preference", label: "No preference" },
+];
+const ROUTINE_FOCUS_OPTIONS = [
+  { value: "natural_hair", label: "My natural hair" },
+  { value: "extensions", label: "My extensions/protective style" },
+  { value: "both", label: "Show me both" },
 ];
 const PROFILE_FOR_OPTIONS = [
   { value: "myself", label: "Myself", subtext: null },
@@ -478,6 +489,62 @@ function ProfileForOption({
           {subtext}
         </span>
       )}
+    </button>
+  );
+}
+
+function NaturalHairIcon() {
+  return (
+    <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M12 3c-3 0-5 2.5-5 6 0 2 .5 3 1 4-1 .5-2 1.5-2 3 0 2.5 2.5 5 6 5s6-2.5 6-5c0-1.5-1-2.5-2-3 .5-1 1-2 1-4 0-3.5-2-6-5-6z"
+      />
+    </svg>
+  );
+}
+function ProtectiveStyleIcon() {
+  return (
+    <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M5 3c1.8 1.8 1.8 3.6 0 5.4 1.8 1.8 1.8 3.6 0 5.4 1.8 1.8 1.8 3.6 0 5.4M12 3c1.8 1.8 1.8 3.6 0 5.4 1.8 1.8 1.8 3.6 0 5.4 1.8 1.8 1.8 3.6 0 5.4M19 3c1.8 1.8 1.8 3.6 0 5.4 1.8 1.8 1.8 3.6 0 5.4 1.8 1.8 1.8 3.6 0 5.4"
+      />
+    </svg>
+  );
+}
+function BothPanelsIcon() {
+  return (
+    <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <rect x="3" y="4" width="7" height="16" rx="1" strokeLinejoin="round" />
+      <rect x="14" y="4" width="7" height="16" rx="1" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function RoutineFocusCard({
+  label,
+  icon,
+  selected,
+  onClick,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-lg border px-4 py-4 text-left transition-colors ${
+        selected ? "border-bronze bg-bronze/20" : "border-bronze/40 bg-transparent hover:border-bronze"
+      }`}
+    >
+      <span className="mb-2 block">{icon}</span>
+      <span className="block text-sm font-medium text-cream">{label}</span>
     </button>
   );
 }
@@ -668,7 +735,8 @@ function ProfileForm() {
   const [extensions, setExtensions] = useState<string | null>(null);
   const [extensionType, setExtensionType] = useState<string[]>([]);
   const [extensionCare, setExtensionCare] = useState("");
-  const [budget, setBudget] = useState<string | null>(null);
+  const [routineFocus, setRoutineFocus] = useState<string | null>(null);
+  const [budgetRange, setBudgetRange] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -694,12 +762,19 @@ function ProfileForm() {
     setLastName(hairProfile.last_name ?? "");
     setEmail(hairProfile.email ?? "");
     setShowerFilter(hairProfile.shower_filter);
-    setColorTreated(hairProfile.color_treated);
+    setColorTreated(
+      hairProfile.color_treated === null
+        ? null
+        : isColorTreatedYes(hairProfile.color_treated)
+        ? "yes"
+        : "no"
+    );
     setColorType(hairProfile.color_type ?? "");
     setExtensions(hairProfile.extensions);
     setExtensionType(hairProfile.extension_type ?? []);
     setExtensionCare(hairProfile.extension_care ?? "");
-    setBudget(hairProfile.budget);
+    setRoutineFocus(hairProfile.routine_focus);
+    setBudgetRange(hairProfile.budget_range);
     setNotes(hairProfile.notes ?? "");
     setHydratedFromProfileId(hairProfile.id);
   }, [hairProfile, hydratedFromProfileId]);
@@ -722,6 +797,15 @@ function ProfileForm() {
     () => (isPlausibleZip ? waterHardnessFromZip(zipCode) : null),
     [isPlausibleZip, zipCode]
   );
+
+  // First selected extension type stands in for "their" protective style
+  // when more than one is picked (e.g. both Braids and Wigs) - the
+  // routine can only actually be built around one, so Card 2's label
+  // names that primary type rather than trying to list every selection.
+  const protectiveStyleType = protectiveStyleTypeFromExtensionType(extensionType);
+  const protectiveStyleLabel = protectiveStyleType
+    ? PROTECTIVE_STYLE_LABEL[protectiveStyleType]
+    : "extensions, locs, or wig";
 
   function toggleConcern(value: string) {
     setHairConcerns((prev) =>
@@ -787,7 +871,8 @@ function ProfileForm() {
       extensions,
       extension_type: extensions === "yes" ? extensionType : [],
       extension_care: extensions === "yes" ? extensionCare : "",
-      budget,
+      routine_focus: extensions === "yes" ? routineFocus : null,
+      budget_range: budgetRange,
       notes,
       updated_at: new Date().toISOString(),
     };
@@ -830,7 +915,7 @@ function ProfileForm() {
             profile_for: profileFor,
             extensions,
             color_treated: colorTreated,
-            budget,
+            budget: budgetRange,
           }),
         }).catch(() => {});
       }
@@ -964,8 +1049,8 @@ function ProfileForm() {
             </ReadOnlyField>
 
             <ReadOnlyField label="Color Treated">
-              <Chip label={hairProfile.color_treated === "yes" ? "Yes" : "No"} />
-              {hairProfile.color_treated === "yes" && hairProfile.color_type && (
+              <Chip label={isColorTreatedYes(hairProfile.color_treated) ? "Yes" : "No"} />
+              {isColorTreatedYes(hairProfile.color_treated) && hairProfile.color_type && (
                 <Chip label={labelFor(COLOR_TYPE_OPTIONS, hairProfile.color_type)} />
               )}
             </ReadOnlyField>
@@ -989,8 +1074,14 @@ function ProfileForm() {
               </div>
             )}
 
+            {hairProfile.extensions === "yes" && hairProfile.routine_focus && (
+              <ReadOnlyField label="Routine Focus">
+                <Chip label={labelFor(ROUTINE_FOCUS_OPTIONS, hairProfile.routine_focus)} />
+              </ReadOnlyField>
+            )}
+
             <ReadOnlyField label="Monthly Budget">
-              <Chip label={labelFor(BUDGET_OPTIONS, hairProfile.budget)} />
+              <Chip label={labelFor(BUDGET_OPTIONS, hairProfile.budget_range)} />
             </ReadOnlyField>
 
             {hairProfile.notes && (
@@ -1363,6 +1454,27 @@ function ProfileForm() {
             </div>
           </div>
 
+          <div role="group" aria-labelledby="budget-label">
+            <p id="budget-label" className="font-serif text-lg text-bronze2">
+              Monthly hair care budget (optional)
+            </p>
+            <p className="mt-1 text-sm text-cream/60">
+              This helps us prioritize recommendations within your range. We
+              will always show you the best formula match regardless of
+              price.
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {BUDGET_OPTIONS.map((option) => (
+                <SelectButton
+                  key={option.value}
+                  label={option.label}
+                  selected={budgetRange === option.value}
+                  onClick={() => setBudgetRange(option.value)}
+                />
+              ))}
+            </div>
+          </div>
+
           <div>
             <p className="font-serif text-lg text-bronze2">Name</p>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1520,30 +1632,38 @@ function ProfileForm() {
                   className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
                 />
               </div>
-            </Collapse>
-          </div>
 
-          <div role="group" aria-labelledby="budget-label">
-            <p
-              id="budget-label"
-              className="flex items-center gap-2 font-serif text-lg text-bronze2"
-            >
-              Monthly hair care budget.
-              <InfoTooltip
-                label="Budget"
-                description="We use this to prioritize affordable product recommendations within your range."
-              />
-            </p>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {BUDGET_OPTIONS.map((option) => (
-                <SelectButton
-                  key={option.value}
-                  label={option.label}
-                  selected={budget === option.value}
-                  onClick={() => setBudget(option.value)}
-                />
-              ))}
-            </div>
+              {extensionType.length > 0 && (
+                <div role="group" aria-labelledby="routine-focus-label">
+                  <p
+                    id="routine-focus-label"
+                    className="font-serif text-lg text-bronze2"
+                  >
+                    What would you like your routine to focus on?
+                  </p>
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <RoutineFocusCard
+                      label="My natural hair under the style"
+                      icon={<NaturalHairIcon />}
+                      selected={routineFocus === "natural_hair"}
+                      onClick={() => setRoutineFocus("natural_hair")}
+                    />
+                    <RoutineFocusCard
+                      label={`Caring for my ${protectiveStyleLabel.toLowerCase()}`}
+                      icon={<ProtectiveStyleIcon />}
+                      selected={routineFocus === "extensions"}
+                      onClick={() => setRoutineFocus("extensions")}
+                    />
+                    <RoutineFocusCard
+                      label="Both - show me two separate routines"
+                      icon={<BothPanelsIcon />}
+                      selected={routineFocus === "both"}
+                      onClick={() => setRoutineFocus("both")}
+                    />
+                  </div>
+                </div>
+              )}
+            </Collapse>
           </div>
 
           <fieldset>
