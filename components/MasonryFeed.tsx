@@ -444,7 +444,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
       {/* Search + filter tabs - one sticky unit pinned to the very top
           of the page (no top nav on the home page to offset for
           anymore - see components/Nav.tsx's home-only side rail). */}
-      <div className="sticky top-0 z-20 -mx-4 bg-dark px-4 pt-3 sm:mx-0 sm:px-0">
+      <div className="sticky top-0 z-20 -mx-4 bg-dark pl-4 pr-4 pt-3 min-[360px]:pl-12 sm:mx-0 sm:pl-0 sm:pr-0">
         {/* Search - Pinterest-style pill */}
         <div className="relative">
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
@@ -500,11 +500,11 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
 
       {/* Grid */}
       {composedFeed.length > 0 ? (
-        <div className="mt-4">
+        <div className="mt-4 -mx-4 pl-4 pr-4 min-[360px]:pl-12 min-[360px]:pr-1 sm:mx-0 sm:pl-0 sm:pr-0">
           <Masonry
             breakpointCols={BREAKPOINT_COLUMNS}
-            className="flex w-auto gap-1"
-            columnClassName="flex flex-col gap-1 bg-clip-padding"
+            className="flex w-auto gap-1.5 sm:gap-1"
+            columnClassName="flex flex-col gap-1.5 bg-clip-padding sm:gap-1"
           >
             {visibleCards.map((card) => {
               const onGateTap = () => setShowAuthGateSheet(true);

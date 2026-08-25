@@ -123,35 +123,58 @@ function GridIcon({ size = 18 }: { size?: number }) {
 // keeps the top nav bars below unchanged. Reuses the same menuOpen
 // state/full-screen menu markup as the top nav's hamburger, so the
 // mobile rail's grid icon opens the exact same overlay.
+//
+// Semi-transparent + blurred rather than a solid panel, so it reads as
+// a floating strip over the feed instead of a wall - hidden below
+// 360px entirely (see HomeMiniMenuButton) since there's no room left
+// for both the strip and a legible two-column feed at that width.
 function HomeSideNavMobile({ onOpenMenu }: { onOpenMenu: () => void }) {
   return (
     <div
-      className="fixed bottom-0 left-0 top-0 z-50 flex w-10 flex-col items-center gap-5 border-r border-bronze/40 bg-[#1C1612]/70 pt-3 backdrop-blur-md sm:hidden"
+      className="fixed bottom-0 left-0 top-0 z-50 hidden w-10 flex-col items-center bg-[rgba(28,22,18,0.85)] pt-4 shadow-[2px_0_8px_rgba(0,0,0,0.2)] backdrop-blur-[8px] min-[360px]:flex sm:hidden"
     >
-      <Link href="/" aria-label="Home" className="font-serif text-lg text-bronze">
+      <Link href="/" aria-label="Home" className="mb-6 font-serif text-lg text-bronze">
         Q
       </Link>
-      <Link href="/search" aria-label="Search a product" className="flex items-center justify-center p-1">
-        <SearchIcon size={17} />
-      </Link>
-      <Link href="/style-match" aria-label="Style Match" className="flex items-center justify-center p-1">
-        <SparkleIcon size={17} className="text-cream" />
-      </Link>
-      <Link href="/dashboard" aria-label="Profile" className="flex items-center justify-center p-1">
-        <PersonIcon size={17} />
-      </Link>
-      <Link href="/travel" aria-label="Travel" className="flex items-center justify-center p-1">
-        <CompassIcon size={17} />
-      </Link>
+      <div className="flex flex-col items-center gap-1">
+        <Link href="/search" aria-label="Search a product" className="flex h-10 w-10 items-center justify-center">
+          <SearchIcon size={18} />
+        </Link>
+        <Link href="/style-match" aria-label="Style Match" className="flex h-10 w-10 items-center justify-center">
+          <SparkleIcon size={18} className="text-cream" />
+        </Link>
+        <Link href="/dashboard" aria-label="Profile" className="flex h-10 w-10 items-center justify-center">
+          <PersonIcon size={18} />
+        </Link>
+        <Link href="/travel" aria-label="Travel" className="flex h-10 w-10 items-center justify-center">
+          <CompassIcon size={18} />
+        </Link>
+      </div>
       <button
         type="button"
         onClick={onOpenMenu}
         aria-label="Open menu"
-        className="flex items-center justify-center p-1"
+        className="mb-4 mt-auto flex h-10 w-10 items-center justify-center"
       >
-        <GridIcon size={17} />
+        <GridIcon size={18} />
       </button>
     </div>
+  );
+}
+
+// Sub-360px fallback - the side strip itself is hidden that small (see
+// min-[360px]:flex above), so this bronze circle in the bottom-right
+// corner is the only way to reach search/profile/travel/etc. there.
+function HomeMiniMenuButton({ onOpenMenu }: { onOpenMenu: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpenMenu}
+      aria-label="Open menu"
+      className="fixed bottom-6 right-6 z-50 flex h-11 w-11 items-center justify-center rounded-full bg-bronze shadow-[0_4px_20px_rgba(0,0,0,0.3)] min-[360px]:hidden sm:hidden"
+    >
+      <HamburgerIcon />
+    </button>
   );
 }
 
@@ -342,6 +365,7 @@ export default function Nav() {
       {isHome && (
         <>
           <HomeSideNavMobile onOpenMenu={() => setMenuOpen(true)} />
+          <HomeMiniMenuButton onOpenMenu={() => setMenuOpen(true)} />
           <HomeSideNavDesktop
             user={user}
             hasRoutineSubscription={hasRoutineSubscription}
