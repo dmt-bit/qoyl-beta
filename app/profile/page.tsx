@@ -1,13 +1,21 @@
 "use client";
 
 import { Fragment, Suspense, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import BabyProfileForm from "@/components/BabyProfileForm";
+import ChildProfileForm from "@/components/ChildProfileForm";
 import Collapse from "@/components/Collapse";
 import HairJourneySection from "@/components/HairJourneySection";
 import HairTypeStrip from "@/components/HairTypeStrip";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
+import {
+  fetchBabyProfileById,
+  fetchChildProfileById,
+  type BabyProfile,
+  type ChildProfile,
+} from "@/lib/familyProfiles";
 import { ADULT_AGE_RANGE_OPTIONS, formatAdultAgeRange } from "@/lib/ageRange";
 import { classifyClimateFromZip } from "@/lib/climateData";
 import { isColorTreatedYes } from "@/lib/compatibility";
@@ -416,13 +424,6 @@ const PROFILE_FOR_OPTIONS = [
     subtext: "Safe, gentle recommendations for infants and toddlers",
   },
 ];
-const AGE_RANGE_OPTIONS = [
-  { value: "0-12 months", label: "0-12 months" },
-  { value: "1-3 years", label: "1-3 years" },
-  { value: "4-8 years", label: "4-8 years" },
-  { value: "9-12 years", label: "9-12 years" },
-  { value: "13+", label: "13+" },
-];
 const GENDER_OPTIONS = [
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
@@ -640,6 +641,54 @@ function ProfileForm() {
   const { user, hairProfile, hairProfileLoading, refreshHairProfile } =
     useAuth();
 
+  // Family profiles (baby/child) live in their own tables, not
+  // hair_profiles - see lib/familyProfiles.ts and
+  // supabase/create_family_profiles.sql. ?addFamily=1 is the "Add
+  // another child's profile +" dashboard button's target: it forces the
+  // form (and the "Who is this profile for?" selector) open even for a
+  // user whose own adult hair_profiles row is 30-day-locked, since that
+  // lock is about editing THEIR profile, not about adding a child's.
+  // ?editBaby=<id> / ?editChild=<id> route straight to editing one
+  // existing family profile, bypassing all of the above entirely.
+  const searchParams = useSearchParams();
+  const addFamily = searchParams.get("addFamily") === "1";
+  const editBabyId = searchParams.get("editBaby");
+  const editChildId = searchParams.get("editChild");
+
+  const [editBabyProfile, setEditBabyProfile] = useState<BabyProfile | null>(null);
+  const [editChildProfile, setEditChildProfile] = useState<ChildProfile | null>(null);
+  const [editProfileLoading, setEditProfileLoading] = useState(
+    Boolean(editBabyId || editChildId)
+  );
+
+  useEffect(() => {
+    if (!editBabyId) return;
+    let cancelled = false;
+    fetchBabyProfileById(editBabyId).then((data) => {
+      if (!cancelled) {
+        setEditBabyProfile(data);
+        setEditProfileLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [editBabyId]);
+
+  useEffect(() => {
+    if (!editChildId) return;
+    let cancelled = false;
+    fetchChildProfileById(editChildId).then((data) => {
+      if (!cancelled) {
+        setEditChildProfile(data);
+        setEditProfileLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [editChildId]);
+
   // A saved profile (hairProfile is only ever populated for signed-in
   // users - see auth-context.tsx) opens in a read-only view. "unlocked"
   // flips to true only after the 30-day check in handleConfirmUpdate
@@ -648,7 +697,7 @@ function ProfileForm() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [lockMessage, setLockMessage] = useState<string | null>(null);
 
-  const showForm = !hairProfile || unlocked;
+  const showForm = !hairProfile || unlocked || addFamily;
 
   // isAdmin() (lib/isAdmin.ts) reads ADMIN_EMAILS, which has no
   // NEXT_PUBLIC_ prefix and is deliberately server-only - calling it
@@ -933,6 +982,36 @@ function ProfileForm() {
     );
   }
 
+  if (editBabyId || editChildId) {
+    if (!user || editProfileLoading) {
+      return (
+        <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
+          <p className="text-sm text-cream/60">Loading...</p>
+        </main>
+      );
+    }
+    return (
+      <main className="min-h-screen bg-dark font-sans text-cream">
+        <div className="px-4 py-10 sm:px-6">
+          <div className="mx-auto max-w-md">
+            <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+              {editBabyId ? "Edit Baby Profile" : "Edit Child Profile"}
+            </h1>
+            <p className="mt-2 text-sm text-cream/70">
+              Update their details below and save to refresh their recommendations.
+            </p>
+            {editBabyId && editBabyProfile && (
+              <BabyProfileForm userId={user.id} initialData={editBabyProfile} />
+            )}
+            {editChildId && editChildProfile && (
+              <ChildProfileForm userId={user.id} initialData={editChildProfile} />
+            )}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-dark font-sans text-cream">
       <HairTypeStrip tileSize={160} />
@@ -1115,7 +1194,7 @@ function ProfileForm() {
         )}
 
         {showForm && (
-        <form onSubmit={handleSubmit} className="mt-8 space-y-8">
+        <div className="mt-8 space-y-8">
           <div role="group" aria-labelledby="profile-for-label">
             <p
               id="profile-for-label"
@@ -1147,14 +1226,11 @@ function ProfileForm() {
             care only.
           </div>
 
-          {(profileFor === "child" || profileFor === "baby") && (
-            <div className="rounded-lg border border-bronze/40 bg-warm/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
-              You&apos;re building a profile for a child. We&apos;ll
-              prioritize gentle, age-appropriate ingredients and flag
-              anything that may be too harsh for young scalps.
-            </div>
-          )}
+          {profileFor === "baby" && user && <BabyProfileForm userId={user.id} />}
+          {profileFor === "child" && user && <ChildProfileForm userId={user.id} />}
 
+          {profileFor === "myself" && (
+          <form onSubmit={handleSubmit} className="space-y-8">
           <Collapse show={profileFor === "myself"}>
             <div role="group" aria-labelledby="adult-age-range-label">
               <p
@@ -1274,27 +1350,6 @@ function ProfileForm() {
               />
             </div>
           </div>
-
-          <Collapse show={profileFor === "child" || profileFor === "baby"}>
-            <div role="group" aria-labelledby="age-range-label">
-              <p
-                id="age-range-label"
-                className="font-serif text-lg text-bronze2"
-              >
-                Age range
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-5">
-                {AGE_RANGE_OPTIONS.map((option) => (
-                  <SelectButton
-                    key={option.value}
-                    label={option.label}
-                    selected={ageRange === option.value}
-                    onClick={() => setAgeRange(option.value)}
-                  />
-                ))}
-              </div>
-            </div>
-          </Collapse>
 
           <div role="group" aria-labelledby="porosity-label">
             <p
@@ -1694,7 +1749,9 @@ function ProfileForm() {
           >
             {submitting ? "Saving..." : "Save Profile"}
           </button>
-        </form>
+          </form>
+          )}
+        </div>
         )}
 
         {/* Deliberately outside the showForm/summary split above - hair

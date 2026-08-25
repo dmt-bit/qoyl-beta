@@ -631,6 +631,105 @@ function applyColorTreatedAdjustment(
   return { score: adjusted, rating: ratingForScore(adjusted) };
 }
 
+// ---- Baby-safety and child-safety scoring adjustments ---------------------
+//
+// Baby scoring (item 6 of the family-profiles spec) is safety-first, not
+// compatibility-based: a handful of ingredient categories are hard-avoid
+// for infant scalps regardless of porosity/curl-type/anything else, and a
+// handful of gentle ingredients score higher. This intentionally
+// overrides (not just deltas) score/rating for the avoid list, since
+// "avoid regardless of hair type" is a stronger claim than every other
+// adjustment in this file makes.
+
+const BABY_AVOID_FRAGRANCE = new Set(["parfum", "fragrance"]);
+const BABY_AVOID_ESSENTIAL_OILS = new Set([
+  "mentha piperita oil", // Peppermint Oil
+  "eucalyptus globolus (eucalyptus) leaf oil", // Eucalyptus Oil
+  "melaleuca alternifolia leaf oil", // Tea Tree Oil
+  "lavandula angustifolia (lavender) oil", // Lavender Oil
+  "rosmarinus officinalis leaf oil", // Rosemary Oil
+]);
+const BABY_AVOID_SURFACTANTS = new Set(["sodium lauryl sulfate"]);
+const BABY_AVOID_PARABENS = new Set([
+  "methylparaben",
+  "propylparaben",
+  "butylparaben",
+  "ethylparaben",
+]);
+const BABY_AVOID_PHTHALATES = new Set(["dibutyl phthalate", "diethyl phthalate"]);
+const BABY_AVOID_FORMALDEHYDE_RELEASERS = new Set(["dmdm hydantoin", "imidazolidinyl urea"]);
+const BABY_AVOID_OTHER = new Set(["retinol", "salicylic acid", "alcohol denat"]);
+
+const BABY_GENTLE_BOOST: Record<string, number> = {
+  "cocamidopropyl betaine": 3,
+  "decyl glucoside": 3,
+  glycerin: 2,
+  "aloe barbadensis leaf juice": 2, // Aloe Vera
+  panthenol: 2,
+  "calendula officinalis flower extract": 2,
+  "chamomilla recutita (matricaria) flower extract": 2, // Chamomile Extract
+};
+
+function isBabyAvoidIngredient(name: string): boolean {
+  return (
+    BABY_AVOID_FRAGRANCE.has(name) ||
+    BABY_AVOID_ESSENTIAL_OILS.has(name) ||
+    BABY_AVOID_SURFACTANTS.has(name) ||
+    BABY_AVOID_PARABENS.has(name) ||
+    BABY_AVOID_PHTHALATES.has(name) ||
+    BABY_AVOID_FORMALDEHYDE_RELEASERS.has(name) ||
+    BABY_AVOID_OTHER.has(name)
+  );
+}
+
+function applyBabySafetyAdjustment(
+  inciName: string,
+  babySafety: boolean,
+  score: number,
+  rating: string
+): { score: number; rating: string } {
+  if (!babySafety) return { score, rating };
+
+  const name = inciName.trim().toLowerCase();
+  if (isBabyAvoidIngredient(name)) return { score: 0, rating: "avoid" };
+
+  const boost = BABY_GENTLE_BOOST[name];
+  if (!boost) return { score, rating };
+  const adjusted = clampScore(score + boost);
+  return { score: adjusted, rating: ratingForScore(adjusted) };
+}
+
+// Child scoring reuses the normal curl-type/scalp-condition pipeline (it's
+// "same as adult BUT..." per spec, not a from-scratch safety-first mode
+// like babies), with two extra ingredient-level cautions layered on top.
+function applyChildSafetyAdjustment(
+  inciName: string,
+  childSafety: { ageRange: string | null; sensorySensitive: boolean } | undefined,
+  score: number,
+  rating: string
+): { score: number; rating: string } {
+  if (!childSafety) return { score, rating };
+
+  const name = inciName.trim().toLowerCase();
+  const isUnder8 =
+    childSafety.ageRange === "2-4" || childSafety.ageRange === "5-7";
+
+  if (FRAGRANCE.has(name)) {
+    // Sensory-sensitive children get the harder "avoid" treatment; everyone
+    // else just gets a one-point caution, not a hard avoid.
+    if (childSafety.sensorySensitive) return { score: 0, rating: "avoid" };
+    const adjusted = clampScore(score - 1);
+    return { score: adjusted, rating: ratingForScore(adjusted) };
+  }
+
+  if (isUnder8 && YOUTH_ESSENTIAL_OILS.has(name)) {
+    const adjusted = clampScore(score - 1);
+    return { score: adjusted, rating: ratingForScore(adjusted) };
+  }
+
+  return { score, rating };
+}
+
 function applyCurlTypeAdjustment(
   inciName: string,
   family: CurlFamily | null,
@@ -704,6 +803,11 @@ export type ScoringProfile = {
   // ingredients, since there's no higher tier left to bump to. See
   // applyColorTreatedAdjustment.
   colorTreatedAlreadyHighPorosity: boolean;
+  // Set only by buildBabyScoringProfile/buildChildScoringProfile (see
+  // below) - undefined/false for every ordinary adult profile, so this
+  // is fully additive and changes nothing for the existing scoring paths.
+  babySafety?: boolean;
+  childSafety?: { ageRange: string | null; sensorySensitive: boolean };
 };
 
 type ProfileRow = {
@@ -770,6 +874,79 @@ export function buildScoringProfile(
     hairConcerns: row.hair_concerns ?? null,
     colorTreated,
     colorTreatedAlreadyHighPorosity: colorTreated && naturalPorosity === "high",
+  };
+}
+
+type BabyProfileRow = {
+  hair_texture: string | null;
+  scalp_condition: string | null;
+};
+
+// Baby scoring is safety-first (see applyBabySafetyAdjustment above), so
+// porosity/family here just pick a reasonable base DB row to start
+// from - the avoid/boost overrides are what actually drive the result,
+// not curl-type compatibility.
+export function buildBabyScoringProfile(row: BabyProfileRow): ScoringProfile {
+  const texture = row.hair_texture ?? "";
+  const family: CurlFamily | null = texture.includes("straight")
+    ? "straight"
+    : texture.includes("wavy")
+      ? "wavy"
+      : texture.includes("curly")
+        ? "curly"
+        : texture.includes("coily")
+          ? "coily"
+          : null;
+
+  return {
+    climate: null,
+    waterHardness: null,
+    porosity: "medium",
+    scalpCondition: row.scalp_condition === "cradle_cap" ? "dry" : row.scalp_condition,
+    family,
+    ageRange: null,
+    hairConcerns: null,
+    colorTreated: false,
+    colorTreatedAlreadyHighPorosity: false,
+    babySafety: true,
+  };
+}
+
+const CHILD_SCALP_CONDITION_MAP: Record<string, string> = {
+  normal: "normal",
+  dry_flaky: "dry",
+  sensitive_irritated: "sensitive",
+  oily: "oily",
+  dandruff_prone: "dandruff",
+};
+
+type ChildProfileRow = {
+  curl_type: string | null;
+  scalp_condition: string | null;
+  age_range: string | null;
+  sensory_sensitive: boolean;
+  zip_code?: string | null;
+  climate?: string | null;
+  water_hardness?: string | null;
+};
+
+// "Same scoring as adult profiles for their curl type and scalp condition
+// BUT..." per spec - reuses the ordinary porosity-keyed pipeline (child
+// profiles don't collect porosity, so this defaults to medium the same
+// way an adult's "not sure" answer does) and layers applyChildSafetyAdjustment
+// on top via the childSafety field.
+export function buildChildScoringProfile(row: ChildProfileRow): ScoringProfile {
+  return {
+    climate: row.climate ?? null,
+    waterHardness: row.water_hardness ?? null,
+    porosity: "medium",
+    scalpCondition: row.scalp_condition ? CHILD_SCALP_CONDITION_MAP[row.scalp_condition] ?? null : null,
+    family: curlFamily(row.curl_type),
+    ageRange: null,
+    hairConcerns: null,
+    colorTreated: false,
+    colorTreatedAlreadyHighPorosity: false,
+    childSafety: { ageRange: row.age_range, sensorySensitive: row.sensory_sensitive },
   };
 }
 
@@ -852,6 +1029,8 @@ function resolveScoreResult(
     hairConcerns,
     colorTreated,
     colorTreatedAlreadyHighPorosity,
+    babySafety,
+    childSafety,
   } = profile;
 
   if (ingredients.length === 0) {
@@ -954,6 +1133,18 @@ function resolveScoreResult(
       ingredient.inci_name,
       colorTreated,
       colorTreatedAlreadyHighPorosity,
+      score,
+      rating
+    ));
+    ({ score, rating } = applyBabySafetyAdjustment(
+      ingredient.inci_name,
+      Boolean(babySafety),
+      score,
+      rating
+    ));
+    ({ score, rating } = applyChildSafetyAdjustment(
+      ingredient.inci_name,
+      childSafety,
       score,
       rating
     ));

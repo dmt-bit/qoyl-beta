@@ -10,6 +10,15 @@ import { formatAdultAgeRange } from "@/lib/ageRange";
 import { getChildSafetyNote } from "@/lib/childSafety";
 import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import {
+  BABY_AGE_RANGE_LABELS,
+  BABY_TEXTURE_LABELS,
+  CHILD_AGE_RANGE_LABELS,
+  fetchBabyProfilesByUserId,
+  fetchChildProfilesByUserId,
+  type BabyProfile,
+  type ChildProfile,
+} from "@/lib/familyProfiles";
+import {
   protectiveStyleTypeFromExtensionType,
   PROTECTIVE_STYLE_LABEL,
 } from "@/lib/protectiveStyleRoutine";
@@ -242,6 +251,27 @@ function DashboardContent() {
   const [hasRoutineSubscription, setHasRoutineSubscription] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [entitlementLoading, setEntitlementLoading] = useState(true);
+
+  const [babyProfiles, setBabyProfiles] = useState<BabyProfile[]>([]);
+  const [childProfiles, setChildProfiles] = useState<ChildProfile[]>([]);
+  const [familyProfilesLoading, setFamilyProfilesLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    setFamilyProfilesLoading(true);
+    Promise.all([fetchBabyProfilesByUserId(user.id), fetchChildProfilesByUserId(user.id)]).then(
+      ([babies, children]) => {
+        if (cancelled) return;
+        setBabyProfiles(babies);
+        setChildProfiles(children);
+        setFamilyProfilesLoading(false);
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const paymentStatus = searchParams.get("payment");
 
@@ -601,6 +631,84 @@ function DashboardContent() {
                   </div>
                 )
               )}
+            </div>
+          </section>
+        )}
+
+        {!familyProfilesLoading && (babyProfiles.length > 0 || childProfiles.length > 0) && (
+          <section className="print-hide mt-10">
+            <h2 className="font-serif text-2xl font-semibold text-cream">Family profiles</h2>
+            <div className="mt-4 space-y-3">
+              {babyProfiles.map((baby) => (
+                <div key={baby.id} className="rounded-xl border border-bronze/30 bg-dark p-5">
+                  <p className="font-serif text-lg text-cream">{baby.name || "Baby"}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {baby.age_range && (
+                      <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
+                        {BABY_AGE_RANGE_LABELS[baby.age_range] ?? baby.age_range}
+                      </span>
+                    )}
+                    {baby.hair_texture && (
+                      <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
+                        {BABY_TEXTURE_LABELS[baby.hair_texture] ?? baby.hair_texture}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex gap-4">
+                    <Link
+                      href={`/routine/baby/${baby.id}`}
+                      className="text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+                    >
+                      View routine →
+                    </Link>
+                    <Link
+                      href={`/profile?editBaby=${baby.id}`}
+                      className="text-sm font-medium text-cream/60 underline underline-offset-2 hover:text-cream"
+                    >
+                      Edit profile →
+                    </Link>
+                  </div>
+                </div>
+              ))}
+
+              {childProfiles.map((child) => (
+                <div key={child.id} className="rounded-xl border border-bronze/30 bg-dark p-5">
+                  <p className="font-serif text-lg text-cream">{child.name || "Child"}</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {child.age_range && (
+                      <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
+                        {CHILD_AGE_RANGE_LABELS[child.age_range] ?? child.age_range}
+                      </span>
+                    )}
+                    {child.curl_type && (
+                      <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
+                        {child.curl_type === "not_sure" ? "Not sure" : child.curl_type}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-3 flex gap-4">
+                    <Link
+                      href={`/routine/child/${child.id}`}
+                      className="text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+                    >
+                      View routine →
+                    </Link>
+                    <Link
+                      href={`/profile?editChild=${child.id}`}
+                      className="text-sm font-medium text-cream/60 underline underline-offset-2 hover:text-cream"
+                    >
+                      Edit profile →
+                    </Link>
+                  </div>
+                </div>
+              ))}
+
+              <Link
+                href="/profile?addFamily=1"
+                className="block rounded-xl border border-dashed border-bronze/40 px-5 py-4 text-center text-sm font-medium text-bronze2 transition-colors hover:border-bronze"
+              >
+                Add another child&apos;s profile +
+              </Link>
             </div>
           </section>
         )}
