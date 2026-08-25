@@ -307,7 +307,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
     let cancelled = false;
     supabase
       .from("styles")
-      .select("id, name, slug, description, hair_types_compatible")
+      .select("id, name, slug, description, hair_types_compatible, image_url")
       .then(({ data }) => {
         if (!cancelled) setStyleRows(shuffle((data as StyleRow[]) ?? []).slice(0, 3));
       });

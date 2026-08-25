@@ -59,6 +59,7 @@ type StyleRow = {
   requires_fake_hair: boolean;
   estimated_time: string | null;
   difficulty: string | null;
+  image_url?: string | null;
 };
 
 type LengthDifference = "same" | "longer" | "shorter";
@@ -969,7 +970,7 @@ function StyleMatchContent() {
     try {
       const { data, error: fetchError } = await supabase
         .from("styles")
-        .select("id, name, slug, description, hair_types_compatible, requires_fake_hair, estimated_time, difficulty");
+        .select("id, name, slug, description, hair_types_compatible, requires_fake_hair, estimated_time, difficulty, image_url");
 
       const rows = !fetchError && data && data.length > 0 ? (data as StyleRow[]) : STATIC_STYLES;
       const curlType = hairProfile?.curl_type ?? null;
@@ -1197,25 +1198,41 @@ function StyleMatchContent() {
                     key={style.id}
                     type="button"
                     onClick={() => handleInspoCardTap(style)}
-                    className="rounded-xl border border-bronze/30 p-4 text-left transition-colors hover:border-bronze"
+                    className="overflow-hidden rounded-xl border border-bronze/30 text-left transition-colors hover:border-bronze"
                   >
-                    <p className="font-serif text-lg text-cream">{style.name}</p>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {style.difficulty && (
-                        <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium capitalize text-bronze2">
-                          {style.difficulty}
-                        </span>
+                    {style.image_url ? (
+                      <img
+                        src={style.image_url}
+                        alt={style.name}
+                        loading="lazy"
+                        className="aspect-[4/5] w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex aspect-[4/5] w-full items-center justify-center bg-gradient-to-br from-[#1C1612] to-[#2C2420] p-4 text-center">
+                        <p className="font-serif text-lg text-cream">{style.name}</p>
+                      </div>
+                    )}
+                    <div className="p-4">
+                      {style.image_url && (
+                        <p className="font-serif text-lg text-cream">{style.name}</p>
                       )}
-                      {style.estimated_time && (
-                        <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium text-bronze2">
-                          {style.estimated_time}
-                        </span>
-                      )}
-                      {style.requires_fake_hair && (
-                        <span className="rounded-full bg-dark px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-bronze">
-                          Fake hair
-                        </span>
-                      )}
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {style.difficulty && (
+                          <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium capitalize text-bronze2">
+                            {style.difficulty}
+                          </span>
+                        )}
+                        {style.estimated_time && (
+                          <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium text-bronze2">
+                            {style.estimated_time}
+                          </span>
+                        )}
+                        {style.requires_fake_hair && (
+                          <span className="rounded-full bg-dark px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-bronze">
+                            Fake hair
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </button>
                 ))}

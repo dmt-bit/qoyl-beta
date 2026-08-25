@@ -26,6 +26,7 @@ export type StyleRow = {
   slug: string;
   description: string | null;
   hair_types_compatible: string[] | null;
+  image_url: string | null;
 };
 
 export type FeedCard =
@@ -397,13 +398,20 @@ export function StyleMasonryCard({
 
   return (
     <Link href={href} className={CARD_CLASS} {...longPress}>
-      <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#1C1612] to-[#2C2420] p-5 text-center">
-        <p className="font-serif text-xl italic leading-snug text-cream">{style.name}</p>
-        {style.description && (
-          <p className="line-clamp-2 text-xs text-cream/60">{style.description}</p>
-        )}
-        <p className="mt-2 text-xs font-medium text-bronze2">Style Match this →</p>
-      </div>
+      {style.image_url ? (
+        <>
+          <img src={style.image_url} alt={style.name} loading="lazy" className="block w-full h-auto" />
+          <BottomTitleOverlay>{style.name}</BottomTitleOverlay>
+        </>
+      ) : (
+        <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#1C1612] to-[#2C2420] p-5 text-center">
+          <p className="font-serif text-xl italic leading-snug text-cream">{style.name}</p>
+          {style.description && (
+            <p className="line-clamp-2 text-xs text-cream/60">{style.description}</p>
+          )}
+          <p className="mt-2 text-xs font-medium text-bronze2">Style Match this →</p>
+        </div>
+      )}
     </Link>
   );
 }
