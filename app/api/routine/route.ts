@@ -5,7 +5,9 @@ import {
   formatStartDateLabel,
   generateWashCalendar,
   getWashFrequencyDays,
+  toIsoDate,
 } from "@/lib/routineCalendar";
+import { calculateStreak, computeMissedDates, fetchCompletedDays } from "@/lib/routineCompletions";
 import { generateAdditionalRoutineNotes, generateRoutineStepsByWashType } from "@/lib/routineSteps";
 import {
   getRoutineProductPicks,
@@ -14,7 +16,7 @@ import {
   PROTECTIVE_STYLE_ACCESSORIES,
 } from "@/lib/routineProducts";
 import { getChildSafetyNote, isChildSafetyProfile } from "@/lib/childSafety";
-import { isColorTreatedYes } from "@/lib/compatibility";
+import { curlFamily, isColorTreatedYes } from "@/lib/compatibility";
 import {
   generateProtectiveStyleCalendar,
   getProtectiveStyleFrequency,
@@ -90,7 +92,7 @@ export async function GET(request: Request) {
   // 'extensions' profile the "natural hair under wig" section is just
   // this same routine (see spec: "Same as natural hair routine based on
   // their curl type and porosity").
-  const [calendarDays, stepsByWashType, products, avoidIngredients] = await Promise.all([
+  const [calendarDays, stepsByWashType, products, avoidIngredients, completedDays] = await Promise.all([
     Promise.resolve(generateWashCalendar(now, curlType, porosity, scalpCondition, routineStartDate)),
     Promise.resolve(generateRoutineStepsByWashType(curlType)),
     getRoutineProductPicks(
@@ -101,7 +103,21 @@ export async function GET(request: Request) {
       budgetRange
     ),
     getIngredientsToAvoid(porosity, avoidLimit),
+    fetchCompletedDays(userId, toIsoDate(routineStartDate)),
   ]);
+
+  // Daily check-off system (streak, calendar completed/missed
+  // indicators) - see lib/routineCompletions.ts. todayIso is computed
+  // explicitly rather than read off calendarDays[0] because that array
+  // no longer always contains an entry for today (a genuine rest day
+  // has none at all - see generateWashCalendar).
+  const todayIso = toIsoDate(now);
+  const completedIsoDates = new Set(completedDays.keys());
+  const family = curlFamily(curlType);
+  const interval = getWashFrequencyDays(curlType, porosity, scalpCondition).recommended;
+  const streak = calculateStreak(now, routineStartDate, family, interval, completedIsoDates);
+  const missedDates = computeMissedDates(now, routineStartDate, family, interval, completedIsoDates, 7);
+  const todayCompletion = completedDays.get(todayIso) ?? null;
 
   const additionalNotes = generateAdditionalRoutineNotes(
     profile?.extensions ?? null,
@@ -166,6 +182,10 @@ export async function GET(request: Request) {
     profileFor,
     childSafetyNote: getChildSafetyNote(profileFor),
     calendarDays,
+    todayIso,
+    streak,
+    missedDates,
+    todayCompletion,
     stepsByWashType,
     additionalNotes,
     products,

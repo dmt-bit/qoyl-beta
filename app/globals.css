@@ -71,6 +71,22 @@ body {
   animation: routine-bounce 3s ease-in-out infinite;
 }
 
+/* Check-off confetti burst (TodayCheckOffButton in app/routine/page.tsx) -
+   each dot travels from center to its own --dx/--dy offset while fading. */
+@keyframes routine-confetti {
+  0% {
+    transform: translate(-50%, -50%) translate(0, 0);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy));
+    opacity: 0;
+  }
+}
+.routine-confetti-dot {
+  animation: routine-confetti 700ms ease-out forwards;
+}
+
 /* ---- Signature motion -------------------------------------------------
    Hero load sequence (home page only): wordmark fades in, the hair-type
    strip slides in from the right, then headline and CTA fade up in

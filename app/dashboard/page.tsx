@@ -76,6 +76,81 @@ const SCALP_LABELS: Record<string, string> = {
   "dandruff-prone": "Dandruff-prone scalp",
 };
 
+type DayStripStatus = "completed" | "rest" | "missed" | "future" | "scheduled";
+type DayStripEntry = { date: string; status: DayStripStatus };
+
+// Small habit-tracker strip - not importing lib/routineCompletions.ts
+// directly here (it pulls in getSupabaseAdmin, service-role only) so
+// this fetches through /api/routine/completions like every other
+// server-computed value on this page.
+function RecentCompletionsStrip({ userId }: { userId: string }) {
+  const [dayStrip, setDayStrip] = useState<DayStripEntry[] | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/routine/completions?user_id=${userId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setDayStrip(data?.dayStrip ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setDayStrip(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  if (!dayStrip) return null;
+
+  function circleClass(status: DayStripStatus): string {
+    switch (status) {
+      case "completed":
+        return "bg-bronze border-bronze";
+      case "rest":
+        return "border-bronze/40"; // filled via the inner dot below
+      case "missed":
+        return "border-bronze/30 bg-transparent";
+      case "scheduled":
+        return "border-bronze bg-transparent";
+      case "future":
+      default:
+        return "border-cream/15 bg-cream/5";
+    }
+  }
+
+  return (
+    <div className="print-hide mt-6 border-t border-bronze/20 pt-6">
+      <p className="text-xs font-semibold uppercase tracking-wide text-bronze2">
+        Recent completions
+      </p>
+      <div className="mt-3 flex items-center justify-between gap-2">
+        {dayStrip.map((entry) => {
+          const weekday = new Date(`${entry.date}T00:00:00`).toLocaleDateString("en-US", {
+            weekday: "narrow",
+          });
+          return (
+            <div key={entry.date} className="flex flex-col items-center gap-1.5">
+              <div
+                className={`flex h-7 w-7 items-center justify-center rounded-full border-2 ${circleClass(entry.status)}`}
+              >
+                {entry.status === "rest" && <span className="h-1.5 w-1.5 rounded-full bg-bronze" />}
+              </div>
+              <span className="text-[10px] text-cream/40">{weekday}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-cream/40">
+        <span>● Completed</span>
+        <span>· Rest day</span>
+        <span>○ Missed</span>
+        <span>○ Future</span>
+      </div>
+    </div>
+  );
+}
+
 function routineFocusChipLabel(
   routineFocus: string | null,
   extensionType: string[] | null
@@ -651,22 +726,25 @@ function DashboardContent() {
               </div>
 
               {hasRoutineSubscription ? (
-                <div className="mt-6 border-t border-bronze/20 pt-6">
-                  <Link
-                    href="/routine"
-                    className="print-hide flex items-center justify-between rounded-xl border border-bronze/40 bg-bronze/10 px-5 py-4 transition-colors hover:border-bronze"
-                  >
-                    <div>
-                      <p className="font-serif text-lg text-cream">
-                        Your routine is ready →
-                      </p>
-                      <p className="mt-1 text-sm text-cream/60">
-                        Full wash calendar, personalized steps, and curated
-                        products for this month.
-                      </p>
-                    </div>
-                  </Link>
-                </div>
+                <>
+                  <div className="mt-6 border-t border-bronze/20 pt-6">
+                    <Link
+                      href="/routine"
+                      className="print-hide flex items-center justify-between rounded-xl border border-bronze/40 bg-bronze/10 px-5 py-4 transition-colors hover:border-bronze"
+                    >
+                      <div>
+                        <p className="font-serif text-lg text-cream">
+                          Your routine is ready →
+                        </p>
+                        <p className="mt-1 text-sm text-cream/60">
+                          Full wash calendar, personalized steps, and curated
+                          products for this month.
+                        </p>
+                      </div>
+                    </Link>
+                  </div>
+                  {user && <RecentCompletionsStrip userId={user.id} />}
+                </>
               ) : (
                 !entitlementLoading &&
                 user && (

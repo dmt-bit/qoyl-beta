@@ -116,41 +116,66 @@ function washTypeForOccurrence(
   }
 }
 
-function toIsoDate(date: Date): string {
+export function toIsoDate(date: Date): string {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
 }
 
-function atMidnight(date: Date): Date {
+export function atMidnight(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-const MS_PER_DAY = 1000 * 60 * 60 * 24;
+export const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-// Which wash occurrence (1st, 2nd, 3rd wash since the user's routine
-// started) a given date falls on, given the wash interval. This is the
-// piece that used to be a local counter reset to 1 every time the
-// calendar was generated (i.e. every page load), which made "today"
-// always land on occurrence 1 -> always the first entry of whatever
-// cycle array (chelate/clarify) regardless of the actual date. Anchoring
-// to a persisted routineStartDate instead means occurrence - and so
-// today's wash type - only advances with real elapsed days.
-function occurrenceForDate(date: Date, routineStartDate: Date, interval: number): number {
+// Whether `date` is a real, scheduled routine-action day given the
+// user's routine start date and wash interval - and if so, which type.
+// Returns null for a genuine rest/between day requiring no action
+// (curly/coily families only; straight/wavy always get a "refresh" day
+// on every non-wash date since their routines cover daily maintenance).
+//
+// This replaced a local "occurrence" counter that reset to 1 every time
+// the calendar was generated (i.e. every page load with startDate=today),
+// which had two compounding bugs: (1) "today" always landed on
+// occurrence 1 regardless of the actual date, and (2) even after
+// anchoring occurrence to a persisted routineStartDate, the *day itself*
+// was still unconditionally forced to be "a wash day" (the loop always
+// started at offset 0 = today), so the app would ask a coily user to
+// wash every single day instead of only on their real ~10-14 day
+// schedule. Exported (not just used internally) because the streak/
+// missed-day/check-off system introduced alongside this needs to ask
+// "was this arbitrary past or present date actually due?" independent
+// of the forward-looking display window below.
+export function scheduledWashType(
+  date: Date,
+  family: CurlFamily | null,
+  interval: number,
+  routineStartDate: Date
+): WashDayType | null {
   const daysSinceStart = Math.floor(
     (atMidnight(date).getTime() - atMidnight(routineStartDate).getTime()) / MS_PER_DAY
   );
-  const washDayNumber = Math.floor(Math.max(0, daysSinceStart) / interval);
-  return washDayNumber + 1; // 1-indexed, matching washTypeForOccurrence's convention
+  if (daysSinceStart < 0) return null; // before the routine existed
+
+  if (daysSinceStart % interval === 0) {
+    const occurrence = daysSinceStart / interval + 1; // 1-indexed
+    return washTypeForOccurrence(family, occurrence);
+  }
+  if (family === "straight" || family === "wavy") return "refresh";
+  return null;
 }
 
-// Rolling 30-day window starting from `startDate` (today, in practice).
-// The first entry is always startDate itself (offset 0), regardless of
-// curl type or interval. `routineStartDate` (hair_profiles.routine_start_date -
-// the date the user's routine subscription was activated) anchors which
-// occurrence of the wash cycle each date falls on; defaults to
-// `startDate` only if the caller has no persisted start date at all.
+// Rolling 30-day window starting from `startDate` (today, in practice) -
+// one entry per date that's actually due per the real schedule; dates
+// that aren't due (curly/coily rest days) simply have no entry, so
+// `calendarDays[0]` is NOT guaranteed to be today anymore - callers that
+// need "today's" entry specifically should match on date (see
+// data.todayIso from /api/routine) rather than assuming array position.
+// `routineStartDate` (hair_profiles.routine_start_date - the date the
+// user's routine subscription was activated) anchors the schedule;
+// defaults to `startDate` only if the caller has no persisted start
+// date at all.
 export function generateWashCalendar(
   startDate: Date,
   curlType: string | null,
@@ -167,37 +192,12 @@ export function generateWashCalendar(
 
   const washDays: WashDay[] = [];
 
-  for (let offset = 0; offset < WINDOW_DAYS; offset += interval) {
+  for (let offset = 0; offset < WINDOW_DAYS; offset++) {
     const date = new Date(startDate);
     date.setDate(date.getDate() + offset);
-    const occurrence = occurrenceForDate(date, routineStartDate, interval);
-    washDays.push({
-      date: toIsoDate(date),
-      weekday: date.getDay(),
-      washType: washTypeForOccurrence(family, occurrence),
-    });
-
-    // Straight and wavy hair's wash-cadence interval (1-5 days) can leave
-    // real gap days that need their own guidance - fill with `interval -
-    // 1` refresh days between each wash (zero when interval is 1, i.e. a
-    // daily washer, so no refresh days show up for them at all). Curly and
-    // coily intervals run 4-21 days and deliberately have no refresh
-    // entries - their non-wash days render as plain rest/seal-ends dots
-    // instead (see app/routine/page.tsx's DayCell).
-    if (family === "straight" || family === "wavy") {
-      for (
-        let gapOffset = offset + 1;
-        gapOffset < Math.min(offset + interval, WINDOW_DAYS);
-        gapOffset++
-      ) {
-        const gapDate = new Date(startDate);
-        gapDate.setDate(gapDate.getDate() + gapOffset);
-        washDays.push({
-          date: toIsoDate(gapDate),
-          weekday: gapDate.getDay(),
-          washType: "refresh",
-        });
-      }
+    const washType = scheduledWashType(date, family, interval, routineStartDate);
+    if (washType) {
+      washDays.push({ date: toIsoDate(date), weekday: date.getDay(), washType });
     }
   }
 

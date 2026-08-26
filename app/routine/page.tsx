@@ -74,6 +74,10 @@ type RoutineData = {
   profileFor: string | null;
   childSafetyNote: string | null;
   calendarDays: WashDay[];
+  todayIso: string;
+  streak: number;
+  missedDates: string[];
+  todayCompletion: { washType: string; completedAt: string; notes: string | null } | null;
   stepsByWashType: WashDaySteps[];
   additionalNotes: RoutineStep[];
   products: ProductPick[];
@@ -233,11 +237,16 @@ type WashCellStyle =
 // small dot instead (bronze for an actual wash, muted for a refresh),
 // letting the clarify/protein cells actually stand out. Every other
 // family keeps the original filled-cell "wash"/"refresh" treatment.
-function washDayCellStyle(type: WashDayType, family: CurlFamily | null): WashCellStyle {
+// `completed` brightens a wash-type (non-refresh) cell's background
+// from #1C1612 to #2C2420 - the checkmark overlay itself is drawn by
+// DayCell, not here, since it's the same brightened background either
+// way and only DayCell knows about the todayCompletion/missed props.
+function washDayCellStyle(type: WashDayType, family: CurlFamily | null, completed: boolean): WashCellStyle {
+  const washBg = completed ? "bg-[#2C2420]" : "bg-dark";
   if (type === "chelate" || type === "clarify") {
     return {
       kind: "filled",
-      cellClass: "cal-cell-clarify bg-dark border-2 border-bronze",
+      cellClass: `cal-cell-clarify ${washBg} border-2 border-bronze`,
       numberClass: "text-cream",
       label: "Clarify",
       labelClass: "text-bronze",
@@ -246,7 +255,7 @@ function washDayCellStyle(type: WashDayType, family: CurlFamily | null): WashCel
   if (type === "protein") {
     return {
       kind: "filled",
-      cellClass: "cal-cell-protein bg-dark border-2 border-green",
+      cellClass: `cal-cell-protein ${washBg} border-2 border-green`,
       numberClass: "text-cream",
       label: "Protein",
       labelClass: "text-green",
@@ -265,11 +274,22 @@ function washDayCellStyle(type: WashDayType, family: CurlFamily | null): WashCel
   if (family === "straight") return { kind: "dot", dotClass: "bg-bronze" };
   return {
     kind: "filled",
-    cellClass: "cal-cell-wash bg-dark",
+    cellClass: `cal-cell-wash ${washBg}`,
     numberClass: "text-cream",
     label: "Wash",
     labelClass: "text-cream/50",
   };
+}
+
+// Tiny white checkmark for a completed wash-type cell - deliberately
+// not reusing CheckListIcon/etc. from elsewhere in this file, all of
+// which are sized for buttons/badges, not an 8-10px overlay.
+function TinyCheckIcon() {
+  return (
+    <svg className="h-2.5 w-2.5 text-cream" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+    </svg>
+  );
 }
 
 function DayCell({
@@ -277,12 +297,16 @@ function DayCell({
   washDay,
   isToday,
   isWithinWindow,
+  isCompleted,
+  isMissed,
   family,
 }: {
   cell: DayCellData;
   washDay: WashDay | undefined;
   isToday: boolean;
   isWithinWindow: boolean;
+  isCompleted: boolean;
+  isMissed: boolean;
   family: CurlFamily | null;
 }) {
   const todayMarker = isToday ? (
@@ -290,13 +314,25 @@ function DayCell({
   ) : null;
 
   if (washDay) {
-    const style = washDayCellStyle(washDay.washType, family);
+    const style = washDayCellStyle(washDay.washType, family, isCompleted);
+    const isRefresh = washDay.washType === "refresh";
     if (style.kind === "dot") {
+      // Completed dot-kind cells (straight/wavy's daily wash shown as a
+      // small dot rather than a full filled cell): a wash dot becomes a
+      // tiny checkmark, a refresh dot turns bronze - same two
+      // completed treatments as the filled cells below, just scaled
+      // down to fit the dot presentation.
       return (
         <div className="relative flex min-h-[40px] flex-col items-center justify-center rounded-md">
           {todayMarker}
           <span className="font-sans text-xs text-cream/70">{cell.day}</span>
-          <span className={`mt-0.5 h-1 w-1 rounded-full ${style.dotClass}`} />
+          {isCompleted && !isRefresh ? (
+            <TinyCheckIcon />
+          ) : (
+            <span
+              className={`mt-0.5 h-1 w-1 rounded-full ${isCompleted ? "bg-bronze" : style.dotClass}`}
+            />
+          )}
         </div>
       );
     }
@@ -305,18 +341,31 @@ function DayCell({
         className={`relative flex min-h-[40px] flex-col items-center justify-center rounded-md ${style.cellClass}`}
       >
         {todayMarker}
+        {isCompleted && isRefresh && (
+          <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-bronze" />
+        )}
         <span className={`font-sans text-xs ${style.numberClass}`}>{cell.day}</span>
-        <span className={`font-sans text-[7px] sm:text-[8px] ${style.labelClass}`}>
-          {style.label}
-        </span>
+        {isCompleted && !isRefresh ? (
+          <TinyCheckIcon />
+        ) : (
+          <span className={`font-sans text-[7px] sm:text-[8px] ${style.labelClass}`}>
+            {style.label}
+          </span>
+        )}
       </div>
     );
   }
 
   if (!isWithinWindow) {
     return (
-      <div className="flex min-h-[40px] items-center justify-center rounded-md opacity-30">
-        <span className="font-sans text-xs text-muted">{cell.day}</span>
+      <div className="relative flex min-h-[40px] items-center justify-center rounded-md">
+        <span className="font-sans text-xs text-muted opacity-30">{cell.day}</span>
+        {isMissed && (
+          <span
+            aria-label="Missed"
+            className="absolute bottom-0.5 right-1 h-1.5 w-1.5 rounded-full bg-amber"
+          />
+        )}
       </div>
     );
   }
@@ -343,6 +392,8 @@ function MonthCalendar({
   todayIso,
   windowStartIso,
   windowEndIso,
+  completedIso,
+  missedIsoDates,
   family,
 }: {
   meta: MonthMeta;
@@ -350,6 +401,8 @@ function MonthCalendar({
   todayIso: string;
   windowStartIso: string;
   windowEndIso: string;
+  completedIso: string | null;
+  missedIsoDates: Set<string>;
   family: CurlFamily | null;
 }) {
   const cells = buildMonthCells(meta.year, meta.month);
@@ -377,6 +430,8 @@ function MonthCalendar({
             washDay={washDayByDate.get(cell.iso)}
             isToday={cell.iso === todayIso}
             isWithinWindow={cell.iso >= windowStartIso && cell.iso <= windowEndIso}
+            isCompleted={cell.iso === completedIso}
+            isMissed={missedIsoDates.has(cell.iso)}
             family={family}
           />
         ))}
@@ -420,15 +475,19 @@ function CalendarLegend({ family }: { family: CurlFamily | null }) {
 
 function WashCalendarGrid({
   calendarDays,
+  todayIso,
+  completedIso,
+  missedDates,
   family,
 }: {
   calendarDays: WashDay[];
+  todayIso: string;
+  completedIso: string | null;
+  missedDates: string[];
   family: CurlFamily | null;
 }) {
-  if (calendarDays.length === 0) return null;
-
   const washDayByDate = new Map(calendarDays.map((d) => [d.date, d]));
-  const todayIso = calendarDays[0].date; // offset 0 is always today, see generateWashCalendar
+  const missedIsoDates = new Set(missedDates);
   const today = new Date(`${todayIso}T00:00:00`);
   const windowEndIso = toIsoLocal(addDays(today, CALENDAR_WINDOW_DAYS - 1));
   const months = getMonthsInWindow(today);
@@ -448,6 +507,8 @@ function WashCalendarGrid({
               todayIso={todayIso}
               windowStartIso={todayIso}
               windowEndIso={windowEndIso}
+              completedIso={completedIso}
+              missedIsoDates={missedIsoDates}
               family={family}
             />
           </div>
@@ -689,11 +750,12 @@ function SectionDivider({ section }: { section: RoutineSection }) {
 }
 
 // "What to use today" - checks today's entry in the generated wash
-// calendar (always calendarDays[0], see generateWashCalendar) and shows
-// only the product(s) relevant to that specific day, so a user doesn't
-// have to scroll the full list every morning.
+// calendar (matched by data.todayIso - calendarDays no longer always
+// has an entry for today, see generateWashCalendar) and shows only the
+// product(s) relevant to that specific day, so a user doesn't have to
+// scroll the full list every morning.
 function TodayProducts({ data }: { data: RoutineData }) {
-  const todayWash = data.calendarDays[0];
+  const todayWash = data.calendarDays.find((d) => d.date === data.todayIso);
 
   if (!todayWash) {
     return (
@@ -1075,12 +1137,202 @@ function RoutineHero({
   );
 }
 
+function FlameIcon() {
+  return (
+    <svg className="h-8 w-8 text-bronze" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M12 2.5c1.2 3-1.8 4.2-2.6 7.3-.6 2.3.3 4.5 2.6 5.5-1-1.3-1.2-2.7-.3-4 .4 1.5 1.4 2.1 2.4 1.6-.6-.9-.5-1.9.3-2.6.4 1.1 1.4 1.4 2.1.8.9-.8 1.2-2.3.6-3.6-.4 1-1.1 1.3-1.7.9.7-2.3-.5-4.3-3.4-5.9z" />
+      <path d="M9.8 15.3c-.5 2 .6 3.9 2.6 4.2 2.3.3 4.1-1.2 4.1-3.3 0-1.1-.5-2-1.3-2.6.1 1-.3 1.8-1.1 2-.1-1-.7-1.6-1.6-1.5.3 1.2-.3 2.1-1.3 2.1-.6 0-1.1-.4-1.4-.9z" />
+    </svg>
+  );
+}
+
+// Streak, per the request's three treatments (>=3, 1-2, 0). Rendered
+// between the hero and the "What to use today" card. Nothing shown at
+// all for streak === 0 - the encouragement note lives on the check-off
+// button itself (see TodayCheckOffButton's "Start your streak today").
+function StreakDisplay({ streak }: { streak: number }) {
+  if (streak <= 0) return null;
+
+  if (streak >= 3) {
+    return (
+      <div className="px-4 pt-6 text-center sm:px-6">
+        <div className="mx-auto flex max-w-3xl flex-col items-center">
+          <FlameIcon />
+          <p className="mt-1 font-serif text-[36px] leading-none text-bronze">{streak}</p>
+          <p className="mt-1 font-sans text-[10px] uppercase tracking-wide text-muted">day streak</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-4 pt-6 text-center sm:px-6">
+      <p className="font-sans text-sm text-bronze2">
+        {streak} day{streak === 1 ? "" : "s"} in — keep going →
+      </p>
+    </div>
+  );
+}
+
+function formatCheckOffTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+// CSS-only confetti - a handful of bronze dots scattering outward from
+// the button and fading, no animation library. Each dot's travel vector
+// is set via CSS custom properties consumed by the .routine-confetti-dot
+// keyframe in globals.css.
+const CONFETTI_VECTORS = [
+  { x: -34, y: -22 }, { x: 26, y: -30 }, { x: -14, y: -38 }, { x: 38, y: -8 },
+  { x: -38, y: 6 }, { x: 16, y: -42 }, { x: 2, y: -46 }, { x: -22, y: -10 },
+];
+function ConfettiBurst() {
+  return (
+    <div className="pointer-events-none absolute inset-0" aria-hidden>
+      {CONFETTI_VECTORS.map((v, i) => (
+        <span
+          key={i}
+          className="routine-confetti-dot absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full bg-bronze"
+          style={{ "--dx": `${v.x}px`, "--dy": `${v.y}px`, animationDelay: `${i * 20}ms` } as React.CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
+// The check-off control itself - idle "Mark today as complete" button,
+// a saving state, a completed badge with time + undo, and the confetti
+// burst on a fresh completion. washType is null on a genuine rest day
+// (no calendarDays entry for today), in which case there's nothing to
+// check off at all.
+function TodayCheckOffButton({
+  userId,
+  todayIso,
+  washType,
+  todayCompletion,
+  streak,
+  onChanged,
+}: {
+  userId: string;
+  todayIso: string;
+  washType: string | null;
+  todayCompletion: { washType: string; completedAt: string; notes: string | null } | null;
+  streak: number;
+  onChanged: () => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [undoing, setUndoing] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Optimistic local mirror of todayCompletion - flips instantly on tap
+  // rather than waiting on onChanged's round trip through /api/routine,
+  // per "Button immediately changes to filled state."
+  const [localCompletedAt, setLocalCompletedAt] = useState<string | null>(
+    todayCompletion?.completedAt ?? null
+  );
+
+  useEffect(() => {
+    setLocalCompletedAt(todayCompletion?.completedAt ?? null);
+  }, [todayCompletion]);
+
+  if (!washType) return null;
+
+  async function handleCheckOff() {
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/routine/check-off", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ user_id: userId, completed_date: todayIso, wash_type: washType }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        setError(json.error ?? "Couldn't save. Please try again.");
+        return;
+      }
+      setLocalCompletedAt(json.completedAt);
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 900);
+      onChanged();
+    } catch {
+      setError("Couldn't save. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleUndo() {
+    setUndoing(true);
+    try {
+      await fetch(
+        `/api/routine/check-off?user_id=${userId}&completed_date=${todayIso}`,
+        { method: "DELETE" }
+      );
+      setLocalCompletedAt(null);
+      onChanged();
+    } finally {
+      setUndoing(false);
+    }
+  }
+
+  if (localCompletedAt) {
+    return (
+      <div className="relative mt-4">
+        <div className="flex h-10 w-full items-center justify-between rounded-lg border border-bronze bg-bronze/15 px-4">
+          <span className="text-sm font-semibold text-bronze">Completed today ✓</span>
+          <button
+            type="button"
+            onClick={handleUndo}
+            disabled={undoing}
+            className="text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70 disabled:opacity-50"
+          >
+            {undoing ? "..." : "Undo"}
+          </button>
+        </div>
+        <p className="mt-1.5 text-[11px] text-muted">
+          Marked complete at {formatCheckOffTime(localCompletedAt)}
+        </p>
+        {showConfetti && <ConfettiBurst />}
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative mt-4">
+      <button
+        type="button"
+        onClick={handleCheckOff}
+        disabled={saving}
+        className="flex h-10 w-full items-center justify-center rounded-lg border border-bronze text-sm font-semibold text-bronze transition-colors hover:bg-bronze/10 disabled:opacity-60"
+      >
+        {saving ? "Saving..." : "Mark today as complete ✓"}
+      </button>
+      {error && <p className="mt-1.5 text-xs text-red">{error}</p>}
+      {streak === 0 && !error && (
+        <p className="mt-1.5 text-center text-[11px] text-muted">Start your streak today</p>
+      )}
+    </div>
+  );
+}
+
 // SECTION - "What to use today" teaser: the single most actionable
 // thing on the page, so it sits immediately below the hero with no
 // scrolling required. Distinct from TodayProducts further down (which
 // shows the actual product cards) - this is a compact pointer to it.
-function TodayTeaserCard({ data }: { data: RoutineData }) {
-  const todayWash = data.calendarDays[0];
+function TodayTeaserCard({
+  data,
+  userId,
+  onChanged,
+}: {
+  data: RoutineData;
+  userId: string;
+  onChanged: () => void;
+}) {
+  // Looked up by date, not calendarDays[0] - that array no longer
+  // always contains today (a genuine rest day has no entry at all, see
+  // generateWashCalendar), so "today" has to be matched explicitly.
+  const todayWash = data.calendarDays.find((d) => d.date === data.todayIso);
   const todayLabel = todayWash ? todayLabelForWashType(todayWash.washType) : "Rest day";
   const todayDate = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -1100,7 +1352,7 @@ function TodayTeaserCard({ data }: { data: RoutineData }) {
       <div className="mx-auto -mt-6 max-w-3xl">
         <div className="rounded-lg border-l-4 border-bronze bg-[#2C2420] px-5 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-bronze">Today</p>
               <p className="mt-0.5 font-sans text-[11px] text-muted">{todayDate}</p>
               <p className="mt-1.5 font-serif text-[22px] leading-tight text-cream">{todayLabel}</p>
@@ -1125,6 +1377,15 @@ function TodayTeaserCard({ data }: { data: RoutineData }) {
               <SmallCalendarIcon />
             </button>
           </div>
+
+          <TodayCheckOffButton
+            userId={userId}
+            todayIso={data.todayIso}
+            washType={todayWash?.washType ?? null}
+            todayCompletion={data.todayCompletion}
+            streak={data.streak}
+            onChanged={onChanged}
+          />
         </div>
 
         <ScrollTeaser />
@@ -1358,37 +1619,34 @@ function RoutineContent() {
 
   const showWelcome = searchParams.get("welcome") === "true" && !welcomeDismissed;
 
+  // Reused both for the initial load and to refresh after a check-off/
+  // undo (see TodayTeaserCard) - re-fetching rather than recomputing the
+  // streak client-side keeps that math in exactly one place (the API
+  // route/lib/routineCompletions.ts).
+  async function loadRoutine(userId: string): Promise<void> {
+    try {
+      const res = await fetch(`/api/routine?user_id=${userId}`);
+      if (res.status === 403) {
+        router.replace("/dashboard");
+        return;
+      }
+      if (!res.ok) throw new Error("Failed to load routine.");
+      const json = await res.json();
+      setData(json);
+      setStatus("ready");
+    } catch {
+      router.replace("/dashboard");
+    }
+  }
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
       router.replace("/auth");
       return;
     }
-
-    let cancelled = false;
-
-    async function load() {
-      try {
-        const res = await fetch(`/api/routine?user_id=${user!.id}`);
-        if (res.status === 403) {
-          if (!cancelled) router.replace("/dashboard");
-          return;
-        }
-        if (!res.ok) throw new Error("Failed to load routine.");
-        const json = await res.json();
-        if (!cancelled) {
-          setData(json);
-          setStatus("ready");
-        }
-      } catch {
-        if (!cancelled) router.replace("/dashboard");
-      }
-    }
-
-    load();
-    return () => {
-      cancelled = true;
-    };
+    loadRoutine(user.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, authLoading, router]);
 
   // Marks this as the user's last routine visit (see lib/routineVisit.ts)
@@ -1450,7 +1708,8 @@ function RoutineContent() {
   return (
     <main className="min-h-screen bg-dark font-sans text-cream">
       <RoutineHero curlType={data.curlType} porosity={data.porosity} cityLabel={cityLabel} />
-      <TodayTeaserCard data={data} />
+      <StreakDisplay streak={data.streak} />
+      <TodayTeaserCard data={data} userId={user!.id} onChanged={() => loadRoutine(user!.id)} />
       <RoutineMiniNav />
 
       <div className="px-4 py-10 sm:px-6">
@@ -1589,7 +1848,13 @@ function RoutineContent() {
             <p className="mt-2 text-sm text-dark/70">{FREQUENCY_EXPLANATION[family]}</p>
           )}
 
-          <WashCalendarGrid calendarDays={data.calendarDays} family={family} />
+          <WashCalendarGrid
+            calendarDays={data.calendarDays}
+            todayIso={data.todayIso}
+            completedIso={data.todayCompletion ? data.todayIso : null}
+            missedDates={data.missedDates}
+            family={family}
+          />
         </section>
 
         <PhotoStripDivider family={family} />
