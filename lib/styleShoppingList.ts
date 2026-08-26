@@ -16,11 +16,22 @@ export type StaticShoppingItem = {
   retailer: string;
 };
 
+export type FakeHairItem = {
+  name: string;
+  description: string;
+  packsNeeded: string;
+  retailer: string;
+  url: string;
+  priceRange: string;
+};
+
 export type StyleShoppingList = {
   hairCare: ScoredHairCareItem[];
-  fakeHair: StaticShoppingItem[];
+  fakeHair: FakeHairItem[];
   fakeHairNote: string | null;
+  fakeHairTip: string | null;
   showFakeHairSection: boolean;
+  lengthExtensionOptions: StaticShoppingItem[];
   tools: StaticShoppingItem[];
   accessories: StaticShoppingItem[];
 };
@@ -134,50 +145,200 @@ async function fetchScoredHairCareProducts(
   return results;
 }
 
-function buildFakeHairOptions(
-  styleName: string,
-  styleDescription: string,
-  fakeHairType: string | null
-): { items: StaticShoppingItem[]; note: string } {
-  const text = styleText(styleName, styleDescription);
-  const fakeHairText = (fakeHairType ?? "").toLowerCase();
-  const note =
-    "We recommend purchasing from a beauty supply store to see colors in person.";
+const FAKE_HAIR_NOTE =
+  "Visit your local beauty supply store for the best color selection and to match your hair color in person. Prices and availability vary by location.";
+const FAKE_HAIR_TIP =
+  "Buy one extra pack as backup — running out mid-install is a common frustration.";
 
-  if (fakeHairText.includes("crochet")) {
-    return {
-      items: [
-        { name: "Freetress Water Wave", url: amazonSearch("Freetress Water Wave crochet hair"), retailer: "Amazon" },
-      ],
-      note,
-    };
+// Comprehensive, per-style-type fake hair recommendations. This section
+// is a hard guarantee whenever the detected style requires_fake_hair -
+// every branch below returns at least 3 items, including the generic
+// fallback, so "What you will need" is never empty for a style that
+// needs added hair.
+function generateFakeHairList(
+  fakeHairType: string | null,
+  styleName: string
+): FakeHairItem[] {
+  const name = styleName.toLowerCase();
+  const type = (fakeHairType ?? "").toLowerCase();
+
+  // Box braids, knotless braids, goddess braids
+  if (name.includes("braid")) {
+    return [
+      {
+        name: "X-Pression Braiding Hair",
+        description: "The most popular braiding hair — lightweight, minimal tangling, holds well",
+        packsNeeded: "5-8 packs for waist length, 3-5 for shoulder length",
+        retailer: "Amazon",
+        url: amazonSearch("x-pression braiding hair"),
+        priceRange: "$3-5 per pack",
+      },
+      {
+        name: "Freetress Equal Braiding Hair",
+        description: "Pre-stretched option — saves time and reduces hand fatigue during installation",
+        packsNeeded: "4-6 packs",
+        retailer: "Amazon",
+        url: amazonSearch("freetress equal braiding hair"),
+        priceRange: "$4-7 per pack",
+      },
+      {
+        name: "Toyokalon Jumbo Braiding Hair",
+        description: "Affordable option, very available at beauty supply stores",
+        packsNeeded: "5-8 packs",
+        retailer: "Amazon",
+        url: amazonSearch("toyokalon jumbo braiding hair"),
+        priceRange: "$2-4 per pack",
+      },
+    ];
   }
 
-  if (fakeHairText.includes("wig") || fakeHairText.includes("lace front")) {
-    return {
-      items: [
-        { name: "Lace front wigs", url: amazonSearch("lace front wig"), retailer: "Amazon" },
-      ],
-      note,
-    };
+  // Faux locs, goddess locs
+  if (name.includes("loc")) {
+    return [
+      {
+        name: "Freetress Water Wave Crochet Hair",
+        description: "Most popular for boho and goddess faux locs — soft texture, natural look",
+        packsNeeded: "6-10 packs",
+        retailer: "Amazon",
+        url: amazonSearch("freetress water wave crochet faux locs"),
+        priceRange: "$6-10 per pack",
+      },
+      {
+        name: "Pre-wrapped Faux Locs",
+        description: "Quickest installation — locs come pre-wrapped and ready to crochet",
+        packsNeeded: "4-6 packs",
+        retailer: "Amazon",
+        url: amazonSearch("pre wrapped faux locs crochet hair"),
+        priceRange: "$10-18 per pack",
+      },
+      {
+        name: "Marley Hair for Wrapping",
+        description: "Used to wrap individual locs for a more textured, natural finish",
+        packsNeeded: "3-5 packs",
+        retailer: "Amazon",
+        url: amazonSearch("marley hair loc wrapping"),
+        priceRange: "$5-8 per pack",
+      },
+    ];
   }
 
-  if (isBraidedStyle(text) || fakeHairText.includes("braid")) {
-    return {
-      items: [
-        { name: "X-Pression Braiding Hair", url: amazonSearch("X-Pression braiding hair"), retailer: "Amazon" },
-        { name: "Freetress Braid", url: amazonSearch("Freetress braid hair"), retailer: "Amazon" },
-      ],
-      note,
-    };
+  // Passion twists
+  if (name.includes("passion twist") || name.includes("passion")) {
+    return [
+      {
+        name: "Freetress Water Wave Passion Twist Hair",
+        description: "The original for passion twists — the wavy texture is essential",
+        packsNeeded: "6-8 packs",
+        retailer: "Amazon",
+        url: amazonSearch("freetress water wave passion twist"),
+        priceRange: "$6-9 per pack",
+      },
+      {
+        name: "Spring Twist Hair",
+        description: "Pre-twisted option for spring twists or passion twist look",
+        packsNeeded: "5-7 packs",
+        retailer: "Amazon",
+        url: amazonSearch("spring twist hair crochet"),
+        priceRange: "$7-12 per pack",
+      },
+      {
+        name: "Marley Hair for Wrapping",
+        description: "Used to wrap twist ends for a more textured, natural finish",
+        packsNeeded: "2-4 packs",
+        retailer: "Amazon",
+        url: amazonSearch("marley hair twist wrapping"),
+        priceRange: "$5-8 per pack",
+      },
+    ];
   }
 
-  return {
-    items: [
-      { name: fakeHairType ?? "Fake hair for this style", url: amazonSearch(fakeHairType ?? `${styleName} hair extensions`), retailer: "Amazon" },
-    ],
-    note,
-  };
+  // Crochet styles
+  if (type.includes("crochet")) {
+    return [
+      {
+        name: "Crochet Braiding Hair",
+        description: "Pre-looped for easy crochet installation",
+        packsNeeded: "4-7 packs depending on density",
+        retailer: "Amazon",
+        url: amazonSearch("crochet braiding hair pre looped"),
+        priceRange: "$8-15 per pack",
+      },
+      {
+        name: "X-Pression Crochet Braids",
+        description: "Same trusted brand as traditional braiding hair, in a pre-looped crochet format",
+        packsNeeded: "4-6 packs",
+        retailer: "Amazon",
+        url: amazonSearch("x-pression crochet braids"),
+        priceRange: "$4-7 per pack",
+      },
+      {
+        name: "Marley Hair for Crochet",
+        description: "Coarser, more natural-textured option for crochet braids or twists",
+        packsNeeded: "3-5 packs",
+        retailer: "Amazon",
+        url: amazonSearch("marley hair crochet braids"),
+        priceRange: "$5-8 per pack",
+      },
+    ];
+  }
+
+  // Wig styles (silk press, straight styles)
+  if (name.includes("silk press") || type.includes("wig")) {
+    return [
+      {
+        name: "Lace Front Wig — Human Hair",
+        description: "For a silk press look without heat damage to natural hair",
+        packsNeeded: "N/A — 1 wig unit",
+        retailer: "Amazon",
+        url: amazonSearch("lace front wig human hair straight"),
+        priceRange: "$80-400+",
+      },
+      {
+        name: "Lace Front Wig — Synthetic Heat Resistant",
+        description: "More affordable option — can be styled with low heat",
+        packsNeeded: "N/A — 1 wig unit",
+        retailer: "Amazon",
+        url: amazonSearch("heat resistant synthetic lace front wig straight"),
+        priceRange: "$25-80",
+      },
+      {
+        name: "Wig Grip Band",
+        description: "Keeps the wig secure and comfortable all day without adhesive",
+        packsNeeded: "N/A — 1 unit",
+        retailer: "Amazon",
+        url: amazonSearch("wig grip band"),
+        priceRange: "$8-15",
+      },
+    ];
+  }
+
+  // Generic fallback — should rarely be hit
+  return [
+    {
+      name: `${styleName} Hair Extensions`,
+      description: "Search your local beauty supply store for the best color match",
+      packsNeeded: "Ask your stylist for the right amount",
+      retailer: "Amazon",
+      url: amazonSearch(`${styleName} hair extension`),
+      priceRange: "Varies",
+    },
+    {
+      name: "Rat Tail Comb (for sectioning)",
+      description: "Standard tool for clean, even sections before installing added hair",
+      packsNeeded: "N/A — 1 unit",
+      retailer: "Amazon",
+      url: amazonSearch("rat tail comb"),
+      priceRange: "$3-6",
+    },
+    {
+      name: "Edge Control",
+      description: "For laying edges cleanly around any style that adds hair",
+      packsNeeded: "N/A — 1 unit",
+      retailer: "Amazon",
+      url: amazonSearch("edge control gel"),
+      priceRange: "$5-12",
+    },
+  ];
 }
 
 // Deep Match's "longer than my current hair, include extension options"
@@ -262,21 +423,26 @@ export async function buildStyleShoppingList(input: {
   const categorySlugs = pickCategoriesForStyle(input.styleName, input.styleDescription);
   const hairCare = await fetchScoredHairCareProducts(categorySlugs);
 
-  const fakeHairResult = input.requiresFakeHair
-    ? buildFakeHairOptions(input.styleName, input.styleDescription, input.fakeHairType)
-    : null;
+  // Hard guarantee: whenever the style requires fake hair, this section
+  // is always populated (generateFakeHairList always returns >= 3 items,
+  // including its generic fallback branch) - it can never come back
+  // empty or missing the way an earlier, purely conditional version
+  // sometimes did.
+  const fakeHair = input.requiresFakeHair
+    ? generateFakeHairList(input.fakeHairType, input.styleName)
+    : [];
 
-  const lengthExtensionItems = input.wantsLengthExtensions
+  const lengthExtensionOptions = input.wantsLengthExtensions
     ? buildLengthExtensionOptions(input.styleName, input.styleDescription)
     : [];
 
   return {
     hairCare,
-    fakeHair: [...(fakeHairResult?.items ?? []), ...lengthExtensionItems],
-    fakeHairNote: fakeHairResult?.note ?? (lengthExtensionItems.length > 0
-      ? "We recommend purchasing from a beauty supply store to see colors in person."
-      : null),
-    showFakeHairSection: input.requiresFakeHair || lengthExtensionItems.length > 0,
+    fakeHair,
+    fakeHairNote: input.requiresFakeHair ? FAKE_HAIR_NOTE : null,
+    fakeHairTip: input.requiresFakeHair ? FAKE_HAIR_TIP : null,
+    showFakeHairSection: input.requiresFakeHair,
+    lengthExtensionOptions,
     tools: buildTools(input.styleName, input.styleDescription),
     accessories: buildAccessories(input.accessoriesVisible),
   };

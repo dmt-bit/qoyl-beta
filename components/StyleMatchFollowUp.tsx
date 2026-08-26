@@ -1,0 +1,268 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+
+export type FollowUpCandidate = {
+  id: string;
+  detected_style: string | null;
+  created_at: string;
+};
+
+const SNOOZE_DAYS = 7;
+const SNOOZE_KEY_PREFIX = "qoyl_style_match_followup_snooze_";
+
+function isSnoozed(matchId: string): boolean {
+  if (typeof window === "undefined") return false;
+  const raw = window.localStorage.getItem(SNOOZE_KEY_PREFIX + matchId);
+  if (!raw) return false;
+  const until = Number(raw);
+  return Number.isFinite(until) && Date.now() < until;
+}
+
+function snooze(matchId: string) {
+  const until = Date.now() + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
+  window.localStorage.setItem(SNOOZE_KEY_PREFIX + matchId, String(until));
+}
+
+function fileToBase64(file: File): Promise<{ base64: string; mediaType: string }> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve({ base64: result.split(",")[1] ?? "", mediaType: file.type });
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+type CardState = "prompt" | "uploading" | "success";
+
+function FollowUpCard({
+  match,
+  userId,
+  onDismiss,
+}: {
+  match: FollowUpCandidate;
+  userId: string;
+  onDismiss: () => void;
+}) {
+  const [state, setState] = useState<CardState>("prompt");
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
+  const [keepPrivate, setKeepPrivate] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [uploadedPhotoId, setUploadedPhotoId] = useState<string | null>(null);
+
+  const styleName = match.detected_style || "this style";
+
+  function handleNotYet() {
+    snooze(match.id);
+    onDismiss();
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPendingFile(file);
+    setPendingPreviewUrl(URL.createObjectURL(file));
+    setError(null);
+  }
+
+  async function handleSave() {
+    if (!pendingFile) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const { base64, mediaType } = await fileToBase64(pendingFile);
+      const photoRes = await fetch("/api/hair-photos", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          image_base64: base64,
+          image_media_type: mediaType,
+          filename: pendingFile.name,
+          caption: `Did the ${styleName}`,
+          is_public: !keepPrivate,
+        }),
+      });
+      const photoData = await photoRes.json();
+      if (!photoRes.ok || !photoData.photo) {
+        setError(photoData.error ?? "Couldn't save photo. Please try again.");
+        return;
+      }
+
+      const followUpRes = await fetch("/api/style-match/follow-up", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          match_id: match.id,
+          user_id: userId,
+          hair_photo_id: photoData.photo.id,
+        }),
+      });
+      if (!followUpRes.ok) {
+        setError("Couldn't save this. Please try again.");
+        return;
+      }
+
+      setUploadedPhotoId(photoData.photo.id);
+      setState("success");
+    } catch {
+      setError("Couldn't save photo. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleTogglePublic() {
+    if (!uploadedPhotoId) return;
+    const nextPublic = keepPrivate;
+    setKeepPrivate(!nextPublic);
+    await fetch(`/api/hair-photos/${uploadedPhotoId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ user_id: userId, is_public: nextPublic }),
+    });
+  }
+
+  if (state === "success") {
+    return (
+      <div className="rounded-lg border border-bronze/40 bg-bronze/10 px-4 py-3">
+        <p className="text-sm text-cream">
+          Added to your hair journey! Share your look with the community →
+        </p>
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            onClick={handleTogglePublic}
+            className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+              keepPrivate ? "border-bronze/40 text-cream/70" : "border-bronze bg-bronze/20 text-cream"
+            }`}
+          >
+            {keepPrivate ? "Private - tap to share to community" : "Shared to community ✓"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-bronze/40 bg-bronze/10 px-4 py-3">
+      <p className="text-sm text-cream">
+        Did you try {styleName}? Let us know how it turned out →
+      </p>
+
+      {state === "prompt" && (
+        <div className="mt-3 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setState("uploading")}
+            className="flex-1 rounded-lg bg-bronze py-2 text-xs font-semibold text-dark transition-colors hover:bg-bronze2"
+          >
+            Yes, I did it!
+          </button>
+          <button
+            type="button"
+            onClick={handleNotYet}
+            className="flex-1 rounded-lg border border-bronze/40 py-2 text-xs font-medium text-cream/80 transition-colors hover:border-bronze"
+          >
+            Not yet
+          </button>
+        </div>
+      )}
+
+      {state === "uploading" && (
+        <div className="mt-3">
+          {pendingPreviewUrl && (
+            <div className="relative mx-auto h-32 w-32 overflow-hidden rounded-lg bg-[#2C2420]">
+              <Image src={pendingPreviewUrl} alt="Selected photo" fill className="object-cover" />
+            </div>
+          )}
+
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="mt-3 block w-full text-xs text-cream/70 file:mr-3 file:rounded-full file:border file:border-bronze/40 file:bg-transparent file:px-3 file:py-1.5 file:text-xs file:text-bronze2"
+          />
+
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setKeepPrivate(true)}
+              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                keepPrivate ? "border-bronze bg-bronze/20 text-cream" : "border-bronze/40 text-cream/70"
+              }`}
+            >
+              Keep private
+            </button>
+            <button
+              type="button"
+              onClick={() => setKeepPrivate(false)}
+              className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                !keepPrivate ? "border-bronze bg-bronze/20 text-cream" : "border-bronze/40 text-cream/70"
+              }`}
+            >
+              Share to community
+            </button>
+          </div>
+
+          {error && <p className="mt-2 text-xs text-red">{error}</p>}
+
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!pendingFile || saving}
+              className="flex-1 rounded-lg bg-bronze py-2 text-xs font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save photo"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setState("prompt")}
+              disabled={saving}
+              className="rounded-lg border border-bronze/40 px-4 py-2 text-xs font-medium text-cream/80"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// No scheduled-job infrastructure exists in this app (see the "OR
+// simpler approach" carve-out in the spec this implements), so this
+// renders directly on the dashboard for any style match old enough to
+// prompt on, rather than sending a 7-day-later email via a cron job.
+export default function StyleMatchFollowUp({
+  candidates,
+  userId,
+}: {
+  candidates: FollowUpCandidate[];
+  userId: string;
+}) {
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+
+  const visible = candidates.filter((c) => !dismissedIds.has(c.id) && !isSnoozed(c.id));
+  if (visible.length === 0) return null;
+
+  return (
+    <div className="mt-4 space-y-3">
+      {visible.map((match) => (
+        <FollowUpCard
+          key={match.id}
+          match={match}
+          userId={userId}
+          onDismiss={() => setDismissedIds((prev) => new Set(prev).add(match.id))}
+        />
+      ))}
+    </div>
+  );
+}

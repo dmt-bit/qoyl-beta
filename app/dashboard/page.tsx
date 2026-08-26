@@ -19,6 +19,7 @@ import {
   type ChildProfile,
 } from "@/lib/familyProfiles";
 import { EXTENSION_TYPE_LABELS, fetchLatestExtensionProfileByUserId, type ExtensionProfile } from "@/lib/extensionProfiles";
+import StyleMatchFollowUp, { type FollowUpCandidate } from "@/components/StyleMatchFollowUp";
 import {
   protectiveStyleTypeFromExtensionType,
   PROTECTIVE_STYLE_LABEL,
@@ -438,6 +439,36 @@ function DashboardContent() {
     };
   }, [user]);
 
+  // "Did you do this style?" prompt candidates (Part 3) - any match at
+  // least 7 days old with no follow-through recorded yet. Separate from
+  // recentStyleMatches above, which is capped at 3 and not filtered by
+  // age - a style matched 8 days ago could easily have scrolled out of
+  // that list already but still be waiting on a follow-up prompt.
+  const [followUpCandidates, setFollowUpCandidates] = useState<FollowUpCandidate[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    async function loadFollowUpCandidates() {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data } = await supabase
+        .from("style_matches")
+        .select("id, detected_style, created_at")
+        .eq("user_id", user!.id)
+        .eq("followed_through", false)
+        .lte("created_at", sevenDaysAgo)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (!cancelled) setFollowUpCandidates(data ?? []);
+    }
+
+    loadFollowUpCandidates();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   const [savedStyles, setSavedStyles] = useState<SavedStyle[]>([]);
   const [savedStylesLoaded, setSavedStylesLoaded] = useState(false);
 
@@ -821,6 +852,7 @@ function DashboardContent() {
             <h2 className="font-serif text-2xl font-semibold text-cream">
               Recent Style Matches
             </h2>
+            {user && <StyleMatchFollowUp candidates={followUpCandidates} userId={user.id} />}
             <ul className="mt-4 space-y-2">
               {recentStyleMatches.map((match) => {
                 const expanded = expandedMatchId === match.id;

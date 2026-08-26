@@ -147,13 +147,6 @@ function CameraIcon() {
     </svg>
   );
 }
-function PencilIcon() {
-  return (
-    <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
-    </svg>
-  );
-}
 function CompassIcon() {
   return (
     <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -265,7 +258,7 @@ function DemoSection() {
             <CameraIcon />
           </div>
           <p className="mt-3 text-sm text-cream/80">
-            Upload a photo of the style you want or describe it in words
+            Upload a photo of the style you want or browse our style library
           </p>
           <div className="mt-4 flex h-28 items-center justify-center rounded-2xl border-2 border-cream/20">
             <UploadIcon />
@@ -430,19 +423,17 @@ function UpgradeWallContent({ userId, userEmail }: { userId: string; userEmail: 
     <div>
       <h1 className="font-serif text-[28px] font-semibold text-cream">Unlock unlimited Style Match</h1>
       <p className="mt-2 text-sm text-cream/70">
-        Your first match is free. Upgrade to the Qoyl routine subscription for unlimited style
-        matches, your personalized monthly routine, and a curated product list - all in one.
-      </p>
-      <p className="mt-3 text-sm text-cream/70">
-        Add your hair photos to your profile and Style Match will use them to show you
-        exactly what any style would take starting from your current hair.
+        You have used your 1 free style match. Upgrade for unlimited style matching — plus
+        your personalized monthly routine, 30-day wash day calendar, and unlimited product
+        searches.
       </p>
 
       <ul className="mt-6 space-y-2.5">
         {[
-          "Unlimited Style Match - photo or text, any style, any time",
-          "30-day personalized wash day calendar",
-          "Monthly curated product list scored for your hair",
+          "Unlimited Style Match - photo or browse, any style, any time",
+          "Personalized monthly routine",
+          "30-day wash day calendar",
+          "Unlimited product searches",
         ].map((b) => (
           <li key={b} className="flex items-start gap-2 text-sm text-cream/80">
             <span className="mt-0.5 text-bronze2">✓</span>
@@ -450,6 +441,8 @@ function UpgradeWallContent({ userId, userEmail }: { userId: string; userEmail: 
           </li>
         ))}
       </ul>
+
+      <p className="mt-4 text-sm font-semibold text-cream">$7.99/month — cancel anytime</p>
 
       {error && <p className="mt-3 text-sm text-red">{error}</p>}
 
@@ -459,7 +452,7 @@ function UpgradeWallContent({ userId, userEmail }: { userId: string; userEmail: 
         disabled={loading}
         className="mt-6 w-full rounded-lg bg-bronze py-4 text-base font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
       >
-        {loading ? "Redirecting..." : "Unlock for $7.99/month →"}
+        {loading ? "Redirecting..." : "Unlock unlimited →"}
       </button>
 
       <Link href="/auth" className="mt-4 block text-center text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70">
@@ -549,11 +542,18 @@ function StyleMatchContent() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const [textDescription, setTextDescription] = useState("");
 
-  // Pre-fill from a saved style ("Match this style ->", Part 4) - fills
-  // the text input but doesn't auto-submit, unlike inspo cards below.
+  // Pre-fill from a saved style ("Match this style ->", Part 4). The
+  // "Describe it" card this used to fill (and wait for the user to press
+  // "Find this style" on) no longer exists, so this now jumps straight
+  // into the deep survey - same behavior as tapping an inspo card below.
   useEffect(() => {
     const prefill = searchParams.get("prefill");
-    if (prefill) setTextDescription(prefill);
+    if (prefill) {
+      setTextDescription(prefill);
+      setDeepStep(1);
+      setPageState("deepSurvey");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // Pre-fill from a community photo's "Style Match this ->" button -
@@ -1040,22 +1040,22 @@ function StyleMatchContent() {
           <>
             <h1 className="font-serif text-[28px] font-semibold text-cream">Style Match</h1>
             <p className="mt-2 text-sm text-cream/70">
-              Upload a photo or describe the style you want. We will find tutorials, build
-              your complete shopping list, and match you with a local stylist if one is
-              available in your city.
+              Upload a photo of the style you want or browse our style library — we will
+              find tutorials, build your complete shopping list, and match you with a
+              local stylist.
             </p>
 
             <DemoSection />
 
             {error && <p className="mt-4 text-sm text-red">{error}</p>}
 
-            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="rounded-xl border border-bronze/30 p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
                   <CameraIcon />
                 </div>
                 <p className="mt-4 font-serif text-xl font-semibold text-cream">Upload a photo</p>
-                <p className="mt-1 text-sm text-cream/70">Snap or upload a picture of the style you want.</p>
+                <p className="mt-1 text-sm text-cream/70">A picture of the style you want.</p>
 
                 <input
                   type="file"
@@ -1083,31 +1083,6 @@ function StyleMatchContent() {
                 </button>
               </div>
 
-              <div className="rounded-xl border border-bronze/30 p-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
-                  <PencilIcon />
-                </div>
-                <p className="mt-4 font-serif text-xl font-semibold text-cream">Describe it</p>
-                <p className="mt-1 text-sm text-cream/70">Tell us about the hairstyle you&apos;re picturing.</p>
-
-                <textarea
-                  value={textDescription}
-                  onChange={(e) => setTextDescription(e.target.value)}
-                  placeholder="Knotless box braids, medium length, with a middle part..."
-                  rows={4}
-                  className="mt-4 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
-                />
-
-                <button
-                  type="button"
-                  onClick={handlePrimarySubmit}
-                  disabled={!textDescription.trim()}
-                  className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-40"
-                >
-                  Find this style →
-                </button>
-              </div>
-
               <button
                 type="button"
                 onClick={openInspoMode}
@@ -1116,9 +1091,9 @@ function StyleMatchContent() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
                   <CompassIcon />
                 </div>
-                <p className="mt-4 font-serif text-xl font-semibold text-cream">Show me inspo</p>
+                <p className="mt-4 font-serif text-xl font-semibold text-cream">Browse styles</p>
                 <p className="mt-1 text-sm text-cream/70">
-                  Not sure what you want? Browse styles for your hair type.
+                  Not sure? Browse styles for your hair type.
                 </p>
               </button>
             </div>
@@ -1651,6 +1626,52 @@ function StyleMatchContent() {
 
                 {!shoppingLoading && shoppingList && (
                   <>
+                    {shoppingList.showFakeHairSection && shoppingList.fakeHair.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-bronze">What you will need</p>
+                        <ul className="mt-3 space-y-3">
+                          {shoppingList.fakeHair.map((item) => (
+                            <li key={item.name} className="rounded-lg border border-bronze/30 px-4 py-3">
+                              <p className="text-sm text-cream">{item.name}</p>
+                              <p className="mt-1 text-xs text-cream/60">{item.description}</p>
+                              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-cream/50">
+                                <span>{item.packsNeeded}</span>
+                                <span>{item.priceRange}</span>
+                              </div>
+                              <div className="mt-2 flex items-center gap-2">
+                                <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-bronze2">
+                                  {item.retailer}
+                                </span>
+                                <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-bronze2 underline">
+                                  Shop on Amazon →
+                                </a>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                        {shoppingList.fakeHairNote && <p className="mt-3 text-xs text-cream/50">{shoppingList.fakeHairNote}</p>}
+                        {shoppingList.fakeHairTip && (
+                          <p className="mt-2 text-xs text-bronze2">Tip: {shoppingList.fakeHairTip}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {shoppingList.lengthExtensionOptions.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Additional Length Options</p>
+                        <ul className="mt-3 space-y-2">
+                          {shoppingList.lengthExtensionOptions.map((item) => (
+                            <li key={item.name} className="flex items-center justify-between rounded-lg border border-bronze/30 px-4 py-3">
+                              <span className="text-sm text-cream">{item.name}</span>
+                              <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-bronze2 underline">
+                                {item.retailer} →
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Hair Care Products</p>
                       <ul className="mt-3 space-y-2">
@@ -1673,23 +1694,6 @@ function StyleMatchContent() {
                         {shoppingList.hairCare.length === 0 && <p className="text-sm text-cream/50">No matching products found yet.</p>}
                       </ul>
                     </div>
-
-                    {shoppingList.showFakeHairSection && shoppingList.fakeHair.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Fake Hair Needed</p>
-                        {shoppingList.fakeHairNote && <p className="mt-1 text-xs text-cream/50">{shoppingList.fakeHairNote}</p>}
-                        <ul className="mt-3 space-y-2">
-                          {shoppingList.fakeHair.map((item) => (
-                            <li key={item.name} className="flex items-center justify-between rounded-lg border border-bronze/30 px-4 py-3">
-                              <span className="text-sm text-cream">{item.name}</span>
-                              <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-bronze2 underline">
-                                {item.retailer} →
-                              </a>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
 
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Tools</p>
