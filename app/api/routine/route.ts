@@ -50,13 +50,22 @@ export async function GET(request: Request) {
   const { data: profile } = await getSupabaseAdmin()
     .from("hair_profiles")
     .select(
-      "first_name, curl_type, porosity, scalp_condition, zip_code, water_hardness, extensions, extension_type, extension_care, profile_for, adult_age_range, hair_concerns, color_treated, budget_range, routine_focus"
+      "first_name, curl_type, porosity, scalp_condition, zip_code, water_hardness, extensions, extension_type, extension_care, profile_for, adult_age_range, hair_concerns, color_treated, budget_range, routine_focus, routine_start_date"
     )
     .eq("user_id", userId)
     .maybeSingle();
 
   const now = new Date();
   const startDateLabel = formatStartDateLabel(now);
+  // Anchors the wash cycle to when the routine subscription was actually
+  // activated (set in the Stripe webhook) rather than "today" - see
+  // lib/routineCalendar.ts's generateWashCalendar for why that mattered.
+  // Falls back to today only for a profile with no persisted value at
+  // all (shouldn't happen post-migration, but a null here would silently
+  // reproduce the old bug rather than error, so it's an explicit guard).
+  const routineStartDate = profile?.routine_start_date
+    ? new Date(`${profile.routine_start_date}T00:00:00`)
+    : now;
 
   const curlType = profile?.curl_type ?? null;
   const porosity = profile?.porosity ?? null;
@@ -82,7 +91,7 @@ export async function GET(request: Request) {
   // this same routine (see spec: "Same as natural hair routine based on
   // their curl type and porosity").
   const [calendarDays, stepsByWashType, products, avoidIngredients] = await Promise.all([
-    Promise.resolve(generateWashCalendar(now, curlType, porosity, scalpCondition)),
+    Promise.resolve(generateWashCalendar(now, curlType, porosity, scalpCondition, routineStartDate)),
     Promise.resolve(generateRoutineStepsByWashType(curlType)),
     getRoutineProductPicks(
       porosity,

@@ -123,14 +123,40 @@ function toIsoDate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+function atMidnight(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+// Which wash occurrence (1st, 2nd, 3rd wash since the user's routine
+// started) a given date falls on, given the wash interval. This is the
+// piece that used to be a local counter reset to 1 every time the
+// calendar was generated (i.e. every page load), which made "today"
+// always land on occurrence 1 -> always the first entry of whatever
+// cycle array (chelate/clarify) regardless of the actual date. Anchoring
+// to a persisted routineStartDate instead means occurrence - and so
+// today's wash type - only advances with real elapsed days.
+function occurrenceForDate(date: Date, routineStartDate: Date, interval: number): number {
+  const daysSinceStart = Math.floor(
+    (atMidnight(date).getTime() - atMidnight(routineStartDate).getTime()) / MS_PER_DAY
+  );
+  const washDayNumber = Math.floor(Math.max(0, daysSinceStart) / interval);
+  return washDayNumber + 1; // 1-indexed, matching washTypeForOccurrence's convention
+}
+
 // Rolling 30-day window starting from `startDate` (today, in practice).
 // The first entry is always startDate itself (offset 0), regardless of
-// curl type or interval.
+// curl type or interval. `routineStartDate` (hair_profiles.routine_start_date -
+// the date the user's routine subscription was activated) anchors which
+// occurrence of the wash cycle each date falls on; defaults to
+// `startDate` only if the caller has no persisted start date at all.
 export function generateWashCalendar(
   startDate: Date,
   curlType: string | null,
   porosity: string | null,
-  scalpCondition: string | null = null
+  scalpCondition: string | null = null,
+  routineStartDate: Date = startDate
 ): WashDay[] {
   const family = curlFamily(curlType);
   const { recommended: interval } = getWashFrequencyDays(
@@ -140,12 +166,11 @@ export function generateWashCalendar(
   );
 
   const washDays: WashDay[] = [];
-  let occurrence = 0;
 
   for (let offset = 0; offset < WINDOW_DAYS; offset += interval) {
-    occurrence++;
     const date = new Date(startDate);
     date.setDate(date.getDate() + offset);
+    const occurrence = occurrenceForDate(date, routineStartDate, interval);
     washDays.push({
       date: toIsoDate(date),
       weekday: date.getDay(),

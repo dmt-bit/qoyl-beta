@@ -110,6 +110,21 @@ export async function POST(request: Request) {
         }
 
         if (productType === "routine_subscription") {
+          // Anchors the wash-day cycle (see lib/routineCalendar.ts) to
+          // the date the subscription actually went live, not whenever
+          // the hair_profiles row happened to be created (could be
+          // months earlier, during free-tier profile setup). Always set
+          // on checkout.session.completed rather than only-if-null -
+          // this event is the real "first activation" moment for this
+          // subscription.
+          const { error: routineStartDateError } = await getSupabaseAdmin()
+            .from("hair_profiles")
+            .update({ routine_start_date: new Date().toISOString().slice(0, 10) })
+            .eq("user_id", userId);
+          if (routineStartDateError) {
+            console.error("Failed to set routine_start_date:", userId, routineStartDateError);
+          }
+
           const { data: routineProfile } = await getSupabaseAdmin()
             .from("hair_profiles")
             .select("curl_type, porosity, zip_code, climate")
