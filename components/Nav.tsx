@@ -5,14 +5,25 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { TABS } from "@/lib/postTabs";
+import { shouldShowRoutineNudge } from "@/lib/routineVisit";
 import { supabase } from "@/lib/supabase";
 
-const DESKTOP_CENTER_LINKS = [
+const DESKTOP_CENTER_LINKS_BASE = [
   { href: "/style-match", label: "Style Match" },
   { href: "/travel", label: "Travel" },
   { href: "/posts", label: "Posts" },
   { href: "/how-we-score", label: "How We Score" },
 ];
+
+// "My Routine" only appears here for subscribers - non-subscribers keep
+// it in the hamburger menu only (as an upgrade prompt) to avoid
+// cluttering the top nav with a locked feature. Inserted between Style
+// Match and Travel specifically, matching the request.
+function buildDesktopCenterLinks(hasRoutineSubscription: boolean) {
+  if (!hasRoutineSubscription) return DESKTOP_CENTER_LINKS_BASE;
+  const [styleMatch, ...rest] = DESKTOP_CENTER_LINKS_BASE;
+  return [styleMatch, { href: "/routine", label: "My Routine" }, ...rest];
+}
 
 // Menu link labels differ slightly from TABS' own labels ("Straight" vs
 // "Straight Hair") - built from TABS so the hrefs/keys can't drift out
@@ -89,6 +100,23 @@ function PersonIcon({ size = 18 }: { size?: number }) {
   );
 }
 
+// Wraps PersonIcon with an optional small bronze notification dot in the
+// top-right corner - a gentle nudge for subscribers who haven't opened
+// their routine in over 7 days (see lib/routineVisit.ts).
+function PersonNavIcon({ size = 18, showDot = false }: { size?: number; showDot?: boolean }) {
+  return (
+    <span className="relative inline-flex">
+      <PersonIcon size={size} />
+      {showDot && (
+        <span
+          aria-hidden
+          className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-bronze ring-2 ring-[#1C1612]"
+        />
+      )}
+    </span>
+  );
+}
+
 function CompassIcon({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-cream">
@@ -103,6 +131,24 @@ function CalendarIcon({ size = 18 }: { size?: number }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-cream">
       <rect x="3.75" y="5.25" width="16.5" height="15" rx="1.5" />
       <path strokeLinecap="round" d="M3.75 9.75h16.5M8.25 3v3.75M15.75 3v3.75" />
+    </svg>
+  );
+}
+
+function LockIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-cream/50">
+      <rect x="4.5" y="10.5" width="15" height="9.75" rx="1.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 10.5V7.5a4.5 4.5 0 119 0v3" />
+    </svg>
+  );
+}
+
+function CheckCircleIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-bronze">
+      <circle cx="12" cy="12" r="9" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 12.5l2.5 2.5 4.5-5" />
     </svg>
   );
 }
@@ -128,7 +174,15 @@ function GridIcon({ size = 18 }: { size?: number }) {
 // a floating strip over the feed instead of a wall - hidden below
 // 360px entirely (see HomeMiniMenuButton) since there's no room left
 // for both the strip and a legible two-column feed at that width.
-function HomeSideNavMobile({ onOpenMenu }: { onOpenMenu: () => void }) {
+function HomeSideNavMobile({
+  onOpenMenu,
+  user,
+  showRoutineNudge,
+}: {
+  onOpenMenu: () => void;
+  user: unknown;
+  showRoutineNudge: boolean;
+}) {
   return (
     <div
       className="fixed bottom-0 left-0 top-0 z-50 hidden w-10 flex-col items-center bg-[rgba(28,22,18,0.85)] pt-4 shadow-[2px_0_8px_rgba(0,0,0,0.2)] backdrop-blur-[8px] min-[360px]:flex sm:hidden"
@@ -143,8 +197,12 @@ function HomeSideNavMobile({ onOpenMenu }: { onOpenMenu: () => void }) {
         <Link href="/style-match" aria-label="Style Match" className="flex h-10 w-10 items-center justify-center">
           <SparkleIcon size={18} className="text-cream" />
         </Link>
-        <Link href="/dashboard" aria-label="Profile" className="flex h-10 w-10 items-center justify-center">
-          <PersonIcon size={18} />
+        <Link
+          href={user ? "/dashboard" : "/auth"}
+          aria-label="Dashboard"
+          className="flex h-10 w-10 items-center justify-center"
+        >
+          <PersonNavIcon size={18} showDot={showRoutineNudge} />
         </Link>
         <Link href="/travel" aria-label="Travel" className="flex h-10 w-10 items-center justify-center">
           <CompassIcon size={18} />
@@ -181,10 +239,12 @@ function HomeMiniMenuButton({ onOpenMenu }: { onOpenMenu: () => void }) {
 function HomeSideNavDesktop({
   user,
   hasRoutineSubscription,
+  showRoutineNudge,
   pathname,
 }: {
   user: unknown;
   hasRoutineSubscription: boolean;
+  showRoutineNudge: boolean;
   pathname: string;
 }) {
   return (
@@ -196,9 +256,13 @@ function HomeSideNavDesktop({
       <div className="flex flex-col gap-1 px-3">
         <SideNavLink href="/search" label="Search a Product" icon={<SearchIcon size={16} />} pathname={pathname} />
         <SideNavLink href="/style-match" label="Style Match" icon={<SparkleIcon size={16} className="text-cream" />} pathname={pathname} />
-        <SideNavLink href="/profile" label="My Profile" icon={<PersonIcon size={16} />} pathname={pathname} />
+        <SideNavLink
+          href={user ? "/dashboard" : "/auth"}
+          label="Dashboard"
+          icon={<PersonNavIcon size={16} showDot={showRoutineNudge} />}
+          pathname={pathname}
+        />
         <SideNavLink href="/travel" label="Travel Kit" icon={<CompassIcon size={16} />} pathname={pathname} />
-        <SideNavLink href="/dashboard" label="Dashboard" icon={<GridIcon size={16} />} pathname={pathname} />
         {hasRoutineSubscription && (
           <SideNavLink href="/routine" label="My Routine" icon={<CalendarIcon size={16} />} pathname={pathname} />
         )}
@@ -308,12 +372,52 @@ function MenuLink({
   );
 }
 
+// "My Routine" gets a distinct treatment from the plain MenuLink rows
+// around it - it's the core paid product, so it should read as either
+// an owned feature (subscriber) or an aspirational upgrade (everyone
+// else), never just another list item. Always rendered (unlike the old
+// subscriber-only conditional) so non-subscribers see and can tap into
+// the upgrade path from the menu itself.
+function RoutineMenuLink({
+  hasRoutineSubscription,
+  onNavigate,
+}: {
+  hasRoutineSubscription: boolean;
+  onNavigate: () => void;
+}) {
+  return (
+    <Link
+      href="/routine"
+      onClick={onNavigate}
+      className="flex items-center justify-between gap-3 border-b border-[#2C2420] px-6 py-4 text-base font-medium text-cream transition-colors hover:bg-[#2C2420]/50"
+    >
+      {hasRoutineSubscription ? (
+        <>
+          <span className="flex items-center gap-2">
+            My Routine
+            <CheckCircleIcon />
+          </span>
+        </>
+      ) : (
+        <span>
+          <span className="flex items-center gap-2">
+            My Routine
+            <LockIcon />
+          </span>
+          <span className="mt-0.5 block text-xs font-semibold text-bronze">$7.99/mo</span>
+        </span>
+      )}
+    </Link>
+  );
+}
+
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, hairProfile } = useAuth();
   const [hasRoutineSubscription, setHasRoutineSubscription] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showRoutineNudge, setShowRoutineNudge] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -335,6 +439,14 @@ export default function Nav() {
       cancelled = true;
     };
   }, [user]);
+
+  // Re-checked whenever subscription status resolves or the user
+  // navigates (pathname changes) - the latter so the dot clears right
+  // after a visit to /routine (which calls markRoutineVisited) without
+  // needing a full page reload.
+  useEffect(() => {
+    setShowRoutineNudge(shouldShowRoutineNudge(user?.id ?? null, hasRoutineSubscription));
+  }, [user, hasRoutineSubscription, pathname]);
 
   // Full-screen menu shouldn't let the page behind it scroll.
   useEffect(() => {
@@ -364,11 +476,12 @@ export default function Nav() {
     <nav className="print-hide bg-dark font-sans">
       {isHome && (
         <>
-          <HomeSideNavMobile onOpenMenu={() => setMenuOpen(true)} />
+          <HomeSideNavMobile onOpenMenu={() => setMenuOpen(true)} user={user} showRoutineNudge={showRoutineNudge} />
           <HomeMiniMenuButton onOpenMenu={() => setMenuOpen(true)} />
           <HomeSideNavDesktop
             user={user}
             hasRoutineSubscription={hasRoutineSubscription}
+            showRoutineNudge={showRoutineNudge}
             pathname={pathname}
           />
         </>
@@ -422,7 +535,7 @@ export default function Nav() {
                 Search a Product
               </Link>
             </li>
-            {DESKTOP_CENTER_LINKS.map((link) => (
+            {buildDesktopCenterLinks(hasRoutineSubscription).map((link) => (
               <li key={link.href} className="shrink-0">
                 <Link
                   href={link.href}
@@ -517,12 +630,10 @@ export default function Nav() {
             badge={!hairProfile ? "Start here" : undefined}
             onNavigate={closeMenu}
           />
+          <RoutineMenuLink hasRoutineSubscription={hasRoutineSubscription} onNavigate={closeMenu} />
           <MenuLink href="/search" label="Search a Product" onNavigate={closeMenu} />
           <MenuLink href="/style-match" label="Style Match" badge="New" onNavigate={closeMenu} />
           <MenuLink href="/travel" label="Travel Kit" onNavigate={closeMenu} />
-          {hasRoutineSubscription && (
-            <MenuLink href="/routine" label="My Routine" onNavigate={closeMenu} />
-          )}
           <MenuLink href="/dashboard" label="My Dashboard" onNavigate={closeMenu} />
 
           <MenuSectionLabel>The Feed</MenuSectionLabel>

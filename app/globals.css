@@ -56,6 +56,21 @@ body {
   animation: tab-scroll-hint 1.4s ease-in-out 1;
 }
 
+/* /routine's "scroll for more" teaser (ScrollTeaser in app/routine/page.tsx) */
+@keyframes routine-bounce {
+  0%,
+  20%,
+  100% {
+    transform: translateY(0);
+  }
+  10% {
+    transform: translateY(4px);
+  }
+}
+.routine-bounce {
+  animation: routine-bounce 3s ease-in-out infinite;
+}
+
 /* ---- Signature motion -------------------------------------------------
    Hero load sequence (home page only): wordmark fades in, the hair-type
    strip slides in from the right, then headline and CTA fade up in

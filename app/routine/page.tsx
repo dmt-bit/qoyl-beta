@@ -24,7 +24,9 @@ import {
   priceTierFor,
 } from "@/lib/priceContext";
 import { PROTECTIVE_STYLE_DAY_LABEL } from "@/lib/protectiveStyleRoutine";
+import { markRoutineVisited } from "@/lib/routineVisit";
 import type { RoutineStepDetail, WashDayKey, WashDaySteps } from "@/lib/routineSteps";
+import { lookupCityState } from "@/lib/zipLookup";
 
 type RoutineStep = {
   title: string;
@@ -355,7 +357,7 @@ function MonthCalendar({
 
   return (
     <div>
-      <h3 className="font-serif text-base text-bronze">{meta.label}</h3>
+      <h3 className="font-serif text-base text-dark">{meta.label}</h3>
       <div className="mt-2 grid grid-cols-7 gap-1">
         {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
           <div
@@ -400,9 +402,12 @@ function CalendarLegend({ family }: { family: CurlFamily | null }) {
   }
 
   return (
-    <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-cream/60">
+    <div className="no-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1">
       {items.map((item) => (
-        <span key={item.label} className="flex items-center gap-1.5">
+        <span
+          key={item.label}
+          className="flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border border-dark/15 bg-cream px-3 py-1.5 text-xs font-medium text-dark"
+        >
           <span
             className={`h-2.5 w-2.5 shrink-0 ${item.dot ? "rounded-full" : "rounded-sm"} ${item.swatchClass}`}
           />
@@ -586,9 +591,10 @@ function ProductCard({
     : null;
   const note = categoryNote(pick.category, curlFamily(curlType));
   const budgetActive = isBudgetActive(budgetRange);
+  const accentClass = productAccentClass(pick);
 
   return (
-    <div className="rounded-xl border border-bronze/30 p-5">
+    <div className={`rounded-xl border border-bronze/30 p-5 ${accentClass}`}>
       <p className="text-xs font-semibold uppercase tracking-wide text-bronze2">
         {pick.categoryLabel}
       </p>
@@ -672,8 +678,9 @@ function ProductCard({
 // color match SECTION_META / CalendarLegend above 1:1.
 function SectionDivider({ section }: { section: RoutineSection }) {
   return (
-    <div className="col-span-full mt-6 flex items-center gap-3 first:mt-0">
-      <span className="shrink-0 text-xs font-semibold uppercase tracking-wide text-bronze">
+    <div className="col-span-full mt-6 flex items-center gap-2 first:mt-0">
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-bronze" />
+      <span className="shrink-0 font-sans text-[10px] font-semibold uppercase tracking-wide text-bronze">
         {SECTION_META[section].label}
       </span>
       <span className="h-px flex-1 bg-bronze/20" />
@@ -837,21 +844,26 @@ function ClockIcon() {
   );
 }
 
-// Colors/borders mirror SECTION_META/CalendarLegend above, so a wash
+// Colors/icons mirror SECTION_META/CalendarLegend above, so a wash
 // day's color reads the same whether it's the calendar, the product
-// list dividers, or this accordion header.
-const WASH_DAY_ACCORDION_STYLE: Record<WashDayKey, { border: string; label: string }> = {
-  clarifying: { border: "border-bronze", label: "text-bronze" },
-  regular: { border: "border-bronze/20", label: "text-cream" },
-  protein: { border: "border-green", label: "text-green" },
-  between: { border: "border-cream/20", label: "text-cream/60" },
+// list dividers, or this accordion header. border is a left-accent
+// (paired with border-l-4 in WashDayAccordion below), not a full
+// perimeter border.
+const WASH_DAY_ACCORDION_STYLE: Record<
+  WashDayKey,
+  { border: string; label: string; icon: () => React.ReactElement; cadenceTypes: WashDayType[]; cadenceUnit: "weeks" | "washes" | null }
+> = {
+  clarifying: { border: "border-l-bronze", label: "text-bronze", icon: SmallCalendarIcon, cadenceTypes: ["chelate", "clarify"], cadenceUnit: "weeks" },
+  regular: { border: "border-l-cream", label: "text-cream", icon: DropIcon, cadenceTypes: [], cadenceUnit: null },
+  protein: { border: "border-l-green", label: "text-green", icon: LeafIcon, cadenceTypes: ["protein"], cadenceUnit: "washes" },
+  between: { border: "border-l-[#3D2E22]", label: "text-cream/60", icon: MoonIcon, cadenceTypes: [], cadenceUnit: null },
 };
 
-// One step within a wash-day accordion - bronze-circled number,
-// Cormorant Garamond title, DM Sans body, an optional timer line (clock
-// icon), an optional bronze "why" callout, and - when the step names a
-// product category the user has a curated pick for - a direct link to
-// that pick so they don't have to scroll down to SECTION 4 to find it.
+// One step within a wash-day accordion - bronze-filled numbered circle,
+// DM Sans title/body, an optional timer line (clock icon), an optional
+// bronze "why" callout, and - when the step names a product category
+// the user has a curated pick for - a direct link to that pick so they
+// don't have to scroll down to SECTION 4 to find it.
 function StepDetailRow({
   step,
   index,
@@ -869,12 +881,12 @@ function StepDetailRow({
 
   return (
     <div className="flex gap-4">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-bronze font-serif text-sm font-semibold text-dark">
+      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-bronze font-sans text-xs font-semibold text-cream">
         {index + 1}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="font-serif text-base text-cream">{step.title}</p>
-        <p className="mt-1 text-[13px] leading-relaxed text-cream/70">{step.body}</p>
+        <p className="font-sans text-sm font-semibold text-cream">{step.title}</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-[#9C8070]">{step.body}</p>
 
         {step.timerMinutes && (
           <p className="mt-2 flex items-center gap-1.5 text-xs text-bronze2">
@@ -884,7 +896,7 @@ function StepDetailRow({
         )}
 
         {step.why && (
-          <p className="mt-2 rounded-md bg-bronze/10 px-2.5 py-1.5 text-xs leading-relaxed text-bronze2">
+          <p className="mt-2 rounded-md border-l-2 border-bronze bg-[#2C2420] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#9C8070]">
             {step.why}
           </p>
         )}
@@ -940,25 +952,42 @@ function StepDetailRow({
 function WashDayAccordion({
   washDay,
   products,
+  calendarDays,
   defaultOpen,
 }: {
   washDay: WashDaySteps;
   products: ProductPick[];
+  calendarDays: WashDay[];
   defaultOpen: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const style = WASH_DAY_ACCORDION_STYLE[washDay.key];
+  const Icon = style.icon;
+  const cadence =
+    washDay.key === "regular"
+      ? "Most common"
+      : style.cadenceUnit
+      ? computeCadenceLabel(calendarDays, style.cadenceTypes, style.cadenceUnit)
+      : null;
 
   return (
-    <div className={`rounded-xl border p-5 ${style.border}`}>
+    <div className={`rounded-xl border-l-4 p-5 transition-colors ${style.border} ${open ? "bg-dark" : "bg-[#2C2420]/40"}`}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between gap-3 text-left"
       >
-        <span className={`font-serif text-xl font-semibold ${style.label}`}>{washDay.label}</span>
-        <span className={`shrink-0 text-sm transition-transform ${open ? "rotate-180" : ""} text-cream/50`}>
-          ▼
+        <span className="flex items-center gap-2">
+          <Icon />
+          <span className={`font-serif text-xl font-semibold ${style.label}`}>{washDay.label}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-3">
+          {cadence && (
+            <span className="whitespace-nowrap rounded-full border border-bronze/30 px-2.5 py-1 text-[10px] font-medium text-cream/70">
+              {cadence}
+            </span>
+          )}
+          <span className={`text-sm transition-transform ${open ? "rotate-180" : ""} text-cream/50`}>▼</span>
         </span>
       </button>
       <Collapse show={open}>
@@ -966,6 +995,346 @@ function WashDayAccordion({
           <StepDetailRow key={`${washDay.key}-${step.title}`} step={step} index={i} products={products} />
         ))}
       </Collapse>
+    </div>
+  );
+}
+
+// ---- Visual redesign additions (nav/hero/calendar/steps/products) -----
+// Purely presentational - no change to how routine data is computed or
+// what functionality exists, per the request.
+
+function DropIcon() {
+  return (
+    <svg className="h-4 w-4 shrink-0 text-cream" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3s6.5 7.09 6.5 11.5a6.5 6.5 0 11-13 0C5.5 10.09 12 3 12 3z" />
+    </svg>
+  );
+}
+function LeafIcon() {
+  return (
+    <svg className="h-4 w-4 shrink-0 text-green" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20 4S6 5 6 15a6 6 0 006 6C22 21 20 4 20 4z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 20c0-6 2-11 9-15" />
+    </svg>
+  );
+}
+function MoonIcon() {
+  return (
+    <svg className="h-4 w-4 shrink-0 text-[#9C8070]" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M20.4 14.7A8.5 8.5 0 019.3 3.6a.75.75 0 00-.9-1 10 10 0 1013 13 .75.75 0 00-1-.9z" />
+    </svg>
+  );
+}
+function SmallCalendarIcon() {
+  return (
+    <svg className="h-4 w-4 shrink-0 text-bronze" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <rect x="3.75" y="5.25" width="16.5" height="15" rx="1.5" />
+      <path strokeLinecap="round" d="M3.75 9.75h16.5M8.25 3v3.75M15.75 3v3.75" />
+    </svg>
+  );
+}
+function ChevronDownIcon() {
+  return (
+    <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+    </svg>
+  );
+}
+
+function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+// SECTION - Hero: the profile's most personal, at-a-glance summary,
+// large curl type acting as the page's visual anchor.
+function RoutineHero({
+  curlType,
+  porosity,
+  cityLabel,
+}: {
+  curlType: string | null;
+  porosity: string | null;
+  cityLabel: string | null;
+}) {
+  const showCurl = Boolean(curlType && curlType !== "not_sure");
+  const porosityLabel =
+    porosity && porosity !== "not sure" ? `${capitalize(porosity)} Porosity` : null;
+  const subline = [porosityLabel, cityLabel].filter(Boolean).join(" · ");
+
+  return (
+    <div
+      id="routine-hero"
+      className="flex h-[220px] w-full flex-col items-center justify-center bg-[#1C1612] px-4 text-center sm:h-[260px]"
+    >
+      <p className="font-serif text-[64px] italic leading-none text-bronze sm:text-[80px]">
+        {showCurl ? curlType : "Your Hair"}
+      </p>
+      {subline && <p className="mt-3 font-sans text-[11px] text-muted">{subline}</p>}
+      <p className="mt-2 font-serif text-lg text-cream">Your personalized 30-day routine</p>
+    </div>
+  );
+}
+
+// SECTION - "What to use today" teaser: the single most actionable
+// thing on the page, so it sits immediately below the hero with no
+// scrolling required. Distinct from TodayProducts further down (which
+// shows the actual product cards) - this is a compact pointer to it.
+function TodayTeaserCard({ data }: { data: RoutineData }) {
+  const todayWash = data.calendarDays[0];
+  const todayLabel = todayWash ? todayLabelForWashType(todayWash.washType) : "Rest day";
+  const todayDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+
+  function scrollToProducts() {
+    document.getElementById("section-products")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function scrollToCalendar() {
+    document.getElementById("section-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  return (
+    <div id="section-today" className="px-4 sm:px-6">
+      <div className="mx-auto -mt-6 max-w-3xl">
+        <div className="rounded-lg border-l-4 border-bronze bg-[#2C2420] px-5 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-bronze">Today</p>
+              <p className="mt-0.5 font-sans text-[11px] text-muted">{todayDate}</p>
+              <p className="mt-1.5 font-serif text-[22px] leading-tight text-cream">{todayLabel}</p>
+              {todayWash ? (
+                <button
+                  type="button"
+                  onClick={scrollToProducts}
+                  className="mt-2 text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+                >
+                  Your products for today →
+                </button>
+              ) : (
+                <p className="mt-2 text-sm text-cream/60">No wash products needed today.</p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={scrollToCalendar}
+              aria-label="View full calendar"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-bronze/40"
+            >
+              <SmallCalendarIcon />
+            </button>
+          </div>
+        </div>
+
+        <ScrollTeaser />
+      </div>
+    </div>
+  );
+}
+
+// Gentle bounce, tells the user exactly what's below the fold - stops
+// once they've actually started scrolling (100px) so it doesn't nag
+// forever.
+function ScrollTeaser() {
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    function onScroll() {
+      if (window.scrollY > 100) setDismissed(true);
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  if (dismissed) return null;
+
+  return (
+    <div className="print-hide flex flex-col items-center gap-1 py-6 text-center">
+      <p className="font-sans text-[10px] text-muted">Your calendar · Your routine · Your products</p>
+      <span className="routine-bounce text-bronze2">
+        <ChevronDownIcon />
+      </span>
+    </div>
+  );
+}
+
+// SECTION - full-bleed photo strip, a visual breath between the
+// data-heavy calendar and the step-by-step routine. No "hero carousel"
+// component exists elsewhere in this app to reuse (checked), so this
+// pulls from the same Cloudinary stock set already used by the curl
+// type selector on /profile, picked by the user's curl family for
+// visual continuity with their profile.
+const PHOTO_STRIP_IMAGES: Record<CurlFamily | "default", string[]> = {
+  straight: [
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-photo-35267456",
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-fall-maple-1195057-2325807",
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-photo-3356211",
+  ],
+  wavy: [
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-ulrick-t-16207701",
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-aibek-skakov-418917601-27679976",
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-olga-somek-147015162-17889750",
+  ],
+  curly: [
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-vlada-karpovich-4668513",
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-soufianlafnesh-34579409",
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-eddson-lens-748406628-28172264",
+  ],
+  coily: [
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-polina-tankilevitch-7382918",
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-jordy-toscano-712212447-27596675",
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-praise-nnadozie-1081270006-38284790",
+  ],
+  default: [
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-vlada-karpovich-4668513",
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-polina-tankilevitch-7382918",
+    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-aibek-skakov-418917601-27679976",
+  ],
+};
+
+function PhotoStripDivider({ family }: { family: CurlFamily | null }) {
+  const images = PHOTO_STRIP_IMAGES[family ?? "default"];
+  return (
+    <div className="-mx-4 grid h-[120px] grid-cols-3 sm:-mx-6">
+      {images.map((src) => (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img key={src} src={src} alt="" className="h-full w-full object-cover" />
+      ))}
+    </div>
+  );
+}
+
+// SECTION - warm-background title divider, used between routine steps
+// and the product list. Serves as both the visual break and the section
+// heading at once.
+function WarmSectionTitle({ children, id }: { children: React.ReactNode; id?: string }) {
+  return (
+    <div id={id} className="-mx-4 bg-warm px-4 py-8 text-center sm:-mx-6 sm:px-6">
+      <p className="font-serif text-2xl italic text-dark">{children}</p>
+    </div>
+  );
+}
+
+// Cadence chips ("Every N weeks" / "Every N washes") derived from the
+// already-computed 30-day calendar - no new data/API needed. Returns
+// null when there isn't enough data in-window to infer a cadence
+// (e.g. a type that only occurs once, or not at all, in 30 days).
+function computeCadenceLabel(
+  calendarDays: WashDay[],
+  types: WashDayType[],
+  unit: "weeks" | "washes"
+): string | null {
+  const matches = calendarDays
+    .map((d, i) => ({ d, i }))
+    .filter(({ d }) => types.includes(d.washType));
+  if (matches.length < 2) return null;
+
+  if (unit === "weeks") {
+    const days = Math.round(
+      (new Date(`${matches[1].d.date}T00:00:00`).getTime() -
+        new Date(`${matches[0].d.date}T00:00:00`).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+    const weeks = Math.max(1, Math.round(days / 7));
+    return `Every ${weeks} week${weeks === 1 ? "" : "s"}`;
+  }
+
+  const washes = matches[1].i - matches[0].i;
+  return `Every ${washes} wash${washes === 1 ? "" : "es"}`;
+}
+
+// Product card left-accent color, connecting the product list visually
+// back to the calendar's color coding. Explicit category slugs match
+// the request's literal examples; every other category falls back to
+// its RoutineSection's color (regular/styling/between/clarify/protein).
+// border-l-{color} (not border-{color}, which would also recolor the
+// card's existing all-side border-bronze/30) so this only tints the
+// left edge.
+const CATEGORY_ACCENT_OVERRIDE: Record<string, string> = {
+  "clarifying-shampoo": "border-l-4 border-l-bronze",
+  shampoo: "border-l-4 border-l-cream",
+  "protein-treatment": "border-l-4 border-l-green",
+  "deep-conditioner": "border-l-4 border-l-cream",
+  "leave-in": "border-l-4 border-l-[#9C8070]",
+  styler: "",
+};
+const SECTION_ACCENT: Record<RoutineSection, string> = {
+  clarify: "border-l-4 border-l-bronze",
+  regular: "border-l-4 border-l-cream",
+  protein: "border-l-4 border-l-green",
+  between: "border-l-4 border-l-[#9C8070]",
+  styling: "",
+};
+function productAccentClass(pick: ProductPick): string {
+  return CATEGORY_ACCENT_OVERRIDE[pick.category] ?? SECTION_ACCENT[pick.section] ?? "";
+}
+
+const MINI_NAV_SECTIONS: { id: string; label: string }[] = [
+  { id: "section-today", label: "Today" },
+  { id: "section-calendar", label: "Calendar" },
+  { id: "section-routine", label: "Routine" },
+  { id: "section-products", label: "Products" },
+];
+
+// Sticky mini-nav: hidden until the hero scrolls out of view, then
+// tracks which of the four sections is currently in view (scroll-spy)
+// and lets a tap jump straight to any of them.
+function RoutineMiniNav() {
+  const [visible, setVisible] = useState(false);
+  const [active, setActive] = useState(MINI_NAV_SECTIONS[0].id);
+
+  useEffect(() => {
+    const hero = document.getElementById("routine-hero");
+    if (!hero) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setVisible(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(hero);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const targets = MINI_NAV_SECTIONS.map((s) => document.getElementById(s.id)).filter(
+      (el): el is HTMLElement => Boolean(el)
+    );
+    if (targets.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEntries = entries.filter((e) => e.isIntersecting);
+        if (visibleEntries.length === 0) return;
+        const top = visibleEntries.sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        setActive(top.target.id);
+      },
+      { rootMargin: "-100px 0px -60% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
+    );
+    targets.forEach((t) => observer.observe(t));
+    return () => observer.disconnect();
+  }, []);
+
+  function goTo(id: string) {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  if (!visible) return null;
+
+  return (
+    <div className="print-hide sticky top-0 z-40 border-b border-bronze/20 bg-[#1C1612]/95 backdrop-blur-md">
+      <div className="no-scrollbar mx-auto flex max-w-3xl gap-1 overflow-x-auto px-4 sm:px-6">
+        {MINI_NAV_SECTIONS.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => goTo(s.id)}
+            className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-3 text-xs font-medium transition-colors ${
+              active === s.id ? "border-bronze text-cream" : "border-transparent text-cream/50 hover:text-cream/80"
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -983,6 +1352,9 @@ function RoutineContent() {
   // protective-style routines are then shown as two tabs instead of both
   // stacked on one page.
   const [activeTab, setActiveTab] = useState<"natural" | "protective">("natural");
+  // Hero subline ("Medium Porosity · Chicago") - resolved client-side
+  // since /api/routine only returns the raw zip code.
+  const [cityLabel, setCityLabel] = useState<string | null>(null);
 
   const showWelcome = searchParams.get("welcome") === "true" && !welcomeDismissed;
 
@@ -1018,6 +1390,22 @@ function RoutineContent() {
       cancelled = true;
     };
   }, [user, authLoading, router]);
+
+  // Marks this as the user's last routine visit (see lib/routineVisit.ts)
+  // so the nav's re-engagement dot clears, and resolves the hero's city
+  // subline - both only once the routine has actually loaded.
+  useEffect(() => {
+    if (status !== "ready" || !data || !user) return;
+    markRoutineVisited(user.id);
+    let cancelled = false;
+    lookupCityState(data.zipCode).then((cityState) => {
+      if (!cancelled) setCityLabel(cityState?.city ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, data, user]);
 
   if (status !== "ready" || !data) {
     return (
@@ -1060,7 +1448,12 @@ function RoutineContent() {
   const showProtectiveRoutine = isBothFocus ? activeTab === "protective" : protectiveRoutineApplies;
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-dark font-sans text-cream">
+      <RoutineHero curlType={data.curlType} porosity={data.porosity} cityLabel={cityLabel} />
+      <TodayTeaserCard data={data} />
+      <RoutineMiniNav />
+
+      <div className="px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-3xl">
         <div className="hidden print:mb-8 print:block">
           <p className="font-serif text-2xl text-dark">
@@ -1174,28 +1567,37 @@ function RoutineContent() {
 
         {showNaturalRoutine && (
         <>
-        {/* SECTION 2 - 30-day wash calendar */}
-        <section className="print-page-break mt-12">
-          <h2 className="font-serif text-2xl font-semibold text-cream">
+        {/* SECTION 2 - 30-day wash calendar. Full-bleed warm-cream
+            section (edge to edge on mobile via negative margins that
+            cancel the parent's px-4/sm:px-6 padding) - the dark wash-day
+            cells inside pop against it instead of blending into the
+            rest of the page. */}
+        <section id="section-calendar" className="print-page-break -mx-4 mt-12 bg-warm px-4 py-6 sm:-mx-6 sm:px-6">
+          <p className="text-center font-sans text-[9px] font-semibold uppercase tracking-[0.2em] text-bronze">
+            Your 30-Day Calendar
+          </p>
+          <h2 className="mt-2 font-serif text-2xl font-semibold text-dark">
             Your next 30 days - starting {data.startDateLabel}
           </h2>
 
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <span className="inline-block rounded-full bg-bronze/20 px-3 py-1 text-xs font-medium text-bronze2">
+            <span className="inline-block rounded-full bg-dark px-3 py-1 text-xs font-medium text-cream">
               Your hair: wash every {data.washFrequency.min}-{data.washFrequency.max} days
             </span>
           </div>
           {family && (
-            <p className="mt-2 text-sm text-cream/60">{FREQUENCY_EXPLANATION[family]}</p>
+            <p className="mt-2 text-sm text-dark/70">{FREQUENCY_EXPLANATION[family]}</p>
           )}
 
           <WashCalendarGrid calendarDays={data.calendarDays} family={family} />
         </section>
 
+        <PhotoStripDivider family={family} />
+
         {/* SECTION 3 - Your wash day routine: four collapsible sequences,
             one per wash-day type. Regular is open by default since it's
             the day the user will hit most often. */}
-        <section className="print-page-break mt-12">
+        <section id="section-routine" className="print-page-break mt-12">
           <h2 className="font-serif text-2xl font-semibold text-cream">
             Your wash day routine
           </h2>
@@ -1205,6 +1607,7 @@ function RoutineContent() {
                 key={washDay.key}
                 washDay={washDay}
                 products={data.products}
+                calendarDays={data.calendarDays}
                 defaultOpen={washDay.key === "regular"}
               />
             ))}
@@ -1223,12 +1626,11 @@ function RoutineContent() {
           )}
         </section>
 
-        {/* SECTION 4 - Curated product list */}
-        <section className="print-page-break mt-12">
-          <h2 className="font-serif text-2xl font-semibold text-cream">
-            Your curated product list
-          </h2>
-
+        {/* SECTION 4 - Curated product list. The warm divider above acts
+            as both the visual break from the routine steps and this
+            section's title. */}
+        <WarmSectionTitle id="section-products">Your curated product list</WarmSectionTitle>
+        <section className="print-page-break mt-8">
           <div className="mt-4">
             <TodayProducts data={data} />
           </div>
@@ -1350,6 +1752,7 @@ function RoutineContent() {
             </p>
           </Collapse>
         </div>
+      </div>
       </div>
     </main>
   );
