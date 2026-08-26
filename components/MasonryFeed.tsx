@@ -28,6 +28,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { getAffiliateLink } from "@/lib/affiliateLinks";
 import { buildScoringProfile, curlFamily, scoreCatalogProductsForProfile } from "@/lib/compatibility";
+import { fetchLatestExtensionProfileByUserId } from "@/lib/extensionProfiles";
 import { supabase } from "@/lib/supabase";
 
 type TabKey =
@@ -70,9 +71,34 @@ function shuffle<T>(arr: T[]): T[] {
   return copy;
 }
 
+// Posts tagged hair_type="extensions" always qualify, but the Extensions
+// tab also needs to surface posts about these specific topics even when
+// they weren't tagged that way (e.g. a post filed under "mens" that's
+// actually about k-tip maintenance) - there's no separate tags column on
+// posts, so this matches the same title/excerpt/body/category fields
+// matchesPostSearch already searches.
+const EXTENSION_TOPIC_KEYWORDS = [
+  "wig care",
+  "tape-in care",
+  "tape in care",
+  "crochet hair",
+  "k-tip",
+  "ktip",
+  "extension maintenance",
+  "blend natural hair with extensions",
+  "protective style maintenance",
+];
+
+function isExtensionTopicPost(post: Post): boolean {
+  if (post.hair_type === "extensions") return true;
+  const haystack = `${post.title} ${post.excerpt} ${post.body ?? ""} ${post.category}`.toLowerCase();
+  return EXTENSION_TOPIC_KEYWORDS.some((kw) => haystack.includes(kw));
+}
+
 function matchesPostTab(post: Post, tab: TabKey): boolean {
   if (tab === "ingredients") return post.category === "ingredient-evaluation";
   if (tab === "coily") return post.hair_type === "coily" || post.hair_type === "all";
+  if (tab === "extensions") return isExtensionTopicPost(post);
   return post.hair_type === tab;
 }
 
@@ -109,6 +135,7 @@ function buildComposedFeed({
   communityPhotos,
   styles,
   hiddenTypes,
+  prioritizeExtensions,
 }: {
   posts: Post[];
   activeTab: TabKey;
@@ -117,6 +144,10 @@ function buildComposedFeed({
   communityPhotos: CommunityPhoto[];
   styles: StyleRow[];
   hiddenTypes: Set<string>;
+  // True when the signed-in user has an extension_profile - surfaces
+  // extension/wig-topic posts first in the All tab (item 6 of the
+  // extension-profiles spec) without excluding everything else.
+  prioritizeExtensions: boolean;
 }): FeedCard[] {
   const term = search.trim().toLowerCase();
 
@@ -140,6 +171,14 @@ function buildComposedFeed({
     ? posts
     : posts.filter((p) => matchesPostTab(p, activeTab));
   if (term) editorialPosts = editorialPosts.filter((p) => matchesPostSearch(p, term));
+
+  // Stable partition, not a full re-sort - extension-topic posts move to
+  // the front but otherwise keep the feed's existing relative order.
+  if (activeTab === "all" && prioritizeExtensions && !term) {
+    const extensionPosts = editorialPosts.filter(isExtensionTopicPost);
+    const otherPosts = editorialPosts.filter((p) => !isExtensionTopicPost(p));
+    editorialPosts = [...extensionPosts, ...otherPosts];
+  }
 
   let sideCommunity = hiddenTypes.has("community") ? [] : communityPhotos;
   if (HAIR_TYPE_TABS.has(activeTab)) {
@@ -249,6 +288,21 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
       requestAnimationFrame(() => window.scrollTo(0, y));
     }
   }, [resolvingAuth, isFullyAuthed]);
+
+  const [hasExtensionProfile, setHasExtensionProfile] = useState(false);
+  useEffect(() => {
+    if (!user) {
+      setHasExtensionProfile(false);
+      return;
+    }
+    let cancelled = false;
+    fetchLatestExtensionProfileByUserId(user.id).then((profile) => {
+      if (!cancelled) setHasExtensionProfile(Boolean(profile));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const [activeTab, setActiveTab] = useState<TabKey>("all");
   const [searchInput, setSearchInput] = useState("");
@@ -371,8 +425,9 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
         communityPhotos,
         styles: styleRows,
         hiddenTypes,
+        prioritizeExtensions: hasExtensionProfile,
       }),
-    [posts, activeTab, debouncedSearch, scoredProducts, communityPhotos, styleRows, hiddenTypes]
+    [posts, activeTab, debouncedSearch, scoredProducts, communityPhotos, styleRows, hiddenTypes, hasExtensionProfile]
   );
 
   useEffect(() => {

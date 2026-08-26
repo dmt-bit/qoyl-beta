@@ -18,6 +18,7 @@ import {
   type BabyProfile,
   type ChildProfile,
 } from "@/lib/familyProfiles";
+import { EXTENSION_TYPE_LABELS, fetchLatestExtensionProfileByUserId, type ExtensionProfile } from "@/lib/extensionProfiles";
 import {
   protectiveStyleTypeFromExtensionType,
   PROTECTIVE_STYLE_LABEL,
@@ -268,6 +269,18 @@ function DashboardContent() {
         setFamilyProfilesLoading(false);
       }
     );
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
+  const [extensionProfile, setExtensionProfile] = useState<ExtensionProfile | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetchLatestExtensionProfileByUserId(user.id).then((data) => {
+      if (!cancelled) setExtensionProfile(data);
+    });
     return () => {
       cancelled = true;
     };
@@ -631,6 +644,54 @@ function DashboardContent() {
                   </div>
                 )
               )}
+            </div>
+          </section>
+        )}
+
+        {extensionProfile && (
+          <section className="print-hide mt-10">
+            <h2 className="font-serif text-2xl font-semibold text-cream">
+              My extensions &amp; wig care
+            </h2>
+            <div className="mt-4 rounded-xl border border-bronze/30 bg-dark p-5">
+              <div className="flex flex-wrap gap-2">
+                {Array.from(
+                  new Set((extensionProfile.extension_types ?? []).map((t) => EXTENSION_TYPE_LABELS[t] ?? t))
+                ).map((label) => (
+                  <span
+                    key={label}
+                    className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2"
+                  >
+                    {label}
+                  </span>
+                ))}
+                {(extensionProfile.extension_types ?? []).length === 0 && (
+                  <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
+                    Protective style only
+                  </span>
+                )}
+                {extensionProfile.natural_curl_type && (
+                  <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
+                    Natural: {extensionProfile.natural_curl_type === "not_sure" ? "Not sure" : extensionProfile.natural_curl_type}
+                  </span>
+                )}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href={`/routine/extension/${extensionProfile.id}`}
+                  className="rounded-lg bg-bronze px-4 py-2 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+                >
+                  View my extension routine →
+                </Link>
+                {extensionProfile.needs_blending && (
+                  <Link
+                    href={`/routine/extension/${extensionProfile.id}?tab=blending`}
+                    className="rounded-lg border border-bronze/40 px-4 py-2 text-sm font-semibold text-cream transition-colors hover:border-bronze"
+                  >
+                    Blending guide →
+                  </Link>
+                )}
+              </div>
             </div>
           </section>
         )}

@@ -6,6 +6,7 @@ import Image from "next/image";
 import BabyProfileForm from "@/components/BabyProfileForm";
 import ChildProfileForm from "@/components/ChildProfileForm";
 import Collapse from "@/components/Collapse";
+import ExtensionProfileForm from "@/components/ExtensionProfileForm";
 import HairJourneySection from "@/components/HairJourneySection";
 import HairTypeStrip from "@/components/HairTypeStrip";
 import InfoTooltip from "@/components/InfoTooltip";
@@ -16,6 +17,11 @@ import {
   type BabyProfile,
   type ChildProfile,
 } from "@/lib/familyProfiles";
+import {
+  fetchExtensionProfileById,
+  fetchLatestExtensionProfileByUserId,
+  type ExtensionProfile,
+} from "@/lib/extensionProfiles";
 import { ADULT_AGE_RANGE_OPTIONS, formatAdultAgeRange } from "@/lib/ageRange";
 import { classifyClimateFromZip } from "@/lib/climateData";
 import { isColorTreatedYes } from "@/lib/compatibility";
@@ -412,7 +418,12 @@ const ROUTINE_FOCUS_OPTIONS = [
   { value: "both", label: "Show me both" },
 ];
 const PROFILE_FOR_OPTIONS = [
-  { value: "myself", label: "Myself", subtext: null },
+  { value: "myself", label: "Myself", subtext: "Natural hair routine" },
+  {
+    value: "extension",
+    label: "My extensions, wig, or protective style",
+    subtext: "Wig, weave, tape-in, k-tip, crochet, or braid care",
+  },
   {
     value: "child",
     label: "My child",
@@ -654,11 +665,13 @@ function ProfileForm() {
   const addFamily = searchParams.get("addFamily") === "1";
   const editBabyId = searchParams.get("editBaby");
   const editChildId = searchParams.get("editChild");
+  const editExtensionId = searchParams.get("editExtension");
 
   const [editBabyProfile, setEditBabyProfile] = useState<BabyProfile | null>(null);
   const [editChildProfile, setEditChildProfile] = useState<ChildProfile | null>(null);
+  const [editExtensionProfile, setEditExtensionProfile] = useState<ExtensionProfile | null>(null);
   const [editProfileLoading, setEditProfileLoading] = useState(
-    Boolean(editBabyId || editChildId)
+    Boolean(editBabyId || editChildId || editExtensionId)
   );
 
   useEffect(() => {
@@ -688,6 +701,39 @@ function ProfileForm() {
       cancelled = true;
     };
   }, [editChildId]);
+
+  useEffect(() => {
+    if (!editExtensionId) return;
+    let cancelled = false;
+    fetchExtensionProfileById(editExtensionId).then((data) => {
+      if (!cancelled) {
+        setEditExtensionProfile(data);
+        setEditProfileLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [editExtensionId]);
+
+  // The plain (non-edit-link) "My extensions..." selection on this page
+  // prefills from the user's existing extension profile if one already
+  // exists, so re-opening the form to tweak an answer updates that same
+  // row via its id instead of accumulating duplicate rows (the table has
+  // no unique constraint on user_id, unlike hair_profiles).
+  const [latestExtensionProfile, setLatestExtensionProfile] = useState<ExtensionProfile | null>(
+    null
+  );
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetchLatestExtensionProfileByUserId(user.id).then((data) => {
+      if (!cancelled) setLatestExtensionProfile(data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   // A saved profile (hairProfile is only ever populated for signed-in
   // users - see auth-context.tsx) opens in a read-only view. "unlocked"
@@ -982,7 +1028,7 @@ function ProfileForm() {
     );
   }
 
-  if (editBabyId || editChildId) {
+  if (editBabyId || editChildId || editExtensionId) {
     if (!user || editProfileLoading) {
       return (
         <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
@@ -993,18 +1039,21 @@ function ProfileForm() {
     return (
       <main className="min-h-screen bg-dark font-sans text-cream">
         <div className="px-4 py-10 sm:px-6">
-          <div className="mx-auto max-w-md">
+          <div className={editExtensionId ? "mx-auto max-w-2xl" : "mx-auto max-w-md"}>
             <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
-              {editBabyId ? "Edit Baby Profile" : "Edit Child Profile"}
+              {editBabyId ? "Edit Baby Profile" : editChildId ? "Edit Child Profile" : "Edit Extension Profile"}
             </h1>
             <p className="mt-2 text-sm text-cream/70">
-              Update their details below and save to refresh their recommendations.
+              Update the details below and save to refresh your recommendations.
             </p>
             {editBabyId && editBabyProfile && (
               <BabyProfileForm userId={user.id} initialData={editBabyProfile} />
             )}
             {editChildId && editChildProfile && (
               <ChildProfileForm userId={user.id} initialData={editChildProfile} />
+            )}
+            {editExtensionId && editExtensionProfile && (
+              <ExtensionProfileForm userId={user.id} initialData={editExtensionProfile} />
             )}
           </div>
         </div>
@@ -1226,6 +1275,9 @@ function ProfileForm() {
             care only.
           </div>
 
+          {profileFor === "extension" && user && (
+            <ExtensionProfileForm userId={user.id} initialData={latestExtensionProfile ?? undefined} />
+          )}
           {profileFor === "baby" && user && <BabyProfileForm userId={user.id} />}
           {profileFor === "child" && user && <ChildProfileForm userId={user.id} />}
 

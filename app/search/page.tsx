@@ -46,6 +46,14 @@ import {
   writeAnonSearchState,
 } from "@/lib/searchLimit";
 import { supabase } from "@/lib/supabase";
+import {
+  EXTENSION_SEARCH_FILTERS,
+  EXTENSION_TYPE_LABELS,
+  fetchLatestExtensionProfileByUserId,
+  isProductSafeForExtensionFilter,
+  type ExtensionProfile,
+  type ExtensionSearchFilterKey,
+} from "@/lib/extensionProfiles";
 
 const TIER_LABELS: Record<"green" | "amber" | "red", string> = {
   green: "Good match",
@@ -389,6 +397,19 @@ function SearchPageContent() {
   const searchParams = useSearchParams();
   const { user, loading: authLoading, hairProfile, hairProfileLoading } =
     useAuth();
+
+  const [extensionProfile, setExtensionProfile] = useState<ExtensionProfile | null>(null);
+  const [extensionFilter, setExtensionFilter] = useState<ExtensionSearchFilterKey | null>(null);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetchLatestExtensionProfileByUserId(user.id).then((profile) => {
+      if (!cancelled) setExtensionProfile(profile);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   // Anonymous visitors who built a profile without an account (no login,
   // just a hair_profile_id in localStorage) keep the existing "no account
@@ -845,7 +866,7 @@ function SearchPageContent() {
 
   const effectiveSearches = effectiveSearchState(searchState);
 
-  const filteredResults =
+  let filteredResults =
     weightFilter === "all"
       ? results
       : results.filter((product) => {
@@ -856,6 +877,25 @@ function SearchPageContent() {
           if (weightFilter === "medium") return w === "medium";
           return w === "heavy" || w === "very_heavy";
         });
+
+  // Extension quick filters (item 7) - "adhesive remover" is a literal
+  // product search (surface anything named like a remover first), the
+  // rest reorder to surface ingredient-safe products first rather than
+  // hard-filtering, since a small catalog could otherwise show zero
+  // results for a legitimate safety concern.
+  if (extensionFilter === "adhesive_remover") {
+    const isRemover = (p: Product) => /remover|isopropyl|adhesive/i.test(p.name);
+    filteredResults = [...filteredResults].sort(
+      (a, b) => Number(isRemover(b)) - Number(isRemover(a))
+    );
+  } else if (extensionFilter) {
+    const isSafe = (p: Product) => {
+      const state = scoresByCode[p.code];
+      const names = state?.status === "done" ? state.result.matches.map((m) => m.ingredient_name) : [];
+      return isProductSafeForExtensionFilter(names, extensionFilter);
+    };
+    filteredResults = [...filteredResults].sort((a, b) => Number(isSafe(b)) - Number(isSafe(a)));
+  }
 
   return (
     <main className="min-h-screen bg-dark font-sans text-cream">
@@ -871,6 +911,38 @@ function SearchPageContent() {
         <p className="mt-2 text-sm text-cream/70">
           Find a product to check its compatibility with your hair profile.
         </p>
+
+        {extensionProfile && (
+          <div className="mt-5 rounded-lg border border-bronze/40 bg-bronze/10 px-4 py-3">
+            <p className="text-sm font-medium text-cream">
+              Products safe for your{" "}
+              {(extensionProfile.extension_types ?? [])
+                .map((t) => EXTENSION_TYPE_LABELS[t])
+                .filter(Boolean)
+                .join(", ") || "extensions"}
+              :
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {EXTENSION_SEARCH_FILTERS.map((filter) => {
+                const isActive = extensionFilter === filter.key;
+                return (
+                  <button
+                    key={filter.key}
+                    type="button"
+                    onClick={() => setExtensionFilter(isActive ? null : filter.key)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      isActive
+                        ? "border-bronze bg-bronze text-dark"
+                        : "border-bronze/40 text-bronze2 hover:border-bronze"
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="relative -mx-4 mt-6 px-4 sm:mx-0 sm:px-0">
           <div
