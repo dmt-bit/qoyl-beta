@@ -271,7 +271,7 @@ function DemoSection() {
             <SparkleIcon />
           </div>
           <p className="mt-3 text-sm text-cream/80">
-            Claude identifies the style, difficulty, time required, and what you need
+            Our AI agent identifies the style, difficulty, time required, and what you need
           </p>
           <div className="mt-4 rounded-lg bg-dark p-3">
             <p className="font-serif text-sm text-cream">Knotless Braids</p>

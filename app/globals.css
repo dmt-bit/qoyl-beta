@@ -20,6 +20,15 @@ body {
   font-family: var(--font-dm-sans), Arial, Helvetica, sans-serif;
 }
 
+/* BottomNav (components/Nav.tsx) is fixed at 60px + safe-area on mobile
+   on every page - reserved here globally rather than per-page so no
+   page's content ever sits behind it. */
+@media (max-width: 640px) {
+  body {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom));
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

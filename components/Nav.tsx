@@ -42,7 +42,7 @@ function isLinkActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-function SearchIcon({ size = 18 }: { size?: number }) {
+function SearchIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
   return (
     <svg
       width={size}
@@ -51,13 +51,39 @@ function SearchIcon({ size = 18 }: { size?: number }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={1.75}
-      className="shrink-0 text-cream"
+      className={className}
     >
       <path
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
       />
+    </svg>
+  );
+}
+
+function HouseIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10.5L12 3l9 7.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 9.75V21h13.5V9.75" />
+    </svg>
+  );
+}
+
+function SuitcaseIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
+      <rect x="3.75" y="7.5" width="16.5" height="11.25" rx="1.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 7.5V6a2.25 2.25 0 012.25-2.25h3A2.25 2.25 0 0115.75 6v1.5M3.75 12.75h16.5" />
+    </svg>
+  );
+}
+
+function ChevronIcon({ size = 16, className = "shrink-0 text-cream/30" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 6l6 6-6 6" />
     </svg>
   );
 }
@@ -92,9 +118,9 @@ function CloseIcon() {
   );
 }
 
-function PersonIcon({ size = 18 }: { size?: number }) {
+function PersonIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-cream">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
     </svg>
   );
@@ -117,45 +143,36 @@ function PersonNavIcon({ size = 18, showDot = false }: { size?: number; showDot?
   );
 }
 
-function CompassIcon({ size = 18 }: { size?: number }) {
+function CompassIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-cream">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M15 9l-3.5 1.5L10 14l3.5-1.5L15 9z" />
     </svg>
   );
 }
 
-function CalendarIcon({ size = 18 }: { size?: number }) {
+function CalendarIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-cream">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <rect x="3.75" y="5.25" width="16.5" height="15" rx="1.5" />
       <path strokeLinecap="round" d="M3.75 9.75h16.5M8.25 3v3.75M15.75 3v3.75" />
     </svg>
   );
 }
 
-function LockIcon({ size = 16 }: { size?: number }) {
+function LockIcon({ size = 16, className = "shrink-0 text-cream/50" }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-cream/50">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <rect x="4.5" y="10.5" width="15" height="9.75" rx="1.5" />
       <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 10.5V7.5a4.5 4.5 0 119 0v3" />
     </svg>
   );
 }
 
-function CheckCircleIcon({ size = 16 }: { size?: number }) {
+function GridIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-bronze">
-      <circle cx="12" cy="12" r="9" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 12.5l2.5 2.5 4.5-5" />
-    </svg>
-  );
-}
-
-function GridIcon({ size = 18 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="shrink-0 text-cream">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <rect x="3.75" y="3.75" width="6.5" height="6.5" rx="1" />
       <rect x="13.75" y="3.75" width="6.5" height="6.5" rx="1" />
       <rect x="3.75" y="13.75" width="6.5" height="6.5" rx="1" />
@@ -166,76 +183,6 @@ function GridIcon({ size = 18 }: { size?: number }) {
 
 // The slim (mobile) / expanded (desktop) side rail shown only on the
 // home page, replacing the top nav entirely there - every other page
-// keeps the top nav bars below unchanged. Reuses the same menuOpen
-// state/full-screen menu markup as the top nav's hamburger, so the
-// mobile rail's grid icon opens the exact same overlay.
-//
-// Semi-transparent + blurred rather than a solid panel, so it reads as
-// a floating strip over the feed instead of a wall - hidden below
-// 360px entirely (see HomeMiniMenuButton) since there's no room left
-// for both the strip and a legible two-column feed at that width.
-function HomeSideNavMobile({
-  onOpenMenu,
-  user,
-  showRoutineNudge,
-}: {
-  onOpenMenu: () => void;
-  user: unknown;
-  showRoutineNudge: boolean;
-}) {
-  return (
-    <div
-      className="fixed bottom-0 left-0 top-0 z-50 hidden w-10 flex-col items-center bg-[rgba(28,22,18,0.85)] pt-4 shadow-[2px_0_8px_rgba(0,0,0,0.2)] backdrop-blur-[8px] min-[360px]:flex sm:hidden"
-    >
-      <Link href="/" aria-label="Home" className="mb-6 font-serif text-lg text-bronze">
-        Q
-      </Link>
-      <div className="flex flex-col items-center gap-1">
-        <Link href="/search" aria-label="Search a product" className="flex h-10 w-10 items-center justify-center">
-          <SearchIcon size={18} />
-        </Link>
-        <Link href="/style-match" aria-label="Style Match" className="flex h-10 w-10 items-center justify-center">
-          <SparkleIcon size={18} className="text-cream" />
-        </Link>
-        <Link
-          href={user ? "/dashboard" : "/auth"}
-          aria-label="Dashboard"
-          className="flex h-10 w-10 items-center justify-center"
-        >
-          <PersonNavIcon size={18} showDot={showRoutineNudge} />
-        </Link>
-        <Link href="/travel" aria-label="Travel" className="flex h-10 w-10 items-center justify-center">
-          <CompassIcon size={18} />
-        </Link>
-      </div>
-      <button
-        type="button"
-        onClick={onOpenMenu}
-        aria-label="Open menu"
-        className="mb-4 mt-auto flex h-10 w-10 items-center justify-center"
-      >
-        <GridIcon size={18} />
-      </button>
-    </div>
-  );
-}
-
-// Sub-360px fallback - the side strip itself is hidden that small (see
-// min-[360px]:flex above), so this bronze circle in the bottom-right
-// corner is the only way to reach search/profile/travel/etc. there.
-function HomeMiniMenuButton({ onOpenMenu }: { onOpenMenu: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onOpenMenu}
-      aria-label="Open menu"
-      className="fixed bottom-6 right-6 z-50 flex h-11 w-11 items-center justify-center rounded-full bg-bronze shadow-[0_4px_20px_rgba(0,0,0,0.3)] min-[360px]:hidden sm:hidden"
-    >
-      <HamburgerIcon />
-    </button>
-  );
-}
-
 function HomeSideNavDesktop({
   user,
   hasRoutineSubscription,
@@ -322,18 +269,119 @@ function SideNavLink({
   );
 }
 
-function StyleMatchPill() {
+const BOTTOM_NAV_ACTIVE = "text-bronze";
+const BOTTOM_NAV_INACTIVE = "text-[#5A4A3A]";
+
+function BottomNavTab({
+  href,
+  label,
+  active,
+  icon,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  icon: React.ReactNode;
+}) {
   return (
-    <Link
-      href="/style-match"
-      aria-label="Style Match"
-      className="flex items-center gap-1 whitespace-nowrap rounded-[20px] border border-bronze px-[10px] py-[5px] text-bronze"
-    >
-      <SparkleIcon size={13} />
-      <span className="hidden font-sans text-[11px] font-semibold min-[380px]:inline">
-        Style Match
+    <Link href={href} className="flex flex-1 flex-col items-center justify-center gap-1">
+      {icon}
+      <span className={`font-sans text-[10px] ${active ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`}>
+        {label}
       </span>
     </Link>
+  );
+}
+
+// Calendar icon with a small overlay signaling subscription state - a
+// bronze dot above it when active, a tiny lock badge on it when not.
+function RoutineTabIcon({
+  active,
+  hasRoutineSubscription,
+}: {
+  active: boolean;
+  hasRoutineSubscription: boolean;
+}) {
+  const colorClass = `shrink-0 ${active ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`;
+  return (
+    <span className="relative inline-flex">
+      {hasRoutineSubscription && (
+        <span
+          aria-hidden
+          className="absolute -top-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-bronze"
+        />
+      )}
+      <CalendarIcon size={20} className={colorClass} />
+      {!hasRoutineSubscription && (
+        <span className="absolute -bottom-0.5 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-dark">
+          <LockIcon size={9} className={colorClass} />
+        </span>
+      )}
+    </span>
+  );
+}
+
+// Persistent primary navigation on mobile - the pattern every major
+// mobile app uses, replacing the old side-strip workaround entirely
+// (see the removed HomeSideNavMobile/HomeMiniMenuButton). Rendered
+// unconditionally from Nav() below so it appears on every page without
+// needing to be added per-page; globals.css adds matching bottom
+// padding to <body> on mobile so page content never sits behind it.
+function BottomNav({
+  pathname,
+  user,
+  hairProfile,
+  hasRoutineSubscription,
+}: {
+  pathname: string;
+  user: unknown;
+  hairProfile: unknown;
+  hasRoutineSubscription: boolean;
+}) {
+  const profileHref = !user ? "/auth" : hairProfile ? "/dashboard" : "/profile";
+  const profileActive = pathname.startsWith("/dashboard") || pathname.startsWith("/profile");
+  const searchActive = pathname.startsWith("/search");
+  const styleActive = pathname.startsWith("/style-match");
+  const routineActive = pathname.startsWith("/routine");
+  const feedActive = pathname === "/";
+
+  return (
+    <nav
+      data-testid="bottom-nav"
+      className="fixed inset-x-0 bottom-0 z-[100] flex h-[60px] border-t border-[#2C2420] bg-[#1C1612] sm:hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <BottomNavTab
+        href="/"
+        label="Feed"
+        active={feedActive}
+        icon={<HouseIcon size={20} className={`shrink-0 ${feedActive ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`} />}
+      />
+      <BottomNavTab
+        href="/search"
+        label="Search"
+        active={searchActive}
+        icon={<SearchIcon size={20} className={`shrink-0 ${searchActive ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`} />}
+      />
+      <BottomNavTab
+        href="/style-match"
+        label="Style"
+        active={styleActive}
+        icon={<SparkleIcon size={24} className={styleActive ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE} />}
+      />
+      <BottomNavTab
+        href="/routine"
+        label="Routine"
+        active={routineActive}
+        icon={<RoutineTabIcon active={routineActive} hasRoutineSubscription={hasRoutineSubscription} />}
+      />
+      <BottomNavTab
+        href={profileHref}
+        label="Profile"
+        active={profileActive}
+        icon={<PersonIcon size={20} className={`shrink-0 ${profileActive ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`} />}
+      />
+    </nav>
   );
 }
 
@@ -345,14 +393,20 @@ function MenuSectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Every hamburger row is 52px tall with a bottom border for a larger,
+// consistent tap target - icon rows (My Profile/Dashboard/Search/Style
+// Match/Travel) pass `icon`; plain rows (feed filters, account, learn)
+// omit it and just indent to align with the icon rows above them.
 function MenuLink({
   href,
   label,
+  icon,
   badge,
   onNavigate,
 }: {
   href: string;
   label: string;
+  icon?: React.ReactNode;
   badge?: string;
   onNavigate: () => void;
 }) {
@@ -360,24 +414,26 @@ function MenuLink({
     <Link
       href={href}
       onClick={onNavigate}
-      className="flex items-center justify-between gap-3 border-b border-[#2C2420] px-6 py-4 text-base font-medium text-cream transition-colors hover:bg-[#2C2420]/50"
+      className="flex h-[52px] items-center gap-3 border-b border-[#2C2420] px-6 text-cream transition-colors hover:bg-[#2C2420]/50"
     >
-      <span>{label}</span>
+      {icon && <span className="flex h-5 w-5 shrink-0 items-center justify-center">{icon}</span>}
+      <span className="flex-1 truncate font-sans text-sm text-cream">{label}</span>
       {badge && (
         <span className="shrink-0 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-dark">
           {badge}
         </span>
       )}
+      {!badge && <ChevronIcon />}
     </Link>
   );
 }
 
-// "My Routine" gets a distinct treatment from the plain MenuLink rows
+// "My Routine" gets a visually heavier treatment than the plain rows
 // around it - it's the core paid product, so it should read as either
 // an owned feature (subscriber) or an aspirational upgrade (everyone
-// else), never just another list item. Always rendered (unlike the old
-// subscriber-only conditional) so non-subscribers see and can tap into
-// the upgrade path from the menu itself.
+// else), never just another list item. Always rendered (unlike an
+// earlier subscriber-only conditional) so non-subscribers see and can
+// tap into the upgrade path from the menu itself.
 function RoutineMenuLink({
   hasRoutineSubscription,
   onNavigate,
@@ -389,22 +445,20 @@ function RoutineMenuLink({
     <Link
       href="/routine"
       onClick={onNavigate}
-      className="flex items-center justify-between gap-3 border-b border-[#2C2420] px-6 py-4 text-base font-medium text-cream transition-colors hover:bg-[#2C2420]/50"
+      className="flex h-[52px] items-center gap-3 border-b border-l-[3px] border-b-[#2C2420] border-l-bronze bg-[#2C2420] pl-[21px] pr-6 transition-colors hover:bg-[#332A22]"
     >
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+        <CalendarIcon size={20} className="shrink-0 text-bronze" />
+      </span>
+      <span className="flex-1 font-sans text-sm font-semibold text-cream">My Routine</span>
       {hasRoutineSubscription ? (
-        <>
-          <span className="flex items-center gap-2">
-            My Routine
-            <CheckCircleIcon />
-          </span>
-        </>
+        <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-green/15 px-2.5 py-1 text-[10px] font-semibold text-green">
+          <span className="h-1.5 w-1.5 rounded-full bg-green" />
+          Active
+        </span>
       ) : (
-        <span>
-          <span className="flex items-center gap-2">
-            My Routine
-            <LockIcon />
-          </span>
-          <span className="mt-0.5 block text-xs font-semibold text-bronze">$7.99/mo</span>
+        <span className="shrink-0 rounded-full bg-bronze px-2.5 py-1 text-[10px] font-semibold text-dark">
+          $7.99/mo
         </span>
       )}
     </Link>
@@ -466,59 +520,44 @@ export default function Nav() {
     setMenuOpen(false);
   }
 
-  // The home page ("/") replaces the top nav entirely with a persistent
-  // left side rail (slim icon strip on mobile, expanded panel on
-  // desktop) - see HomeSideNavMobile/HomeSideNavDesktop above. Every
-  // other page keeps the top nav bars below exactly as they were.
+  // The home page ("/") still replaces the desktop top nav with a
+  // persistent left side rail (see HomeSideNavDesktop above) - but on
+  // mobile, every page (including home) now shares the same simplified
+  // top bar (wordmark + hamburger only) and the same fixed BottomNav;
+  // the old mobile-only side-strip workaround is gone entirely.
   const isHome = pathname === "/";
 
   return (
     <nav className="print-hide bg-dark font-sans">
-      {isHome && (
-        <>
-          <HomeSideNavMobile onOpenMenu={() => setMenuOpen(true)} user={user} showRoutineNudge={showRoutineNudge} />
-          <HomeMiniMenuButton onOpenMenu={() => setMenuOpen(true)} />
-          <HomeSideNavDesktop
-            user={user}
-            hasRoutineSubscription={hasRoutineSubscription}
-            showRoutineNudge={showRoutineNudge}
-            pathname={pathname}
-          />
-        </>
-      )}
-
-      {!isHome && (
-      <>
-      {/* Mobile: wordmark left, Search a Product + Style Match pills,
-          hamburger opens the full-screen menu. Account access lives in
-          that menu now - no person icon here. */}
+      {/* Mobile top nav - wordmark + hamburger only. Primary navigation
+          (feed/search/style match/routine/profile) now lives in
+          BottomNav below; the hamburger here is secondary navigation
+          (feed filters by hair type, account, learn). */}
       <div className="flex h-[52px] items-center justify-between px-4 sm:hidden">
         <Link href="/" className="font-serif text-xl italic text-cream">
           Qoyl
         </Link>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/search"
-            aria-label="Search a product"
-            className="flex items-center gap-1 whitespace-nowrap rounded-full bg-bronze px-2.5 py-1.5 text-cream"
-          >
-            <SearchIcon size={13} />
-            <span className="font-sans text-[11px] font-semibold">
-              Search a Product
-            </span>
-          </Link>
-          <StyleMatchPill />
-          <button
-            type="button"
-            onClick={() => setMenuOpen(true)}
-            aria-label="Open menu"
-            className="flex items-center justify-center p-1"
-          >
-            <HamburgerIcon />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setMenuOpen(true)}
+          aria-label="Open menu"
+          className="flex items-center justify-center p-1"
+        >
+          <HamburgerIcon />
+        </button>
       </div>
 
+      {isHome && (
+        <HomeSideNavDesktop
+          user={user}
+          hasRoutineSubscription={hasRoutineSubscription}
+          showRoutineNudge={showRoutineNudge}
+          pathname={pathname}
+        />
+      )}
+
+      {!isHome && (
+      <>
       {/* Desktop: wordmark, center text links, sign-in/account on the right. */}
       <div className="hidden border-b border-bronze/20 px-6 py-4 sm:block">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
@@ -596,7 +635,9 @@ export default function Nav() {
           translate-x/opacity so the slide-in transition actually plays.
           Reused on the home page too - the mobile side rail's grid icon
           opens this exact same overlay. */}
-      <div className={`fixed inset-0 z-50 sm:hidden ${menuOpen ? "" : "pointer-events-none"}`}>
+      {/* z-[110], above BottomNav's z-[100] - otherwise the fixed bottom
+          nav bar would peek through on top of this full-screen menu. */}
+      <div className={`fixed inset-0 z-[110] sm:hidden ${menuOpen ? "" : "pointer-events-none"}`}>
         <div
           onClick={closeMenu}
           aria-hidden
@@ -623,18 +664,27 @@ export default function Nav() {
             </button>
           </div>
 
-          <MenuSectionLabel>Main features</MenuSectionLabel>
+          <MenuSectionLabel>Your Hair</MenuSectionLabel>
           <MenuLink
             href="/profile"
-            label="Build my hair profile"
+            label="My Profile"
+            icon={<PersonIcon size={20} />}
             badge={!hairProfile ? "Start here" : undefined}
             onNavigate={closeMenu}
           />
+          <MenuLink href="/dashboard" label="My Dashboard" icon={<GridIcon size={20} />} onNavigate={closeMenu} />
           <RoutineMenuLink hasRoutineSubscription={hasRoutineSubscription} onNavigate={closeMenu} />
-          <MenuLink href="/search" label="Search a Product" onNavigate={closeMenu} />
-          <MenuLink href="/style-match" label="Style Match" badge="New" onNavigate={closeMenu} />
-          <MenuLink href="/travel" label="Travel Kit" onNavigate={closeMenu} />
-          <MenuLink href="/dashboard" label="My Dashboard" onNavigate={closeMenu} />
+
+          <MenuSectionLabel>Tools</MenuSectionLabel>
+          <MenuLink href="/search" label="Search a Product" icon={<SearchIcon size={20} />} onNavigate={closeMenu} />
+          <MenuLink
+            href="/style-match"
+            label="Style Match"
+            icon={<SparkleIcon size={20} className="shrink-0 text-bronze" />}
+            badge="New"
+            onNavigate={closeMenu}
+          />
+          <MenuLink href="/travel" label="Travel Kit" icon={<SuitcaseIcon size={20} />} onNavigate={closeMenu} />
 
           <MenuSectionLabel>The Feed</MenuSectionLabel>
           {TABS.map((tab) => (
@@ -648,16 +698,13 @@ export default function Nav() {
 
           <MenuSectionLabel>Account</MenuSectionLabel>
           {loading ? null : user ? (
-            <>
-              <MenuLink href="/profile" label="My Profile" onNavigate={closeMenu} />
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="flex w-full items-center justify-between border-b border-[#2C2420] px-6 py-4 text-left text-base font-medium text-cream transition-colors hover:bg-[#2C2420]/50"
-              >
-                Sign out
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={handleSignOut}
+              className="flex h-[52px] w-full items-center gap-3 border-b border-[#2C2420] px-6 text-left font-sans text-sm text-cream transition-colors hover:bg-[#2C2420]/50"
+            >
+              Sign out
+            </button>
           ) : (
             <MenuLink href="/auth" label="Sign in" onNavigate={closeMenu} />
           )}
@@ -687,6 +734,13 @@ export default function Nav() {
           </div>
         </div>
       </div>
+
+      <BottomNav
+        pathname={pathname}
+        user={user}
+        hairProfile={hairProfile}
+        hasRoutineSubscription={hasRoutineSubscription}
+      />
     </nav>
   );
 }
