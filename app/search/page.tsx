@@ -15,6 +15,7 @@ import {
   isColorTreatedYes,
   isSulfate,
   Match,
+  nameKeywordBadgeLabel,
   RATING_BORDER_CLASSES,
   ScoreResult,
   TIER_CLASSES,
@@ -292,6 +293,11 @@ function ResultCard({
                   >
                     {scoreState.result.normalizedScore} · {TIER_LABELS[tier]}
                   </span>
+                  {nameKeywordBadgeLabel(scoreState.result) && (
+                    <span className="inline-block rounded-full border border-bronze px-2 py-0.5 font-sans text-[9px] font-medium text-bronze2">
+                      {nameKeywordBadgeLabel(scoreState.result)}
+                    </span>
+                  )}
                   <span
                     className={`inline-block rounded-full px-2 py-0.5 font-sans text-[10px] font-medium ${
                       showWeightWarning ? WEIGHT_WARNING_CLASSES : WEIGHT_PILL_CLASSES[productWeight]

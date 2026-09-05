@@ -43,6 +43,7 @@ type ProductCandidate = {
   affiliateLink: string | null;
   priceUsd: number | null;
   containsSulfates: boolean;
+  nameKeywordBadge: string | null;
 };
 
 type ProductPick = {
@@ -682,6 +683,11 @@ function ProductCard({
               >
                 {primary.score}
               </span>
+              {primary.nameKeywordBadge && (
+                <span className="rounded-full border border-bronze px-2 py-0.5 text-right font-sans text-[9px] font-medium text-bronze2">
+                  {primary.nameKeywordBadge}
+                </span>
+              )}
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${WEIGHT_PILL_CLASSES[primary.weight]}`}
               >

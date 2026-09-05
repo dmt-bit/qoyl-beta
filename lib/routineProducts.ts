@@ -4,6 +4,8 @@ import {
   buildScoringProfile,
   curlFamily,
   isSulfate,
+  nameKeywordBadgeLabel,
+  nameKeywordWhyCopyAddendum,
   scoreCatalogProductsForProfile,
   type CurlFamily,
 } from "@/lib/compatibility";
@@ -248,6 +250,10 @@ export type RoutineProductCandidate = {
   // itself (a sulfate can still score fine overall while being worth
   // flagging specifically for color-treated hair).
   containsSulfates: boolean;
+  // "Matches your volume goal" etc. - see
+  // lib/compatibility.ts's nameKeywordBadgeLabel. Null unless the
+  // product name's keyword modifier is significant (>= 6).
+  nameKeywordBadge: string | null;
 };
 
 export type RoutineProductPick = {
@@ -583,22 +589,25 @@ async function rankCategoryProducts(
       }
 
       const brandName = brandNameOf(row);
+      const baseWhy = generateWhyCopy(
+        row.name,
+        pickCategory,
+        curlType,
+        profile.porosity,
+        result.productWeight,
+        hairConcerns
+      );
+      const nameKeywordAddendum = nameKeywordWhyCopyAddendum(result.nameKeywordMatch);
       return {
         productName: row.name,
         brandName,
         score: result.normalizedScore,
         weight: result.productWeight,
-        why: generateWhyCopy(
-          row.name,
-          pickCategory,
-          curlType,
-          profile.porosity,
-          result.productWeight,
-          hairConcerns
-        ),
+        why: nameKeywordAddendum ? `${baseWhy} ${nameKeywordAddendum}` : baseWhy,
         affiliateLink: getAffiliateLink(row.name, brandName),
         priceUsd: row.price_usd ?? null,
         containsSulfates: result.matches.some((m) => isSulfate(m.ingredient_name)),
+        nameKeywordBadge: nameKeywordBadgeLabel(result),
       };
     })
     .filter((c): c is RoutineProductCandidate => c !== null)

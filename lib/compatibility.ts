@@ -13,6 +13,14 @@ export type ScoreResult = {
   normalizedScore: number;
   matches: Match[];
   productWeight: ProductWeight;
+  // Product-name keyword scoring (see getNameKeywordModifiers below) -
+  // nameKeywordModifier is already folded into normalizedScore;
+  // nameKeywordMatch is only set when the modifier is significant enough
+  // (>4 positive or <-4 negative) to surface as why-copy/a badge, and is
+  // null otherwise even if smaller keyword matches contributed to the
+  // score.
+  nameKeywordModifier: number;
+  nameKeywordMatch: (NameKeywordMatch & { direction: "positive" | "negative" }) | null;
 };
 
 export function parseIngredients(text: string): string[] {
@@ -788,6 +796,287 @@ function applyCurlTypeAdjustment(
   return { score: adjustedScore, rating: ratingForScore(adjustedScore) };
 }
 
+// ---- Product-name keyword scoring ---------------------------------------
+//
+// A second, independent signal on top of the ingredient score above: what
+// a brand calls a product ("Volume & Lift Shampoo", "Curl Defining
+// Custard") is a real, if noisy, indicator of intended use that
+// ingredient analysis alone can miss - two products with near-identical
+// INCI lists can be marketed and formulated for opposite hair goals via
+// small differences in surfactant ratios, silicone load, etc. that don't
+// show up as a difference in *which* ingredients are present.
+//
+// Deliberately capped at +/-15 (see NAME_KEYWORD_CAP below) so this can
+// nudge the score but never override what the ingredient list itself
+// says - a product called "Curl Defining Cream" with three drying
+// alcohols near the top of its ingredient list should still score poorly
+// overall.
+export type NameKeywordMatch = {
+  category: string;
+  label: string;
+  delta: number;
+};
+
+const NAME_KEYWORD_CAP = 15;
+
+type KeywordContext = {
+  hairConcerns: string[];
+  family: CurlFamily | null;
+  porosity: string;
+  scalpCondition: string | null;
+};
+
+function hasAny(text: string, keywords: string[]): boolean {
+  return keywords.some((k) => text.includes(k));
+}
+
+function hasConcern(concerns: string[], ...names: string[]): boolean {
+  return names.some((n) => concerns.includes(n));
+}
+
+// Each entry mirrors one section of the request's keyword spec - the
+// keyword list that gates it, and a scorer producing this category's
+// delta plus (when it fires) the label used in why-copy/badges.
+const NAME_KEYWORD_CATEGORIES: {
+  category: string;
+  label: string;
+  keywords: string[];
+  score: (ctx: KeywordContext) => number;
+}[] = [
+  {
+    category: "volume",
+    label: "volume and lift",
+    keywords: ["volume", "volumiz", "lift", "body", "thicken", "plump"],
+    score: ({ hairConcerns, family }) => {
+      let d = 0;
+      if (hasConcern(hairConcerns, "lack_of_volume", "limp_hair", "thinning")) d += 8;
+      if (family === "straight" || family === "wavy") d += 5;
+      if (family === "coily") d -= 3;
+      return d;
+    },
+  },
+  {
+    category: "moisture",
+    label: "moisture and hydration",
+    keywords: ["moisture", "hydrat", "quench", "thirst", "drench", "replenish"],
+    score: ({ hairConcerns, porosity }) => {
+      let d = 0;
+      if (hasConcern(hairConcerns, "dryness", "brittleness")) d += 6;
+      if (porosity === "high") d += 4;
+      if (porosity === "low") d -= 2;
+      return d;
+    },
+  },
+  {
+    category: "curl_definition",
+    label: "curl definition",
+    keywords: ["curl", "coil", "define", "definition", "pattern", "enhance"],
+    score: ({ family }) => {
+      let d = 0;
+      if (family === "curly" || family === "coily") d += 6;
+      if (family === "straight") d -= 8;
+      if (family === "wavy") d += 2;
+      return d;
+    },
+  },
+  {
+    category: "scalp",
+    label: "scalp health",
+    keywords: ["scalp", "root", "follicle", "growth", "stimulat"],
+    score: ({ hairConcerns }) =>
+      hasConcern(hairConcerns, "scalp_issues", "thinning", "slow_growth") ? 8 : 2,
+  },
+  {
+    category: "strengthening",
+    label: "strengthening and repair",
+    keywords: [
+      "strength", "strengthen", "fortif", "bond", "repair", "restore",
+      "reconstruct", "resilience", "reinforc",
+    ],
+    score: ({ hairConcerns }) =>
+      hasConcern(hairConcerns, "breakage", "thinning", "damage") ? 8 : 3,
+  },
+  {
+    category: "frizz_control",
+    label: "frizz control",
+    keywords: [
+      "frizz", "smooth", "sleek", "anti-frizz", "anti frizz", "tame", "control",
+    ],
+    score: ({ hairConcerns, family }) => {
+      let d = 0;
+      if (hasConcern(hairConcerns, "frizz")) d += 8;
+      if (family === "wavy") d += 4;
+      if (family === "straight") d += 3;
+      return d;
+    },
+  },
+  {
+    category: "protein",
+    label: "protein",
+    keywords: ["protein", "keratin", "peptide", "amino", "silk", "collagen"],
+    score: ({ porosity, hairConcerns }) => {
+      let d = 0;
+      if (porosity === "high") d += 6;
+      if (porosity === "low") d -= 4;
+      if (hasConcern(hairConcerns, "breakage", "damage")) d += 5;
+      return d;
+    },
+  },
+  {
+    category: "clarifying",
+    label: "clarifying",
+    keywords: ["clarif", "detox", "cleanse", "purif", "reset", "chelat"],
+    // Everyone benefits a little; water-hardness scoring (see
+    // applyWaterHardnessAdjustment) is what actually drives the bulk of
+    // this recommendation for hard-water users.
+    score: () => 2,
+  },
+  {
+    category: "color_treated",
+    label: "color-treated hair",
+    keywords: [
+      "color", "colour", "color-safe", "color safe", "color protect", "vibrancy", "fade",
+    ],
+    score: ({ hairConcerns }) =>
+      hasConcern(hairConcerns, "color_treated", "color-treated") ? 8 : -2,
+  },
+  {
+    category: "sensitive_scalp",
+    label: "gentle, sensitive-scalp care",
+    keywords: ["sensitive", "gentle", "sooth", "calm", "relief", "itch", "comfort"],
+    score: ({ scalpCondition }) =>
+      scalpCondition === "sensitive" || scalpCondition === "itchy" ? 8 : 1,
+  },
+  {
+    category: "natural",
+    label: "natural, clean ingredients",
+    keywords: ["natural", "organic", "botanical", "plant-based", "clean"],
+    score: () => 2,
+  },
+  {
+    category: "heat_protection",
+    label: "heat protection",
+    keywords: ["heat", "thermal", "blowout", "blow dry", "flat iron", "hot tool"],
+    score: ({ family }) => (family === "straight" || family === "wavy" ? 6 : 3),
+  },
+  {
+    category: "protective_styling",
+    label: "protective styling",
+    keywords: ["braid", "loc", "twist", "protective", "extension"],
+    score: ({ hairConcerns, family }) =>
+      hasConcern(hairConcerns, "protective_styling") || family === "coily" ? 6 : 0,
+  },
+  {
+    category: "anti_dandruff",
+    label: "anti-dandruff care",
+    keywords: ["dandruff", "flake", "seborrheic", "pyrithione", "zinc"],
+    score: ({ scalpCondition }) => (scalpCondition === "dandruff_prone" ? 10 : -3),
+  },
+  {
+    category: "wavy",
+    label: "wave-enhancing",
+    keywords: ["wave", "wavy", "beach wave", "sea salt"],
+    score: ({ family }) => {
+      if (family === "wavy") return 8;
+      if (family === "straight") return 3;
+      if (family === "coily") return -5;
+      return 0;
+    },
+  },
+];
+
+// Sums every matching category's delta, capped to +/-15 - the total is
+// what stacks onto the ingredient score. topPositive/topNegative (the
+// single largest contributor in each direction) drive the why-copy
+// addendum and search/routine badge, so a product with several small
+// matching categories still gets one clear, specific reason surfaced
+// rather than a vague blend of all of them.
+export function getNameKeywordModifiers(
+  productName: string,
+  hairConcerns: string[] | null,
+  family: CurlFamily | null,
+  porosity: string,
+  scalpCondition: string | null
+): { modifier: number; topPositive: NameKeywordMatch | null; topNegative: NameKeywordMatch | null } {
+  const name = productName.toLowerCase();
+  const ctx: KeywordContext = { hairConcerns: hairConcerns ?? [], family, porosity, scalpCondition };
+
+  let total = 0;
+  let topPositive: NameKeywordMatch | null = null;
+  let topNegative: NameKeywordMatch | null = null;
+
+  for (const entry of NAME_KEYWORD_CATEGORIES) {
+    if (!hasAny(name, entry.keywords)) continue;
+    const delta = entry.score(ctx);
+    if (delta === 0) continue;
+    total += delta;
+
+    const match: NameKeywordMatch = { category: entry.category, label: entry.label, delta };
+    if (delta > 0 && (!topPositive || delta > topPositive.delta)) topPositive = match;
+    if (delta < 0 && (!topNegative || delta < topNegative.delta)) topNegative = match;
+  }
+
+  return {
+    modifier: Math.max(-NAME_KEYWORD_CAP, Math.min(NAME_KEYWORD_CAP, total)),
+    topPositive,
+    topNegative,
+  };
+}
+
+// Short "Matches your X" badge text, keyed by category - shown on
+// product cards (search results, routine picks) whenever
+// ScoreResult.nameKeywordModifier >= 6, per the request. Only ever
+// looked up for a positive match (see nameKeywordBadgeLabel below), so
+// there's no negative-direction entry needed here.
+const NAME_KEYWORD_BADGE_TEXT: Record<string, string> = {
+  volume: "Matches your volume goal",
+  moisture: "Matches your moisture needs",
+  curl_definition: "Matches your curl goals",
+  scalp: "Matches your scalp concern",
+  strengthening: "Matches your strengthening goals",
+  frizz_control: "Matches your frizz concern",
+  protein: "Matches your protein needs",
+  clarifying: "Matches your clarifying needs",
+  color_treated: "Matches your color-treated hair",
+  sensitive_scalp: "Matches your sensitive scalp needs",
+  natural: "Matches your clean ingredient preference",
+  heat_protection: "Matches your heat styling needs",
+  protective_styling: "Matches your protective style needs",
+  anti_dandruff: "Matches your scalp concern",
+  wavy: "Matches your wave goals",
+};
+
+// Bronze "Matches your X" badge text for a scored product, or null when
+// the name-keyword modifier isn't significant enough (>= 6) to call out.
+export function nameKeywordBadgeLabel(result: {
+  nameKeywordModifier: number;
+  nameKeywordMatch: (NameKeywordMatch & { direction: "positive" | "negative" }) | null;
+}): string | null {
+  if (result.nameKeywordModifier < 6) return null;
+  const match = result.nameKeywordMatch;
+  if (!match || match.direction !== "positive") return null;
+  return NAME_KEYWORD_BADGE_TEXT[match.category] ?? `Matches your ${match.label} goal`;
+}
+
+// Extra why-copy sentence reflecting a significant name-keyword match
+// (positive: >4, negative: <-4 - see resolveScoreResult). Returns null
+// when there's nothing significant enough to call out.
+export function nameKeywordWhyCopyAddendum(
+  match: (NameKeywordMatch & { direction: "positive" | "negative" }) | null
+): string | null {
+  if (!match) return null;
+  if (match.direction === "negative") {
+    return `Note: this product is formulated for ${match.label} which differs from your profile - consider it a secondary option.`;
+  }
+  if (match.category === "protein") {
+    return `This product's protein-forward formula is well suited for your hair.`;
+  }
+  if (match.category === "color_treated") {
+    return `This product is specifically formulated for color-treated hair - a strong match for your color-treated profile.`;
+  }
+  return `This product is specifically formulated for ${match.label} - which aligns with your hair goals.`;
+}
+
 export type ScoringProfile = {
   climate: string | null;
   waterHardness: string | null;
@@ -1038,6 +1327,8 @@ function resolveScoreResult(
       normalizedScore: 0,
       matches: [],
       productWeight: classifyProductWeight([], category ?? "", productName ?? ""),
+      nameKeywordModifier: 0,
+      nameKeywordMatch: null,
     };
   }
 
@@ -1180,9 +1471,29 @@ function resolveScoreResult(
     .map((i) => i.inci_name);
   const productWeight = classifyProductWeight(orderedIngredientNames, category ?? "", productName ?? "");
   const weightModifier = getWeightModifier(productWeight, family);
-  const normalizedScore = Math.min(100, Math.max(0, baseScore + weightModifier));
+  const scoreBeforeNameKeywords = Math.min(100, Math.max(0, baseScore + weightModifier));
 
-  return { normalizedScore, matches: matchList, productWeight };
+  // Product-name keyword scoring - a second, independent signal stacked
+  // on top of the ingredient score (see getNameKeywordModifiers above).
+  // Only meaningful with a real product name; scoreIngredientsText (raw
+  // pasted label text, no catalog row) passes null and gets a no-op 0
+  // here, same as before this existed.
+  const { modifier: nameKeywordModifier, topPositive, topNegative } = productName
+    ? getNameKeywordModifiers(productName, hairConcerns, family, porosity, scalpCondition)
+    : { modifier: 0, topPositive: null, topNegative: null };
+  const normalizedScore = Math.min(100, Math.max(0, scoreBeforeNameKeywords + nameKeywordModifier));
+
+  // Thresholds match the request: >4 surfaces a positive reason, <-4 a
+  // caution - a modifier that landed in between (or exactly at a
+  // threshold) is real but too marginal to call out specifically.
+  const nameKeywordMatch: ScoreResult["nameKeywordMatch"] =
+    nameKeywordModifier > 4 && topPositive
+      ? { ...topPositive, direction: "positive" }
+      : nameKeywordModifier < -4 && topNegative
+      ? { ...topNegative, direction: "negative" }
+      : null;
+
+  return { normalizedScore, matches: matchList, productWeight, nameKeywordModifier, nameKeywordMatch };
 }
 
 // Shared by the single-product scoring entry points below - fetches
@@ -1199,6 +1510,8 @@ async function scorePositionedIngredients(
         normalizedScore: 0,
         matches: [],
         productWeight: classifyProductWeight([], category ?? "", productName ?? ""),
+        nameKeywordModifier: 0,
+        nameKeywordMatch: null,
       },
     };
   }
