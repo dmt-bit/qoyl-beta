@@ -12,6 +12,7 @@ import UpgradeWall from "@/components/UpgradeWall";
 import { useAuth } from "@/lib/auth-context";
 import {
   curlFamily,
+  INGREDIENT_FUNCTION_LABELS,
   isColorTreatedYes,
   isSulfate,
   Match,
@@ -169,6 +170,9 @@ function IngredientRow({ match }: { match: Match }) {
   const borderClass = RATING_BORDER_CLASSES[match.rating] ?? "border-muted";
   const label =
     match.rating.charAt(0).toUpperCase() + match.rating.slice(1);
+  const functionLabel = match.primaryFunction
+    ? INGREDIENT_FUNCTION_LABELS[match.primaryFunction] ?? null
+    : null;
 
   return (
     <div className={`border-l-4 py-1.5 pl-2.5 ${borderClass}`}>
@@ -176,6 +180,11 @@ function IngredientRow({ match }: { match: Match }) {
         {match.ingredient_name}
       </span>
       <span className="ml-1.5 font-sans text-[10px] text-muted">{label}</span>
+      {functionLabel && (
+        <span className="ml-1.5 inline-block rounded-full border border-bronze/40 px-1.5 py-0.5 font-sans text-[8px] font-medium text-bronze2">
+          {functionLabel}
+        </span>
+      )}
     </div>
   );
 }

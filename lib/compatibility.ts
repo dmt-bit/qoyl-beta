@@ -7,6 +7,36 @@ export type Match = {
   rating: "good" | "neutral" | "caution" | "avoid" | string;
   position: number;
   weight: number;
+  // ingredients.primary_function (see supabase/ingredient_function_tags.sql) -
+  // null for ingredients not yet tagged. Drives both the function-aware
+  // scoring modifiers below and the ingredient-breakdown badge on /search.
+  primaryFunction: string | null;
+};
+
+// Human-readable labels for ingredients.primary_function, shared by the
+// /search ingredient-breakdown badge (item 4) and anywhere else a
+// function tag needs display text.
+export const INGREDIENT_FUNCTION_LABELS: Record<string, string> = {
+  humectant: "Humectant",
+  emollient: "Emollient",
+  emulsifier: "Emulsifier",
+  surfactant: "Surfactant",
+  conditioning_agent: "Conditioning",
+  film_former: "Film Former",
+  protein: "Protein",
+  preservative: "Preservative",
+  fragrance: "Fragrance",
+  colorant: "Colorant",
+  chelating_agent: "Chelating",
+  ph_adjuster: "pH Adjuster",
+  thickener: "Thickener",
+  penetration_enhancer: "Penetration Enhancer",
+  antifungal: "Antifungal",
+  occlusive: "Occlusive",
+  solvent: "Solvent",
+  antioxidant: "Antioxidant",
+  scalp_active: "Scalp Active",
+  bond_builder: "Bond Builder",
 };
 
 export type ScoreResult = {
@@ -84,6 +114,11 @@ export type IngredientRow = {
   // label (see lib/adminProducts.ts's matchIngredientNames) only get an
   // inci_name, not a curated common_name.
   common_name: string | null;
+  // Optional (not selected by every caller - e.g. lib/adminProducts.ts's
+  // ingredient-matching query has no need for them) rather than required,
+  // so existing selects that omit these columns still satisfy the type.
+  primary_function?: string | null;
+  secondary_function?: string | null;
 };
 
 function firstWord(s: string): string {
@@ -824,6 +859,7 @@ type KeywordContext = {
   family: CurlFamily | null;
   porosity: string;
   scalpCondition: string | null;
+  colorTreated: boolean;
 };
 
 function hasAny(text: string, keywords: string[]): boolean {
@@ -849,7 +885,10 @@ const NAME_KEYWORD_CATEGORIES: {
     keywords: ["volume", "volumiz", "lift", "body", "thicken", "plump"],
     score: ({ hairConcerns, family }) => {
       let d = 0;
-      if (hasConcern(hairConcerns, "lack_of_volume", "limp_hair", "thinning")) d += 8;
+      // No dedicated "lacks volume"/"limp" concern exists in this app's
+      // real CONCERN_OPTIONS (see app/profile/page.tsx) - "thinning" is
+      // the closest real signal that volume-boosting copy is relevant.
+      if (hasConcern(hairConcerns, "thinning")) d += 8;
       if (family === "straight" || family === "wavy") d += 5;
       if (family === "coily") d -= 3;
       return d;
@@ -861,7 +900,8 @@ const NAME_KEYWORD_CATEGORIES: {
     keywords: ["moisture", "hydrat", "quench", "thirst", "drench", "replenish"],
     score: ({ hairConcerns, porosity }) => {
       let d = 0;
-      if (hasConcern(hairConcerns, "dryness", "brittleness")) d += 6;
+      // "brittleness" isn't a real concern value here - "dryness" is.
+      if (hasConcern(hairConcerns, "dryness")) d += 6;
       if (porosity === "high") d += 4;
       if (porosity === "low") d -= 2;
       return d;
@@ -883,8 +923,10 @@ const NAME_KEYWORD_CATEGORIES: {
     category: "scalp",
     label: "scalp health",
     keywords: ["scalp", "root", "follicle", "growth", "stimulat"],
+    // "scalp" and "growth" (not "scalp_issues"/"slow_growth") are this
+    // app's real concern values.
     score: ({ hairConcerns }) =>
-      hasConcern(hairConcerns, "scalp_issues", "thinning", "slow_growth") ? 8 : 2,
+      hasConcern(hairConcerns, "scalp", "thinning", "growth") ? 8 : 2,
   },
   {
     category: "strengthening",
@@ -893,8 +935,10 @@ const NAME_KEYWORD_CATEGORIES: {
       "strength", "strengthen", "fortif", "bond", "repair", "restore",
       "reconstruct", "resilience", "reinforc",
     ],
+    // "damage" isn't a real concern value here - "breakage" is the real
+    // analog.
     score: ({ hairConcerns }) =>
-      hasConcern(hairConcerns, "breakage", "thinning", "damage") ? 8 : 3,
+      hasConcern(hairConcerns, "breakage", "thinning") ? 8 : 3,
   },
   {
     category: "frizz_control",
@@ -918,7 +962,8 @@ const NAME_KEYWORD_CATEGORIES: {
       let d = 0;
       if (porosity === "high") d += 6;
       if (porosity === "low") d -= 4;
-      if (hasConcern(hairConcerns, "breakage", "damage")) d += 5;
+      // "damage" isn't a real concern value here - "breakage" is.
+      if (hasConcern(hairConcerns, "breakage")) d += 5;
       return d;
     },
   },
@@ -937,15 +982,17 @@ const NAME_KEYWORD_CATEGORIES: {
     keywords: [
       "color", "colour", "color-safe", "color safe", "color protect", "vibrancy", "fade",
     ],
-    score: ({ hairConcerns }) =>
-      hasConcern(hairConcerns, "color_treated", "color-treated") ? 8 : -2,
+    // Color-treated status is a real boolean field on the profile
+    // (hair_profiles.color_treated), not a hair_concerns value - there
+    // is no "color_treated"/"color-treated" concern in this app.
+    score: ({ colorTreated }) => (colorTreated ? 8 : -2),
   },
   {
     category: "sensitive_scalp",
     label: "gentle, sensitive-scalp care",
     keywords: ["sensitive", "gentle", "sooth", "calm", "relief", "itch", "comfort"],
-    score: ({ scalpCondition }) =>
-      scalpCondition === "sensitive" || scalpCondition === "itchy" ? 8 : 1,
+    // "itchy" isn't a real scalp_condition value here - "sensitive" is.
+    score: ({ scalpCondition }) => (scalpCondition === "sensitive" ? 8 : 1),
   },
   {
     category: "natural",
@@ -963,14 +1010,18 @@ const NAME_KEYWORD_CATEGORIES: {
     category: "protective_styling",
     label: "protective styling",
     keywords: ["braid", "loc", "twist", "protective", "extension"],
-    score: ({ hairConcerns, family }) =>
-      hasConcern(hairConcerns, "protective_styling") || family === "coily" ? 6 : 0,
+    // No "protective_styling" concern exists in this app - family alone
+    // (coily hair being the most common protective-styling wearer) is
+    // the only real signal available here.
+    score: ({ family }) => (family === "coily" ? 6 : 0),
   },
   {
     category: "anti_dandruff",
     label: "anti-dandruff care",
     keywords: ["dandruff", "flake", "seborrheic", "pyrithione", "zinc"],
-    score: ({ scalpCondition }) => (scalpCondition === "dandruff_prone" ? 10 : -3),
+    // normalizeScalpCondition maps the raw "dandruff-prone" DB value to
+    // "dandruff" - there is no "dandruff_prone" in a built ScoringProfile.
+    score: ({ scalpCondition }) => (scalpCondition === "dandruff" ? 10 : -3),
   },
   {
     category: "wavy",
@@ -996,10 +1047,11 @@ export function getNameKeywordModifiers(
   hairConcerns: string[] | null,
   family: CurlFamily | null,
   porosity: string,
-  scalpCondition: string | null
+  scalpCondition: string | null,
+  colorTreated: boolean = false
 ): { modifier: number; topPositive: NameKeywordMatch | null; topNegative: NameKeywordMatch | null } {
   const name = productName.toLowerCase();
-  const ctx: KeywordContext = { hairConcerns: hairConcerns ?? [], family, porosity, scalpCondition };
+  const ctx: KeywordContext = { hairConcerns: hairConcerns ?? [], family, porosity, scalpCondition, colorTreated };
 
   let total = 0;
   let topPositive: NameKeywordMatch | null = null;
@@ -1075,6 +1127,108 @@ export function nameKeywordWhyCopyAddendum(
     return `This product is specifically formulated for color-treated hair - a strong match for your color-treated profile.`;
   }
   return `This product is specifically formulated for ${match.label} - which aligns with your hair goals.`;
+}
+
+// ---- Ingredient-function-aware scoring modifiers ------------------------
+//
+// A third, independent layer (alongside the curl-type/climate/etc.
+// per-ingredient adjustments above and the product-name keyword modifier
+// above that) - this one keyed off ingredients.primary_function/
+// secondary_function (see supabase/ingredient_function_tags.sql) rather
+// than a hardcoded ingredient-name Set, and the first one to use
+// ingredient *position* as a concentration proxy for a function-level
+// judgment ("is this humectant the star of the formula, or a trace
+// amount near the end of the list?").
+//
+// This deliberately overlaps with a few existing Set-based rules
+// (HUMECTANTS in applyClimateAdjustment, CHELATING_AGENTS in
+// applyWaterHardnessAdjustment) rather than replacing them - same
+// "stack, don't merge" approach as getNameKeywordModifiers above. The
+// two signals answer different questions (climate physics vs. formula
+// prominence) and an ingredient tagged by both isn't being double-
+// counted for the same reason, just penalized/boosted twice for two
+// related-but-distinct ones.
+//
+// hairConcerns/scalpCondition values below are this app's REAL values
+// (see CONCERN_OPTIONS/SCALP_OPTIONS in app/profile/page.tsx and
+// normalizeScalpCondition above) - there is no "damage",
+// "color_treated", or "dandruff_prone" concern/scalp value in this app.
+// "damage" is treated as this app's "breakage" concern; "color-treated"
+// as profile.colorTreated (a real boolean field, not a concern);
+// "dandruff_prone" as the normalized "dandruff" scalp value.
+const SALICYLIC_ACID = new Set(["salicylic acid"]);
+const ZINC_PYRITHIONE = new Set(["zinc pyrithione"]);
+
+function isGentleSurfactant(name: string): boolean {
+  return name.includes("betaine") || name.includes("glucoside");
+}
+
+function applyIngredientFunctionAdjustment(
+  ingredient: PositionedIngredient,
+  profile: ScoringProfile,
+  score: number,
+  rating: string
+): { score: number; rating: string } {
+  const name = ingredient.inci_name.trim().toLowerCase();
+  const { primary_function: primaryFn, secondary_function: secondaryFn, position } = ingredient;
+  const { climate, porosity, family, scalpCondition, waterHardness, hairConcerns, colorTreated } = profile;
+  const hasBreakageConcern = hairConcerns?.includes("breakage") ?? false;
+  let delta = 0;
+
+  if (primaryFn === "humectant") {
+    if (isDryClimate(climate)) {
+      // Most specific (top-3, "major humectant") wins over the broader
+      // top-5 case rather than stacking both penalties on the same
+      // ingredient.
+      if (position <= 3) delta -= 5;
+      else if (position <= 5) delta -= 3;
+    }
+    if (isHumidClimate(climate) && porosity === "high") delta += 2;
+  }
+
+  if (primaryFn === "protein" || secondaryFn === "protein") {
+    if (porosity === "low") {
+      delta += primaryFn === "protein" && position <= 5 ? -4 : secondaryFn === "protein" ? -1 : 0;
+    }
+    if (porosity === "high" && hasBreakageConcern) delta += 4;
+  }
+
+  if (primaryFn === "occlusive") {
+    if (family === "straight" && position <= 5) delta -= 5;
+    else if (family === "coily" && position <= 3) delta += 3;
+    // family === "coily" && position >= 8 -> explicitly no adjustment
+    // (a trace occlusive is fine for coily hair) - already the default.
+  }
+
+  if (primaryFn === "surfactant") {
+    if (scalpCondition === "sensitive" && name.includes("sulfate")) delta -= 4;
+    if (scalpCondition === "oily" && isGentleSurfactant(name)) delta += 2;
+  }
+
+  if (primaryFn === "chelating_agent") {
+    if (waterHardness === "hard") delta += 4;
+    else if (waterHardness === "soft") delta += 1;
+  }
+
+  if (primaryFn === "bond_builder") {
+    delta += colorTreated || hasBreakageConcern ? 5 : 2;
+  }
+
+  if (primaryFn === "scalp_active") {
+    if (hairConcerns?.includes("thinning") && (ROSEMARY.has(name) || CAFFEINE.has(name) || SAW_PALMETTO.has(name))) {
+      delta += 4;
+    }
+    if (scalpCondition === "sensitive" && (SALICYLIC_ACID.has(name) || ZINC_PYRITHIONE.has(name))) {
+      delta -= 2;
+    }
+    if (scalpCondition === "dandruff" && ZINC_PYRITHIONE.has(name)) {
+      delta += 6;
+    }
+  }
+
+  if (delta === 0) return { score, rating };
+  const adjusted = clampScore(score + delta);
+  return { score: adjusted, rating: ratingForScore(adjusted) };
 }
 
 export type ScoringProfile = {
@@ -1269,6 +1423,8 @@ type PositionedIngredient = {
   inci_name: string;
   common_name: string | null;
   position: number;
+  primary_function: string | null;
+  secondary_function: string | null;
 };
 
 type ScoreRow = {
@@ -1439,6 +1595,7 @@ function resolveScoreResult(
       score,
       rating
     ));
+    ({ score, rating } = applyIngredientFunctionAdjustment(ingredient, profile, score, rating));
 
     matchList.push({
       ingredient_name: ingredient.common_name || ingredient.inci_name,
@@ -1446,6 +1603,7 @@ function resolveScoreResult(
       rating,
       position: ingredient.position,
       weight: positionWeight(ingredient.position),
+      primaryFunction: ingredient.primary_function,
     });
   }
 
@@ -1479,7 +1637,7 @@ function resolveScoreResult(
   // pasted label text, no catalog row) passes null and gets a no-op 0
   // here, same as before this existed.
   const { modifier: nameKeywordModifier, topPositive, topNegative } = productName
-    ? getNameKeywordModifiers(productName, hairConcerns, family, porosity, scalpCondition)
+    ? getNameKeywordModifiers(productName, hairConcerns, family, porosity, scalpCondition, colorTreated)
     : { modifier: 0, topPositive: null, topNegative: null };
   const normalizedScore = Math.min(100, Math.max(0, scoreBeforeNameKeywords + nameKeywordModifier));
 
@@ -1538,7 +1696,9 @@ export async function scoreIngredientsText(
 
   const [{ data: allIngredients, error: ingredientsError }, { data: aliasRows }] =
     await Promise.all([
-      supabase.from("ingredients").select("id, inci_name, common_name"),
+      supabase
+        .from("ingredients")
+        .select("id, inci_name, common_name, primary_function, secondary_function"),
       supabase.from("aliases").select("alias, ingredient_id"),
     ]);
 
@@ -1573,6 +1733,8 @@ export async function scoreIngredientsText(
       inci_name: ingredient.inci_name,
       common_name: ingredient.common_name,
       position: positionById.get(id) ?? Number.MAX_SAFE_INTEGER,
+      primary_function: ingredient.primary_function ?? null,
+      secondary_function: ingredient.secondary_function ?? null,
     })
   );
 
@@ -1595,7 +1757,7 @@ export async function scoreCatalogProduct(
   const [{ data: rows, error }, { data: productRow }] = await Promise.all([
     supabase
       .from("catalog_product_ingredients")
-      .select("position, ingredients(id, inci_name, common_name)")
+      .select("position, ingredients(id, inci_name, common_name, primary_function, secondary_function)")
       .eq("product_id", productId)
       .order("position"),
     supabase
@@ -1618,6 +1780,8 @@ export async function scoreCatalogProduct(
         inci_name: ingredient.inci_name,
         common_name: ingredient.common_name,
         position: row.position,
+        primary_function: ingredient.primary_function ?? null,
+        secondary_function: ingredient.secondary_function ?? null,
       };
     })
     .filter((i): i is PositionedIngredient => i !== null);
@@ -1668,7 +1832,7 @@ export async function scoreCatalogProductsForProfile(
   const [{ data: rows, error: piError }, { data: categoryRows }] = await Promise.all([
     supabase
       .from("catalog_product_ingredients")
-      .select("product_id, position, ingredients(id, inci_name, common_name)")
+      .select("product_id, position, ingredients(id, inci_name, common_name, primary_function, secondary_function)")
       .in("product_id", productIds)
       .order("position"),
     supabase.from("catalog_products").select("id, name, categories(slug)").in("id", productIds),
@@ -1703,6 +1867,8 @@ export async function scoreCatalogProductsForProfile(
       inci_name: ingredient.inci_name,
       common_name: ingredient.common_name,
       position: row.position,
+      primary_function: ingredient.primary_function ?? null,
+      secondary_function: ingredient.secondary_function ?? null,
     });
     ingredientsByProduct.set(row.product_id, list);
     allIngredientIds.add(ingredient.id);
