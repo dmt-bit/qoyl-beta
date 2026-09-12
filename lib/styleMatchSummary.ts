@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { lookupCityState } from "@/lib/zipLookup";
 import type { StyleShoppingList } from "@/lib/styleShoppingList";
+import { HAIR_ADDITION_PREFERENCE_LABELS, type HairAdditionPreference } from "@/lib/hairAdditionPreference";
 
 // Same CHECK-constraint values as components/HairJourneySection.tsx -
 // used only to label the client's most recent hair photo as a
@@ -43,6 +44,14 @@ export type StructuredService = {
   deposit_required: boolean;
   deposit_amount: number | null;
   hair_types_served?: string[];
+  // Optional - the qoyl-business stylist form (a separate codebase, not
+  // this repo) doesn't collect this yet, so it's absent on every real
+  // service today. Interpreted here as: which hair_addition_preference
+  // values ("human_hair_only", "synthetic_only", etc. - see
+  // lib/hairAdditionPreference.ts) this specific service is offered for.
+  // The "Human hair installs only" filter (item 8) reads this field when
+  // present and simply shows nothing for a stylist who hasn't set it.
+  hair_addition_types?: string[];
   notes: string | null;
 };
 
@@ -55,6 +64,8 @@ export type StyleMatchSummaryData = {
     colorMatch: boolean;
     lengthDifference: string | null;
     involvesExtensions: string | null;
+    hairAdditionPreference: string | null;
+    hairAdditionPreferenceLabel: string | null;
     translatedForHairType: boolean;
   };
   clientProfile: {
@@ -116,6 +127,7 @@ export function findMatchingService(
         deposit_required: Boolean(svc.deposit_required),
         deposit_amount: svc.deposit_amount ?? null,
         hair_types_served: svc.hair_types_served ?? [],
+        hair_addition_types: svc.hair_addition_types ?? [],
         notes: svc.notes ?? null,
       };
     }
@@ -163,7 +175,7 @@ export async function buildStyleMatchSummary(
   const { data: match, error } = await admin
     .from("style_matches")
     .select(
-      "id, user_id, created_at, detected_style, detected_details, tutorials, shopping_list, stylist_id, color_match, length_difference, involves_extensions, translated_for_hair_type, notes"
+      "id, user_id, created_at, detected_style, detected_details, tutorials, shopping_list, stylist_id, color_match, length_difference, involves_extensions, hair_addition_preference, translated_for_hair_type, notes"
     )
     .eq("id", matchId)
     .maybeSingle();
@@ -224,6 +236,10 @@ export async function buildStyleMatchSummary(
       colorMatch: Boolean(match.color_match),
       lengthDifference: match.length_difference,
       involvesExtensions: match.involves_extensions,
+      hairAdditionPreference: match.hair_addition_preference,
+      hairAdditionPreferenceLabel: match.hair_addition_preference
+        ? HAIR_ADDITION_PREFERENCE_LABELS[match.hair_addition_preference as HairAdditionPreference] ?? null
+        : null,
       translatedForHairType: Boolean(match.translated_for_hair_type),
     },
     clientProfile: {

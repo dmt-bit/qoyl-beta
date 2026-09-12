@@ -12,6 +12,7 @@ type CreateRequestBody = {
   color_match?: boolean;
   length_difference?: string | null;
   involves_extensions?: string | null;
+  hair_addition_preference?: string | null;
   translated_for_hair_type?: boolean;
 };
 
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
     color_match,
     length_difference,
     involves_extensions,
+    hair_addition_preference,
     translated_for_hair_type,
   } = body;
 
@@ -61,6 +63,7 @@ export async function POST(request: Request) {
       color_match: Boolean(color_match),
       length_difference: length_difference ?? null,
       involves_extensions: involves_extensions ?? null,
+      hair_addition_preference: hair_addition_preference ?? null,
       translated_for_hair_type: Boolean(translated_for_hair_type),
     })
     .select("id")

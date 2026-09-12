@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { scoreCatalogProductsForProfile, type ScoringProfile } from "@/lib/compatibility";
+import { matchesHairTypeCategory, type HairAdditionPreference } from "@/lib/hairAdditionPreference";
 
 // brand_catalog_products/brand_accounts are shared with qoyl-business
 // (the indie brand dashboard at business.qoyl.live lives there, not in
@@ -44,11 +45,12 @@ type BrandProductRow = {
   shopper_url: string | null;
   category: string;
   is_featured: boolean;
+  hair_type_category: string | null;
   brand_accounts: { company_name: string | null; subscription_tier: string | null } | null;
 };
 
 const BRAND_PRODUCT_SELECT =
-  "id, name, description, price_usd, image_url, product_url, shopper_url, category, is_featured, brand_accounts(company_name, subscription_tier)";
+  "id, name, description, price_usd, image_url, product_url, shopper_url, category, is_featured, hair_type_category, brand_accounts(company_name, subscription_tier)";
 
 function isFeaturedTier(row: BrandProductRow): boolean {
   const tier = row.brand_accounts?.subscription_tier ?? null;
@@ -119,7 +121,8 @@ export async function fetchBrandProductsForCategories(
   categorySlugs: string[],
   styleSlug: string | null,
   profile: ScoringProfile | null,
-  limitPerCategory = 3
+  limitPerCategory = 3,
+  hairAdditionPreference: HairAdditionPreference | null = null
 ): Promise<Record<string, BrandCatalogItem[]>> {
   if (categorySlugs.length === 0) return {};
   const admin = getSupabaseAdmin();
@@ -143,7 +146,14 @@ export async function fetchBrandProductsForCategories(
     return {};
   }
 
-  const rows = data as unknown as BrandProductRow[];
+  // Item 6 - filtered in JS rather than a WHERE clause since a product
+  // with no hair_type_category set (true for every row until
+  // qoyl-business's brand form starts asking for it) must still pass
+  // through, and a NULL-inclusive OR is awkward to express through the
+  // Supabase query builder across every preference branch.
+  const rows = (data as unknown as BrandProductRow[]).filter((row) =>
+    matchesHairTypeCategory(hairAdditionPreference, row.hair_type_category)
+  );
   const scoreByProductId = await scoreBrandProductsByName(admin, rows, profile);
 
   const byCategory: Record<string, BrandCatalogItem[]> = {};

@@ -292,6 +292,13 @@ function StyleMatchSummaryContent({ id }: { id: string }) {
         {data.shoppingList && (
           <section className="mt-10">
             <SectionLabel>Products and supplies</SectionLabel>
+            {data.survey.hairAdditionPreferenceLabel && (
+              <p className="mt-2">
+                <span className="inline-block rounded-full border border-bronze/60 bg-warm/40 px-3 py-1 text-xs font-medium text-dark">
+                  Hair preference: {data.survey.hairAdditionPreferenceLabel}
+                </span>
+              </p>
+            )}
             <ChecklistGroup title="Added hair needed" items={fakeHairItems} />
             <ChecklistGroup title="Hair care products client is using" items={hairCareItems} />
             <ChecklistGroup title="Tools" items={toolItems} />

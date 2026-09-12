@@ -32,6 +32,10 @@ import {
 } from "@/lib/protectiveStyleRoutine";
 import { waterHardnessFromZip } from "@/lib/waterHardnessData";
 import { supabase } from "@/lib/supabase";
+import {
+  HAIR_ADDITION_PREFERENCE_OPTIONS,
+  type HairAdditionPreference,
+} from "@/lib/hairAdditionPreference";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -536,6 +540,32 @@ function BothPanelsIcon() {
   );
 }
 
+function HairAdditionPreferenceCard({
+  label,
+  description,
+  selected,
+  onClick,
+}: {
+  label: string;
+  description: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`flex flex-col items-start gap-1.5 rounded-xl p-4 text-left transition-colors ${
+        selected ? "border-2 border-bronze bg-bronze/10" : "border border-[#2C2420] hover:border-bronze/50"
+      }`}
+    >
+      <span className="font-serif text-base font-semibold text-cream">{label}</span>
+      <span className="text-xs leading-relaxed text-cream/60">{description}</span>
+    </button>
+  );
+}
+
 function RoutineFocusCard({
   label,
   icon,
@@ -830,6 +860,8 @@ function ProfileForm() {
   const [extensions, setExtensions] = useState<string | null>(null);
   const [extensionType, setExtensionType] = useState<string[]>([]);
   const [extensionCare, setExtensionCare] = useState("");
+  const [hairAdditionPreference, setHairAdditionPreference] =
+    useState<HairAdditionPreference | null>(null);
   const [routineFocus, setRoutineFocus] = useState<string | null>(null);
   const [budgetRange, setBudgetRange] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
@@ -868,6 +900,9 @@ function ProfileForm() {
     setExtensions(hairProfile.extensions);
     setExtensionType(hairProfile.extension_type ?? []);
     setExtensionCare(hairProfile.extension_care ?? "");
+    setHairAdditionPreference(
+      (hairProfile.hair_addition_preference as HairAdditionPreference | null) ?? null
+    );
     setRoutineFocus(hairProfile.routine_focus);
     setBudgetRange(hairProfile.budget_range);
     setNotes(hairProfile.notes ?? "");
@@ -966,6 +1001,7 @@ function ProfileForm() {
       extensions,
       extension_type: extensions === "yes" ? extensionType : [],
       extension_care: extensions === "yes" ? extensionCare : "",
+      hair_addition_preference: extensions === "yes" ? hairAdditionPreference : null,
       routine_focus: extensions === "yes" ? routineFocus : null,
       budget_range: budgetRange,
       notes,
@@ -1738,6 +1774,26 @@ function ProfileForm() {
                   rows={4}
                   className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
                 />
+              </div>
+
+              <div role="group" aria-labelledby="hair-addition-preference-label">
+                <p
+                  id="hair-addition-preference-label"
+                  className="font-serif text-lg text-bronze2"
+                >
+                  When you wear added hair, what do you prefer?
+                </p>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {HAIR_ADDITION_PREFERENCE_OPTIONS.map((option) => (
+                    <HairAdditionPreferenceCard
+                      key={option.value}
+                      label={option.label}
+                      description={option.description}
+                      selected={hairAdditionPreference === option.value}
+                      onClick={() => setHairAdditionPreference(option.value)}
+                    />
+                  ))}
+                </div>
               </div>
 
               {extensionType.length > 0 && (

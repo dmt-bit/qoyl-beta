@@ -4,6 +4,7 @@ import { CATEGORY_LABEL_BY_SLUG } from "@/lib/productCategories";
 // Type-only import - erased at compile time, so the service-role code
 // in lib/brandCatalogProducts.ts never ends up in this client bundle.
 import type { BrandCatalogItem } from "@/lib/brandCatalogProducts";
+import type { HairAdditionPreference } from "@/lib/hairAdditionPreference";
 
 export type ScoredHairCareItem = {
   catalogProductId: string;
@@ -41,6 +42,18 @@ export type StyleShoppingList = {
   fakeHairNote: string | null;
   fakeHairTip: string | null;
   showFakeHairSection: boolean;
+  // Item 4 - preference-specific messaging shown alongside the fake
+  // hair list (null when preference is no_preference/unanswered, since
+  // that's the unfiltered default view with nothing extra to explain).
+  fakeHairPreferenceNote: string | null;
+  fakeHairPreferenceWarning: string | null;
+  fakeHairPreferenceTip: string | null;
+  fakeHairPricingNote: string | null;
+  // Set only when preference === 'natural_hair_only' and the style
+  // requires fake hair - showFakeHairSection is false in that case, and
+  // this offers natural-hair-achievable alternatives instead.
+  naturalHairAlternativeNote: string | null;
+  naturalHairAlternativeStyles: string[];
   lengthExtensionOptions: StaticShoppingItem[];
   tools: StaticShoppingItem[];
   accessories: StaticShoppingItem[];
@@ -198,13 +211,15 @@ async function fetchBrandProducts(
   categorySlugs: string[],
   styleName: string,
   userId: string | null,
-  matchId: string | null
+  matchId: string | null,
+  hairAdditionPreference: HairAdditionPreference | null
 ): Promise<Record<string, BrandCatalogItem[]>> {
   const params = new URLSearchParams({
     categories: categorySlugs.join(","),
     style_name: styleName,
   });
   if (userId) params.set("user_id", userId);
+  if (hairAdditionPreference) params.set("hair_addition_preference", hairAdditionPreference);
   if (matchId) params.set("match_id", matchId);
 
   try {
@@ -223,169 +238,364 @@ const FAKE_HAIR_NOTE =
 const FAKE_HAIR_TIP =
   "Buy one extra pack as backup — running out mid-install is a common frustration.";
 
-// Comprehensive, per-style-type fake hair recommendations. This section
-// is a hard guarantee whenever the detected style requires_fake_hair -
-// every branch below returns at least 3 items, including the generic
-// fallback, so "What you will need" is never empty for a style that
-// needs added hair.
-function generateFakeHairList(
-  fakeHairType: string | null,
-  styleName: string
-): FakeHairItem[] {
-  const name = styleName.toLowerCase();
-  const type = (fakeHairType ?? "").toLowerCase();
+// Item 4 - hair-type-aware fake hair catalog. Every item is tagged with
+// which hair type it is; "universal" items (tools, not added hair
+// itself - e.g. a wig grip band) show regardless of preference.
+// isOriginalDefault marks exactly the items this list showed before the
+// hair_addition_preference feature existed, so preference === null or
+// "no_preference" reproduces that unchanged behavior exactly rather
+// than silently changing what existing users see.
+type FakeHairCatalogItem = FakeHairItem & {
+  hairType: "human" | "synthetic" | "heat_resistant_synthetic" | "universal";
+  isOriginalDefault: boolean;
+};
 
-  // Box braids, knotless braids, goddess braids
-  if (name.includes("braid")) {
-    return [
-      {
-        name: "X-Pression Braiding Hair",
-        description: "The most popular braiding hair — lightweight, minimal tangling, holds well",
-        packsNeeded: "5-8 packs for waist length, 3-5 for shoulder length",
-        retailer: "Amazon",
-        url: amazonSearch("x-pression braiding hair"),
-        priceRange: "$3-5 per pack",
-      },
-      {
-        name: "Freetress Equal Braiding Hair",
-        description: "Pre-stretched option — saves time and reduces hand fatigue during installation",
-        packsNeeded: "4-6 packs",
-        retailer: "Amazon",
-        url: amazonSearch("freetress equal braiding hair"),
-        priceRange: "$4-7 per pack",
-      },
-      {
-        name: "Toyokalon Jumbo Braiding Hair",
-        description: "Affordable option, very available at beauty supply stores",
-        packsNeeded: "5-8 packs",
-        retailer: "Amazon",
-        url: amazonSearch("toyokalon jumbo braiding hair"),
-        priceRange: "$2-4 per pack",
-      },
-    ];
-  }
+function braidingHairCatalog(): FakeHairCatalogItem[] {
+  return [
+    {
+      name: "X-Pression Braiding Hair",
+      description: "The most popular braiding hair — lightweight, minimal tangling, holds well",
+      packsNeeded: "5-8 packs for waist length, 3-5 for shoulder length",
+      retailer: "Amazon",
+      url: amazonSearch("x-pression braiding hair"),
+      priceRange: "$3-5 per pack",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Freetress Equal Braiding Hair",
+      description: "Pre-stretched option — saves time and reduces hand fatigue during installation",
+      packsNeeded: "4-6 packs",
+      retailer: "Amazon",
+      url: amazonSearch("freetress equal braiding hair"),
+      priceRange: "$4-7 per pack",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Toyokalon Jumbo Braiding Hair",
+      description: "Affordable option, very available at beauty supply stores",
+      packsNeeded: "5-8 packs",
+      retailer: "Amazon",
+      url: amazonSearch("toyokalon jumbo braiding hair"),
+      priceRange: "$2-4 per pack",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Freetress Equal Heat Resistant Braiding Hair",
+      description: "Can be lightly heat styled on low settings, unlike standard braiding hair",
+      packsNeeded: "5-8 packs",
+      retailer: "Amazon",
+      url: amazonSearch("freetress equal heat resistant braiding hair"),
+      priceRange: "$5-8 per pack",
+      hairType: "heat_resistant_synthetic",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Sensationnel Synthetic Braiding Hair (Heat-Resistant)",
+      description: "Holds curl and wave patterns when styled with low heat",
+      packsNeeded: "5-8 packs",
+      retailer: "Amazon",
+      url: amazonSearch("sensationnel synthetic braiding hair heat resistant"),
+      priceRange: "$5-9 per pack",
+      hairType: "heat_resistant_synthetic",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Outre Heat-Defying Braiding Hair",
+      description: "Designed for heat-styled looks like braid-and-curl ends",
+      packsNeeded: "5-8 packs",
+      retailer: "Amazon",
+      url: amazonSearch("outre heat defying braiding hair"),
+      priceRange: "$6-10 per pack",
+      hairType: "heat_resistant_synthetic",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Bohyme Human Hair Braiding Hair",
+      description: "Full human hair bulk — washes, colors, and heat styles like your natural hair",
+      packsNeeded: "8-12 packs for waist length, 5-8 for shoulder length",
+      retailer: "Amazon",
+      url: amazonSearch("bohyme human hair braiding hair bulk"),
+      priceRange: "$30-60 per pack",
+      hairType: "human",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Outre Human Hair Braiding Bulk",
+      description: "100% human hair bulk sold specifically for braiding installs",
+      packsNeeded: "8-12 packs",
+      retailer: "Amazon",
+      url: amazonSearch("outre human hair braiding bulk"),
+      priceRange: "$35-70 per pack",
+      hairType: "human",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Human Hair Bulk for Braiding",
+      description: "Unprocessed or lightly processed human hair bulk, sold by texture match",
+      packsNeeded: "8-12 packs",
+      retailer: "Amazon",
+      url: amazonSearch("human hair bulk for braiding"),
+      priceRange: "$40-80+ per pack",
+      hairType: "human",
+      isOriginalDefault: false,
+    },
+  ];
+}
 
-  // Faux locs, goddess locs
-  if (name.includes("loc")) {
-    return [
-      {
-        name: "Freetress Water Wave Crochet Hair",
-        description: "Most popular for boho and goddess faux locs — soft texture, natural look",
-        packsNeeded: "6-10 packs",
-        retailer: "Amazon",
-        url: amazonSearch("freetress water wave crochet faux locs"),
-        priceRange: "$6-10 per pack",
-      },
-      {
-        name: "Pre-wrapped Faux Locs",
-        description: "Quickest installation — locs come pre-wrapped and ready to crochet",
-        packsNeeded: "4-6 packs",
-        retailer: "Amazon",
-        url: amazonSearch("pre wrapped faux locs crochet hair"),
-        priceRange: "$10-18 per pack",
-      },
-      {
-        name: "Marley Hair for Wrapping",
-        description: "Used to wrap individual locs for a more textured, natural finish",
-        packsNeeded: "3-5 packs",
-        retailer: "Amazon",
-        url: amazonSearch("marley hair loc wrapping"),
-        priceRange: "$5-8 per pack",
-      },
-    ];
-  }
+function locsCatalog(): FakeHairCatalogItem[] {
+  return [
+    {
+      name: "Freetress Water Wave Crochet Hair",
+      description: "Most popular for boho and goddess faux locs — soft texture, natural look",
+      packsNeeded: "6-10 packs",
+      retailer: "Amazon",
+      url: amazonSearch("freetress water wave crochet faux locs"),
+      priceRange: "$6-10 per pack",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Pre-wrapped Faux Locs",
+      description: "Quickest installation — locs come pre-wrapped and ready to crochet",
+      packsNeeded: "4-6 packs",
+      retailer: "Amazon",
+      url: amazonSearch("pre wrapped faux locs crochet hair"),
+      priceRange: "$10-18 per pack",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Marley Hair for Wrapping",
+      description: "Used to wrap individual locs for a more textured, natural finish",
+      packsNeeded: "3-5 packs",
+      retailer: "Amazon",
+      url: amazonSearch("marley hair loc wrapping"),
+      priceRange: "$5-8 per pack",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Pre-Wrapped Faux Locs (Heat-Resistant Synthetic)",
+      description: "Same quick install, fiber can be lightly heat sealed at the ends on low heat",
+      packsNeeded: "4-6 packs",
+      retailer: "Amazon",
+      url: amazonSearch("heat resistant pre wrapped faux locs"),
+      priceRange: "$12-20 per pack",
+      hairType: "heat_resistant_synthetic",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Toyokalon Heat-Resistant Loc Extensions",
+      description: "Heat-resistant fiber for locs that need sealed, singed, or curled ends",
+      packsNeeded: "6-10 packs",
+      retailer: "Amazon",
+      url: amazonSearch("toyokalon heat resistant loc extensions"),
+      priceRange: "$4-8 per pack",
+      hairType: "heat_resistant_synthetic",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Human Hair Faux Locs (Pre-Made)",
+      description: "Pre-made locs in real human hair — heaviest investment, most natural movement and shine",
+      packsNeeded: "As determined by your stylist",
+      retailer: "Amazon",
+      url: amazonSearch("human hair faux locs pre made"),
+      priceRange: "$150-400+ total",
+      hairType: "human",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Bohyme Human Hair for Loc Extensions",
+      description: "Human hair bulk used to wrap or install faux locs by hand",
+      packsNeeded: "6-10 packs",
+      retailer: "Amazon",
+      url: amazonSearch("bohyme human hair loc extensions"),
+      priceRange: "$30-60 per pack",
+      hairType: "human",
+      isOriginalDefault: false,
+    },
+  ];
+}
 
-  // Passion twists
-  if (name.includes("passion twist") || name.includes("passion")) {
-    return [
-      {
-        name: "Freetress Water Wave Passion Twist Hair",
-        description: "The original for passion twists — the wavy texture is essential",
-        packsNeeded: "6-8 packs",
-        retailer: "Amazon",
-        url: amazonSearch("freetress water wave passion twist"),
-        priceRange: "$6-9 per pack",
-      },
-      {
-        name: "Spring Twist Hair",
-        description: "Pre-twisted option for spring twists or passion twist look",
-        packsNeeded: "5-7 packs",
-        retailer: "Amazon",
-        url: amazonSearch("spring twist hair crochet"),
-        priceRange: "$7-12 per pack",
-      },
-      {
-        name: "Marley Hair for Wrapping",
-        description: "Used to wrap twist ends for a more textured, natural finish",
-        packsNeeded: "2-4 packs",
-        retailer: "Amazon",
-        url: amazonSearch("marley hair twist wrapping"),
-        priceRange: "$5-8 per pack",
-      },
-    ];
-  }
+function passionTwistCatalog(): FakeHairCatalogItem[] {
+  return [
+    {
+      name: "Freetress Water Wave Passion Twist Hair",
+      description: "The original for passion twists — the wavy texture is essential",
+      packsNeeded: "6-8 packs",
+      retailer: "Amazon",
+      url: amazonSearch("freetress water wave passion twist"),
+      priceRange: "$6-9 per pack",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Spring Twist Hair",
+      description: "Pre-twisted option for spring twists or passion twist look",
+      packsNeeded: "5-7 packs",
+      retailer: "Amazon",
+      url: amazonSearch("spring twist hair crochet"),
+      priceRange: "$7-12 per pack",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Marley Hair for Wrapping",
+      description: "Used to wrap twist ends for a more textured, natural finish",
+      packsNeeded: "2-4 packs",
+      retailer: "Amazon",
+      url: amazonSearch("marley hair twist wrapping"),
+      priceRange: "$5-8 per pack",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Freetress Water Wave Passion Twist (Heat-Resistant)",
+      description: "Same wavy texture, fiber tolerates light heat sealing on the ends",
+      packsNeeded: "6-8 packs",
+      retailer: "Amazon",
+      url: amazonSearch("freetress water wave passion twist heat resistant"),
+      priceRange: "$7-11 per pack",
+      hairType: "heat_resistant_synthetic",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Outre Heat-Defying Water Wave Twist Hair",
+      description: "Built for heat-styled passion twist looks",
+      packsNeeded: "6-8 packs",
+      retailer: "Amazon",
+      url: amazonSearch("outre heat defying water wave twist hair"),
+      priceRange: "$7-12 per pack",
+      hairType: "heat_resistant_synthetic",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Human Hair Water Wave Bulk for Passion Twists",
+      description: "Human hair bulk in a water-wave texture for a fully natural-looking passion twist",
+      packsNeeded: "8-12 packs",
+      retailer: "Amazon",
+      url: amazonSearch("human hair water wave bulk passion twist"),
+      priceRange: "$35-70 per pack",
+      hairType: "human",
+      isOriginalDefault: false,
+    },
+  ];
+}
 
-  // Crochet styles
-  if (type.includes("crochet")) {
-    return [
-      {
-        name: "Crochet Braiding Hair",
-        description: "Pre-looped for easy crochet installation",
-        packsNeeded: "4-7 packs depending on density",
-        retailer: "Amazon",
-        url: amazonSearch("crochet braiding hair pre looped"),
-        priceRange: "$8-15 per pack",
-      },
-      {
-        name: "X-Pression Crochet Braids",
-        description: "Same trusted brand as traditional braiding hair, in a pre-looped crochet format",
-        packsNeeded: "4-6 packs",
-        retailer: "Amazon",
-        url: amazonSearch("x-pression crochet braids"),
-        priceRange: "$4-7 per pack",
-      },
-      {
-        name: "Marley Hair for Crochet",
-        description: "Coarser, more natural-textured option for crochet braids or twists",
-        packsNeeded: "3-5 packs",
-        retailer: "Amazon",
-        url: amazonSearch("marley hair crochet braids"),
-        priceRange: "$5-8 per pack",
-      },
-    ];
-  }
+function crochetCatalog(): FakeHairCatalogItem[] {
+  return [
+    {
+      name: "Crochet Braiding Hair",
+      description: "Pre-looped for easy crochet installation",
+      packsNeeded: "4-7 packs depending on density",
+      retailer: "Amazon",
+      url: amazonSearch("crochet braiding hair pre looped"),
+      priceRange: "$8-15 per pack",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "X-Pression Crochet Braids",
+      description: "Same trusted brand as traditional braiding hair, in a pre-looped crochet format",
+      packsNeeded: "4-6 packs",
+      retailer: "Amazon",
+      url: amazonSearch("x-pression crochet braids"),
+      priceRange: "$4-7 per pack",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Marley Hair for Crochet",
+      description: "Coarser, more natural-textured option for crochet braids or twists",
+      packsNeeded: "3-5 packs",
+      retailer: "Amazon",
+      url: amazonSearch("marley hair crochet braids"),
+      priceRange: "$5-8 per pack",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Freetress Crochet Hair (Heat-Resistant)",
+      description: "Most crochet hair sold today is heat-resistant — check the packaging for the flame/heat icon",
+      packsNeeded: "4-7 packs",
+      retailer: "Amazon",
+      url: amazonSearch("freetress crochet hair heat resistant"),
+      priceRange: "$6-10 per pack",
+      hairType: "heat_resistant_synthetic",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Outre Heat-Defying Crochet Braids",
+      description: "Pre-looped and rated for light heat styling",
+      packsNeeded: "4-6 packs",
+      retailer: "Amazon",
+      url: amazonSearch("outre heat defying crochet braids"),
+      priceRange: "$6-10 per pack",
+      hairType: "heat_resistant_synthetic",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Human Hair Crochet Braids",
+      description: "Pre-looped human hair crochet extensions for a fully natural finish",
+      packsNeeded: "6-10 packs",
+      retailer: "Amazon",
+      url: amazonSearch("human hair crochet braids pre looped"),
+      priceRange: "$35-70 per pack",
+      hairType: "human",
+      isOriginalDefault: false,
+    },
+  ];
+}
 
-  // Wig styles (silk press, straight styles)
-  if (name.includes("silk press") || type.includes("wig")) {
-    return [
-      {
-        name: "Lace Front Wig — Human Hair",
-        description: "For a silk press look without heat damage to natural hair",
-        packsNeeded: "N/A — 1 wig unit",
-        retailer: "Amazon",
-        url: amazonSearch("lace front wig human hair straight"),
-        priceRange: "$80-400+",
-      },
-      {
-        name: "Lace Front Wig — Synthetic Heat Resistant",
-        description: "More affordable option — can be styled with low heat",
-        packsNeeded: "N/A — 1 wig unit",
-        retailer: "Amazon",
-        url: amazonSearch("heat resistant synthetic lace front wig straight"),
-        priceRange: "$25-80",
-      },
-      {
-        name: "Wig Grip Band",
-        description: "Keeps the wig secure and comfortable all day without adhesive",
-        packsNeeded: "N/A — 1 unit",
-        retailer: "Amazon",
-        url: amazonSearch("wig grip band"),
-        priceRange: "$8-15",
-      },
-    ];
-  }
+function wigCatalog(): FakeHairCatalogItem[] {
+  return [
+    {
+      name: "Lace Front Wig — Human Hair",
+      description: "For a silk press look without heat damage to natural hair",
+      packsNeeded: "N/A — 1 wig unit",
+      retailer: "Amazon",
+      url: amazonSearch("lace front wig human hair straight"),
+      priceRange: "$80-400+",
+      hairType: "human",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Lace Front Wig — Synthetic Heat Resistant",
+      description: "More affordable option — can be styled with low heat",
+      packsNeeded: "N/A — 1 wig unit",
+      retailer: "Amazon",
+      url: amazonSearch("heat resistant synthetic lace front wig straight"),
+      priceRange: "$25-80",
+      hairType: "heat_resistant_synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: "Lace Front Wig — Synthetic (Non-Heat-Resistant)",
+      description: "The most affordable option — holds its style but cannot be styled with heat tools",
+      packsNeeded: "N/A — 1 wig unit",
+      retailer: "Amazon",
+      url: amazonSearch("synthetic lace front wig straight"),
+      priceRange: "$20-60",
+      hairType: "synthetic",
+      isOriginalDefault: false,
+    },
+    {
+      name: "Wig Grip Band",
+      description: "Keeps the wig secure and comfortable all day without adhesive",
+      packsNeeded: "N/A — 1 unit",
+      retailer: "Amazon",
+      url: amazonSearch("wig grip band"),
+      priceRange: "$8-15",
+      hairType: "universal",
+      isOriginalDefault: true,
+    },
+  ];
+}
 
-  // Generic fallback — should rarely be hit
+function genericCatalog(styleName: string): FakeHairCatalogItem[] {
   return [
     {
       name: `${styleName} Hair Extensions`,
@@ -394,6 +604,28 @@ function generateFakeHairList(
       retailer: "Amazon",
       url: amazonSearch(`${styleName} hair extension`),
       priceRange: "Varies",
+      hairType: "synthetic",
+      isOriginalDefault: true,
+    },
+    {
+      name: `${styleName} Human Hair Extensions`,
+      description: "Human hair option — can be heat styled, colored, and treated like your natural hair",
+      packsNeeded: "Ask your stylist for the right amount",
+      retailer: "Amazon",
+      url: amazonSearch(`${styleName} human hair extension`),
+      priceRange: "$30-80+ per pack",
+      hairType: "human",
+      isOriginalDefault: false,
+    },
+    {
+      name: `${styleName} Heat-Resistant Synthetic Extensions`,
+      description: "Holds its style pattern and tolerates light heat styling on low settings",
+      packsNeeded: "Ask your stylist for the right amount",
+      retailer: "Amazon",
+      url: amazonSearch(`${styleName} heat resistant synthetic extension`),
+      priceRange: "Varies",
+      hairType: "heat_resistant_synthetic",
+      isOriginalDefault: false,
     },
     {
       name: "Rat Tail Comb (for sectioning)",
@@ -402,6 +634,8 @@ function generateFakeHairList(
       retailer: "Amazon",
       url: amazonSearch("rat tail comb"),
       priceRange: "$3-6",
+      hairType: "universal",
+      isOriginalDefault: true,
     },
     {
       name: "Edge Control",
@@ -410,8 +644,73 @@ function generateFakeHairList(
       retailer: "Amazon",
       url: amazonSearch("edge control gel"),
       priceRange: "$5-12",
+      hairType: "universal",
+      isOriginalDefault: true,
     },
   ];
+}
+
+// Comprehensive, per-style-type fake hair recommendations, filtered by
+// hair_addition_preference (item 4). This section is a hard guarantee
+// whenever the detected style requires_fake_hair - every style-category
+// catalog above has at least one item per hair type, so "What you will
+// need" is never empty for a style that needs added hair, regardless of
+// preference.
+function generateFakeHairList(
+  fakeHairType: string | null,
+  styleName: string,
+  preference: HairAdditionPreference | null
+): FakeHairItem[] {
+  const name = styleName.toLowerCase();
+  const type = (fakeHairType ?? "").toLowerCase();
+
+  let catalog: FakeHairCatalogItem[];
+  if (name.includes("braid")) {
+    catalog = braidingHairCatalog();
+  } else if (name.includes("loc")) {
+    catalog = locsCatalog();
+  } else if (name.includes("passion twist") || name.includes("passion")) {
+    catalog = passionTwistCatalog();
+  } else if (type.includes("crochet")) {
+    catalog = crochetCatalog();
+  } else if (name.includes("silk press") || type.includes("wig")) {
+    catalog = wigCatalog();
+  } else {
+    catalog = genericCatalog(styleName);
+  }
+
+  // preference === null means the user hasn't answered this new
+  // question yet - defaults to the exact pre-existing behavior rather
+  // than silently changing what every existing user sees.
+  const effective = preference ?? "no_preference";
+  const PREFERENCE_TO_HAIR_TYPE: Record<string, FakeHairCatalogItem["hairType"]> = {
+    human_hair_only: "human",
+    synthetic_only: "synthetic",
+    heat_resistant_synthetic: "heat_resistant_synthetic",
+  };
+
+  let filtered: FakeHairCatalogItem[];
+  if (effective === "no_preference") {
+    filtered = catalog.filter((item) => item.isOriginalDefault);
+  } else if (effective === "natural_hair_only") {
+    // Handled entirely by the caller (buildStyleShoppingList hides this
+    // section and shows natural-hair-only style alternatives instead) -
+    // this function is never called with this preference in practice,
+    // but falls back to universal-only rather than an empty list.
+    filtered = catalog.filter((item) => item.hairType === "universal");
+  } else {
+    const targetHairType = PREFERENCE_TO_HAIR_TYPE[effective];
+    filtered = catalog.filter((item) => item.hairType === targetHairType || item.hairType === "universal");
+  }
+
+  return filtered.map((item) => ({
+    name: item.name,
+    description: item.description,
+    packsNeeded: item.packsNeeded,
+    retailer: item.retailer,
+    url: item.url,
+    priceRange: item.priceRange,
+  }));
 }
 
 // Deep Match's "longer than my current hair, include extension options"
@@ -485,6 +784,35 @@ function buildAccessories(accessoriesVisible: string[]): StaticShoppingItem[] {
   return accessories;
 }
 
+const PREFERENCE_NOTE: Record<string, string> = {
+  human_hair_only:
+    "Human hair can be washed, heat styled, and colored just like your natural hair — but requires more care than synthetic.",
+  synthetic_only:
+    "Synthetic hair holds its style pattern and requires minimal maintenance but CANNOT be heat styled. Do not use flat irons or curling irons on synthetic hair — it will melt.",
+  heat_resistant_synthetic:
+    "Heat-resistant synthetic can be styled with heat tools on LOW settings only (below 350°F). Always test a small section first.",
+};
+const PREFERENCE_WARNING: Record<string, string> = {
+  synthetic_only: "⚠️ No heat tools",
+};
+const PREFERENCE_TIP: Record<string, string> = {
+  heat_resistant_synthetic:
+    "Most crochet hair sold today is heat-resistant — check the packaging for the flame/heat icon.",
+};
+const HUMAN_HAIR_PRICING_NOTE =
+  "Human hair is significantly more expensive than synthetic — budget $30-80+ per pack for quality human hair braiding hair.";
+
+// Item 4's natural_hair_only branch - suggested styles that need no
+// added hair, grouped by the same style-category detection used for
+// the fake hair catalogs above.
+function suggestNaturalHairAlternatives(styleName: string, styleDescription: string): string[] {
+  const text = styleText(styleName, styleDescription);
+  if (isBraidedStyle(text)) {
+    return ["Bantu Knots", "Twist Out", "Two-Strand Twists"];
+  }
+  return ["Wash and Go", "Twist Out", "Braid Out"];
+}
+
 export async function buildStyleShoppingList(input: {
   styleName: string;
   styleDescription: string;
@@ -494,14 +822,17 @@ export async function buildStyleShoppingList(input: {
   wantsLengthExtensions?: boolean;
   userId?: string | null;
   matchId?: string | null;
+  hairAdditionPreference?: HairAdditionPreference | null;
 }): Promise<StyleShoppingList> {
   const categorySlugs = pickCategoriesForStyle(input.styleName, input.styleDescription);
+  const preference = input.hairAdditionPreference ?? null;
 
   const brandByCategory = await fetchBrandProducts(
     categorySlugs,
     input.styleName,
     input.userId ?? null,
-    input.matchId ?? null
+    input.matchId ?? null,
+    preference
   );
   const brandProducts = Object.values(brandByCategory).flat();
   const brandCoveredSlugs = new Set(
@@ -521,13 +852,16 @@ export async function buildStyleShoppingList(input: {
     };
   });
 
-  // Hard guarantee: whenever the style requires fake hair, this section
-  // is always populated (generateFakeHairList always returns >= 3 items,
-  // including its generic fallback branch) - it can never come back
-  // empty or missing the way an earlier, purely conditional version
-  // sometimes did.
-  const fakeHair = input.requiresFakeHair
-    ? generateFakeHairList(input.fakeHairType, input.styleName)
+  // Item 4 - natural_hair_only hides the fake hair section entirely and
+  // suggests achievable alternative styles instead; every other
+  // preference (including null/unanswered, which behaves like
+  // no_preference) shows the normal, hair-type-filtered list. Hard
+  // guarantee: whenever shown, every style-category catalog has at
+  // least one item per hair type, so this never comes back empty.
+  const hideForNaturalHairOnly = input.requiresFakeHair && preference === "natural_hair_only";
+  const showFakeHairSection = input.requiresFakeHair && !hideForNaturalHairOnly;
+  const fakeHair = showFakeHairSection
+    ? generateFakeHairList(input.fakeHairType, input.styleName, preference)
     : [];
 
   const lengthExtensionOptions = input.wantsLengthExtensions
@@ -539,9 +873,21 @@ export async function buildStyleShoppingList(input: {
     hairCare,
     amazonFallback,
     fakeHair,
-    fakeHairNote: input.requiresFakeHair ? FAKE_HAIR_NOTE : null,
-    fakeHairTip: input.requiresFakeHair ? FAKE_HAIR_TIP : null,
-    showFakeHairSection: input.requiresFakeHair,
+    fakeHairNote: showFakeHairSection ? FAKE_HAIR_NOTE : null,
+    fakeHairTip: showFakeHairSection ? FAKE_HAIR_TIP : null,
+    showFakeHairSection,
+    fakeHairPreferenceNote: showFakeHairSection && preference ? PREFERENCE_NOTE[preference] ?? null : null,
+    fakeHairPreferenceWarning:
+      showFakeHairSection && preference ? PREFERENCE_WARNING[preference] ?? null : null,
+    fakeHairPreferenceTip: showFakeHairSection && preference ? PREFERENCE_TIP[preference] ?? null : null,
+    fakeHairPricingNote:
+      showFakeHairSection && preference === "human_hair_only" ? HUMAN_HAIR_PRICING_NOTE : null,
+    naturalHairAlternativeNote: hideForNaturalHairOnly
+      ? "This style is typically done with added hair. Here are natural hair alternatives you might consider:"
+      : null,
+    naturalHairAlternativeStyles: hideForNaturalHairOnly
+      ? suggestNaturalHairAlternatives(input.styleName, input.styleDescription)
+      : [],
     lengthExtensionOptions,
     tools: buildTools(input.styleName, input.styleDescription),
     accessories: buildAccessories(input.accessoriesVisible),

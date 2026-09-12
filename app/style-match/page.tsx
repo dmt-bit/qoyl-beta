@@ -15,6 +15,11 @@ import {
 } from "@/lib/styleShoppingList";
 import { supabase } from "@/lib/supabase";
 import { lookupCityState } from "@/lib/zipLookup";
+import {
+  DEEP_MATCH_HAIR_ADDITION_OPTIONS,
+  type DeepMatchHairAdditionPreference,
+  type HairAdditionPreference,
+} from "@/lib/hairAdditionPreference";
 
 type DetectedStyle = {
   style_name: string;
@@ -50,6 +55,7 @@ type StructuredService = {
   duration_max: number | null;
   deposit_required: boolean;
   deposit_amount: number | null;
+  hair_addition_types?: string[];
   notes: string | null;
 };
 
@@ -704,6 +710,8 @@ function StyleMatchContent() {
   const [lengthDifference, setLengthDifference] = useState<LengthDifference | null>(null);
   const [wantsLengthExtensions, setWantsLengthExtensions] = useState(true);
   const [involvesExtensions, setInvolvesExtensions] = useState<InvolvesExtensions | null>(null);
+  const [deepMatchHairPreference, setDeepMatchHairPreference] =
+    useState<DeepMatchHairAdditionPreference | null>(null);
   const [translateForHairType, setTranslateForHairType] = useState<boolean | null>(null);
 
   const [detected, setDetected] = useState<DetectedStyle | null>(null);
@@ -727,6 +735,12 @@ function StyleMatchContent() {
   const [shoppingList, setShoppingList] = useState<StyleShoppingList | null>(null);
   const [shoppingLoading, setShoppingLoading] = useState(false);
   const [stylists, setStylists] = useState<Stylist[]>([]);
+  // Item 8 - filters to stylists whose matched service lists
+  // "human_hair_only" in hair_addition_types. That field isn't
+  // collected by the (separate, out-of-scope) qoyl-business stylist
+  // form yet, so this currently shows nothing for any real stylist -
+  // the toggle is wired and ready for when that data starts flowing in.
+  const [humanHairOnlyFilter, setHumanHairOnlyFilter] = useState(false);
   const [stylistsLoading, setStylistsLoading] = useState(false);
   const [marketEstimate, setMarketEstimate] = useState<MarketEstimate | null>(null);
 
@@ -752,6 +766,7 @@ function StyleMatchContent() {
     setLengthDifference(null);
     setWantsLengthExtensions(true);
     setInvolvesExtensions(null);
+    setDeepMatchHairPreference(null);
     setTranslateForHairType(null);
     setActiveTab("tutorials");
     setInternalTutorials([]);
@@ -861,6 +876,8 @@ function StyleMatchContent() {
               color_match: Boolean(colorMatch),
               length_difference: lengthDifference,
               involves_extensions: involvesExtensions,
+              hair_addition_preference:
+                involvesExtensions && involvesExtensions !== "none" ? deepMatchHairPreference : null,
               translated_for_hair_type: Boolean(translateForHairType),
             }),
           });
@@ -984,6 +1001,14 @@ function StyleMatchContent() {
     async function loadShoppingList() {
       setShoppingLoading(true);
       try {
+        // The survey's own answer (specific to this style) wins over the
+        // profile-level default, since a client might prefer human hair
+        // generally but pick synthetic for one particular style.
+        const resolvedHairPreference: HairAdditionPreference | null =
+          deepMatchHairPreference ??
+          (hairProfile?.hair_addition_preference as HairAdditionPreference | null) ??
+          null;
+
         const list = await buildStyleShoppingList({
           styleName: detected!.style_name,
           styleDescription: detected!.style_description,
@@ -993,6 +1018,7 @@ function StyleMatchContent() {
           wantsLengthExtensions: lengthDifference === "longer" && wantsLengthExtensions,
           userId: user?.id ?? null,
           matchId,
+          hairAdditionPreference: resolvedHairPreference,
         });
         if (!cancelled) setShoppingList(list);
       } finally {
@@ -1460,10 +1486,31 @@ function StyleMatchContent() {
                   <SelectableCard label="Wig" selected={involvesExtensions === "wig"} onClick={() => setInvolvesExtensions("wig")} />
                   <SelectableCard label="Not sure - help me figure it out" selected={involvesExtensions === "not_sure"} onClick={() => setInvolvesExtensions("not_sure")} />
                 </div>
+
+                {involvesExtensions && involvesExtensions !== "none" && (
+                  <div className="mt-6">
+                    <h3 className="font-serif text-lg font-semibold text-cream">What type of added hair do you prefer?</h3>
+                    <div className="mt-3 space-y-3">
+                      {DEEP_MATCH_HAIR_ADDITION_OPTIONS.map((option) => (
+                        <SelectableCard
+                          key={option.value}
+                          label={option.label}
+                          subtext={option.description}
+                          selected={deepMatchHairPreference === option.value}
+                          onClick={() => setDeepMatchHairPreference(option.value)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={() => setDeepStep(4)}
-                  disabled={involvesExtensions === null}
+                  disabled={
+                    involvesExtensions === null ||
+                    (involvesExtensions !== "none" && deepMatchHairPreference === null)
+                  }
                   className="mt-6 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-40"
                 >
                   Continue →
@@ -1774,7 +1821,17 @@ function StyleMatchContent() {
                   <>
                     {shoppingList.showFakeHairSection && shoppingList.fakeHair.length > 0 && (
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-widest text-bronze">What you will need</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-xs font-semibold uppercase tracking-widest text-bronze">What you will need</p>
+                          {shoppingList.fakeHairPreferenceWarning && (
+                            <span className="rounded-full border border-red/50 px-2 py-0.5 text-[10px] font-medium text-red">
+                              {shoppingList.fakeHairPreferenceWarning}
+                            </span>
+                          )}
+                        </div>
+                        {shoppingList.fakeHairPreferenceNote && (
+                          <p className="mt-2 text-xs text-cream/70">{shoppingList.fakeHairPreferenceNote}</p>
+                        )}
                         <ul className="mt-3 space-y-3">
                           {shoppingList.fakeHair.map((item) => (
                             <li key={item.name} className="rounded-lg border border-bronze/30 px-4 py-3">
@@ -1795,9 +1852,33 @@ function StyleMatchContent() {
                             </li>
                           ))}
                         </ul>
+                        {shoppingList.fakeHairPricingNote && (
+                          <p className="mt-3 text-xs text-amber">{shoppingList.fakeHairPricingNote}</p>
+                        )}
+                        {shoppingList.fakeHairPreferenceTip && (
+                          <p className="mt-2 text-xs text-bronze2">Tip: {shoppingList.fakeHairPreferenceTip}</p>
+                        )}
                         {shoppingList.fakeHairNote && <p className="mt-3 text-xs text-cream/50">{shoppingList.fakeHairNote}</p>}
                         {shoppingList.fakeHairTip && (
                           <p className="mt-2 text-xs text-bronze2">Tip: {shoppingList.fakeHairTip}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {shoppingList.naturalHairAlternativeNote && (
+                      <div className="rounded-lg border border-bronze/30 bg-warm/10 px-4 py-3">
+                        <p className="text-sm text-cream/90">{shoppingList.naturalHairAlternativeNote}</p>
+                        {shoppingList.naturalHairAlternativeStyles.length > 0 && (
+                          <ul className="mt-2 flex flex-wrap gap-2">
+                            {shoppingList.naturalHairAlternativeStyles.map((style) => (
+                              <li
+                                key={style}
+                                className="rounded-full border border-bronze/40 px-3 py-1 text-xs text-bronze2"
+                              >
+                                {style}
+                              </li>
+                            ))}
+                          </ul>
                         )}
                       </div>
                     )}
@@ -1985,8 +2066,38 @@ function StyleMatchContent() {
 
                 {stylistsLoading && <p className="text-sm text-cream/50">Finding stylists near you...</p>}
 
+                {!stylistsLoading && stylists.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setHumanHairOnlyFilter((prev) => !prev)}
+                    aria-pressed={humanHairOnlyFilter}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      humanHairOnlyFilter
+                        ? "border-bronze bg-bronze/20 text-cream"
+                        : "border-bronze/40 text-cream/70 hover:border-bronze"
+                    }`}
+                  >
+                    Human hair installs only
+                  </button>
+                )}
+
                 {!stylistsLoading &&
-                  stylists.map((stylist) => (
+                  humanHairOnlyFilter &&
+                  stylists.filter((s) => s.matchedService?.hair_addition_types?.includes("human_hair_only"))
+                    .length === 0 && (
+                    <p className="text-xs text-cream/50">
+                      No stylists have marked human hair services for this style yet.
+                    </p>
+                  )}
+
+                {!stylistsLoading &&
+                  stylists
+                    .filter(
+                      (s) =>
+                        !humanHairOnlyFilter ||
+                        s.matchedService?.hair_addition_types?.includes("human_hair_only")
+                    )
+                    .map((stylist) => (
                     <div key={stylist.id} className="rounded-xl border border-bronze/30 p-5">
                       <div className="flex items-start gap-4">
                         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#2C2420]">
