@@ -42,12 +42,36 @@ type YouTubeVideo = {
   thumbnailUrl: string;
 };
 
+type StructuredService = {
+  name: string;
+  price_min: number | null;
+  price_max: number | null;
+  duration_min: number | null;
+  duration_max: number | null;
+  deposit_required: boolean;
+  deposit_amount: number | null;
+  notes: string | null;
+};
+
 type Stylist = {
   id: string;
   displayName: string;
   salonName: string | null;
   photoUrl: string | null;
   bookingUrl: string | null;
+  matchedService: StructuredService | null;
+  hasAnyServices: boolean;
+  otherServiceNames: string[];
+};
+
+type MarketEstimate = {
+  styleName: string;
+  priceMin: number;
+  priceMax: number;
+  durationMin: number;
+  durationMax: number;
+  priceNotes: string | null;
+  factors: string[];
 };
 
 type StyleRow = {
@@ -322,6 +346,104 @@ function Toast({ message }: { message: string }) {
   return (
     <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-bronze px-4 py-2 text-sm font-semibold text-dark shadow-lg">
       {message}
+    </div>
+  );
+}
+
+// Full-width bronze-bordered card above the results tabs (item 5),
+// consolidating the "Share with your stylist" flow (items 1 and 3) into
+// one place: opening the public summary page, and the three sharing
+// mechanisms for it. compact renders a smaller version for re-use at
+// the top of the Book a Stylist tab (item 1's second placement).
+function ShareWithStylistCard({
+  matchId,
+  onShowToast,
+  compact = false,
+}: {
+  matchId: string | null;
+  onShowToast: (message: string) => void;
+  compact?: boolean;
+}) {
+  if (!matchId) return null;
+  const summaryUrl = typeof window !== "undefined" ? `${window.location.origin}/style-match/summary/${matchId}` : "";
+
+  function openSummary() {
+    window.open(`/style-match/summary/${matchId}`, "_blank", "noopener,noreferrer");
+  }
+
+  async function handleCopyLink() {
+    try {
+      await navigator.clipboard.writeText(summaryUrl);
+      onShowToast("Copied!");
+    } catch {
+      onShowToast("Couldn't copy - long-press the link instead");
+    }
+  }
+
+  function handleDownloadPdf() {
+    // Opens the print-optimized public summary in a new tab and lets
+    // the browser's own print dialog (with our print CSS) handle
+    // "save as PDF" - no separate PDF-generation infra in this app yet.
+    const win = window.open(`/style-match/summary/${matchId}`, "_blank", "noopener,noreferrer");
+    if (win) {
+      win.addEventListener("load", () => win.print());
+    }
+  }
+
+  async function handleShareText() {
+    const text = `Here is my style reference for our appointment: ${summaryUrl}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ text });
+      } catch {
+        // User cancelled the share sheet - not an error.
+      }
+    } else {
+      await handleCopyLink();
+    }
+  }
+
+  return (
+    <div className={`rounded-xl border border-bronze/40 bg-bronze/5 ${compact ? "p-4" : "p-5"}`}>
+      <p className={`font-serif text-cream ${compact ? "text-base" : "text-xl font-semibold"}`}>
+        Share this style with your stylist →
+      </p>
+      {!compact && (
+        <p className="mt-1 text-sm text-cream/70">
+          Send your stylist a summary of this style, your hair profile, and service estimate
+          before you book.
+        </p>
+      )}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={openSummary}
+          className="rounded-lg bg-bronze px-4 py-2 text-xs font-semibold text-dark transition-colors hover:bg-bronze2"
+        >
+          Generate summary →
+        </button>
+        <button
+          type="button"
+          onClick={handleCopyLink}
+          className="rounded-lg border border-bronze/40 px-4 py-2 text-xs font-medium text-cream/80 transition-colors hover:border-bronze"
+        >
+          Copy link →
+        </button>
+        <button
+          type="button"
+          onClick={handleDownloadPdf}
+          className="rounded-lg border border-bronze/40 px-4 py-2 text-xs font-medium text-cream/80 transition-colors hover:border-bronze"
+        >
+          Download as PDF →
+        </button>
+        <button
+          type="button"
+          onClick={handleShareText}
+          className="rounded-lg border border-bronze/40 px-4 py-2 text-xs font-medium text-cream/80 transition-colors hover:border-bronze"
+        >
+          Share via text →
+        </button>
+      </div>
     </div>
   );
 }
@@ -606,6 +728,7 @@ function StyleMatchContent() {
   const [shoppingLoading, setShoppingLoading] = useState(false);
   const [stylists, setStylists] = useState<Stylist[]>([]);
   const [stylistsLoading, setStylistsLoading] = useState(false);
+  const [marketEstimate, setMarketEstimate] = useState<MarketEstimate | null>(null);
 
   const completedRef = useRef(false);
   const [savingChoice, setSavingChoice] = useState<"diy" | "stylist" | null>(null);
@@ -883,10 +1006,28 @@ function StyleMatchContent() {
           if (!cancelled) setStylists([]);
           return;
         }
-        const params = new URLSearchParams({ city: cityState.city, curl_type: curlType });
+        const params = new URLSearchParams({
+          city: cityState.city,
+          curl_type: curlType,
+          style_name: detected!.style_name,
+        });
         const res = await fetch(`/api/style-match/stylists?${params.toString()}`);
         const data = await res.json();
-        if (!cancelled) setStylists(data.stylists ?? []);
+        const fetchedStylists: Stylist[] = data.stylists ?? [];
+        if (!cancelled) setStylists(fetchedStylists);
+
+        // No Qoyl stylist in this city at all - fall back to the market
+        // rate estimate for the "Book a Stylist" tab (item 6's third
+        // case) rather than leaving it empty.
+        if (fetchedStylists.length === 0) {
+          const estimateRes = await fetch(
+            `/api/style-match/price-estimate?style_name=${encodeURIComponent(detected!.style_name)}`
+          );
+          const estimateData = await estimateRes.json();
+          if (!cancelled) setMarketEstimate(estimateData.estimate ?? null);
+        } else if (!cancelled) {
+          setMarketEstimate(null);
+        }
       } finally {
         if (!cancelled) setStylistsLoading(false);
       }
@@ -1495,10 +1636,13 @@ function StyleMatchContent() {
               </div>
             )}
 
+            <div className="mt-6">
+              <ShareWithStylistCard matchId={matchId} onShowToast={showToast} />
+            </div>
+
             <div className="mt-6 flex flex-wrap gap-2 border-b border-bronze/20">
               {(["tutorials", "color", "shopping", "stylist"] as ResultTab[])
                 .filter((tab) => tab !== "color" || colorMatch === true)
-                .filter((tab) => tab !== "stylist" || stylistsLoading || stylists.length > 0)
                 .map((tab) => (
                   <button
                     key={tab}
@@ -1740,6 +1884,8 @@ function StyleMatchContent() {
 
             {activeTab === "stylist" && (
               <div className="mt-6 space-y-4">
+                <ShareWithStylistCard matchId={matchId} onShowToast={showToast} compact />
+
                 {stylistsLoading && <p className="text-sm text-cream/50">Finding stylists near you...</p>}
 
                 {!stylistsLoading &&
@@ -1755,6 +1901,34 @@ function StyleMatchContent() {
                         </div>
                       </div>
 
+                      {stylist.matchedService ? (
+                        <div className="mt-3 rounded-lg bg-bronze/10 px-3 py-2.5">
+                          <p className="text-sm font-medium text-cream">
+                            {stylist.matchedService.name}
+                            {stylist.matchedService.price_min != null &&
+                              `: $${stylist.matchedService.price_min}-${stylist.matchedService.price_max ?? stylist.matchedService.price_min}`}
+                            {stylist.matchedService.duration_min != null &&
+                              ` · ${stylist.matchedService.duration_min}-${stylist.matchedService.duration_max} hours`}
+                          </p>
+                          {stylist.matchedService.deposit_required && (
+                            <p className="mt-1 text-xs text-cream/60">
+                              Deposit: {stylist.matchedService.deposit_amount != null ? `$${stylist.matchedService.deposit_amount}` : "Required"} to book
+                            </p>
+                          )}
+                        </div>
+                      ) : stylist.hasAnyServices ? (
+                        <div className="mt-3 rounded-lg bg-bronze/10 px-3 py-2.5">
+                          <p className="text-sm text-cream/80">
+                            Contact for pricing on {detected?.style_name}
+                          </p>
+                          {stylist.otherServiceNames.length > 0 && (
+                            <p className="mt-1 text-xs text-cream/50">
+                              Other services: {stylist.otherServiceNames.join(", ")}
+                            </p>
+                          )}
+                        </div>
+                      ) : null}
+
                       <button
                         type="button"
                         onClick={() => {
@@ -1764,10 +1938,47 @@ function StyleMatchContent() {
                         disabled={savingChoice === "stylist" || !matchId}
                         className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-60"
                       >
-                        {savedChoice === "stylist" ? "Booking request sent ✓" : "Book an appointment →"}
+                        {savedChoice === "stylist" ? "Booking request sent ✓" : "Book →"}
                       </button>
                     </div>
                   ))}
+
+                {!stylistsLoading && stylists.length === 0 && (
+                  <div className="rounded-xl border border-bronze/30 p-5">
+                    <p className="text-sm text-cream/80">
+                      No Qoyl stylists in your area yet for this style. Here is what to expect
+                      when booking locally:
+                    </p>
+
+                    {marketEstimate ? (
+                      <div className="mt-4 rounded-lg bg-bronze/10 px-4 py-3">
+                        <p className="text-sm font-medium text-cream">
+                          General market rate for {marketEstimate.styleName}
+                        </p>
+                        <p className="mt-1 text-sm text-cream/70">
+                          ${marketEstimate.priceMin}-{marketEstimate.priceMax} ·{" "}
+                          {marketEstimate.durationMin}-{marketEstimate.durationMax} hours
+                        </p>
+                        {marketEstimate.priceNotes && (
+                          <p className="mt-1 text-xs text-cream/50">{marketEstimate.priceNotes}</p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-sm text-cream/50">
+                        No market estimate available for this style yet.
+                      </p>
+                    )}
+
+                    <a
+                      href="https://business.qoyl.live/apply/stylist"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 inline-block text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+                    >
+                      Know a great stylist? Refer them →
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </div>

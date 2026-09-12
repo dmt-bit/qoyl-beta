@@ -520,6 +520,12 @@ export default function Nav() {
     setMenuOpen(false);
   }
 
+  // The public Style Match summary page is a standalone shareable
+  // document (see components/Footer.tsx's matching check) - a stylist
+  // with no Qoyl account shouldn't see the app's own nav chrome around
+  // someone else's client brief.
+  if (pathname.startsWith("/style-match/summary/")) return null;
+
   // The home page ("/") still replaces the desktop top nav with a
   // persistent left side rail (see HomeSideNavDesktop above) - but on
   // mobile, every page (including home) now shares the same simplified

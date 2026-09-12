@@ -1,6 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
+  // The public Style Match summary page (app/style-match/summary/[id])
+  // is a standalone shareable document, not a page within the app shell
+  // - it has its own footer, and showing this one too would be a
+  // confusing double-footer for a stylist who has no Qoyl account.
+  const pathname = usePathname();
+  if (pathname.startsWith("/style-match/summary/")) return null;
+
   return (
     <footer className="print-hide border-t border-bronze/20 bg-dark px-4 py-6 font-sans sm:px-6">
       <div className="mx-auto flex max-w-3xl flex-col items-center gap-2 text-xs text-cream/50 sm:flex-row sm:justify-between">
