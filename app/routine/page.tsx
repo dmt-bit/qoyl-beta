@@ -64,6 +64,21 @@ type AvoidIngredient = {
   reason: string | null;
 };
 
+type RoutineBrandProduct = {
+  id: string;
+  name: string;
+  description: string | null;
+  priceUsd: number | null;
+  imageUrl: string | null;
+  productUrl: string;
+  shopperUrl: string | null;
+  category: string;
+  isFeatured: boolean;
+  brandName: string;
+  subscriptionTier: string | null;
+  score: number | null;
+};
+
 type RoutineData = {
   firstName: string | null;
   curlType: string | null;
@@ -82,6 +97,7 @@ type RoutineData = {
   stepsByWashType: WashDaySteps[];
   additionalNotes: RoutineStep[];
   products: ProductPick[];
+  brandProducts: RoutineBrandProduct[];
   avoidIngredients: AvoidIngredient[];
   colorTreated: string | null;
   budgetRange: string | null;
@@ -1927,6 +1943,63 @@ function RoutineContent() {
               );
             })}
           </div>
+
+          {data.brandProducts.length > 0 && (
+            <div className="mt-8">
+              <h3 className="font-serif text-xl font-semibold text-cream">
+                From Qoyl partner brands
+              </h3>
+              <p className="mt-1 text-sm text-cream/70">
+                Recommended by Qoyl partner brands for your{" "}
+                {data.curlType && data.curlType !== "not_sure" ? data.curlType : ""} hair:
+              </p>
+              <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {data.brandProducts.map((item) => (
+                  <li key={item.id} className="rounded-lg border border-[#B08D57]/50 bg-cream/5 px-4 py-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-serif text-lg text-cream">{item.name}</p>
+                      {item.priceUsd != null && (
+                        <span className="shrink-0 text-sm font-semibold text-bronze">${item.priceUsd}</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted">{item.brandName}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      {item.isFeatured && (
+                        <span className="rounded-full border border-[#B08D57] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#B08D57]">
+                          Qoyl Partner Brand
+                        </span>
+                      )}
+                      {item.score != null && (
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${TIER_CLASSES[scoreTier(item.score)]}`}>
+                          {item.score}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      <a
+                        href={`/api/brand-products/click/${item.id}?via=brand`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                      >
+                        Shop at {item.brandName} →
+                      </a>
+                      {item.shopperUrl && (
+                        <a
+                          href={`/api/brand-products/click/${item.id}?via=shopper`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                        >
+                          Shop at Shopper →
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {data.avoidIngredients.length > 0 && (
             <div className="mt-8">

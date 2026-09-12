@@ -45,14 +45,21 @@ function escapeHtml(value: string): string {
 }
 
 function renderProductRow(item: TravelKitProduct): string {
-  const link = getAffiliateLink(item.name, item.brand);
+  // A Qoyl Partner Brand pick (item 7) has a real product_url from
+  // brand_catalog_products - link there directly rather than falling
+  // through to the name-keyword affiliate-link lookup, which has no
+  // entry for indie brand products.
+  const link = item.isBrandProduct ? item.brandProductUrl ?? null : getAffiliateLink(item.name, item.brand);
   const shopLine = link
     ? `<a href="${link}" style="color:#C4A882;text-decoration:none;">Shop this product &rarr;</a>`
+    : "";
+  const partnerBadge = item.isBrandProduct
+    ? `<span style="display:inline-block;margin-left:6px;padding:1px 6px;border:1px solid #B08D57;border-radius:10px;font-size:10px;color:#B08D57;">Qoyl Partner Brand</span>`
     : "";
 
   return `
     <tr><td style="padding:0 0 20px;border-bottom:1px solid #1C1612;">
-      <div style="font-size:14px;font-weight:600;color:#F5F0EA;">${escapeHtml(item.name)}</div>
+      <div style="font-size:14px;font-weight:600;color:#F5F0EA;">${escapeHtml(item.name)}${partnerBadge}</div>
       <div style="font-size:12px;color:#9C7B5A;margin-top:2px;">${escapeHtml(item.brand)}</div>
       <div style="font-size:12px;color:#7A6A5A;margin-top:6px;line-height:1.6;">${escapeHtml(item.reason)}</div>
       <div style="margin-top:8px;font-size:12px;">${shopLine}</div>

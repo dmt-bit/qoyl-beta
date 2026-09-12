@@ -16,7 +16,8 @@ import {
   PROTECTIVE_STYLE_ACCESSORIES,
 } from "@/lib/routineProducts";
 import { getChildSafetyNote, isChildSafetyProfile } from "@/lib/childSafety";
-import { curlFamily, isColorTreatedYes } from "@/lib/compatibility";
+import { buildScoringProfile, curlFamily, isColorTreatedYes } from "@/lib/compatibility";
+import { fetchBrandProductsForCurlType } from "@/lib/brandCatalogProducts";
 import {
   generateProtectiveStyleCalendar,
   getProtectiveStyleFrequency,
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
   const { data: profile } = await getSupabaseAdmin()
     .from("hair_profiles")
     .select(
-      "first_name, curl_type, porosity, scalp_condition, zip_code, water_hardness, extensions, extension_type, extension_care, profile_for, adult_age_range, hair_concerns, color_treated, budget_range, routine_focus, routine_start_date"
+      "first_name, curl_type, porosity, scalp_condition, zip_code, water_hardness, climate, extensions, extension_type, extension_care, profile_for, adult_age_range, hair_concerns, color_treated, budget_range, routine_focus, routine_start_date"
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -92,19 +93,28 @@ export async function GET(request: Request) {
   // 'extensions' profile the "natural hair under wig" section is just
   // this same routine (see spec: "Same as natural hair routine based on
   // their curl type and porosity").
-  const [calendarDays, stepsByWashType, products, avoidIngredients, completedDays] = await Promise.all([
-    Promise.resolve(generateWashCalendar(now, curlType, porosity, scalpCondition, routineStartDate)),
-    Promise.resolve(generateRoutineStepsByWashType(curlType)),
-    getRoutineProductPicks(
-      porosity,
-      curlType,
-      profile?.hair_concerns ?? null,
-      colorTreated === "yes",
-      budgetRange
-    ),
-    getIngredientsToAvoid(porosity, avoidLimit),
-    fetchCompletedDays(userId, toIsoDate(routineStartDate)),
-  ]);
+  const family = curlFamily(curlType);
+  // Item 8 - "From Qoyl partner brands" section, only meaningful with a
+  // real profile row to score against (buildScoringProfile needs
+  // climate/water_hardness, so this stays null for the no-profile edge
+  // case rather than guessing).
+  const scoringProfile = profile ? buildScoringProfile(profile) : null;
+
+  const [calendarDays, stepsByWashType, products, avoidIngredients, completedDays, brandProducts] =
+    await Promise.all([
+      Promise.resolve(generateWashCalendar(now, curlType, porosity, scalpCondition, routineStartDate)),
+      Promise.resolve(generateRoutineStepsByWashType(curlType)),
+      getRoutineProductPicks(
+        porosity,
+        curlType,
+        profile?.hair_concerns ?? null,
+        colorTreated === "yes",
+        budgetRange
+      ),
+      getIngredientsToAvoid(porosity, avoidLimit),
+      fetchCompletedDays(userId, toIsoDate(routineStartDate)),
+      fetchBrandProductsForCurlType(curlType, family, scoringProfile, 3),
+    ]);
 
   // Daily check-off system (streak, calendar completed/missed
   // indicators) - see lib/routineCompletions.ts. todayIso is computed
@@ -113,7 +123,6 @@ export async function GET(request: Request) {
   // has none at all - see generateWashCalendar).
   const todayIso = toIsoDate(now);
   const completedIsoDates = new Set(completedDays.keys());
-  const family = curlFamily(curlType);
   const interval = getWashFrequencyDays(curlType, porosity, scalpCondition).recommended;
   const streak = calculateStreak(now, routineStartDate, family, interval, completedIsoDates);
   const missedDates = computeMissedDates(now, routineStartDate, family, interval, completedIsoDates, 7);
@@ -189,6 +198,7 @@ export async function GET(request: Request) {
     stepsByWashType,
     additionalNotes,
     products,
+    brandProducts,
     avoidIngredients,
     colorTreated,
     budgetRange,

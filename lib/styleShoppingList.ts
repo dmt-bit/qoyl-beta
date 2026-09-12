@@ -1,6 +1,9 @@
 import { supabase } from "@/lib/supabase";
 import { scoreCatalogProducts, scoreTier } from "@/lib/compatibility";
 import { CATEGORY_LABEL_BY_SLUG } from "@/lib/productCategories";
+// Type-only import - erased at compile time, so the service-role code
+// in lib/brandCatalogProducts.ts never ends up in this client bundle.
+import type { BrandCatalogItem } from "@/lib/brandCatalogProducts";
 
 export type ScoredHairCareItem = {
   catalogProductId: string;
@@ -26,7 +29,14 @@ export type FakeHairItem = {
 };
 
 export type StyleShoppingList = {
+  // Qoyl Partner Brand products, shown above everything else in the
+  // Hair Care Products section - see fetchBrandProducts below.
+  brandProducts: BrandCatalogItem[];
   hairCare: ScoredHairCareItem[];
+  // Only populated for a category where neither a brand product nor a
+  // real catalog match exists - an honest "we don't have a curated pick
+  // here yet" fallback rather than leaving the category silently empty.
+  amazonFallback: StaticShoppingItem[];
   fakeHair: FakeHairItem[];
   fakeHairNote: string | null;
   fakeHairTip: string | null;
@@ -67,9 +77,29 @@ function isWashAndGoStyle(text: string): boolean {
   return /wash.?and.?go|twist.?out|braid.?out|curl/.test(text);
 }
 
-// Category slugs match lib/productCategories.ts. There's no distinct
-// "edge control" or "braid spray" category in the catalog, so those map
-// to the closest existing category (styler, leave-in).
+// Category slugs match lib/productCategories.ts for the main catalog -
+// catalog_products has no distinct "edge control" or "braid spray"
+// category, so those still map to the closest existing one (styler,
+// leave-in) for that lookup. brand_catalog_products is different: its
+// brand-facing form (business.qoyl.live, not this repo) offers exactly
+// these protective-style categories as dropdown options, so a brand
+// product's category column really can be "edge-control"/"braid-spray"/
+// etc. verbatim - both slug families are included here so brand
+// products get found by fetchBrandProducts regardless of which
+// taxonomy they were tagged under.
+const BRAND_CATEGORY_LABELS: Record<string, string> = {
+  "edge-control": "Edge Control",
+  "braid-spray": "Braid Spray",
+  "scalp-spray": "Scalp Spray",
+  "braiding-hair": "Braiding Hair",
+  "loc-spray": "Loc Spray",
+  "wig-care": "Wig Care",
+};
+
+function categoryLabel(slug: string): string {
+  return CATEGORY_LABEL_BY_SLUG[slug] ?? BRAND_CATEGORY_LABELS[slug] ?? slug;
+}
+
 export function pickCategoriesForStyle(
   styleName: string,
   styleDescription: string
@@ -79,8 +109,11 @@ export function pickCategoriesForStyle(
 
   if (isBraidedStyle(text)) {
     categories.add("styler"); // edge control
+    categories.add("edge-control");
     categories.add("leave-in"); // braid spray
+    categories.add("braid-spray");
     categories.add("oil"); // scalp oil
+    if (/loc/.test(text)) categories.add("loc-spray");
   } else if (isWashAndGoStyle(text)) {
     categories.add("gel");
     categories.add("leave-in");
@@ -88,25 +121,30 @@ export function pickCategoriesForStyle(
   } else {
     categories.add("leave-in");
     categories.add("styler");
+    if (/silk press|wig/.test(text)) categories.add("wig-care");
   }
 
-  return Array.from(categories).slice(0, 5);
+  return Array.from(categories).slice(0, 8);
 }
 
 async function fetchScoredHairCareProducts(
   categorySlugs: string[]
-): Promise<ScoredHairCareItem[]> {
+): Promise<{ items: ScoredHairCareItem[]; uncoveredSlugs: string[] }> {
   const { data: categoryRows } = await supabase
     .from("categories")
     .select("id, slug")
     .in("slug", categorySlugs);
 
   const results: ScoredHairCareItem[] = [];
+  const uncoveredSlugs: string[] = [];
   const usedProductIds = new Set<string>();
 
   for (const slug of categorySlugs) {
     const categoryId = categoryRows?.find((c) => c.slug === slug)?.id;
-    if (!categoryId) continue;
+    if (!categoryId) {
+      uncoveredSlugs.push(slug);
+      continue;
+    }
 
     const { data: candidates } = await supabase
       .from("catalog_products")
@@ -115,7 +153,10 @@ async function fetchScoredHairCareProducts(
       .limit(15);
 
     const pool = (candidates ?? []).filter((c) => !usedProductIds.has(c.id));
-    if (pool.length === 0) continue;
+    if (pool.length === 0) {
+      uncoveredSlugs.push(slug);
+      continue;
+    }
 
     const scores = await scoreCatalogProducts(pool.map((c) => c.id));
 
@@ -126,7 +167,10 @@ async function fetchScoredHairCareProducts(
       }))
       .sort((a, b) => b.score - a.score)[0];
 
-    if (!best || best.score < 0) continue;
+    if (!best || best.score < 0) {
+      uncoveredSlugs.push(slug);
+      continue;
+    }
 
     usedProductIds.add(best.product.id);
     const brandName =
@@ -137,12 +181,41 @@ async function fetchScoredHairCareProducts(
       catalogProductId: best.product.id,
       name: best.product.name,
       brand: brandName,
-      categoryLabel: CATEGORY_LABEL_BY_SLUG[slug] ?? slug,
+      categoryLabel: categoryLabel(slug),
       score: best.score,
     });
   }
 
-  return results;
+  return { items: results, uncoveredSlugs };
+}
+
+// Item 5 - queries brand_catalog_products first, per category, via the
+// service-role bridge route (this file runs client-side). Returns only
+// categories that actually had at least one active, style-relevant
+// brand product; buildStyleShoppingList falls through to the existing
+// catalog scoring for everything else.
+async function fetchBrandProducts(
+  categorySlugs: string[],
+  styleName: string,
+  userId: string | null,
+  matchId: string | null
+): Promise<Record<string, BrandCatalogItem[]>> {
+  const params = new URLSearchParams({
+    categories: categorySlugs.join(","),
+    style_name: styleName,
+  });
+  if (userId) params.set("user_id", userId);
+  if (matchId) params.set("match_id", matchId);
+
+  try {
+    const res = await fetch(`/api/style-match/brand-products?${params.toString()}`);
+    if (!res.ok) return {};
+    const data = await res.json();
+    return data.productsByCategory ?? {};
+  } catch (err) {
+    console.error("[styleShoppingList] brand product fetch failed:", err);
+    return {};
+  }
 }
 
 const FAKE_HAIR_NOTE =
@@ -419,9 +492,34 @@ export async function buildStyleShoppingList(input: {
   fakeHairType: string | null;
   accessoriesVisible: string[];
   wantsLengthExtensions?: boolean;
+  userId?: string | null;
+  matchId?: string | null;
 }): Promise<StyleShoppingList> {
   const categorySlugs = pickCategoriesForStyle(input.styleName, input.styleDescription);
-  const hairCare = await fetchScoredHairCareProducts(categorySlugs);
+
+  const brandByCategory = await fetchBrandProducts(
+    categorySlugs,
+    input.styleName,
+    input.userId ?? null,
+    input.matchId ?? null
+  );
+  const brandProducts = Object.values(brandByCategory).flat();
+  const brandCoveredSlugs = new Set(
+    Object.entries(brandByCategory)
+      .filter(([, items]) => items.length > 0)
+      .map(([slug]) => slug)
+  );
+  const remainingSlugs = categorySlugs.filter((slug) => !brandCoveredSlugs.has(slug));
+
+  const { items: hairCare, uncoveredSlugs } = await fetchScoredHairCareProducts(remainingSlugs);
+  const amazonFallback = uncoveredSlugs.map((slug) => {
+    const label = categoryLabel(slug);
+    return {
+      name: `${label} for ${input.styleName}`,
+      url: amazonSearch(`${label} ${input.styleName}`),
+      retailer: "Amazon",
+    };
+  });
 
   // Hard guarantee: whenever the style requires fake hair, this section
   // is always populated (generateFakeHairList always returns >= 3 items,
@@ -437,7 +535,9 @@ export async function buildStyleShoppingList(input: {
     : [];
 
   return {
+    brandProducts,
     hairCare,
+    amazonFallback,
     fakeHair,
     fakeHairNote: input.requiresFakeHair ? FAKE_HAIR_NOTE : null,
     fakeHairTip: input.requiresFakeHair ? FAKE_HAIR_TIP : null,

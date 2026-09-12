@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { buildScoringProfile, scoreCatalogProductsForProfile } from "@/lib/compatibility";
+import { buildScoringProfile, curlFamily, scoreCatalogProductsForProfile } from "@/lib/compatibility";
 import { CATEGORY_LABEL_BY_SLUG } from "@/lib/productCategories";
+import { fetchBrandProductsForTravel, type BrandCatalogItem } from "@/lib/brandCatalogProducts";
 
 export type TravelKitProduct = {
   catalogProductId: string;
@@ -10,6 +11,12 @@ export type TravelKitProduct = {
   categoryLabel: string;
   score: number;
   reason: string;
+  // Set only for a Qoyl Partner Brand pick (item 7) - lets the caller
+  // (the Stripe webhook's PDF/email generation) badge it distinctly
+  // from a regular catalog_products pick.
+  isBrandProduct?: boolean;
+  brandProductUrl?: string;
+  brandShopperUrl?: string | null;
 };
 
 export type GenerateTravelKitInput = {
@@ -110,6 +117,27 @@ function buildReason(
   return parts.join(" ");
 }
 
+function brandItemToTravelKitProduct(
+  item: BrandCatalogItem,
+  categorySlug: string,
+  climate: string | null,
+  swimming: string | null,
+  protectiveStyle: string | null
+): TravelKitProduct {
+  return {
+    catalogProductId: item.id,
+    name: item.name,
+    brand: item.brandName,
+    categorySlug,
+    categoryLabel: CATEGORY_LABEL_BY_SLUG[categorySlug] ?? categorySlug,
+    score: item.score ?? 0,
+    reason: buildReason(categorySlug, climate, swimming, protectiveStyle),
+    isBrandProduct: true,
+    brandProductUrl: item.productUrl,
+    brandShopperUrl: item.shopperUrl,
+  };
+}
+
 // Server-side only - fetches the user's hair profile via the service
 // role client (no browser session/localStorage exists in the Stripe
 // webhook this runs from), scores real catalog products against it
@@ -142,18 +170,43 @@ export async function generateTravelKitProducts(
 
   const categorySlugs = pickCategories(input);
 
-  const { data: categoryRows } = await admin
-    .from("categories")
-    .select("id, slug")
-    .in("slug", categorySlugs);
-  const categoryIdBySlug = new Map(
-    (categoryRows ?? []).map((c) => [c.slug as string, c.id as string])
+  // Item 7 - brand_catalog_products checked first, per category, before
+  // the main catalog_products table. hair_types_served is matched
+  // loosely (both the specific curl type and its family, e.g. "4c" and
+  // "coily") since brands may tag either granularity; climate_tags
+  // overlapping the trip's destination climate is used to break ties
+  // within the featured-first ordering, not as a hard filter.
+  const family = curlFamily(profileRow.curl_type);
+  const hairTypeTags = [profileRow.curl_type, family].filter(
+    (t): t is string => Boolean(t)
+  );
+  const brandByCategory = await fetchBrandProductsForTravel(
+    categorySlugs,
+    hairTypeTags,
+    tripClimate ?? null,
+    scoringProfile
   );
 
   const results: TravelKitProduct[] = [];
   const usedProductIds = new Set<string>();
 
-  for (const slug of categorySlugs) {
+  for (const [slug, items] of Object.entries(brandByCategory)) {
+    const best = items[0];
+    if (!best) continue;
+    results.push(brandItemToTravelKitProduct(best, slug, input.climate, input.swimming, input.protectiveStyle));
+  }
+
+  const remainingSlugs = categorySlugs.filter((slug) => !brandByCategory[slug]?.length);
+
+  const { data: categoryRows } = await admin
+    .from("categories")
+    .select("id, slug")
+    .in("slug", remainingSlugs);
+  const categoryIdBySlug = new Map(
+    (categoryRows ?? []).map((c) => [c.slug as string, c.id as string])
+  );
+
+  for (const slug of remainingSlugs) {
     const categoryId = categoryIdBySlug.get(slug);
     if (!categoryId) continue;
 

@@ -991,6 +991,8 @@ function StyleMatchContent() {
           fakeHairType: detected!.fake_hair_type,
           accessoriesVisible: detected!.accessories_visible ?? [],
           wantsLengthExtensions: lengthDifference === "longer" && wantsLengthExtensions,
+          userId: user?.id ?? null,
+          matchId,
         });
         if (!cancelled) setShoppingList(list);
       } finally {
@@ -1816,6 +1818,78 @@ function StyleMatchContent() {
                       </div>
                     )}
 
+                    {shoppingList.brandProducts.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Qoyl Partner Brands</p>
+                        <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          {shoppingList.brandProducts.map((item) => (
+                            <li
+                              key={item.id}
+                              className="rounded-lg border border-bronze/40 bg-cream px-4 py-3 shadow-sm"
+                            >
+                              <div className="flex items-start gap-3">
+                                {item.imageUrl && (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={item.imageUrl}
+                                    alt={item.name}
+                                    className="h-14 w-14 shrink-0 rounded-md border border-bronze/20 object-cover"
+                                  />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <p className="font-sans text-[13px] font-medium text-dark">{item.name}</p>
+                                    {item.priceUsd != null && (
+                                      <span className="shrink-0 text-sm font-semibold text-bronze">
+                                        ${item.priceUsd}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="mt-0.5 text-[11px] text-dark/50">{item.brandName}</p>
+                                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                                    {item.isFeatured && (
+                                      <span className="rounded-full border border-[#B08D57] bg-[#B08D57]/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#8A6D3B]">
+                                        Qoyl Partner Brand
+                                      </span>
+                                    )}
+                                    {item.score != null ? (
+                                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${TIER_CLASSES[scoreTier(item.score)]}`}>
+                                        {item.score}/100
+                                      </span>
+                                    ) : (
+                                      <Link href="/search" className="text-[10px] text-bronze2 underline">
+                                        Add to your Qoyl profile for a compatibility score →
+                                      </Link>
+                                    )}
+                                  </div>
+                                  <div className="mt-2 flex flex-wrap gap-3">
+                                    <a
+                                      href={`/api/brand-products/click/${item.id}?via=brand${matchId ? `&style_match_id=${matchId}` : ""}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs font-medium text-bronze2 underline"
+                                    >
+                                      Shop at {item.brandName} →
+                                    </a>
+                                    {item.shopperUrl && (
+                                      <a
+                                        href={`/api/brand-products/click/${item.id}?via=shopper${matchId ? `&style_match_id=${matchId}` : ""}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs font-medium text-bronze2 underline"
+                                      >
+                                        Shop at Shopper →
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Hair Care Products</p>
                       <ul className="mt-3 space-y-2">
@@ -1835,9 +1909,32 @@ function StyleMatchContent() {
                             <ShopButton productName={item.name} brandName={item.brand} className="mt-2 inline-block text-xs text-bronze2 underline" />
                           </li>
                         ))}
-                        {shoppingList.hairCare.length === 0 && <p className="text-sm text-cream/50">No matching products found yet.</p>}
+                        {shoppingList.hairCare.length === 0 && shoppingList.brandProducts.length === 0 && (
+                          <p className="text-sm text-cream/50">No matching products found yet.</p>
+                        )}
                       </ul>
                     </div>
+
+                    {shoppingList.amazonFallback.length > 0 && (
+                      <div>
+                        <ul className="mt-1 space-y-1.5">
+                          {shoppingList.amazonFallback.map((item) => (
+                            <li
+                              key={item.name}
+                              className="flex items-center justify-between rounded-lg border border-cream/10 bg-dark/40 px-3 py-2"
+                            >
+                              <div>
+                                <p className="text-xs text-cream/70">{item.name}</p>
+                                <p className="text-[10px] uppercase tracking-wide text-cream/30">Also available on Amazon</p>
+                              </div>
+                              <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-cream/50 underline shrink-0">
+                                View →
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Tools</p>

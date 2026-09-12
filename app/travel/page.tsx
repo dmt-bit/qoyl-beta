@@ -141,25 +141,55 @@ function ProgressBar({ step, totalSteps }: { step: number; totalSteps: number })
 function TravelKitProductCard({ item }: { item: TravelKitProduct }) {
   const tier = scoreTier(item.score);
   return (
-    <li className="rounded-lg border border-bronze/30 p-4">
+    <li className={`rounded-lg border p-4 ${item.isBrandProduct ? "border-[#B08D57]/60 bg-cream/5" : "border-bronze/30"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="font-serif text-lg text-cream">{item.name}</p>
           <p className="text-xs text-muted">{item.brand}</p>
         </div>
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${TIER_CLASSES[tier]}`}
-        >
-          {item.score}
-        </span>
+        {item.score > 0 && (
+          <span
+            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${TIER_CLASSES[tier]}`}
+          >
+            {item.score}
+          </span>
+        )}
       </div>
+      {item.isBrandProduct && (
+        <span className="mt-1 inline-block rounded-full border border-[#B08D57] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#B08D57]">
+          Qoyl Partner Brand
+        </span>
+      )}
       <p className="mt-2 text-sm text-cream/70">{item.reason}</p>
-      <div className="mt-2">
-        <ShopButton
-          productName={item.name}
-          brandName={item.brand}
-          className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
-        />
+      <div className="mt-2 flex flex-wrap gap-3">
+        {item.isBrandProduct ? (
+          <>
+            <a
+              href={item.brandProductUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+            >
+              Shop at {item.brand} →
+            </a>
+            {item.brandShopperUrl && (
+              <a
+                href={item.brandShopperUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+              >
+                Shop at Shopper →
+              </a>
+            )}
+          </>
+        ) : (
+          <ShopButton
+            productName={item.name}
+            brandName={item.brand}
+            className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+          />
+        )}
       </div>
     </li>
   );
