@@ -60,14 +60,14 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-sm">
-        <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+        <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
           Reset Password
         </h1>
 
         {status === "checking" && (
-          <p className="mt-8 text-sm text-cream/50">Loading...</p>
+          <p className="mt-8 text-sm text-dark/50">Loading...</p>
         )}
 
         {status === "invalid" && (
@@ -86,7 +86,7 @@ export default function ResetPasswordPage() {
 
         {status === "ready" && (
           <>
-            <p className="mt-2 text-sm text-cream/70">
+            <p className="mt-2 text-sm text-dark/70">
               Choose a new password for your account.
             </p>
 
@@ -116,7 +116,7 @@ export default function ResetPasswordPage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+                    className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
                   />
                 </div>
 
@@ -136,7 +136,7 @@ export default function ResetPasswordPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+                    className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
                   />
                 </div>
 
@@ -145,7 +145,7 @@ export default function ResetPasswordPage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+                  className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
                 >
                   {submitting ? "Updating..." : "Update Password"}
                 </button>

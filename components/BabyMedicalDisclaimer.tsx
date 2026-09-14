@@ -3,7 +3,7 @@
 // than inline copy in each place) so the wording only lives in one spot.
 export default function BabyMedicalDisclaimer() {
   return (
-    <div className="rounded-lg border border-bronze/40 bg-dark px-4 py-3 text-sm leading-relaxed text-cream/90">
+    <div className="border border-bronze/40 bg-white px-4 py-3 text-sm leading-relaxed text-dark/90">
       Qoyl&apos;s baby recommendations are for cosmetic hair and scalp care only. They are not
       medical advice. If your baby has persistent scalp issues, skin reactions, or hair concerns,
       please consult your pediatrician or a pediatric dermatologist.

@@ -113,7 +113,7 @@ export default function CommentSection({
 
   return (
     <section className="mt-12 border-t border-bronze/20 pt-8">
-      <h2 className="font-serif text-2xl font-semibold text-cream">
+      <h2 className="font-serif text-2xl font-semibold text-dark">
         Join the conversation
       </h2>
 
@@ -125,14 +125,14 @@ export default function CommentSection({
               className="rounded-lg border border-bronze/20 bg-warm/[0.03] p-4"
             >
               <div className="flex items-center justify-between gap-4">
-                <p className="text-sm font-semibold text-cream">
+                <p className="text-sm font-semibold text-dark">
                   {comment.display_name}
                 </p>
-                <p className="text-xs text-cream/40">
+                <p className="text-xs text-dark/40">
                   {timeAgo(comment.created_at)}
                 </p>
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-cream/80">
+              <p className="mt-2 text-sm leading-relaxed text-dark/80">
                 {comment.body}
               </p>
             </div>
@@ -148,7 +148,7 @@ export default function CommentSection({
             onChange={(e) => setName(e.target.value)}
             placeholder="Name"
             required
-            className="w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+            className="w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
           />
           <input
             type="email"
@@ -156,7 +156,7 @@ export default function CommentSection({
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Email (not displayed publicly)"
             required
-            className="w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+            className="w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
           />
         </div>
 
@@ -167,7 +167,7 @@ export default function CommentSection({
           rows={4}
           required
           minLength={10}
-          className="w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+          className="w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
         />
 
         {error && <p className="text-sm text-red">{error}</p>}
@@ -178,7 +178,7 @@ export default function CommentSection({
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-bronze px-6 py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+          className="bg-bronze px-6 py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
         >
           {submitting ? "Posting..." : "Post comment →"}
         </button>

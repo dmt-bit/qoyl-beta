@@ -42,7 +42,7 @@ function isLinkActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname.startsWith(href);
 }
 
-function SearchIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
+function SearchIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
   return (
     <svg
       width={size}
@@ -62,7 +62,7 @@ function SearchIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: n
   );
 }
 
-function HouseIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
+function HouseIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 10.5L12 3l9 7.5" />
@@ -71,7 +71,7 @@ function HouseIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: nu
   );
 }
 
-function SuitcaseIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
+function SuitcaseIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <rect x="3.75" y="7.5" width="16.5" height="11.25" rx="1.5" />
@@ -80,7 +80,7 @@ function SuitcaseIcon({ size = 18, className = "shrink-0 text-cream" }: { size?:
   );
 }
 
-function ChevronIcon({ size = 16, className = "shrink-0 text-cream/30" }: { size?: number; className?: string }) {
+function ChevronIcon({ size = 16, className = "shrink-0 text-dark/30" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 6l6 6-6 6" />
@@ -104,7 +104,7 @@ function SparkleIcon({ size = 14, className = "text-bronze" }: { size?: number; 
 
 function HamburgerIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="text-cream">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="text-dark">
       <path strokeLinecap="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
     </svg>
   );
@@ -112,13 +112,13 @@ function HamburgerIcon() {
 
 function CloseIcon() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="text-cream">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className="text-dark">
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   );
 }
 
-function PersonIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
+function PersonIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
@@ -136,14 +136,14 @@ function PersonNavIcon({ size = 18, showDot = false }: { size?: number; showDot?
       {showDot && (
         <span
           aria-hidden
-          className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-bronze ring-2 ring-[#1C1612]"
+          className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-bronze ring-2 ring-[#ffffff]"
         />
       )}
     </span>
   );
 }
 
-function CompassIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
+function CompassIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
@@ -152,7 +152,7 @@ function CompassIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: 
   );
 }
 
-function CalendarIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
+function CalendarIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <rect x="3.75" y="5.25" width="16.5" height="15" rx="1.5" />
@@ -161,7 +161,7 @@ function CalendarIcon({ size = 18, className = "shrink-0 text-cream" }: { size?:
   );
 }
 
-function LockIcon({ size = 16, className = "shrink-0 text-cream/50" }: { size?: number; className?: string }) {
+function LockIcon({ size = 16, className = "shrink-0 text-dark/50" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <rect x="4.5" y="10.5" width="15" height="9.75" rx="1.5" />
@@ -170,7 +170,7 @@ function LockIcon({ size = 16, className = "shrink-0 text-cream/50" }: { size?: 
   );
 }
 
-function GridIcon({ size = 18, className = "shrink-0 text-cream" }: { size?: number; className?: string }) {
+function GridIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <rect x="3.75" y="3.75" width="6.5" height="6.5" rx="1" />
@@ -195,14 +195,14 @@ function HomeSideNavDesktop({
   pathname: string;
 }) {
   return (
-    <div className="fixed bottom-0 left-0 top-0 z-50 hidden w-[200px] flex-col overflow-y-auto border-r border-bronze/40 bg-[#1C1612]/80 backdrop-blur-md sm:flex">
-      <Link href="/" className="px-6 py-6 font-serif text-2xl italic text-cream">
-        Qoyl
+    <div className="fixed bottom-0 left-0 top-0 z-50 hidden w-[200px] flex-col overflow-y-auto border-r border-bronze/40 bg-[#ffffff]/80 backdrop-blur-md sm:flex">
+      <Link href="/" className="px-6 py-6 font-serif text-2xl font-bold lowercase text-dark">
+        qoyl
       </Link>
 
       <div className="flex flex-col gap-1 px-3">
         <SideNavLink href="/search" label="Search a Product" icon={<SearchIcon size={16} />} pathname={pathname} />
-        <SideNavLink href="/style-match" label="Style Match" icon={<SparkleIcon size={16} className="text-cream" />} pathname={pathname} />
+        <SideNavLink href="/style-match" label="Style Match" icon={<SparkleIcon size={16} className="text-dark" />} pathname={pathname} />
         <SideNavLink
           href={user ? "/dashboard" : "/auth"}
           label="Dashboard"
@@ -223,7 +223,7 @@ function HomeSideNavDesktop({
           <Link
             key={tab.key}
             href={tab.key === "all" ? "/posts" : `/posts?type=${tab.key}`}
-            className="rounded-lg px-3 py-2 text-sm text-cream/70 transition-colors hover:bg-[#2C2420] hover:text-cream"
+            className="rounded-lg px-3 py-2 text-sm text-dark/70 transition-colors hover:bg-[#f5f5f5] hover:text-dark"
           >
             {FEED_LABEL_OVERRIDES[tab.key] ?? tab.label}
           </Link>
@@ -234,7 +234,7 @@ function HomeSideNavDesktop({
         <div className="mt-auto px-3 pb-6">
           <Link
             href="/auth"
-            className="block rounded-lg px-3 py-2 text-sm font-medium text-bronze2 transition-colors hover:text-cream"
+            className="block rounded-lg px-3 py-2 text-sm font-medium text-bronze2 transition-colors hover:text-dark"
           >
             Sign in
           </Link>
@@ -260,7 +260,7 @@ function SideNavLink({
     <Link
       href={href}
       className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-        active ? "bg-[#2C2420] text-cream" : "text-cream/70 hover:bg-[#2C2420]/60 hover:text-cream"
+        active ? "bg-dark text-cream" : "text-dark/70 hover:bg-[#f5f5f5] hover:text-dark"
       }`}
     >
       {icon}
@@ -269,26 +269,40 @@ function SideNavLink({
   );
 }
 
-const BOTTOM_NAV_ACTIVE = "text-bronze";
-const BOTTOM_NAV_INACTIVE = "text-[#5A4A3A]";
+// Active tab now shows as a solid black pill (item 10) rather than a
+// color-only icon change, so the icon itself has to flip to white to
+// stay visible against that black background.
+const BOTTOM_NAV_ACTIVE = "text-cream";
+const BOTTOM_NAV_INACTIVE = "text-muted";
 
 function BottomNavTab({
   href,
   label,
   active,
   icon,
+  alwaysActive,
 }: {
   href: string;
   label: string;
   active: boolean;
   icon: React.ReactNode;
+  // Style Match (center tab) is always shown as the black "anchor" tab
+  // regardless of route (item 10), not just when it's the active page.
+  alwaysActive?: boolean;
 }) {
+  const showActive = active || alwaysActive;
   return (
-    <Link href={href} className="flex flex-1 flex-col items-center justify-center gap-1">
-      {icon}
-      <span className={`font-sans text-[10px] ${active ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`}>
-        {label}
-      </span>
+    <Link href={href} className="flex flex-1 flex-col items-center justify-center gap-1 py-1.5">
+      <div
+        className={`flex flex-col items-center justify-center gap-0.5 rounded-lg px-3 py-1 transition-colors ${
+          showActive ? "bg-dark" : ""
+        }`}
+      >
+        {icon}
+        <span className={`font-sans text-[10px] ${showActive ? "text-cream" : BOTTOM_NAV_INACTIVE}`}>
+          {label}
+        </span>
+      </div>
     </Link>
   );
 }
@@ -308,13 +322,19 @@ function RoutineTabIcon({
       {hasRoutineSubscription && (
         <span
           aria-hidden
-          className="absolute -top-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-bronze"
+          className={`absolute -top-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full ${
+            active ? "bg-cream" : "bg-bronze"
+          }`}
         />
       )}
       <CalendarIcon size={20} className={colorClass} />
       {!hasRoutineSubscription && (
-        <span className="absolute -bottom-0.5 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-dark">
-          <LockIcon size={9} className={colorClass} />
+        <span className="absolute -bottom-0.5 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-white">
+          {/* This badge's own background is always white regardless of
+              tab state, so the lock icon stays a fixed dark color rather
+              than following colorClass (which would go white-on-white
+              when the tab is active). */}
+          <LockIcon size={9} className="shrink-0 text-dark" />
         </span>
       )}
     </span>
@@ -348,7 +368,7 @@ function BottomNav({
   return (
     <nav
       data-testid="bottom-nav"
-      className="fixed inset-x-0 bottom-0 z-[100] flex h-[60px] border-t border-[#2C2420] bg-[#1C1612] sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-[100] flex h-[60px] border-t border-[#e8e8e8] bg-[#ffffff] sm:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <BottomNavTab
@@ -367,7 +387,8 @@ function BottomNav({
         href="/style-match"
         label="Style"
         active={styleActive}
-        icon={<SparkleIcon size={24} className={styleActive ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE} />}
+        alwaysActive
+        icon={<SparkleIcon size={24} className={BOTTOM_NAV_ACTIVE} />}
       />
       <BottomNavTab
         href="/routine"
@@ -414,12 +435,12 @@ function MenuLink({
     <Link
       href={href}
       onClick={onNavigate}
-      className="flex h-[52px] items-center gap-3 border-b border-[#2C2420] px-6 text-cream transition-colors hover:bg-[#2C2420]/50"
+      className="flex h-[52px] items-center gap-3 border-b border-[#e8e8e8] px-6 text-dark transition-colors hover:bg-[#f5f5f5]/50"
     >
       {icon && <span className="flex h-5 w-5 shrink-0 items-center justify-center">{icon}</span>}
-      <span className="flex-1 truncate font-sans text-sm text-cream">{label}</span>
+      <span className="flex-1 truncate font-sans text-sm text-dark">{label}</span>
       {badge && (
-        <span className="shrink-0 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-dark">
+        <span className="shrink-0 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
           {badge}
         </span>
       )}
@@ -445,19 +466,19 @@ function RoutineMenuLink({
     <Link
       href="/routine"
       onClick={onNavigate}
-      className="flex h-[52px] items-center gap-3 border-b border-l-[3px] border-b-[#2C2420] border-l-bronze bg-[#2C2420] pl-[21px] pr-6 transition-colors hover:bg-[#332A22]"
+      className="flex h-[52px] items-center gap-3 border-b border-l-[3px] border-b-[#e8e8e8] border-l-bronze bg-[#f5f5f5] pl-[21px] pr-6 transition-colors hover:bg-[#332A22]"
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
         <CalendarIcon size={20} className="shrink-0 text-bronze" />
       </span>
-      <span className="flex-1 font-sans text-sm font-semibold text-cream">My Routine</span>
+      <span className="flex-1 font-sans text-sm font-semibold text-dark">My Routine</span>
       {hasRoutineSubscription ? (
         <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-green/15 px-2.5 py-1 text-[10px] font-semibold text-green">
           <span className="h-1.5 w-1.5 rounded-full bg-green" />
           Active
         </span>
       ) : (
-        <span className="shrink-0 rounded-full bg-bronze px-2.5 py-1 text-[10px] font-semibold text-dark">
+        <span className="shrink-0 rounded-full bg-bronze px-2.5 py-1 text-[10px] font-semibold text-cream">
           $7.99/mo
         </span>
       )}
@@ -534,14 +555,14 @@ export default function Nav() {
   const isHome = pathname === "/";
 
   return (
-    <nav className="print-hide bg-dark font-sans">
+    <nav className="print-hide bg-white font-sans">
       {/* Mobile top nav - wordmark + hamburger only. Primary navigation
           (feed/search/style match/routine/profile) now lives in
           BottomNav below; the hamburger here is secondary navigation
           (feed filters by hair type, account, learn). */}
       <div className="flex h-[52px] items-center justify-between px-4 sm:hidden">
-        <Link href="/" className="font-serif text-xl italic text-cream">
-          Qoyl
+        <Link href="/" className="font-serif text-xl font-bold lowercase text-dark">
+          qoyl
         </Link>
         <button
           type="button"
@@ -567,15 +588,15 @@ export default function Nav() {
       {/* Desktop: wordmark, center text links, sign-in/account on the right. */}
       <div className="hidden border-b border-bronze/20 px-6 py-4 sm:block">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <Link href="/" className="shrink-0 font-serif text-xl italic text-cream">
-            Qoyl
+          <Link href="/" className="shrink-0 font-serif text-xl font-bold lowercase text-dark">
+            qoyl
           </Link>
 
           <ul className="flex items-center gap-6">
             <li className="shrink-0">
               <Link
                 href="/search"
-                className="whitespace-nowrap rounded-lg bg-bronze px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
+                className="whitespace-nowrap bg-bronze px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
               >
                 Search a Product
               </Link>
@@ -584,10 +605,10 @@ export default function Nav() {
               <li key={link.href} className="shrink-0">
                 <Link
                   href={link.href}
-                  className={`whitespace-nowrap text-sm font-medium transition-colors ${
+                  className={`whitespace-nowrap px-3 py-1.5 text-sm font-medium transition-colors ${
                     isLinkActive(pathname, link.href)
-                      ? "text-bronze2"
-                      : "text-cream/70 hover:text-cream"
+                      ? "bg-dark text-cream"
+                      : "text-dark/70 hover:text-dark"
                   }`}
                 >
                   {link.label}
@@ -602,7 +623,7 @@ export default function Nav() {
                 <Link
                   href="/dashboard"
                   className={`font-medium transition-colors ${
-                    isLinkActive(pathname, "/dashboard") ? "text-bronze2" : "text-cream/70 hover:text-cream"
+                    isLinkActive(pathname, "/dashboard") ? "text-bronze2" : "text-dark/70 hover:text-dark"
                   }`}
                 >
                   Dashboard
@@ -610,7 +631,7 @@ export default function Nav() {
                 <Link
                   href="/profile"
                   className={`font-medium transition-colors ${
-                    isLinkActive(pathname, "/profile") ? "text-bronze2" : "text-cream/70 hover:text-cream"
+                    isLinkActive(pathname, "/profile") ? "text-bronze2" : "text-dark/70 hover:text-dark"
                   }`}
                 >
                   My Profile
@@ -618,7 +639,7 @@ export default function Nav() {
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="font-medium text-bronze2 transition-colors hover:text-cream"
+                  className="font-medium text-bronze2 transition-colors hover:text-dark"
                 >
                   Sign out
                 </button>
@@ -626,7 +647,7 @@ export default function Nav() {
             ) : (
               <Link
                 href="/auth"
-                className="font-medium text-bronze2 transition-colors hover:text-cream"
+                className="font-medium text-bronze2 transition-colors hover:text-dark"
               >
                 Sign in
               </Link>
@@ -652,13 +673,13 @@ export default function Nav() {
           }`}
         />
         <div
-          className={`absolute right-0 top-0 h-full w-full overflow-y-auto bg-[#1C1612] transition-transform duration-300 ease-out ${
+          className={`absolute right-0 top-0 h-full w-full overflow-y-auto bg-[#ffffff] transition-transform duration-300 ease-out ${
             menuOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
           <div className="flex h-[52px] items-center justify-between px-4">
-            <Link href="/" onClick={closeMenu} className="font-serif text-xl italic text-cream">
-              Qoyl
+            <Link href="/" onClick={closeMenu} className="font-serif text-xl font-bold lowercase text-dark">
+              qoyl
             </Link>
             <button
               type="button"
@@ -707,7 +728,7 @@ export default function Nav() {
             <button
               type="button"
               onClick={handleSignOut}
-              className="flex h-[52px] w-full items-center gap-3 border-b border-[#2C2420] px-6 text-left font-sans text-sm text-cream transition-colors hover:bg-[#2C2420]/50"
+              className="flex h-[52px] w-full items-center gap-3 border-b border-[#e8e8e8] px-6 text-left font-sans text-sm text-dark transition-colors hover:bg-[#f5f5f5]/50"
             >
               Sign out
             </button>
@@ -725,18 +746,18 @@ export default function Nav() {
                 href="https://www.instagram.com/clubqoyl"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-bronze2 underline underline-offset-2 hover:text-cream"
+                className="text-bronze2 underline underline-offset-2 hover:text-dark"
               >
                 @clubqoyl
               </a>
               <a
                 href="mailto:hey@qoyl.live"
-                className="text-bronze2 underline underline-offset-2 hover:text-cream"
+                className="text-bronze2 underline underline-offset-2 hover:text-dark"
               >
                 hey@qoyl.live
               </a>
             </div>
-            <p className="mt-4 text-xs text-cream/40">© {new Date().getFullYear()} Qoyl</p>
+            <p className="mt-4 text-xs text-dark/40">© {new Date().getFullYear()} Qoyl</p>
           </div>
         </div>
       </div>

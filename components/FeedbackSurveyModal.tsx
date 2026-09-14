@@ -35,7 +35,7 @@ function OptionButton({
       className={`w-full rounded-lg border px-4 py-3 text-left text-sm transition-colors ${
         selected
           ? "border-bronze bg-bronze/20 text-cream"
-          : "border-bronze/40 text-cream/80 hover:border-bronze"
+          : "border-bronze/40 text-dark/80 hover:border-bronze"
       }`}
     >
       {label}
@@ -90,35 +90,35 @@ export default function FeedbackSurveyModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-dark/70 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-white/70 sm:items-center sm:p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Qoyl feedback survey"
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-bronze/30 bg-dark p-6 sm:rounded-2xl"
+        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-bronze/30 bg-white p-6 sm:rounded-2xl"
       >
         <div className="flex items-start justify-between gap-4">
-          <h2 className="font-serif text-xl font-semibold text-cream sm:text-2xl">
+          <h2 className="font-serif text-xl font-semibold text-dark sm:text-2xl">
             {submitted ? "Thank you" : "Help us build what's next for Qoyl"}
           </h2>
           <button
             type="button"
             aria-label="Close"
             onClick={dismiss}
-            className="text-lg leading-none text-cream/50 transition-colors hover:text-cream"
+            className="text-lg leading-none text-dark/50 transition-colors hover:text-dark"
           >
             ✕
           </button>
         </div>
 
         {submitted ? (
-          <p className="mt-4 text-sm text-cream/80">
+          <p className="mt-4 text-sm text-dark/80">
             Thank you - this genuinely shapes what we build next.
           </p>
         ) : (
           <div className="mt-4 space-y-6">
             <div>
-              <p className="text-sm text-cream/80">
+              <p className="text-sm text-dark/80">
                 When Qoyl recommends a product that scores well for your
                 hair, what do you do next?
               </p>
@@ -135,7 +135,7 @@ export default function FeedbackSurveyModal({
             </div>
 
             <div>
-              <p className="text-sm text-cream/80">
+              <p className="text-sm text-dark/80">
                 Would you want to buy recommended products directly on Qoyl
                 in one checkout - without leaving the app?
               </p>
@@ -152,7 +152,7 @@ export default function FeedbackSurveyModal({
             </div>
 
             <div>
-              <p className="text-sm text-cream/80">
+              <p className="text-sm text-dark/80">
                 Anything else you&apos;d want from Qoyl? We read every
                 response.
               </p>
@@ -161,7 +161,7 @@ export default function FeedbackSurveyModal({
                 onChange={(e) => setQ3(e.target.value)}
                 placeholder="Tell us what would make this more useful for you..."
                 rows={4}
-                className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+                className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
               />
             </div>
 
@@ -171,7 +171,7 @@ export default function FeedbackSurveyModal({
               type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+              className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
             >
               {submitting ? "Submitting..." : "Submit feedback →"}
             </button>

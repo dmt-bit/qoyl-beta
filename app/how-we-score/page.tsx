@@ -11,21 +11,21 @@ const SCORE_RANGES = [
     range: "70–100",
     label: "Strong match",
     borderClass: "border-green",
-    badgeClass: "bg-green text-dark",
+    badgeClass: "font-mono font-bold text-green",
     body: "This product's ingredient profile aligns well with your hair's needs. The key ingredients score positively for your porosity level and hair type, and we didn't flag anything that commonly causes problems for your specific profile. This doesn't mean it will work perfectly - individual responses vary - but the ingredient science supports it.",
   },
   {
     range: "40–69",
     label: "Proceed with caution",
     borderClass: "border-amber",
-    badgeClass: "bg-amber text-dark",
+    badgeClass: "font-mono font-bold text-amber",
     body: "This product has a mixed ingredient profile for your hair. Some ingredients score well, others are flagged as potential concerns for your porosity or hair type. Read the ingredient breakdown before purchasing - the caution flags will tell you exactly what to watch for.",
   },
   {
     range: "0–39",
     label: "Not recommended for your profile",
     borderClass: "border-red",
-    badgeClass: "bg-red text-cream",
+    badgeClass: "font-mono font-bold text-red",
     body: "Several ingredients in this product are flagged as problematic for your specific hair profile. That doesn't mean the product is bad - it may work beautifully for someone with different porosity or curl type. But the ingredient science suggests it's worth exploring other options first.",
   },
 ];
@@ -71,12 +71,12 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 export default function HowWeScorePage() {
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-2xl">
-        <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+        <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
           How Qoyl Scores Products
         </h1>
-        <p className="mt-3 text-sm text-cream/70 sm:text-base">
+        <p className="mt-3 text-sm text-dark/70 sm:text-base">
           No black box. No brand bias. Here&apos;s exactly how your
           compatibility score is calculated.
         </p>
@@ -84,7 +84,7 @@ export default function HowWeScorePage() {
         {/* SECTION 1 - What the score means */}
         <section className="mt-14">
           <SectionLabel>What the score means</SectionLabel>
-          <h2 className="mt-3 font-serif text-2xl font-semibold leading-snug text-cream sm:text-3xl">
+          <h2 className="mt-3 font-serif text-2xl font-semibold leading-snug text-dark sm:text-3xl">
             Your score is personal. Someone else&apos;s 4c high porosity hair
             in Houston will get a different score on the same product than
             your 2b low porosity hair in Chicago. That&apos;s the point.
@@ -102,9 +102,9 @@ export default function HowWeScorePage() {
                   >
                     {tier.range}
                   </span>
-                  <p className="font-serif text-lg text-cream">{tier.label}</p>
+                  <p className="font-serif text-lg text-dark">{tier.label}</p>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-cream/70">
+                <p className="mt-2 text-sm leading-relaxed text-dark/70">
                   {tier.body}
                 </p>
               </div>
@@ -115,7 +115,7 @@ export default function HowWeScorePage() {
         {/* SECTION 2 - What goes into your score */}
         <section className="mt-14">
           <SectionLabel>What goes into your score</SectionLabel>
-          <h2 className="mt-3 font-serif text-2xl font-semibold text-cream sm:text-3xl">
+          <h2 className="mt-3 font-serif text-2xl font-semibold text-dark sm:text-3xl">
             Seven variables. One score.
           </h2>
 
@@ -128,10 +128,10 @@ export default function HowWeScorePage() {
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-bronze2">
                   {String(i + 1).padStart(2, "0")}
                 </p>
-                <p className="mt-1 font-serif text-base leading-tight text-cream sm:text-lg">
+                <p className="mt-1 font-serif text-base leading-tight text-dark sm:text-lg">
                   {variable.title}
                 </p>
-                <p className="mt-2 text-xs leading-relaxed text-cream/70">
+                <p className="mt-2 text-xs leading-relaxed text-dark/70">
                   {variable.body}
                 </p>
               </div>
@@ -142,12 +142,12 @@ export default function HowWeScorePage() {
         {/* SECTION 3 - How ingredient scores are calculated */}
         <section className="mt-14">
           <SectionLabel>How ingredient scores are calculated</SectionLabel>
-          <h2 className="mt-3 font-serif text-2xl font-semibold text-cream sm:text-3xl">
+          <h2 className="mt-3 font-serif text-2xl font-semibold text-dark sm:text-3xl">
             Every ingredient has a score. Your profile determines which ones
             matter most.
           </h2>
 
-          <div className="mt-5 space-y-4 text-sm leading-relaxed text-cream/80">
+          <div className="mt-5 space-y-4 text-sm leading-relaxed text-dark/80">
             <p>
               Qoyl maintains a database of hair care ingredients, each scored
               on a 0–10 scale for low, medium, and high porosity hair
@@ -177,11 +177,11 @@ export default function HowWeScorePage() {
         {/* SECTION 4 - What our scores don't tell you */}
         <section className="mt-14">
           <SectionLabel>What our scores don&apos;t tell you</SectionLabel>
-          <h2 className="mt-3 font-serif text-2xl font-semibold text-cream sm:text-3xl">
+          <h2 className="mt-3 font-serif text-2xl font-semibold text-dark sm:text-3xl">
             Honest limitations.
           </h2>
 
-          <div className="mt-5 space-y-4 text-sm leading-relaxed text-cream/80">
+          <div className="mt-5 space-y-4 text-sm leading-relaxed text-dark/80">
             <p>
               Qoyl scores cosmetic compatibility - not medical outcomes. Our
               scores reflect ingredient-level data and hair science, not
@@ -209,11 +209,11 @@ export default function HowWeScorePage() {
         {/* SECTION 5 - Our commitment to independence */}
         <section className="mt-14">
           <SectionLabel>Our commitment to independence</SectionLabel>
-          <h2 className="mt-3 font-serif text-2xl font-semibold text-cream sm:text-3xl">
+          <h2 className="mt-3 font-serif text-2xl font-semibold text-dark sm:text-3xl">
             No brand pays to improve their score.
           </h2>
 
-          <div className="mt-5 space-y-4 text-sm leading-relaxed text-cream/80">
+          <div className="mt-5 space-y-4 text-sm leading-relaxed text-dark/80">
             <p>
               Every score on Qoyl is generated by our algorithm from the
               product&apos;s ingredient list and your hair profile. Brand
@@ -231,10 +231,10 @@ export default function HowWeScorePage() {
         </section>
 
         <div className="mt-14 border-t border-bronze/20 pt-6">
-          <p className="text-xs text-cream/40">Last updated August 10, 2026</p>
+          <p className="text-xs text-dark/40">Last updated August 10, 2026</p>
           <Link
             href="/search"
-            className="mt-4 inline-block text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+            className="mt-4 inline-block text-sm text-bronze2 underline underline-offset-2 hover:text-dark"
           >
             ← Back to product search
           </Link>

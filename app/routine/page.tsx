@@ -139,9 +139,9 @@ const SCALP_LABELS: Record<string, string> = {
 // the shared source of truth also used by emails/routine-template.ts;
 // only the Tailwind dot styling is web-specific and stays local.
 const SECTION_DOT_CLASS: Record<RoutineSection, string> = {
-  clarify: "border-2 border-bronze bg-dark",
-  regular: "bg-dark",
-  protein: "border-2 border-green bg-dark",
+  clarify: "border-2 border-bronze bg-white",
+  regular: "bg-white",
+  protein: "border-2 border-green bg-white",
   between: "bg-bronze",
   styling: "bg-bronze2",
 };
@@ -254,17 +254,17 @@ type WashCellStyle =
 // small dot instead (bronze for an actual wash, muted for a refresh),
 // letting the clarify/protein cells actually stand out. Every other
 // family keeps the original filled-cell "wash"/"refresh" treatment.
-// `completed` brightens a wash-type (non-refresh) cell's background
-// from #1C1612 to #2C2420 - the checkmark overlay itself is drawn by
+// `completed` tints a wash-type (non-refresh) cell's background
+// from white to a light gray - the checkmark overlay itself is drawn by
 // DayCell, not here, since it's the same brightened background either
 // way and only DayCell knows about the todayCompletion/missed props.
 function washDayCellStyle(type: WashDayType, family: CurlFamily | null, completed: boolean): WashCellStyle {
-  const washBg = completed ? "bg-[#2C2420]" : "bg-dark";
+  const washBg = completed ? "bg-[#f5f5f5]" : "bg-white";
   if (type === "chelate" || type === "clarify") {
     return {
       kind: "filled",
       cellClass: `cal-cell-clarify ${washBg} border-2 border-bronze`,
-      numberClass: "text-cream",
+      numberClass: "text-dark",
       label: "Clarify",
       labelClass: "text-bronze",
     };
@@ -273,7 +273,7 @@ function washDayCellStyle(type: WashDayType, family: CurlFamily | null, complete
     return {
       kind: "filled",
       cellClass: `cal-cell-protein ${washBg} border-2 border-green`,
-      numberClass: "text-cream",
+      numberClass: "text-dark",
       label: "Protein",
       labelClass: "text-green",
     };
@@ -282,7 +282,7 @@ function washDayCellStyle(type: WashDayType, family: CurlFamily | null, complete
     if (family === "straight") return { kind: "dot", dotClass: "bg-muted" };
     return {
       kind: "filled",
-      cellClass: "cal-cell-refresh bg-[#2C2420]",
+      cellClass: "cal-cell-refresh bg-[#f5f5f5]",
       numberClass: "text-bronze2",
       label: "Refresh",
       labelClass: "text-bronze2",
@@ -292,9 +292,9 @@ function washDayCellStyle(type: WashDayType, family: CurlFamily | null, complete
   return {
     kind: "filled",
     cellClass: `cal-cell-wash ${washBg}`,
-    numberClass: "text-cream",
+    numberClass: "text-dark",
     label: "Wash",
-    labelClass: "text-cream/50",
+    labelClass: "text-dark/50",
   };
 }
 
@@ -303,7 +303,7 @@ function washDayCellStyle(type: WashDayType, family: CurlFamily | null, complete
 // which are sized for buttons/badges, not an 8-10px overlay.
 function TinyCheckIcon() {
   return (
-    <svg className="h-2.5 w-2.5 text-cream" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+    <svg className="h-2.5 w-2.5 text-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
     </svg>
   );
@@ -342,7 +342,7 @@ function DayCell({
       return (
         <div className="relative flex min-h-[40px] flex-col items-center justify-center rounded-md">
           {todayMarker}
-          <span className="font-sans text-xs text-cream/70">{cell.day}</span>
+          <span className="font-sans text-xs text-dark/70">{cell.day}</span>
           {isCompleted && !isRefresh ? (
             <TinyCheckIcon />
           ) : (
@@ -602,10 +602,10 @@ function PlaceholderCard({ pick }: { pick: ProductPick }) {
       <div className="mt-3 flex items-start gap-3">
         <CategoryIcon category={pick.category} />
         <div>
-          <p className="font-serif text-base text-cream">
+          <p className="font-serif text-base text-dark">
             We&apos;re adding {labelLower} products to our catalog
           </p>
-          <p className="mt-1 text-sm text-cream/60">
+          <p className="mt-1 text-sm text-dark/60">
             In the meantime, look for these key ingredients when shopping for{" "}
             {articleFor(labelLower)} {labelLower}:
           </p>
@@ -613,7 +613,7 @@ function PlaceholderCard({ pick }: { pick: ProductPick }) {
       </div>
       <ul className="mt-3 space-y-1.5">
         {tips.map((tip) => (
-          <li key={tip} className="text-xs leading-relaxed text-cream/70">
+          <li key={tip} className="text-xs leading-relaxed text-dark/70">
             • {tip}
           </li>
         ))}
@@ -623,13 +623,13 @@ function PlaceholderCard({ pick }: { pick: ProductPick }) {
           href={`/search?category=${encodeURIComponent(pick.searchCategorySlug)}${
             pick.searchQuery ? `&q=${encodeURIComponent(pick.searchQuery)}` : ""
           }`}
-          className="print-hide text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+          className="print-hide text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
         >
           Search our catalog →
         </Link>
         <Link
           href={`/request?product=${encodeURIComponent(pick.categoryLabel)}`}
-          className="print-hide text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+          className="print-hide text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
         >
           Request {articleFor(labelLower)} {labelLower} evaluation →
         </Link>
@@ -677,7 +677,7 @@ function ProductCard({
         {pick.categoryLabel}
       </p>
       {note && (
-        <p className="mt-1.5 rounded-md bg-bronze/10 px-2.5 py-1.5 text-xs leading-relaxed text-bronze2">
+        <p className="mt-1.5 bg-bronze/10 px-2.5 py-1.5 text-xs leading-relaxed text-bronze2">
           {note}
         </p>
       )}
@@ -688,8 +688,8 @@ function ProductCard({
         <>
           <div className="mt-3 flex items-start justify-between gap-3">
             <div>
-              <p className="font-serif text-lg text-cream">{primary.productName}</p>
-              <p className="text-xs text-cream/50">{primary.brandName}</p>
+              <p className="font-serif text-lg text-dark">{primary.productName}</p>
+              <p className="text-xs text-dark/50">{primary.brandName}</p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
               <span
@@ -712,8 +712,8 @@ function ProductCard({
               {budgetActive && <PriceTierChip priceUsd={primary.priceUsd} />}
             </div>
           </div>
-          <p className="mt-1 text-sm text-cream/70">{primary.why}</p>
-          {fitNote && <p className="mt-1 text-xs text-cream/50">{fitNote}</p>}
+          <p className="mt-1 text-sm text-dark/70">{primary.why}</p>
+          {fitNote && <p className="mt-1 text-xs text-dark/50">{fitNote}</p>}
           {colorTreated && primary.containsSulfates && (
             <p className="mt-1.5 rounded-md bg-amber/10 px-2.5 py-1.5 text-xs leading-relaxed text-amber">
               Contains sulfates - may fade color faster. Consider a sulfate-free alternative.
@@ -722,30 +722,30 @@ function ProductCard({
           <ShopButton
             productName={primary.productName}
             brandName={primary.brandName}
-            className="print-hide mt-3 inline-block text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+            className="print-hide mt-3 inline-block text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
           />
 
           {alternate && (
             <div className="mt-4 border-t border-bronze/20 pt-3">
-              <p className="text-xs text-cream/50">
+              <p className="text-xs text-dark/50">
                 Alternate pick:{" "}
-                <span className="text-cream/80">
+                <span className="text-dark/80">
                   {alternate.productName} · {alternate.brandName}
                 </span>
-                <span className="ml-2 text-cream/50">{alternate.score}/100</span>
+                <span className="ml-2 text-dark/50">{alternate.score}/100</span>
               </p>
             </div>
           )}
 
           {budgetActive && budgetAlternate && (
             <div className="mt-4 border-t border-bronze/20 pt-3">
-              <p className="text-xs text-cream/70">
+              <p className="text-xs text-dark/70">
                 This scores highest for your hair. For a budget-friendly alternative:
               </p>
               <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="text-xs text-cream/80">
+                <span className="text-xs text-dark/80">
                   {budgetAlternate.productName} · {budgetAlternate.brandName}
-                  <span className="ml-2 text-cream/50">{budgetAlternate.score}/100</span>
+                  <span className="ml-2 text-dark/50">{budgetAlternate.score}/100</span>
                 </span>
                 <PriceTierChip priceUsd={budgetAlternate.priceUsd} />
               </div>
@@ -782,10 +782,10 @@ function TodayProducts({ data }: { data: RoutineData }) {
   if (!todayWash) {
     return (
       <div className="print-hide mb-10 rounded-xl border border-bronze/30 bg-bronze/5 p-5">
-        <span className="inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-dark">
+        <span className="inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-cream">
           Today is a rest day
         </span>
-        <p className="mt-3 text-sm text-cream/60">No wash products needed today.</p>
+        <p className="mt-3 text-sm text-dark/60">No wash products needed today.</p>
       </div>
     );
   }
@@ -796,10 +796,10 @@ function TodayProducts({ data }: { data: RoutineData }) {
 
   return (
     <div className="print-hide mb-10 rounded-xl border border-bronze/30 bg-bronze/5 p-5">
-      <span className="inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-dark">
+      <span className="inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-cream">
         Today is a {label}
       </span>
-      <p className="mt-3 text-sm font-medium text-cream/80">Your products for today:</p>
+      <p className="mt-3 text-sm font-medium text-dark/80">Your products for today:</p>
       <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
         {todaysPicks.map((pick) => (
           <ProductCard
@@ -826,7 +826,7 @@ function ProtectiveStyleCalendarList({ days }: { days: ProtectiveStyleDay[] }) {
 
   const DAY_TYPE_CLASSES: Record<ProtectiveStyleDay["dayType"], string> = {
     scalp_wash: "border-bronze text-bronze2",
-    moisturize: "border-bronze/30 text-cream/60",
+    moisturize: "border-bronze/30 text-dark/60",
     retwist: "border-green text-green",
   };
 
@@ -835,9 +835,9 @@ function ProtectiveStyleCalendarList({ days }: { days: ProtectiveStyleDay[] }) {
       {days.map((day) => (
         <div
           key={`${day.date}-${day.dayType}`}
-          className={`flex items-center justify-between rounded-md border-l-4 bg-[#2C2420] px-3 py-2 ${DAY_TYPE_CLASSES[day.dayType]}`}
+          className={`flex items-center justify-between rounded-md border-l-4 bg-[#f5f5f5] px-3 py-2 ${DAY_TYPE_CLASSES[day.dayType]}`}
         >
-          <span className="text-sm text-cream">
+          <span className="text-sm text-dark">
             {new Date(`${day.date}T00:00:00`).toLocaleDateString("en-US", {
               weekday: "short",
               month: "short",
@@ -858,7 +858,7 @@ function ProtectiveStyleSection({ data }: { data: RoutineData }) {
   return (
     <>
       <section className="print-page-break mt-12">
-        <h2 className="font-serif text-2xl font-semibold text-cream">
+        <h2 className="font-serif text-2xl font-semibold text-dark">
           Your {style.styleLabel.toLowerCase()} care routine
         </h2>
 
@@ -868,15 +868,15 @@ function ProtectiveStyleSection({ data }: { data: RoutineData }) {
           </span>
         )}
         {style.wigWashNote && (
-          <p className="mt-3 text-sm text-cream/70">{style.wigWashNote}</p>
+          <p className="mt-3 text-sm text-dark/70">{style.wigWashNote}</p>
         )}
         {style.routineNote && (
-          <p className="mt-4 rounded-lg border-l-2 border-bronze bg-warm/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
+          <p className="mt-4 border-l-2 border-bronze bg-warm/10 px-4 py-3 text-sm leading-relaxed text-dark/90">
             {style.routineNote}
           </p>
         )}
         {style.wigScalpCareNote && (
-          <p className="mt-4 rounded-lg border-l-2 border-bronze bg-warm/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
+          <p className="mt-4 border-l-2 border-bronze bg-warm/10 px-4 py-3 text-sm leading-relaxed text-dark/90">
             {style.wigScalpCareNote}
           </p>
         )}
@@ -885,7 +885,7 @@ function ProtectiveStyleSection({ data }: { data: RoutineData }) {
       </section>
 
       <section className="print-page-break mt-12">
-        <h2 className="font-serif text-2xl font-semibold text-cream">
+        <h2 className="font-serif text-2xl font-semibold text-dark">
           {style.styleLabel} products
         </h2>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -908,8 +908,8 @@ function ProtectiveStyleSection({ data }: { data: RoutineData }) {
                 <p className="text-xs font-semibold uppercase tracking-wide text-bronze2">
                   Accessory
                 </p>
-                <p className="mt-3 font-serif text-lg text-cream">{accessory.label}</p>
-                <p className="mt-1 text-sm text-cream/70">{accessory.note}</p>
+                <p className="mt-3 font-serif text-lg text-dark">{accessory.label}</p>
+                <p className="mt-1 text-sm text-dark/70">{accessory.note}</p>
               </div>
             ))}
           </div>
@@ -938,9 +938,9 @@ const WASH_DAY_ACCORDION_STYLE: Record<
   { border: string; label: string; icon: () => React.ReactElement; cadenceTypes: WashDayType[]; cadenceUnit: "weeks" | "washes" | null }
 > = {
   clarifying: { border: "border-l-bronze", label: "text-bronze", icon: SmallCalendarIcon, cadenceTypes: ["chelate", "clarify"], cadenceUnit: "weeks" },
-  regular: { border: "border-l-cream", label: "text-cream", icon: DropIcon, cadenceTypes: [], cadenceUnit: null },
+  regular: { border: "border-l-cream", label: "text-dark", icon: DropIcon, cadenceTypes: [], cadenceUnit: null },
   protein: { border: "border-l-green", label: "text-green", icon: LeafIcon, cadenceTypes: ["protein"], cadenceUnit: "washes" },
-  between: { border: "border-l-[#3D2E22]", label: "text-cream/60", icon: MoonIcon, cadenceTypes: [], cadenceUnit: null },
+  between: { border: "border-l-[#0a0a0a]", label: "text-dark/60", icon: MoonIcon, cadenceTypes: [], cadenceUnit: null },
 };
 
 // One step within a wash-day accordion - bronze-filled numbered circle,
@@ -969,7 +969,7 @@ function StepDetailRow({
         {index + 1}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="font-sans text-sm font-semibold text-cream">{step.title}</p>
+        <p className="font-sans text-sm font-semibold text-dark">{step.title}</p>
         <p className="mt-1 text-[13px] leading-relaxed text-[#9C8070]">{step.body}</p>
 
         {step.timerMinutes && (
@@ -980,13 +980,13 @@ function StepDetailRow({
         )}
 
         {step.why && (
-          <p className="mt-2 rounded-md border-l-2 border-bronze bg-[#2C2420] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#9C8070]">
+          <p className="mt-2 border-l-2 border-bronze bg-[#f5f5f5] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#9C8070]">
             {step.why}
           </p>
         )}
 
         {pick && primary && (
-          <p className="mt-2 text-xs text-cream/60">
+          <p className="mt-2 text-xs text-dark/60">
             Your {pick.categoryLabel.toLowerCase()}: {primary.productName} - {primary.score}/100 for your profile
             {viewLink && (
               <>
@@ -995,7 +995,7 @@ function StepDetailRow({
                   href={viewLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="print-hide font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+                  className="print-hide font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
                 >
                   View product →
                 </a>
@@ -1009,20 +1009,20 @@ function StepDetailRow({
             silently showing nothing - other product-linked steps keep
             the silent fallback above. */}
         {step.productCategory === "detangler" && pick && !primary && (
-          <p className="mt-2 text-xs text-cream/60">
+          <p className="mt-2 text-xs text-dark/60">
             No detangler in your list yet -{" "}
             <Link
               href={`/search?category=${encodeURIComponent(pick.searchCategorySlug)}${
                 pick.searchQuery ? `&q=${encodeURIComponent(pick.searchQuery)}` : ""
               }`}
-              className="print-hide font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+              className="print-hide font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
             >
               search our catalog
             </Link>{" "}
             or{" "}
             <Link
               href={`/request?product=${encodeURIComponent(pick.categoryLabel)}`}
-              className="print-hide font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+              className="print-hide font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
             >
               request an evaluation →
             </Link>
@@ -1055,7 +1055,7 @@ function WashDayAccordion({
       : null;
 
   return (
-    <div className={`rounded-xl border-l-4 p-5 transition-colors ${style.border} ${open ? "bg-dark" : "bg-[#2C2420]/40"}`}>
+    <div className={`rounded-xl border-l-4 p-5 transition-colors ${style.border} ${open ? "bg-white" : "bg-[#f5f5f5]/40"}`}>
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -1067,11 +1067,11 @@ function WashDayAccordion({
         </span>
         <span className="flex shrink-0 items-center gap-3">
           {cadence && (
-            <span className="whitespace-nowrap rounded-full border border-bronze/30 px-2.5 py-1 text-[10px] font-medium text-cream/70">
+            <span className="whitespace-nowrap rounded-full border border-bronze/30 px-2.5 py-1 text-[10px] font-medium text-dark/70">
               {cadence}
             </span>
           )}
-          <span className={`text-sm transition-transform ${open ? "rotate-180" : ""} text-cream/50`}>▼</span>
+          <span className={`text-sm transition-transform ${open ? "rotate-180" : ""} text-dark/50`}>▼</span>
         </span>
       </button>
       <Collapse show={open}>
@@ -1089,7 +1089,7 @@ function WashDayAccordion({
 
 function DropIcon() {
   return (
-    <svg className="h-4 w-4 shrink-0 text-cream" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+    <svg className="h-4 w-4 shrink-0 text-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 3s6.5 7.09 6.5 11.5a6.5 6.5 0 11-13 0C5.5 10.09 12 3 12 3z" />
     </svg>
   );
@@ -1148,13 +1148,13 @@ function RoutineHero({
   return (
     <div
       id="routine-hero"
-      className="flex h-[220px] w-full flex-col items-center justify-center bg-[#1C1612] px-4 text-center sm:h-[260px]"
+      className="flex h-[220px] w-full flex-col items-center justify-center bg-[#ffffff] px-4 text-center sm:h-[260px]"
     >
       <p className="font-serif text-[64px] italic leading-none text-bronze sm:text-[80px]">
         {showCurl ? curlType : "Your Hair"}
       </p>
       {subline && <p className="mt-3 font-sans text-[11px] text-muted">{subline}</p>}
-      <p className="mt-2 font-serif text-lg text-cream">Your personalized 30-day routine</p>
+      <p className="mt-2 font-serif text-lg text-dark">Your personalized 30-day routine</p>
     </div>
   );
 }
@@ -1307,7 +1307,7 @@ function TodayCheckOffButton({
             type="button"
             onClick={handleUndo}
             disabled={undoing}
-            className="text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70 disabled:opacity-50"
+            className="text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70 disabled:opacity-50"
           >
             {undoing ? "..." : "Undo"}
           </button>
@@ -1372,22 +1372,22 @@ function TodayTeaserCard({
   return (
     <div id="section-today" className="px-4 sm:px-6">
       <div className="mx-auto -mt-6 max-w-3xl">
-        <div className="rounded-lg border-l-4 border-bronze bg-[#2C2420] px-5 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
+        <div className="rounded-lg border-l-4 border-bronze bg-[#f5f5f5] px-5 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-[0.15em] text-bronze">Today</p>
               <p className="mt-0.5 font-sans text-[11px] text-muted">{todayDate}</p>
-              <p className="mt-1.5 font-serif text-[22px] leading-tight text-cream">{todayLabel}</p>
+              <p className="mt-1.5 font-serif text-[22px] leading-tight text-dark">{todayLabel}</p>
               {todayWash ? (
                 <button
                   type="button"
                   onClick={scrollToProducts}
-                  className="mt-2 text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+                  className="mt-2 text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
                 >
                   Your products for today →
                 </button>
               ) : (
-                <p className="mt-2 text-sm text-cream/60">No wash products needed today.</p>
+                <p className="mt-2 text-sm text-dark/60">No wash products needed today.</p>
               )}
             </div>
             <button
@@ -1603,7 +1603,7 @@ function RoutineMiniNav() {
   if (!visible) return null;
 
   return (
-    <div className="print-hide sticky top-0 z-40 border-b border-bronze/20 bg-[#1C1612]/95 backdrop-blur-md">
+    <div className="print-hide sticky top-0 z-40 border-b border-bronze/20 bg-[#ffffff]/95 backdrop-blur-md">
       <div className="no-scrollbar mx-auto flex max-w-3xl gap-1 overflow-x-auto px-4 sm:px-6">
         {MINI_NAV_SECTIONS.map((s) => (
           <button
@@ -1611,7 +1611,7 @@ function RoutineMiniNav() {
             type="button"
             onClick={() => goTo(s.id)}
             className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-3 text-xs font-medium transition-colors ${
-              active === s.id ? "border-bronze text-cream" : "border-transparent text-cream/50 hover:text-cream/80"
+              active === s.id ? "border-bronze text-dark" : "border-transparent text-dark/50 hover:text-dark/80"
             }`}
           >
             {s.label}
@@ -1689,8 +1689,8 @@ function RoutineContent() {
 
   if (status !== "ready" || !data) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
-        <p className="text-sm text-cream/60">Loading your routine...</p>
+      <main className="flex min-h-screen items-center justify-center bg-white font-sans">
+        <p className="text-sm text-dark/60">Loading your routine...</p>
       </main>
     );
   }
@@ -1728,7 +1728,7 @@ function RoutineContent() {
   const showProtectiveRoutine = isBothFocus ? activeTab === "protective" : protectiveRoutineApplies;
 
   return (
-    <main className="min-h-screen bg-dark font-sans text-cream">
+    <main className="min-h-screen bg-white font-sans text-dark">
       <RoutineHero curlType={data.curlType} porosity={data.porosity} cityLabel={cityLabel} />
       <StreakDisplay streak={data.streak} />
       <TodayTeaserCard data={data} userId={user!.id} onChanged={() => loadRoutine(user!.id)} />
@@ -1743,7 +1743,7 @@ function RoutineContent() {
         </div>
 
         {showWelcome && (
-          <div className="print-hide mb-6 flex items-start justify-between gap-4 rounded-lg bg-bronze px-4 py-3">
+          <div className="print-hide mb-6 flex items-start justify-between gap-4 bg-bronze px-4 py-3">
             <p className="text-sm text-dark">
               Your routine is ready. We will send your personalized monthly
               routine to your email within 24 hours. Bookmark this page - it
@@ -1763,12 +1763,12 @@ function RoutineContent() {
         {/* SECTION 1 - Personal header */}
         <section>
           <div className="flex items-start justify-between gap-4">
-            <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+            <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
               {headerText}
             </h1>
             <Link
               href="/profile"
-              className="print-hide mt-2 shrink-0 text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70"
+              className="print-hide mt-2 shrink-0 text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70"
             >
               Edit my profile
             </Link>
@@ -1787,18 +1787,18 @@ function RoutineContent() {
             </div>
           )}
 
-          <p className="mt-4 text-sm text-cream/50">
+          <p className="mt-4 text-sm text-dark/50">
             Updated monthly based on your hair profile and seasonal climate
             changes.
           </p>
 
           {hasPlaceholderCards && (
-            <p className="mt-4 rounded-lg border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-cream/90">
+            <p className="mt-4 rounded-lg border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-dark/90">
               We are actively expanding our product catalog. Some categories show
               ingredient guidance while we add more products. Check back soon - or{" "}
               <Link
                 href="/request"
-                className="print-hide underline underline-offset-2 hover:text-cream"
+                className="print-hide underline underline-offset-2 hover:text-dark"
               >
                 request a specific product evaluation
               </Link>
@@ -1807,13 +1807,13 @@ function RoutineContent() {
           )}
 
           {data.childSafetyNote && (
-            <p className="mt-4 rounded-lg border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-cream/90">
+            <p className="mt-4 border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-dark/90">
               {data.childSafetyNote}
             </p>
           )}
 
           {data.focusNote && (
-            <p className="mt-4 rounded-lg border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-cream/90">
+            <p className="mt-4 border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-dark/90">
               {data.focusNote}
             </p>
           )}
@@ -1826,8 +1826,8 @@ function RoutineContent() {
               onClick={() => setActiveTab("natural")}
               className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
                 activeTab === "natural"
-                  ? "border-bronze text-cream"
-                  : "border-transparent text-cream/50 hover:text-cream/80"
+                  ? "border-bronze text-dark"
+                  : "border-transparent text-dark/50 hover:text-dark/80"
               }`}
             >
               My Natural Hair
@@ -1837,8 +1837,8 @@ function RoutineContent() {
               onClick={() => setActiveTab("protective")}
               className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
                 activeTab === "protective"
-                  ? "border-bronze text-cream"
-                  : "border-transparent text-cream/50 hover:text-cream/80"
+                  ? "border-bronze text-dark"
+                  : "border-transparent text-dark/50 hover:text-dark/80"
               }`}
             >
               My {data.protectiveStyle.styleLabel} Care
@@ -1862,7 +1862,7 @@ function RoutineContent() {
           </h2>
 
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <span className="inline-block rounded-full bg-dark px-3 py-1 text-xs font-medium text-cream">
+            <span className="inline-block rounded-full bg-white px-3 py-1 text-xs font-medium text-dark">
               Your hair: wash every {data.washFrequency.min}-{data.washFrequency.max} days
             </span>
           </div>
@@ -1885,7 +1885,7 @@ function RoutineContent() {
             one per wash-day type. Regular is open by default since it's
             the day the user will hit most often. */}
         <section id="section-routine" className="print-page-break mt-12">
-          <h2 className="font-serif text-2xl font-semibold text-cream">
+          <h2 className="font-serif text-2xl font-semibold text-dark">
             Your wash day routine
           </h2>
           <div className="mt-4 space-y-4">
@@ -1904,9 +1904,9 @@ function RoutineContent() {
             <div className="mt-6 space-y-4">
               {data.additionalNotes.map((note) => (
                 <div key={note.title} className="rounded-xl border border-bronze/30 p-5">
-                  <p className="font-serif text-lg text-cream">{note.title}</p>
-                  <p className="mt-1 text-sm text-cream/70">{note.body}</p>
-                  <p className="mt-2 text-xs text-cream/50">{note.why}</p>
+                  <p className="font-serif text-lg text-dark">{note.title}</p>
+                  <p className="mt-1 text-sm text-dark/70">{note.body}</p>
+                  <p className="mt-2 text-xs text-dark/50">{note.why}</p>
                 </div>
               ))}
             </div>
@@ -1946,10 +1946,10 @@ function RoutineContent() {
 
           {data.brandProducts.length > 0 && (
             <div className="mt-8">
-              <h3 className="font-serif text-xl font-semibold text-cream">
+              <h3 className="font-serif text-xl font-semibold text-dark">
                 From Qoyl partner brands
               </h3>
-              <p className="mt-1 text-sm text-cream/70">
+              <p className="mt-1 text-sm text-dark/70">
                 Recommended by Qoyl partner brands for your{" "}
                 {data.curlType && data.curlType !== "not_sure" ? data.curlType : ""} hair:
               </p>
@@ -1957,7 +1957,7 @@ function RoutineContent() {
                 {data.brandProducts.map((item) => (
                   <li key={item.id} className="rounded-lg border border-[#B08D57]/50 bg-cream/5 px-4 py-3">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-serif text-lg text-cream">{item.name}</p>
+                      <p className="font-serif text-lg text-dark">{item.name}</p>
                       {item.priceUsd != null && (
                         <span className="shrink-0 text-sm font-semibold text-bronze">${item.priceUsd}</span>
                       )}
@@ -1980,7 +1980,7 @@ function RoutineContent() {
                         href={`/api/brand-products/click/${item.id}?via=brand`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
                       >
                         Shop at {item.brandName} →
                       </a>
@@ -1989,7 +1989,7 @@ function RoutineContent() {
                           href={`/api/brand-products/click/${item.id}?via=shopper`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                          className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
                         >
                           Shop at Shopper →
                         </a>
@@ -2003,11 +2003,11 @@ function RoutineContent() {
 
           {data.avoidIngredients.length > 0 && (
             <div className="mt-8">
-              <h3 className="font-serif text-xl font-semibold text-cream">
+              <h3 className="font-serif text-xl font-semibold text-dark">
                 Ingredients to avoid for your profile
               </h3>
               {data.profileFor === "baby" && (
-                <p className="mt-1 text-sm text-cream/70">
+                <p className="mt-1 text-sm text-dark/70">
                   Extra caution for an infant profile - these are flagged
                   more broadly than for an adult profile.
                 </p>
@@ -2026,7 +2026,7 @@ function RoutineContent() {
                       🚩 {ing.ingredientName}
                     </p>
                     {ing.reason && (
-                      <p className="mt-1 text-xs text-cream/60">{ing.reason}</p>
+                      <p className="mt-1 text-xs text-dark/60">{ing.reason}</p>
                     )}
                   </li>
                 ))}
@@ -2036,7 +2036,7 @@ function RoutineContent() {
 
           <Link
             href="/how-we-score"
-            className="print-hide mt-6 inline-block text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70"
+            className="print-hide mt-6 inline-block text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70"
           >
             How is this score calculated? →
           </Link>
@@ -2051,7 +2051,7 @@ function RoutineContent() {
           <button
             type="button"
             onClick={() => window.print()}
-            className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 sm:w-auto sm:px-8"
+            className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 sm:w-auto sm:px-8"
           >
             Download my routine →
           </button>
@@ -2072,7 +2072,7 @@ function RoutineContent() {
           <button
             type="button"
             onClick={() => setShowDisclaimer((v) => !v)}
-            className="flex items-center gap-1.5 text-xs text-cream/50 transition-colors hover:text-cream/70"
+            className="flex items-center gap-1.5 text-xs text-dark/50 transition-colors hover:text-dark/70"
           >
             About these recommendations
             <span
@@ -2084,7 +2084,7 @@ function RoutineContent() {
             </span>
           </button>
           <Collapse show={showDisclaimer}>
-            <p className="text-xs leading-relaxed text-cream/50">
+            <p className="text-xs leading-relaxed text-dark/50">
               Qoyl provides cosmetic hair care recommendations only. We do
               not address medical conditions, serious scalp disorders, or
               hair loss related to health conditions (such as alopecia,

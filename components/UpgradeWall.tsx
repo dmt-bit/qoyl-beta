@@ -70,12 +70,12 @@ export default function UpgradeWall({
   }
 
   return (
-    <div className="mt-6 rounded-xl border border-bronze/30 bg-dark px-6 py-10 text-center">
+    <div className="mt-6 rounded-xl border border-bronze/30 bg-white px-6 py-10 text-center">
       <LockIcon />
-      <p className="mt-4 font-serif text-2xl font-semibold text-cream">
+      <p className="mt-4 font-serif text-2xl font-semibold text-dark">
         You&apos;ve used your 5 free searches today.
       </p>
-      <p className="mt-2 text-[13px] text-cream/60">
+      <p className="mt-2 text-[13px] text-dark/60">
         Your searches reset in {countdown}. Upgrade to search unlimited
         products anytime.
       </p>
@@ -88,19 +88,19 @@ export default function UpgradeWall({
             type="button"
             onClick={handleUnlock}
             disabled={loading}
-            className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+            className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
           >
             {loading ? "Redirecting..." : "Unlock unlimited searches →"}
           </button>
         ) : (
           <Link
             href="/auth"
-            className="block w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+            className="block w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
           >
             Unlock unlimited searches →
           </Link>
         )}
-        <p className="text-[11px] text-cream/50">
+        <p className="text-[11px] text-dark/50">
           Includes unlimited product searches, Style Match, and your
           personalized monthly routine
         </p>
@@ -108,14 +108,14 @@ export default function UpgradeWall({
         {!userId && (
           <Link
             href="/auth"
-            className="block w-full rounded-lg border border-bronze/40 py-3 text-sm font-semibold text-cream transition-colors hover:border-bronze"
+            className="block w-full border border-bronze/40 py-3 text-sm font-semibold text-dark transition-colors hover:border-bronze"
           >
             Sign in to continue
           </Link>
         )}
       </div>
 
-      <p className="mt-4 text-[11px] text-cream/40">
+      <p className="mt-4 text-[11px] text-dark/40">
         Or come back tomorrow - your 5 free searches reset every 24 hours.
       </p>
     </div>

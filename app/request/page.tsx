@@ -61,14 +61,14 @@ function RequestForm() {
 
   if (success) {
     return (
-      <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+      <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
         <div className="mx-auto max-w-md">
-          <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+          <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
             Request received
           </h1>
-          <p className="mt-4 text-sm text-cream/70">
+          <p className="mt-4 text-sm text-dark/70">
             Got it - we&apos;ll evaluate{" "}
-            <span className="text-cream">{productName}</span> and email you
+            <span className="text-dark">{productName}</span> and email you
             the results within 48 hours.
           </p>
         </div>
@@ -77,12 +77,12 @@ function RequestForm() {
   }
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-md">
-        <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+        <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
           Request a Product Evaluation
         </h1>
-        <p className="mt-2 text-sm text-cream/70">
+        <p className="mt-2 text-sm text-dark/70">
           Don&apos;t see your product in our search? Send us the details and
           we&apos;ll evaluate it personally.
         </p>
@@ -102,7 +102,7 @@ function RequestForm() {
               value={productName}
               onChange={(e) => setProductName(e.target.value)}
               placeholder="e.g. Curl Love Moisture Milk"
-              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
             />
           </div>
 
@@ -120,7 +120,7 @@ function RequestForm() {
               value={brandName}
               onChange={(e) => setBrandName(e.target.value)}
               placeholder="e.g. Camille Rose"
-              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
             />
           </div>
 
@@ -137,7 +137,7 @@ function RequestForm() {
               value={wherePurchased}
               onChange={(e) => setWherePurchased(e.target.value)}
               placeholder="e.g. Target, Amazon, Sally Beauty"
-              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
             />
           </div>
 
@@ -155,7 +155,7 @@ function RequestForm() {
               onChange={(e) => setIngredientList(e.target.value)}
               placeholder="Aqua, Cetyl Alcohol, Glycerin, ..."
               rows={5}
-              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
             />
           </div>
 
@@ -170,11 +170,11 @@ function RequestForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
             />
           </div>
 
-          <p className="text-sm text-cream/50">
+          <p className="text-sm text-dark/50">
             We&apos;ll email you a personalized evaluation within 48 hours.
             Free.
           </p>
@@ -184,7 +184,7 @@ function RequestForm() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+            className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
           >
             {submitting ? "Sending..." : "Request an evaluation"}
           </button>

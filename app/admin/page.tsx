@@ -15,13 +15,13 @@ type StyleMatchAnalytics = {
 };
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none";
+  "w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none";
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-lg border border-bronze/30 p-4">
-      <p className="text-2xl font-semibold text-cream">{value}</p>
-      <p className="mt-1 text-xs text-cream/60">{label}</p>
+      <p className="text-2xl font-semibold text-dark">{value}</p>
+      <p className="mt-1 text-xs text-dark/60">{label}</p>
     </div>
   );
 }
@@ -29,14 +29,14 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
 function RankedList({ title, items, emptyLabel }: { title: string; items: RankedItem[]; emptyLabel: string }) {
   return (
     <div className="rounded-xl border border-bronze/30 p-5">
-      <h3 className="font-serif text-lg text-cream">{title}</h3>
+      <h3 className="font-serif text-lg text-dark">{title}</h3>
       {items.length === 0 ? (
-        <p className="mt-3 text-xs text-cream/50">{emptyLabel}</p>
+        <p className="mt-3 text-xs text-dark/50">{emptyLabel}</p>
       ) : (
         <ol className="mt-3 space-y-2">
           {items.map((item, i) => (
             <li key={item.label} className="flex items-center justify-between gap-3 text-sm">
-              <span className="text-cream/80">
+              <span className="text-dark/80">
                 <span className="mr-2 text-bronze2">{i + 1}.</span>
                 {item.label}
               </span>
@@ -115,17 +115,17 @@ export default function AdminPage() {
 
   if (checkingStoredAuth) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
-        <p className="text-sm text-cream/60">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-white font-sans">
+        <p className="text-sm text-dark/60">Loading...</p>
       </main>
     );
   }
 
   if (!authorized) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-dark px-4 font-sans text-cream">
+      <main className="flex min-h-screen items-center justify-center bg-white px-4 font-sans text-dark">
         <form onSubmit={handleUnlock} className="w-full max-w-sm rounded-xl border border-bronze/30 p-6">
-          <h1 className="font-serif text-2xl font-semibold text-cream">Admin access</h1>
+          <h1 className="font-serif text-2xl font-semibold text-dark">Admin access</h1>
           <input
             type="password"
             value={password}
@@ -139,7 +139,7 @@ export default function AdminPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+            className="mt-4 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
           >
             {loading ? "Checking..." : "Unlock"}
           </button>
@@ -149,24 +149,24 @@ export default function AdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-4xl">
         <div className="flex items-center justify-between gap-4">
-          <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">Admin</h1>
-          <Link href="/admin/products" className="text-sm text-bronze2 underline underline-offset-2 hover:text-cream">
+          <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">Admin</h1>
+          <Link href="/admin/products" className="text-sm text-bronze2 underline underline-offset-2 hover:text-dark">
             Manage products →
           </Link>
         </div>
 
         <section className="mt-8">
-          <h2 className="font-serif text-2xl font-semibold text-cream">Style Match analytics</h2>
-          <p className="mt-1 text-sm text-cream/60">
+          <h2 className="font-serif text-2xl font-semibold text-dark">Style Match analytics</h2>
+          <p className="mt-1 text-sm text-dark/60">
             Last {90} days. This is the data behind Qoyl&apos;s B2B pitch to brands and stylists -
             which styles are trending, what fake hair users actually need, and where demand is
             concentrated by city.
           </p>
 
-          {loading && <p className="mt-4 text-sm text-cream/50">Loading...</p>}
+          {loading && <p className="mt-4 text-sm text-dark/50">Loading...</p>}
           {loadError && <p className="mt-4 text-sm text-red">{loadError}</p>}
 
           {analytics && (

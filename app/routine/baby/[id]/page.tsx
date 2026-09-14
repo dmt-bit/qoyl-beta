@@ -37,10 +37,10 @@ export default function BabyRoutinePage({ params }: { params: { id: string } }) 
   }, [id]);
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-2xl">
         {error && <p className="text-sm text-red">{error}</p>}
-        {!data && !error && <p className="text-sm text-cream/60">Loading...</p>}
+        {!data && !error && <p className="text-sm text-dark/60">Loading...</p>}
         {data && (
           <BabyRoutine
             name={data.name}

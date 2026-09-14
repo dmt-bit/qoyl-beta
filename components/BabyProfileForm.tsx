@@ -287,7 +287,7 @@ export default function BabyProfileForm({
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+        className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
       >
         {submitting
           ? "Saving..."

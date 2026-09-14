@@ -71,7 +71,7 @@ function getBrandValidationError(values: ProductFormValues): string | null {
 }
 
 const INPUT_CLASS =
-  "w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none";
+  "w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none";
 
 function MatchSummaryBox({
   title,
@@ -82,7 +82,7 @@ function MatchSummaryBox({
 }) {
   return (
     <div className="mt-4 rounded-lg border border-bronze/30 bg-bronze/5 p-3">
-      <p className="text-xs font-medium text-cream/80">
+      <p className="text-xs font-medium text-dark/80">
         {title} {summary.matchedCount} of {summary.totalCount} ingredients
         matched. {summary.createdCount} new ingredient
         {summary.createdCount === 1 ? "" : "s"} created.
@@ -92,7 +92,7 @@ function MatchSummaryBox({
           <p className="mt-2 text-xs font-medium text-amber">
             Review these newly-created ingredients:
           </p>
-          <p className="mt-1 text-xs text-cream/70">
+          <p className="mt-1 text-xs text-dark/70">
             {summary.createdNames.join(", ")}
           </p>
         </>
@@ -227,7 +227,7 @@ function ProductForm({
         <button
           type="submit"
           disabled={submitting || !values.name.trim()}
-          className="flex-1 rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+          className="flex-1 bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
         >
           {submitting ? "Saving..." : submitLabel}
         </button>
@@ -235,7 +235,7 @@ function ProductForm({
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-bronze/40 px-4 py-3 text-sm font-medium text-cream transition-colors hover:border-bronze"
+            className="border border-bronze/40 px-4 py-3 text-sm font-medium text-dark transition-colors hover:border-bronze"
           >
             Cancel
           </button>
@@ -454,20 +454,20 @@ export default function AdminProductsPage() {
 
   if (checkingStoredAuth) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
-        <p className="text-sm text-cream/60">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-white font-sans">
+        <p className="text-sm text-dark/60">Loading...</p>
       </main>
     );
   }
 
   if (!authorized) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-dark px-4 font-sans text-cream">
+      <main className="flex min-h-screen items-center justify-center bg-white px-4 font-sans text-dark">
         <form
           onSubmit={handleUnlock}
           className="w-full max-w-sm rounded-xl border border-bronze/30 p-6"
         >
-          <h1 className="font-serif text-2xl font-semibold text-cream">
+          <h1 className="font-serif text-2xl font-semibold text-dark">
             Admin access
           </h1>
           <input
@@ -484,7 +484,7 @@ export default function AdminProductsPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+            className="mt-4 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
           >
             {loading ? "Checking..." : "Unlock"}
           </button>
@@ -494,14 +494,14 @@ export default function AdminProductsPage() {
   }
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-2xl">
-        <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+        <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
           Manage products
         </h1>
 
         <section className="mt-8 rounded-xl border border-bronze/30 p-6">
-          <h2 className="font-serif text-xl font-semibold text-cream">
+          <h2 className="font-serif text-xl font-semibold text-dark">
             Add a product
           </h2>
           <div className="mt-4">
@@ -522,12 +522,12 @@ export default function AdminProductsPage() {
         </section>
 
         <section className="mt-8">
-          <h2 className="font-serif text-xl font-semibold text-cream">
+          <h2 className="font-serif text-xl font-semibold text-dark">
             All products ({products.length})
           </h2>
 
           {loading && (
-            <p className="mt-4 text-sm text-cream/50">Loading...</p>
+            <p className="mt-4 text-sm text-dark/50">Loading...</p>
           )}
 
           <ul className="mt-4 space-y-3">
@@ -577,7 +577,7 @@ export default function AdminProductsPage() {
                     >
                       <div>
                         <div className="flex items-center gap-2">
-                          <p className="font-serif text-base text-cream">
+                          <p className="font-serif text-base text-dark">
                             {product.name}
                           </p>
                           {product.is_verified && (
@@ -592,7 +592,7 @@ export default function AdminProductsPage() {
                             ? ` · ${product.category_name}`
                             : ""}
                         </p>
-                        <p className="mt-1 text-xs text-cream/50">
+                        <p className="mt-1 text-xs text-dark/50">
                           {ingredientCount} ingredient
                           {ingredientCount === 1 ? "" : "s"} · Match rate:{" "}
                           {product.match_rate === null
@@ -606,7 +606,7 @@ export default function AdminProductsPage() {
                           <button
                             type="button"
                             onClick={(e) => markVerified(product.id, e)}
-                            className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                            className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
                           >
                             Mark verified
                           </button>

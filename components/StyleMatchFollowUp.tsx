@@ -131,8 +131,8 @@ function FollowUpCard({
 
   if (state === "success") {
     return (
-      <div className="rounded-lg border border-bronze/40 bg-bronze/10 px-4 py-3">
-        <p className="text-sm text-cream">
+      <div className="border border-bronze/40 bg-bronze/10 px-4 py-3">
+        <p className="text-sm text-dark">
           Added to your hair journey! Share your look with the community →
         </p>
         <div className="mt-3 flex gap-2">
@@ -151,8 +151,8 @@ function FollowUpCard({
   }
 
   return (
-    <div className="rounded-lg border border-bronze/40 bg-bronze/10 px-4 py-3">
-      <p className="text-sm text-cream">
+    <div className="border border-bronze/40 bg-bronze/10 px-4 py-3">
+      <p className="text-sm text-dark">
         Did you try {styleName}? Let us know how it turned out →
       </p>
 
@@ -161,14 +161,14 @@ function FollowUpCard({
           <button
             type="button"
             onClick={() => setState("uploading")}
-            className="flex-1 rounded-lg bg-bronze py-2 text-xs font-semibold text-dark transition-colors hover:bg-bronze2"
+            className="flex-1 bg-bronze py-2 text-xs font-semibold text-cream transition-colors hover:bg-bronze2"
           >
             Yes, I did it!
           </button>
           <button
             type="button"
             onClick={handleNotYet}
-            className="flex-1 rounded-lg border border-bronze/40 py-2 text-xs font-medium text-cream/80 transition-colors hover:border-bronze"
+            className="flex-1 border border-bronze/40 py-2 text-xs font-medium text-dark/80 transition-colors hover:border-bronze"
           >
             Not yet
           </button>
@@ -178,7 +178,7 @@ function FollowUpCard({
       {state === "uploading" && (
         <div className="mt-3">
           {pendingPreviewUrl && (
-            <div className="relative mx-auto h-32 w-32 overflow-hidden rounded-lg bg-[#2C2420]">
+            <div className="relative mx-auto h-32 w-32 overflow-hidden rounded-lg bg-[#f5f5f5]">
               <Image src={pendingPreviewUrl} alt="Selected photo" fill className="object-cover" />
             </div>
           )}
@@ -187,7 +187,7 @@ function FollowUpCard({
             type="file"
             accept="image/*"
             onChange={handleFileChange}
-            className="mt-3 block w-full text-xs text-cream/70 file:mr-3 file:rounded-full file:border file:border-bronze/40 file:bg-transparent file:px-3 file:py-1.5 file:text-xs file:text-bronze2"
+            className="mt-3 block w-full text-xs text-dark/70 file:mr-3 file:rounded-full file:border file:border-bronze/40 file:bg-transparent file:px-3 file:py-1.5 file:text-xs file:text-bronze2"
           />
 
           <div className="mt-3 flex gap-2">
@@ -218,7 +218,7 @@ function FollowUpCard({
               type="button"
               onClick={handleSave}
               disabled={!pendingFile || saving}
-              className="flex-1 rounded-lg bg-bronze py-2 text-xs font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+              className="flex-1 bg-bronze py-2 text-xs font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save photo"}
             </button>
@@ -226,7 +226,7 @@ function FollowUpCard({
               type="button"
               onClick={() => setState("prompt")}
               disabled={saving}
-              className="rounded-lg border border-bronze/40 px-4 py-2 text-xs font-medium text-cream/80"
+              className="border border-bronze/40 px-4 py-2 text-xs font-medium text-dark/80"
             >
               Cancel
             </button>

@@ -51,12 +51,12 @@ export default function UpgradePrompt({
 
   return (
     <div>
-      <p className="font-serif text-lg text-cream">{headline}</p>
+      <p className="font-serif text-lg text-dark">{headline}</p>
       <ul className="mt-3 space-y-1.5">
         {FEATURES.map((feature) => (
           <li
             key={feature}
-            className="flex items-start gap-2 text-sm text-cream/80"
+            className="flex items-start gap-2 text-sm text-dark/80"
           >
             <span className="mt-0.5 text-bronze2">✓</span>
             <span>{feature}</span>
@@ -70,11 +70,11 @@ export default function UpgradePrompt({
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+        className="mt-4 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
       >
         {loading ? "Redirecting..." : ctaLabel}
       </button>
-      <p className="mt-2 text-center text-[11px] text-cream/50">
+      <p className="mt-2 text-center text-[11px] text-dark/50">
         $7.99/month · cancel anytime
       </p>
     </div>

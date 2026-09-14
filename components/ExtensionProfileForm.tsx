@@ -177,12 +177,12 @@ function ExtensionTypeCard({
       onClick={onClick}
       aria-pressed={selected}
       className={`flex flex-col items-start gap-2 rounded-xl p-4 text-left transition-colors ${
-        selected ? "border-2 border-bronze bg-bronze/10" : "border border-[#2C2420] hover:border-bronze/50"
+        selected ? "border-2 border-bronze bg-bronze/10" : "border border-[#e8e8e8] hover:border-bronze/50"
       }`}
     >
       <Icon />
-      <span className="font-serif text-base font-semibold text-cream">{label}</span>
-      <span className="text-xs leading-relaxed text-cream/60">{description}</span>
+      <span className="font-serif text-base font-semibold text-dark">{label}</span>
+      <span className="text-xs leading-relaxed text-dark/60">{description}</span>
     </button>
   );
 }
@@ -320,7 +320,7 @@ export default function ExtensionProfileForm({
           What type of extensions or hair do you wear?
         </p>
         <FieldLabel>
-          <span className="text-sm text-cream/60">Select all that apply:</span>
+          <span className="text-sm text-dark/60">Select all that apply:</span>
         </FieldLabel>
         <div className="mt-3 grid grid-cols-2 gap-3">
           {EXTENSION_TYPE_OPTIONS.map((option) => (
@@ -339,7 +339,7 @@ export default function ExtensionProfileForm({
       {/* Section 2 */}
       <div>
         <p className="font-serif text-lg text-bronze2">Your natural hair underneath:</p>
-        <p className="mt-1 text-sm text-cream/60">
+        <p className="mt-1 text-sm text-dark/60">
           This determines how we protect and maintain your hair during the install.
         </p>
 
@@ -534,7 +534,7 @@ export default function ExtensionProfileForm({
                 className={`flex items-center gap-2 rounded-lg border px-3 py-3 text-sm transition-colors ${
                   adhesiveMethods.includes(option.value)
                     ? "border-bronze bg-bronze/20 text-cream"
-                    : "border-bronze/40 text-cream/80 hover:border-bronze"
+                    : "border-bronze/40 text-dark/80 hover:border-bronze"
                 }`}
               >
                 <input
@@ -566,10 +566,10 @@ export default function ExtensionProfileForm({
         </label>
         <TextInput id="extension-zip" value={zipCode} onChange={setZipCode} placeholder="e.g. 90210" />
         {climate && (
-          <p className="mt-2 text-xs text-cream/50">Detected climate: {CLIMATE_LABELS[climate]}</p>
+          <p className="mt-2 text-xs text-dark/50">Detected climate: {CLIMATE_LABELS[climate]}</p>
         )}
         {waterHardness && (
-          <p className="mt-1 text-xs text-cream/50">
+          <p className="mt-1 text-xs text-dark/50">
             Detected water hardness: {WATER_HARDNESS_LABELS[waterHardness]}
           </p>
         )}
@@ -581,7 +581,7 @@ export default function ExtensionProfileForm({
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+        className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
       >
         {submitting ? "Saving..." : "Build my extension routine →"}
       </button>

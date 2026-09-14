@@ -18,7 +18,7 @@ export default async function Home() {
     .order("published_at", { ascending: false });
 
   return (
-    <main className="min-h-screen bg-dark px-4 pb-12 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 pb-12 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-5xl">
         <MasonryFeed posts={posts ?? []} />
       </div>

@@ -51,17 +51,17 @@ function renderProductRow(item: TravelKitProduct): string {
   // entry for indie brand products.
   const link = item.isBrandProduct ? item.brandProductUrl ?? null : getAffiliateLink(item.name, item.brand);
   const shopLine = link
-    ? `<a href="${link}" style="color:#C4A882;text-decoration:none;">Shop this product &rarr;</a>`
+    ? `<a href="${link}" style="color:#444444;text-decoration:none;">Shop this product &rarr;</a>`
     : "";
   const partnerBadge = item.isBrandProduct
     ? `<span style="display:inline-block;margin-left:6px;padding:1px 6px;border:1px solid #B08D57;border-radius:10px;font-size:10px;color:#B08D57;">Qoyl Partner Brand</span>`
     : "";
 
   return `
-    <tr><td style="padding:0 0 20px;border-bottom:1px solid #1C1612;">
-      <div style="font-size:14px;font-weight:600;color:#F5F0EA;">${escapeHtml(item.name)}${partnerBadge}</div>
-      <div style="font-size:12px;color:#9C7B5A;margin-top:2px;">${escapeHtml(item.brand)}</div>
-      <div style="font-size:12px;color:#7A6A5A;margin-top:6px;line-height:1.6;">${escapeHtml(item.reason)}</div>
+    <tr><td style="padding:0 0 20px;border-bottom:1px solid #e8e8e8;">
+      <div style="font-size:14px;font-weight:600;color:#0a0a0a;">${escapeHtml(item.name)}${partnerBadge}</div>
+      <div style="font-size:12px;color:#0a0a0a;margin-top:2px;">${escapeHtml(item.brand)}</div>
+      <div style="font-size:12px;color:#888888;margin-top:6px;line-height:1.6;">${escapeHtml(item.reason)}</div>
       <div style="margin-top:8px;font-size:12px;">${shopLine}</div>
     </td></tr>`;
 }
@@ -120,26 +120,26 @@ export async function sendTravelKitEmail(
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 </head>
-<body style="margin:0;padding:0;background:#0E0C0A;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-<div style="max-width:560px;margin:0 auto;background:#0E0C0A;">
+<body style="margin:0;padding:0;background:#ffffff;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+<div style="max-width:560px;margin:0 auto;background:#ffffff;">
   <div style="padding:32px 32px 0;text-align:center;">
-    <span style="font-family:Georgia,'Times New Roman',serif;font-size:28px;color:#F5F0EA;">Q</span><span style="font-family:Georgia,'Times New Roman',serif;font-size:28px;color:#C4A882;font-style:italic;">oyl</span>
+    <span style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:28px;font-weight:700;color:#0a0a0a;">qoyl</span>
   </div>
   <div style="padding:24px 32px 0;">
-    <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:24px;font-weight:300;color:#F5F0EA;margin:0 0 8px;">
+    <h1 style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:24px;font-weight:500;color:#0a0a0a;margin:0 0 8px;">
       Your kit for ${tripLine}
     </h1>
-    ${contextChips ? `<p style="font-size:12px;color:#9C7B5A;margin:0 0 24px;">${contextChips}</p>` : ""}
+    ${contextChips ? `<p style="font-size:12px;color:#0a0a0a;margin:0 0 24px;">${contextChips}</p>` : ""}
     <table width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 24px;">
       ${productRows}
     </table>
-    <a href="https://qoyl.live/travel" style="display:inline-block;background:#9C7B5A;color:#F5F0EA;border-radius:4px;padding:12px 28px;font-size:12px;font-weight:500;text-decoration:none;letter-spacing:0.08em;text-transform:uppercase;">
+    <a href="https://qoyl.live/travel" style="display:inline-block;background:#0a0a0a;color:#ffffff;border-radius:4px;padding:12px 28px;font-size:12px;font-weight:500;text-decoration:none;letter-spacing:0.08em;text-transform:uppercase;">
       View your full kit
     </a>
   </div>
   <div style="padding:28px 32px 32px;margin-top:16px;">
-    <p style="font-size:12px;color:#7A6A5A;line-height:1.7;margin:0 0 4px;">Questions? Reply to this email.</p>
-    <p style="font-size:12px;color:#9C7B5A;font-style:italic;margin:0;">The Qoyl Team</p>
+    <p style="font-size:12px;color:#888888;line-height:1.7;margin:0 0 4px;">Questions? Reply to this email.</p>
+    <p style="font-size:12px;color:#0a0a0a;margin:0;">The Qoyl Team</p>
   </div>
 </div>
 </body>

@@ -498,7 +498,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
     <div>
       {/* Search + filter tabs - one sticky unit pinned to the top of the
           scroll container. */}
-      <div className="sticky top-0 z-20 -mx-4 bg-dark pl-4 pr-4 pt-3 sm:mx-0 sm:pl-0 sm:pr-0">
+      <div className="sticky top-0 z-20 -mx-4 bg-white pl-4 pr-4 pt-3 sm:mx-0 sm:pl-0 sm:pr-0">
         {/* Search - Pinterest-style pill */}
         <div className="relative">
           <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
@@ -511,7 +511,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setSearchFocused(false)}
             placeholder="Search hair tips, styles, ingredients..."
-            className={`h-10 w-full rounded-full bg-[#2C2420] pl-10 pr-4 font-sans text-sm text-cream placeholder:text-cream/40 focus:outline-none ${
+            className={`h-10 w-full rounded-full bg-[#f5f5f5] pl-10 pr-4 font-sans text-sm text-dark placeholder:text-dark/40 focus:outline-none ${
               searchFocused ? "ring-1 ring-bronze" : ""
             }`}
           />
@@ -527,7 +527,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
             className="no-scrollbar flex items-center gap-1 overflow-x-auto"
           >
             <span className="mr-2 flex shrink-0 items-center gap-2">
-              <span className="font-serif text-sm italic text-bronze">Qoyl</span>
+              <span className="font-serif text-sm font-bold lowercase text-bronze">qoyl</span>
               <span className="h-3 w-px bg-bronze/40" />
             </span>
             {TABS.map((tab) => {
@@ -538,7 +538,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
                   type="button"
                   onClick={() => setActiveTab(tab.key)}
                   className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1 font-sans text-[11px] font-medium uppercase tracking-[0.08em] transition-colors ${
-                    isActive ? "bg-[#1C1612] text-cream" : "text-muted hover:text-bronze2"
+                    isActive ? "bg-[#ffffff] text-dark" : "text-muted hover:text-bronze2"
                   }`}
                 >
                   {tab.label}
@@ -623,15 +623,15 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
           )}
         </div>
       ) : debouncedSearch ? (
-        <p className="mt-8 text-sm text-cream/50">
+        <p className="mt-8 text-sm text-dark/50">
           No results for &apos;{debouncedSearch}&apos; - try a different search or browse a tab above.
         </p>
       ) : activeTab === "community" ? (
-        <p className="mt-8 text-sm text-cream/50">
+        <p className="mt-8 text-sm text-dark/50">
           Be the first to share your hair journey. Add public photos on your profile page →
         </p>
       ) : (
-        <p className="mt-8 text-sm text-cream/50">No posts yet for this tab - check back soon.</p>
+        <p className="mt-8 text-sm text-dark/50">No posts yet for this tab - check back soon.</p>
       )}
 
       <ActionSheet
@@ -661,10 +661,10 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
                 onClick={() => setOpenPhoto(null)}
               >
                 <div className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-                  <div className="relative h-[360px] w-full overflow-hidden rounded-xl bg-[#1C1612]">
+                  <div className="relative h-[360px] w-full overflow-hidden rounded-xl bg-[#ffffff]">
                     <Image src={openPhoto.url} alt="Community hair photo" fill className="object-cover" />
                   </div>
-                  {openPhoto.caption && <p className="mt-3 text-sm text-cream/80">{openPhoto.caption}</p>}
+                  {openPhoto.caption && <p className="mt-3 text-sm text-dark/80">{openPhoto.caption}</p>}
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {openPhoto.curlType && (
                       <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-bronze2">
@@ -681,14 +681,14 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
                     type="button"
                     onClick={() => handleStyleMatchThis(openPhoto)}
                     disabled={sendingCommunityMatch}
-                    className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+                    className="mt-4 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
                   >
                     {sendingCommunityMatch ? "Loading..." : "Style Match this →"}
                   </button>
                   <button
                     type="button"
                     onClick={() => setOpenPhoto(null)}
-                    className="mt-2 w-full text-center text-xs text-cream/50 underline"
+                    className="mt-2 w-full text-center text-xs text-dark/50 underline"
                   >
                     Close
                   </button>
@@ -697,7 +697,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
             )}
 
             {toast && (
-              <div className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-full bg-[#1C1612] px-4 py-2 text-xs text-cream shadow-lg">
+              <div className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-full bg-[#ffffff] px-4 py-2 text-xs text-dark shadow-lg">
                 {toast}
               </div>
             )}

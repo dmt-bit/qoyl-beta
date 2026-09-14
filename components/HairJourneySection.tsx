@@ -73,7 +73,7 @@ function PhotoTile({
 
   return (
     <div
-      className="relative aspect-square overflow-hidden rounded-md bg-[#2C2420]"
+      className="relative aspect-square overflow-hidden rounded-md bg-[#f5f5f5]"
       onPointerDown={startPress}
       onPointerUp={() => endPress(true)}
       onPointerLeave={() => endPress(false)}
@@ -86,13 +86,13 @@ function PhotoTile({
           e.stopPropagation();
           onTogglePublic();
         }}
-        className="absolute right-1 top-1 rounded-full bg-dark/80 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-bronze2"
+        className="absolute right-1 top-1 rounded-full bg-white/80 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-bronze2"
       >
         {photo.isPublic ? "Public" : "Private"}
       </button>
 
       {showDelete && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-dark/85">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/85">
           <button
             type="button"
             onClick={(e) => {
@@ -100,7 +100,7 @@ function PhotoTile({
               onDelete();
               setShowDelete(false);
             }}
-            className="rounded-full bg-red px-3 py-1 text-[10px] font-semibold text-cream"
+            className="rounded-full bg-red px-3 py-1 text-[10px] font-semibold text-dark"
           >
             Delete
           </button>
@@ -110,7 +110,7 @@ function PhotoTile({
               e.stopPropagation();
               setShowDelete(false);
             }}
-            className="text-[10px] text-cream/60 underline"
+            className="text-[10px] text-dark/60 underline"
           >
             Cancel
           </button>
@@ -219,7 +219,7 @@ export default function HairJourneySection({ userId }: { userId: string }) {
   return (
     <div>
       <p className="font-serif text-lg text-bronze2">My Hair Journey</p>
-      <p className="mt-1 text-sm text-cream/60">
+      <p className="mt-1 text-sm text-dark/60">
         Add photos of your hair over time. Your most recent photo helps Style Match
         understand your current length and texture.
       </p>
@@ -265,19 +265,19 @@ export default function HairJourneySection({ userId }: { userId: string }) {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="mt-4 w-full rounded-lg border border-bronze py-3 text-sm font-semibold text-bronze transition-colors hover:bg-bronze/10"
+          className="mt-4 w-full border border-bronze py-3 text-sm font-semibold text-bronze transition-colors hover:bg-bronze/10"
         >
           Add a hair photo +
         </button>
       ) : (
         <div className="mt-4 rounded-lg border border-bronze/30 p-4">
           {pendingPreviewUrl && (
-            <div className="relative mx-auto h-40 w-40 overflow-hidden rounded-lg bg-[#2C2420]">
+            <div className="relative mx-auto h-40 w-40 overflow-hidden rounded-lg bg-[#f5f5f5]">
               <Image src={pendingPreviewUrl} alt="Selected photo" fill className="object-cover" />
             </div>
           )}
 
-          <label htmlFor="hair-photo-caption" className="mt-4 block text-xs font-medium text-cream/70">
+          <label htmlFor="hair-photo-caption" className="mt-4 block text-xs font-medium text-dark/70">
             Add a note (optional)
           </label>
           <input
@@ -286,10 +286,10 @@ export default function HairJourneySection({ userId }: { userId: string }) {
             value={caption}
             onChange={(e) => setCaption(e.target.value)}
             placeholder="6 months post big chop"
-            className="mt-1.5 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+            className="mt-1.5 w-full border border-bronze/40 bg-transparent px-3 py-2 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
           />
 
-          <p className="mt-4 text-xs font-medium text-cream/70">Hair length</p>
+          <p className="mt-4 text-xs font-medium text-dark/70">Hair length</p>
           <div className="mt-1.5 flex flex-wrap gap-2">
             {HAIR_LENGTH_OPTIONS.map((option) => (
               <button
@@ -298,8 +298,8 @@ export default function HairJourneySection({ userId }: { userId: string }) {
                 onClick={() => setHairLength(option.value)}
                 className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                   hairLength === option.value
-                    ? "border-bronze bg-bronze text-dark"
-                    : "border-bronze/40 text-cream/80 hover:border-bronze"
+                    ? "border-bronze bg-bronze text-cream"
+                    : "border-bronze/40 text-dark/80 hover:border-bronze"
                 }`}
               >
                 {option.label}
@@ -307,7 +307,7 @@ export default function HairJourneySection({ userId }: { userId: string }) {
             ))}
           </div>
 
-          <p className="mt-4 text-xs font-medium text-cream/70">Privacy</p>
+          <p className="mt-4 text-xs font-medium text-dark/70">Privacy</p>
           <div className="mt-1.5 flex gap-2">
             <button
               type="button"
@@ -336,7 +336,7 @@ export default function HairJourneySection({ userId }: { userId: string }) {
               type="button"
               onClick={handleSavePhoto}
               disabled={uploading}
-              className="flex-1 rounded-lg bg-bronze py-2.5 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+              className="flex-1 bg-bronze py-2.5 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
             >
               {uploading ? "Saving..." : "Save photo"}
             </button>
@@ -344,7 +344,7 @@ export default function HairJourneySection({ userId }: { userId: string }) {
               type="button"
               onClick={cancelPending}
               disabled={uploading}
-              className="rounded-lg border border-bronze/40 px-4 py-2.5 text-sm font-semibold text-cream/80"
+              className="border border-bronze/40 px-4 py-2.5 text-sm font-semibold text-dark/80"
             >
               Cancel
             </button>
@@ -366,7 +366,7 @@ export default function HairJourneySection({ userId }: { userId: string }) {
             />
           </div>
           {expandedPhoto.caption && (
-            <p className="absolute bottom-6 left-0 right-0 text-center text-sm text-cream">
+            <p className="absolute bottom-6 left-0 right-0 text-center text-sm text-dark">
               {expandedPhoto.caption}
             </p>
           )}

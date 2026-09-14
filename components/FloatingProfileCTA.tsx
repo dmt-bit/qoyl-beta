@@ -46,7 +46,7 @@ export default function FloatingProfileCTA() {
       }
     >
       {showShrunk ? (
-        <span className="flex h-full w-full items-center justify-center text-xl leading-none text-cream">+</span>
+        <span className="flex h-full w-full items-center justify-center text-xl leading-none text-dark">+</span>
       ) : (
         "Build my free profile →"
       )}

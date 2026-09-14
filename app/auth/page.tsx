@@ -124,12 +124,12 @@ export default function AuthPage() {
 
   if (mode === "forgot-password") {
     return (
-      <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+      <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
         <div className="mx-auto max-w-sm">
-          <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+          <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
             Reset Password
           </h1>
-          <p className="mt-2 text-sm text-cream/70">
+          <p className="mt-2 text-sm text-dark/70">
             Enter your email and we&apos;ll send you a link to reset your
             password.
           </p>
@@ -155,7 +155,7 @@ export default function AuthPage() {
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+                  className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
                 />
               </div>
 
@@ -164,7 +164,7 @@ export default function AuthPage() {
               <button
                 type="submit"
                 disabled={resetSubmitting}
-                className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+                className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
               >
                 {resetSubmitting ? "Sending..." : "Send Reset Link"}
               </button>
@@ -184,12 +184,12 @@ export default function AuthPage() {
   }
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-sm">
-        <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+        <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
           {mode === "sign-in" ? "Sign In" : "Create Account"}
         </h1>
-        <p className="mt-2 text-sm text-cream/70">
+        <p className="mt-2 text-sm text-dark/70">
           {mode === "sign-in"
             ? "Sign in to save and access your hair profile."
             : "Create an account to save your hair profile across visits."}
@@ -208,7 +208,7 @@ export default function AuthPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
             />
           </div>
 
@@ -230,7 +230,7 @@ export default function AuthPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
             />
             {mode === "sign-in" && (
               <button
@@ -249,7 +249,7 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+            className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
           >
             {submitting
               ? "Please wait..."
@@ -259,11 +259,11 @@ export default function AuthPage() {
           </button>
 
           {mode === "sign-up" && (
-            <p className="text-center text-xs text-cream/50">
+            <p className="text-center text-xs text-dark/50">
               By creating an account you agree to our{" "}
               <Link
                 href="/privacy"
-                className="text-bronze2 underline underline-offset-2 hover:text-cream"
+                className="text-bronze2 underline underline-offset-2 hover:text-dark"
               >
                 Privacy Policy
               </Link>

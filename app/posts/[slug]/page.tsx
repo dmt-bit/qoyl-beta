@@ -130,13 +130,13 @@ export default async function PostPage({
     : null;
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <article className="mx-auto max-w-2xl">
         <span className="inline-block rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium capitalize text-bronze2">
           {post.category.replace(/-/g, " ")}
         </span>
 
-        <h1 className="mt-4 font-serif text-3xl font-semibold text-cream sm:text-4xl">
+        <h1 className="mt-4 font-serif text-3xl font-semibold text-dark sm:text-4xl">
           {post.title}
         </h1>
 
@@ -168,7 +168,7 @@ export default async function PostPage({
                 href={post.source_creator_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+                className="font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
               >
                 @{post.source_creator}
               </a>
@@ -183,7 +183,7 @@ export default async function PostPage({
           </div>
         )}
 
-        <div className="prose-invert mt-8 space-y-4 text-cream/90 [&_h2]:mt-6 [&_h2]:font-serif [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-cream [&_li]:ml-4 [&_ol]:list-decimal [&_ol]:space-y-2 [&_p]:leading-relaxed [&_strong]:text-cream [&_ul]:list-disc [&_ul]:space-y-2">
+        <div className="prose-invert mt-8 space-y-4 text-dark/90 [&_h2]:mt-6 [&_h2]:font-serif [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:text-dark [&_li]:ml-4 [&_ol]:list-decimal [&_ol]:space-y-2 [&_p]:leading-relaxed [&_strong]:text-dark [&_ul]:list-disc [&_ul]:space-y-2">
           <ReactMarkdown>{post.body}</ReactMarkdown>
         </div>
 

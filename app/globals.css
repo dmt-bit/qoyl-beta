@@ -4,20 +4,49 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #0a0a0a;
+  --black: #0a0a0a;
+  --white: #ffffff;
+  --gray-100: #f5f5f5;
+  --gray-200: #e8e8e8;
+  --gray-300: #d0d0d0;
+  --gray-500: #888888;
+  --gray-700: #444444;
+  --green: #2d7a3d;
+  --amber: #c4831a;
+  --red: #b03030;
+  --font-sans: "Space Grotesk", sans-serif;
+  --font-mono: "Space Mono", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Qoyl is a deliberate stark black-on-white brand look, not an
+   OS-theme-adaptive one - no longer flips with prefers-color-scheme. */
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: var(--font-dm-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-space-grotesk), Arial, Helvetica, sans-serif;
+}
+
+/* Redesign item 6 - lowercase as a *visual* treatment, not a content
+   change: the underlying text (aria labels, copy, brand/product names)
+   stays whatever case it was authored in; only the rendered glyphs are
+   lowercased. Scoped to UI chrome (nav links/buttons and any button)
+   rather than a blanket rule, so real content - descriptions, ingredient
+   names, user notes - is never affected. */
+nav a,
+nav button,
+footer a,
+button {
+  text-transform: lowercase;
+}
+
+/* Tailwind's `uppercase` utility was applied throughout as the
+   deliberate "eyebrow label" treatment (section labels, tags, filter
+   pills) - flipping the utility itself to lowercase keeps every one of
+   those call sites correct without touching each component. */
+.uppercase {
+  text-transform: lowercase;
 }
 
 /* BottomNav (components/Nav.tsx) is fixed at 60px + safe-area on mobile
@@ -241,10 +270,10 @@ body {
      specificity (two classes) beats `main *` (one element) regardless
      of source order, so these win without needing to reorder anything. */
   main .cal-cell-clarify {
-    border-color: #9C7B5A !important;
+    border-color: #0a0a0a !important;
   }
   main .cal-cell-protein {
-    border-color: #5BA67A !important;
+    border-color: #2d7a3d !important;
   }
 
   /* Keeps both month grids together on one printed page instead of

@@ -12,7 +12,7 @@ function RoutineBlockCard({ block }: { block: RoutineBlock }) {
     return (
       <div className="rounded-xl border border-bronze/30 p-5">
         <p className="font-serif text-lg text-bronze2">{block.heading}</p>
-        <p className="mt-2 text-sm leading-relaxed text-cream/80">{block.body}</p>
+        <p className="mt-2 text-sm leading-relaxed text-dark/80">{block.body}</p>
       </div>
     );
   }
@@ -20,7 +20,7 @@ function RoutineBlockCard({ block }: { block: RoutineBlock }) {
     return (
       <div className="rounded-xl border border-red/40 bg-red/5 p-5">
         <p className="font-serif text-lg text-red">{block.heading}</p>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-cream/80">
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-dark/80">
           {block.items.map((item) => (
             <li key={item}>{item}</li>
           ))}
@@ -30,16 +30,16 @@ function RoutineBlockCard({ block }: { block: RoutineBlock }) {
   }
   return (
     <section>
-      <h3 className="font-serif text-xl font-semibold text-cream">{block.heading}</h3>
-      {block.frequency && <p className="mt-1 text-sm text-cream/60">{block.frequency}</p>}
+      <h3 className="font-serif text-xl font-semibold text-dark">{block.heading}</h3>
+      {block.frequency && <p className="mt-1 text-sm text-dark/60">{block.frequency}</p>}
       <div className="mt-4 space-y-4">
         {block.steps.map((step, i) => (
           <div key={step.title} className="rounded-xl border border-bronze/30 p-5">
             <p className="font-serif text-lg text-bronze2">
               Step {i + 1} - {step.title}
             </p>
-            <p className="mt-2 text-sm leading-relaxed text-cream/80">{step.body}</p>
-            {step.why && <p className="mt-2 text-xs text-cream/50">Why: {step.why}</p>}
+            <p className="mt-2 text-sm leading-relaxed text-dark/80">{step.body}</p>
+            {step.why && <p className="mt-2 text-xs text-dark/50">Why: {step.why}</p>}
           </div>
         ))}
       </div>
@@ -53,10 +53,10 @@ function ProductList({ title, products }: { title: string; products: { name: str
       <p className="font-serif text-lg text-bronze2">{title}</p>
       <ul className="mt-3 space-y-2">
         {products.map((p) => (
-          <li key={p.name} className="text-sm text-cream/80">
-            <span className="font-medium text-cream">{p.name}</span>
+          <li key={p.name} className="text-sm text-dark/80">
+            <span className="font-medium text-dark">{p.name}</span>
             {p.accessory && <span className="ml-1.5 text-xs text-bronze2">(accessory)</span>}
-            {p.note && <span className="block text-xs text-cream/50">{p.note}</span>}
+            {p.note && <span className="block text-xs text-dark/50">{p.note}</span>}
           </li>
         ))}
       </ul>
@@ -99,7 +99,7 @@ export default function ExtensionRoutine({
 
   return (
     <div>
-      <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+      <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
         Your {primaryTypeLabel} routine
       </h1>
 
@@ -111,8 +111,8 @@ export default function ExtensionRoutine({
             onClick={() => setActiveTab(tab.key)}
             className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
               activeTab === tab.key
-                ? "border-bronze text-cream"
-                : "border-transparent text-cream/50 hover:text-cream/80"
+                ? "border-bronze text-dark"
+                : "border-transparent text-dark/50 hover:text-dark/80"
             }`}
           >
             {tab.label}
@@ -139,23 +139,23 @@ export default function ExtensionRoutine({
 
       {activeTab === "natural" && (
         <div className="mt-6 space-y-6">
-          <p className="text-sm leading-relaxed text-cream/80">{naturalHair.intro}</p>
-          <p className="text-sm text-cream/60">Wash frequency: {naturalHair.washFrequency}</p>
+          <p className="text-sm leading-relaxed text-dark/80">{naturalHair.intro}</p>
+          <p className="text-sm text-dark/60">Wash frequency: {naturalHair.washFrequency}</p>
 
           {naturalHair.extraNotes.map((note) => (
             <div key={note} className="rounded-xl border border-bronze/30 p-5">
-              <p className="text-sm leading-relaxed text-cream/80">{note}</p>
+              <p className="text-sm leading-relaxed text-dark/80">{note}</p>
             </div>
           ))}
 
           {naturalHair.washDays.map((day) => (
             <section key={day.key}>
-              <h3 className="font-serif text-xl font-semibold text-cream">{day.label}</h3>
+              <h3 className="font-serif text-xl font-semibold text-dark">{day.label}</h3>
               <div className="mt-4 space-y-4">
                 {day.steps.map((step) => (
                   <div key={step.title} className="rounded-xl border border-bronze/30 p-5">
                     <p className="font-serif text-lg text-bronze2">{step.title}</p>
-                    <p className="mt-2 text-sm leading-relaxed text-cream/80">{step.body}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-dark/80">{step.body}</p>
                   </div>
                 ))}
               </div>
@@ -166,30 +166,30 @@ export default function ExtensionRoutine({
 
       {activeTab === "blending" && blending && (
         <div className="mt-6 space-y-8">
-          <p className="text-sm leading-relaxed text-cream/80">
+          <p className="text-sm leading-relaxed text-dark/80">
             Blending your natural hair with your extensions - protecting your curl pattern.
           </p>
 
           {blending.showHeatMethod && (
             <section>
-              <h3 className="font-serif text-xl font-semibold text-cream">Blending method: heat (flat iron / blow dry)</h3>
+              <h3 className="font-serif text-xl font-semibold text-dark">Blending method: heat (flat iron / blow dry)</h3>
               <div className="mt-4 space-y-4">
                 {blending.heatSteps.map((step, i) => (
                   <div key={step.title} className="rounded-xl border border-bronze/30 p-5">
                     <p className="font-serif text-lg text-bronze2">
                       Step {i + 1} - {step.title}
                     </p>
-                    <p className="mt-2 text-sm leading-relaxed text-cream/80">{step.body}</p>
-                    {step.why && <p className="mt-2 text-xs text-cream/50">Why: {step.why}</p>}
+                    <p className="mt-2 text-sm leading-relaxed text-dark/80">{step.body}</p>
+                    {step.why && <p className="mt-2 text-xs text-dark/50">Why: {step.why}</p>}
                   </div>
                 ))}
               </div>
 
               <div className="mt-4 rounded-xl border border-bronze/30 p-5">
                 <p className="font-serif text-lg text-bronze2">Preserving your curl pattern during the install</p>
-                <p className="mt-2 text-sm leading-relaxed text-cream/80">{blending.preservingCurlPattern.body}</p>
-                <p className="mt-3 text-sm font-medium text-cream">Signs your natural hair needs a break from heat blending:</p>
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-cream/80">
+                <p className="mt-2 text-sm leading-relaxed text-dark/80">{blending.preservingCurlPattern.body}</p>
+                <p className="mt-3 text-sm font-medium text-dark">Signs your natural hair needs a break from heat blending:</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-dark/80">
                   {blending.preservingCurlPattern.signs.map((sign) => (
                     <li key={sign}>{sign}</li>
                   ))}
@@ -200,14 +200,14 @@ export default function ExtensionRoutine({
 
           {blending.showNoHeatMethod && (
             <section>
-              <h3 className="font-serif text-xl font-semibold text-cream">Blending method: no heat (banding or rollers)</h3>
+              <h3 className="font-serif text-xl font-semibold text-dark">Blending method: no heat (banding or rollers)</h3>
               <div className="mt-4 space-y-4">
                 {blending.noHeatSteps.map((step, i) => (
                   <div key={step.title} className="rounded-xl border border-bronze/30 p-5">
                     <p className="font-serif text-lg text-bronze2">
                       Step {i + 1} - {step.title}
                     </p>
-                    <p className="mt-2 text-sm leading-relaxed text-cream/80">{step.body}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-dark/80">{step.body}</p>
                   </div>
                 ))}
               </div>

@@ -149,13 +149,13 @@ function LockIcon() {
 // ---- shared card chrome -----------------------------------------------
 
 const CARD_CLASS =
-  "group relative block w-full overflow-hidden rounded-xl bg-[#1C1612] text-left";
+  "group relative block w-full overflow-hidden bg-[#ffffff] text-left";
 
 function BottomTitleOverlay({ children }: { children: React.ReactNode }) {
   return (
     <>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-black/70 to-transparent" />
-      <p className="absolute bottom-0 left-0 right-0 line-clamp-2 p-2.5 font-sans text-[12px] font-medium leading-tight text-cream">
+      <p className="absolute bottom-0 left-0 right-0 line-clamp-2 p-2.5 font-sans text-[12px] font-medium leading-tight text-dark">
         {children}
       </p>
     </>
@@ -164,8 +164,8 @@ function BottomTitleOverlay({ children }: { children: React.ReactNode }) {
 
 function TextPin({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-[#1C1612] to-[#2C2420] p-5 text-center">
-      <p className="font-serif text-lg leading-snug text-cream">{title}</p>
+    <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-[#ffffff] to-[#f5f5f5] p-5 text-center">
+      <p className="font-serif text-lg leading-snug text-dark">{title}</p>
       {subtitle && <p className="text-xs text-bronze2">{subtitle}</p>}
     </div>
   );
@@ -173,7 +173,7 @@ function TextPin({ title, subtitle }: { title: string; subtitle?: string }) {
 
 function HairTypeChip({ label }: { label: string }) {
   return (
-    <span className="absolute right-1.5 top-1.5 rounded-full bg-[#1C1612]/80 px-2 py-1.5 text-[9px] font-medium uppercase tracking-wide text-cream">
+    <span className="absolute right-1.5 top-1.5 rounded-full bg-[#ffffff]/80 px-2 py-1.5 text-[9px] font-medium uppercase tracking-wide text-dark">
       {label}
     </span>
   );
@@ -228,7 +228,7 @@ export function EditorialMasonryCard({
       )}
 
       {(isVideo || isRepost) && (
-        <span className="absolute left-1.5 top-1.5 rounded-full bg-bronze px-2 py-1 text-[9px] font-semibold text-dark">
+        <span className="absolute left-1.5 top-1.5 rounded-full bg-bronze px-2 py-1 text-[9px] font-semibold text-cream">
           {isVideo ? "▶ Video" : "↗ Repost"}
         </span>
       )}
@@ -288,12 +288,12 @@ export function CommunityMasonryCard({
       </span>
       <div className="absolute bottom-1.5 left-1.5 flex flex-wrap gap-1">
         {photo.curlType && (
-          <span className="rounded-full bg-dark/80 px-2 py-1 text-[9px] font-medium uppercase tracking-wide text-bronze">
+          <span className="rounded-full bg-white/80 px-2 py-1 text-[9px] font-medium uppercase tracking-wide text-bronze">
             {photo.curlType}
           </span>
         )}
         {photo.porosity && (
-          <span className="rounded-full bg-dark/80 px-2 py-1 text-[9px] font-medium capitalize text-bronze2">
+          <span className="rounded-full bg-white/80 px-2 py-1 text-[9px] font-medium capitalize text-bronze2">
             {photo.porosity} porosity
           </span>
         )}
@@ -343,7 +343,7 @@ export function ProductMasonryCard({
       ) : (
         <TextPin title={product.name} subtitle={product.brand} />
       )}
-      <span className="absolute left-1.5 top-1.5 rounded-full bg-bronze px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-dark">
+      <span className="absolute left-1.5 top-1.5 rounded-full bg-bronze px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-cream">
         Shop
       </span>
     </>
@@ -404,10 +404,10 @@ export function StyleMasonryCard({
           <BottomTitleOverlay>{style.name}</BottomTitleOverlay>
         </>
       ) : (
-        <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#1C1612] to-[#2C2420] p-5 text-center">
-          <p className="font-serif text-xl italic leading-snug text-cream">{style.name}</p>
+        <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#ffffff] to-[#f5f5f5] p-5 text-center">
+          <p className="font-serif text-xl italic leading-snug text-dark">{style.name}</p>
           {style.description && (
-            <p className="line-clamp-2 text-xs text-cream/60">{style.description}</p>
+            <p className="line-clamp-2 text-xs text-dark/60">{style.description}</p>
           )}
           <p className="mt-2 text-xs font-medium text-bronze2">Style Match this →</p>
         </div>
@@ -485,7 +485,7 @@ export function ActionSheet({
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60" onClick={handleBackdropClick}>
       <div
-        className="slide-up-sheet w-full max-w-md rounded-t-2xl bg-[#1C1612] pb-6"
+        className="slide-up-sheet w-full max-w-md rounded-t-2xl bg-[#ffffff] pb-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-cream/20" />
@@ -493,14 +493,14 @@ export function ActionSheet({
           <button
             type="button"
             onClick={handleSave}
-            className="flex w-full items-center gap-3 px-5 py-4 text-sm text-cream"
+            className="flex w-full items-center gap-3 px-5 py-4 text-sm text-dark"
           >
             <HeartOutlineIcon /> Save to inspo
           </button>
           <button
             type="button"
             onClick={handleShare}
-            className="flex w-full items-center gap-3 px-5 py-4 text-sm text-cream"
+            className="flex w-full items-center gap-3 px-5 py-4 text-sm text-dark"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75}>
               <path
@@ -514,7 +514,7 @@ export function ActionSheet({
           <button
             type="button"
             onClick={handleNotInterested}
-            className="flex w-full items-center gap-3 px-5 py-4 text-sm text-cream/60"
+            className="flex w-full items-center gap-3 px-5 py-4 text-sm text-dark/60"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -525,7 +525,7 @@ export function ActionSheet({
         <button
           type="button"
           onClick={onClose}
-          className="mt-1 w-full py-3 text-center text-sm text-cream/50"
+          className="mt-1 w-full py-3 text-center text-sm text-dark/50"
         >
           Cancel
         </button>
@@ -596,7 +596,7 @@ export function AuthGateSheet({ open, onClose }: { open: boolean; onClose: () =>
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60" onClick={onClose}>
       <div
-        className={dragY === 0 ? "slide-up-sheet w-full max-w-md rounded-t-[20px] bg-[#1C1612] px-6 pb-8 pt-3" : "w-full max-w-md rounded-t-[20px] bg-[#1C1612] px-6 pb-8 pt-3"}
+        className={dragY === 0 ? "slide-up-sheet w-full max-w-md rounded-t-[20px] bg-[#ffffff] px-6 pb-8 pt-3" : "w-full max-w-md rounded-t-[20px] bg-[#ffffff] px-6 pb-8 pt-3"}
         style={{ transform: `translateY(${dragY}px)`, transition: dragY === 0 ? "transform 0.2s ease-out" : "none" }}
         onClick={(e) => e.stopPropagation()}
         onPointerDown={handlePointerDown}
@@ -605,10 +605,10 @@ export function AuthGateSheet({ open, onClose }: { open: boolean; onClose: () =>
         onPointerCancel={endDrag}
       >
         <div className="mx-auto h-1 w-10 rounded-full bg-bronze" />
-        <p className="mt-4 text-center font-serif text-lg text-cream">
+        <p className="mt-4 text-center font-serif text-lg text-dark">
           Q<span className="italic text-bronze2">oyl</span>
         </p>
-        <h2 className="mt-4 text-center font-serif text-2xl text-cream">Join Qoyl to keep reading.</h2>
+        <h2 className="mt-4 text-center font-serif text-2xl text-dark">Join Qoyl to keep reading.</h2>
         <p className="mt-2 text-center font-sans text-[13px] leading-relaxed text-muted">
           Free forever. Build your hair profile and get personalized scores, style matches, and a
           feed tailored to your hair.
@@ -616,18 +616,18 @@ export function AuthGateSheet({ open, onClose }: { open: boolean; onClose: () =>
         <Link
           href="/profile"
           onClick={saveFeedScrollPosition}
-          className="mt-6 block w-full rounded-lg bg-bronze py-3 text-center text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+          className="mt-6 block w-full bg-bronze py-3 text-center text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
         >
           Create my free profile →
         </Link>
         <Link
           href="/auth"
           onClick={saveFeedScrollPosition}
-          className="mt-3 block w-full rounded-lg border border-bronze/40 py-3 text-center text-sm font-semibold text-cream transition-colors hover:border-bronze"
+          className="mt-3 block w-full border border-bronze/40 py-3 text-center text-sm font-semibold text-dark transition-colors hover:border-bronze"
         >
           Sign in →
         </Link>
-        <p className="mt-4 text-center text-xs text-cream/40">
+        <p className="mt-4 text-center text-xs text-dark/40">
           No credit card. No commitment. Just your hair.
         </p>
       </div>
@@ -641,9 +641,9 @@ export function AuthGateSheet({ open, onClose }: { open: boolean; onClose: () =>
 
 export function ScrollGateCard({ needsProfileOnly }: { needsProfileOnly: boolean }) {
   return (
-    <div className="mt-1 flex h-[280px] w-full flex-col items-center justify-center rounded-xl border border-bronze/30 bg-gradient-to-b from-[#1C1612] to-[#2C2420] px-6 text-center">
+    <div className="mt-1 flex h-[280px] w-full flex-col items-center justify-center border border-bronze/30 bg-gradient-to-b from-[#ffffff] to-[#f5f5f5] px-6 text-center">
       <LockIcon />
-      <h3 className="mt-3 font-serif text-[22px] leading-snug text-cream">
+      <h3 className="mt-3 font-serif text-[22px] leading-snug text-dark">
         {needsProfileOnly ? "One more step - tell us about your hair." : "Your feed is waiting."}
       </h3>
       {!needsProfileOnly && (
@@ -655,7 +655,7 @@ export function ScrollGateCard({ needsProfileOnly }: { needsProfileOnly: boolean
       <Link
         href="/profile"
         onClick={saveFeedScrollPosition}
-        className="mt-4 w-full max-w-xs rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+        className="mt-4 w-full max-w-xs bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
       >
         {needsProfileOnly ? "Complete my profile →" : "Build my free profile →"}
       </Link>
@@ -663,7 +663,7 @@ export function ScrollGateCard({ needsProfileOnly }: { needsProfileOnly: boolean
         <Link
           href="/auth"
           onClick={saveFeedScrollPosition}
-          className="mt-3 text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+          className="mt-3 text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
         >
           Already have an account? Sign in →
         </Link>

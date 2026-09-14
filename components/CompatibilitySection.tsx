@@ -66,15 +66,15 @@ export default function CompatibilitySection({
 
   return (
     <section className="mt-10 border-t border-bronze/20 pt-8">
-      <h2 className="font-serif text-2xl font-semibold text-cream">
+      <h2 className="font-serif text-2xl font-semibold text-dark">
         How this scores
       </h2>
-      <p className="mt-1 text-sm text-cream/70">
+      <p className="mt-1 text-sm text-dark/70">
         Live compatibility for {productName}, based on your hair profile.
       </p>
 
       {loading && (
-        <p className="mt-4 text-sm text-cream/50">Checking compatibility...</p>
+        <p className="mt-4 text-sm text-dark/50">Checking compatibility...</p>
       )}
 
       {error && (

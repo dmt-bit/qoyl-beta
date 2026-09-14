@@ -195,7 +195,7 @@ function SparkleIcon() {
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
     <svg
-      className={`h-6 w-6 transition-colors ${filled ? "text-bronze" : "text-cream/50"}`}
+      className={`h-6 w-6 transition-colors ${filled ? "text-bronze" : "text-dark/50"}`}
       viewBox="0 0 24 24"
       fill={filled ? "currentColor" : "none"}
       stroke="currentColor"
@@ -220,7 +220,7 @@ function CheckListIcon() {
 
 function UploadIcon() {
   return (
-    <svg className="h-6 w-6 text-cream/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <svg className="h-6 w-6 text-dark/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 8.25L12 3.75 7.5 8.25M12 3.75v12" />
     </svg>
   );
@@ -235,7 +235,7 @@ const STYLE_MATCH_FEATURE_PILLS = ["Tutorials", "Shopping list", "Stylist match"
 function StyleMatchPromoHero() {
   return (
     <div className="relative">
-      <div className="relative h-[420px] w-full overflow-hidden bg-dark sm:h-[480px]">
+      <div className="relative h-[420px] w-full overflow-hidden bg-white sm:h-[480px]">
         <Image
           src="https://res.cloudinary.com/kumxntij/image/upload/v1787276711/pexels-casa-rio-beauty-salon-2162626170-38421531.jpg"
           alt=""
@@ -246,14 +246,14 @@ function StyleMatchPromoHero() {
         <div className="absolute inset-0 bg-gradient-to-b from-dark/70 via-dark/10 to-dark" />
 
         <div className="absolute inset-x-0 top-6 flex justify-center">
-          <p className="font-serif text-2xl italic text-cream">Qoyl</p>
+          <p className="font-serif text-2xl font-bold lowercase text-dark">qoyl</p>
         </div>
 
         <div className="absolute inset-x-0 bottom-6 px-6 text-center">
-          <h2 className="font-serif text-[28px] leading-tight text-cream">
+          <h2 className="font-serif text-[28px] leading-tight text-dark">
             Show us the style.
           </h2>
-          <p className="font-serif text-[28px] italic leading-tight text-cream">
+          <p className="font-serif text-[28px] italic leading-tight text-dark">
             We will build your plan.
           </p>
         </div>
@@ -277,17 +277,17 @@ function DemoSection() {
   return (
     <div className="mt-8">
       <p className="text-xs font-semibold uppercase tracking-widest text-bronze">How it works</p>
-      <h2 className="mt-2 font-serif text-2xl font-semibold text-cream">
+      <h2 className="mt-2 font-serif text-2xl font-semibold text-dark">
         Your complete style plan in under 30 seconds
       </h2>
 
       <div className="no-scrollbar -mx-4 mt-5 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
-        <div className="w-[85%] shrink-0 snap-center rounded-xl bg-[#2C2420] p-5 sm:w-auto">
+        <div className="w-[85%] shrink-0 snap-center rounded-xl bg-[#f5f5f5] p-5 sm:w-auto">
           <div className="flex items-center justify-between">
             <span className="font-serif text-2xl text-bronze">1</span>
             <CameraIcon />
           </div>
-          <p className="mt-3 text-sm text-cream/80">
+          <p className="mt-3 text-sm text-dark/80">
             Upload a photo of the style you want or browse our style library
           </p>
           <div className="mt-4 flex h-28 items-center justify-center rounded-2xl border-2 border-cream/20">
@@ -295,16 +295,16 @@ function DemoSection() {
           </div>
         </div>
 
-        <div className="w-[85%] shrink-0 snap-center rounded-xl bg-[#2C2420] p-5 sm:w-auto">
+        <div className="w-[85%] shrink-0 snap-center rounded-xl bg-[#f5f5f5] p-5 sm:w-auto">
           <div className="flex items-center justify-between">
             <span className="font-serif text-2xl text-bronze">2</span>
             <SparkleIcon />
           </div>
-          <p className="mt-3 text-sm text-cream/80">
+          <p className="mt-3 text-sm text-dark/80">
             Our AI agent identifies the style, difficulty, time required, and what you need
           </p>
-          <div className="mt-4 rounded-lg bg-dark p-3">
-            <p className="font-serif text-sm text-cream">Knotless Braids</p>
+          <div className="mt-4 rounded-lg bg-white p-3">
+            <p className="font-serif text-sm text-dark">Knotless Braids</p>
             <div className="mt-2 flex gap-1.5">
               <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[9px] text-bronze2">Intermediate</span>
               <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[9px] text-bronze2">5-9 hrs</span>
@@ -312,19 +312,19 @@ function DemoSection() {
           </div>
         </div>
 
-        <div className="w-[85%] shrink-0 snap-center rounded-xl bg-[#2C2420] p-5 sm:w-auto">
+        <div className="w-[85%] shrink-0 snap-center rounded-xl bg-[#f5f5f5] p-5 sm:w-auto">
           <div className="flex items-center justify-between">
             <span className="font-serif text-2xl text-bronze">3</span>
             <CheckListIcon />
           </div>
-          <p className="mt-3 text-sm text-cream/80">
+          <p className="mt-3 text-sm text-dark/80">
             Tutorials from real creators, a shopping list scored for your hair, and a local
             stylist if available
           </p>
           <div className="mt-4 flex gap-1.5">
             {["Tutorials", "Shopping List", "Stylist"].map((label) => (
-              <div key={label} className="flex-1 rounded-lg bg-dark px-1.5 py-3 text-center">
-                <p className="text-[9px] font-medium text-cream/70">{label}</p>
+              <div key={label} className="flex-1 rounded-lg bg-white px-1.5 py-3 text-center">
+                <p className="text-[9px] font-medium text-dark/70">{label}</p>
               </div>
             ))}
           </div>
@@ -336,21 +336,21 @@ function DemoSection() {
 
 function AnalyzingOverlay() {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-dark/95 font-sans">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/95 font-sans">
       <div className="flex gap-2">
         {[0, 1, 2].map((i) => (
           <span key={i} className="h-3 w-3 animate-bounce rounded-full bg-bronze" style={{ animationDelay: `${i * 150}ms` }} />
         ))}
       </div>
-      <p className="mt-6 font-serif text-xl text-cream">Identifying your style...</p>
-      <p className="mt-2 text-sm text-cream/60">This takes about 5 seconds</p>
+      <p className="mt-6 font-serif text-xl text-dark">Identifying your style...</p>
+      <p className="mt-2 text-sm text-dark/60">This takes about 5 seconds</p>
     </div>
   );
 }
 
 function Toast({ message }: { message: string }) {
   return (
-    <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-bronze px-4 py-2 text-sm font-semibold text-dark shadow-lg">
+    <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-bronze px-4 py-2 text-sm font-semibold text-cream shadow-lg">
       {message}
     </div>
   );
@@ -411,11 +411,11 @@ function ShareWithStylistCard({
 
   return (
     <div className={`rounded-xl border border-bronze/40 bg-bronze/5 ${compact ? "p-4" : "p-5"}`}>
-      <p className={`font-serif text-cream ${compact ? "text-base" : "text-xl font-semibold"}`}>
+      <p className={`font-serif text-dark ${compact ? "text-base" : "text-xl font-semibold"}`}>
         Share this style with your stylist →
       </p>
       {!compact && (
-        <p className="mt-1 text-sm text-cream/70">
+        <p className="mt-1 text-sm text-dark/70">
           Send your stylist a summary of this style, your hair profile, and service estimate
           before you book.
         </p>
@@ -424,28 +424,28 @@ function ShareWithStylistCard({
         <button
           type="button"
           onClick={openSummary}
-          className="rounded-lg bg-bronze px-4 py-2 text-xs font-semibold text-dark transition-colors hover:bg-bronze2"
+          className="bg-bronze px-4 py-2 text-xs font-semibold text-cream transition-colors hover:bg-bronze2"
         >
           Generate summary →
         </button>
         <button
           type="button"
           onClick={handleCopyLink}
-          className="rounded-lg border border-bronze/40 px-4 py-2 text-xs font-medium text-cream/80 transition-colors hover:border-bronze"
+          className="border border-bronze/40 px-4 py-2 text-xs font-medium text-dark/80 transition-colors hover:border-bronze"
         >
           Copy link →
         </button>
         <button
           type="button"
           onClick={handleDownloadPdf}
-          className="rounded-lg border border-bronze/40 px-4 py-2 text-xs font-medium text-cream/80 transition-colors hover:border-bronze"
+          className="border border-bronze/40 px-4 py-2 text-xs font-medium text-dark/80 transition-colors hover:border-bronze"
         >
           Download as PDF →
         </button>
         <button
           type="button"
           onClick={handleShareText}
-          className="rounded-lg border border-bronze/40 px-4 py-2 text-xs font-medium text-cream/80 transition-colors hover:border-bronze"
+          className="border border-bronze/40 px-4 py-2 text-xs font-medium text-dark/80 transition-colors hover:border-bronze"
         >
           Share via text →
         </button>
@@ -477,8 +477,8 @@ function SelectableCard({
       }`}
     >
       {icon && <span className="mb-1.5 block">{icon}</span>}
-      <span className="block text-sm font-medium text-cream">{label}</span>
-      {subtext && <span className="mt-1 block text-xs leading-snug text-cream/60">{subtext}</span>}
+      <span className="block text-sm font-medium text-dark">{label}</span>
+      {subtext && <span className="mt-1 block text-xs leading-snug text-dark/60">{subtext}</span>}
     </button>
   );
 }
@@ -549,8 +549,8 @@ function UpgradeWallContent({ userId, userEmail }: { userId: string; userEmail: 
 
   return (
     <div>
-      <h1 className="font-serif text-[28px] font-semibold text-cream">Unlock unlimited Style Match</h1>
-      <p className="mt-2 text-sm text-cream/70">
+      <h1 className="font-serif text-[28px] font-semibold text-dark">Unlock unlimited Style Match</h1>
+      <p className="mt-2 text-sm text-dark/70">
         You have used your 1 free style match. Upgrade for unlimited style matching — plus
         your personalized monthly routine, 30-day wash day calendar, and unlimited product
         searches.
@@ -563,14 +563,14 @@ function UpgradeWallContent({ userId, userEmail }: { userId: string; userEmail: 
           "30-day wash day calendar",
           "Unlimited product searches",
         ].map((b) => (
-          <li key={b} className="flex items-start gap-2 text-sm text-cream/80">
+          <li key={b} className="flex items-start gap-2 text-sm text-dark/80">
             <span className="mt-0.5 text-bronze2">✓</span>
             <span>{b}</span>
           </li>
         ))}
       </ul>
 
-      <p className="mt-4 text-sm font-semibold text-cream">$7.99/month — cancel anytime</p>
+      <p className="mt-4 text-sm font-semibold text-dark">$7.99/month — cancel anytime</p>
 
       {error && <p className="mt-3 text-sm text-red">{error}</p>}
 
@@ -578,12 +578,12 @@ function UpgradeWallContent({ userId, userEmail }: { userId: string; userEmail: 
         type="button"
         onClick={handleUnlock}
         disabled={loading}
-        className="mt-6 w-full rounded-lg bg-bronze py-4 text-base font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+        className="mt-6 w-full rounded-lg bg-bronze py-4 text-base font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
       >
         {loading ? "Redirecting..." : "Unlock unlimited →"}
       </button>
 
-      <Link href="/auth" className="mt-4 block text-center text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70">
+      <Link href="/auth" className="mt-4 block text-center text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70">
         Already subscribed? Sign in to access Style Match →
       </Link>
     </div>
@@ -1181,8 +1181,8 @@ function StyleMatchContent() {
 
   if (resolvingAccess || (user && !hairProfile)) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
-        <p className="text-sm text-cream/60">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-white font-sans">
+        <p className="text-sm text-dark/60">Loading...</p>
       </main>
     );
   }
@@ -1191,7 +1191,7 @@ function StyleMatchContent() {
 
   if (showUpgradeWall && pageState === "landing") {
     return (
-      <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+      <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
         <div className="mx-auto max-w-md">
           <UpgradeWallContent userId={user!.id} userEmail={user!.email} />
         </div>
@@ -1200,15 +1200,15 @@ function StyleMatchContent() {
   }
 
   return (
-    <main className="min-h-screen bg-dark font-sans text-cream">
+    <main className="min-h-screen bg-white font-sans text-dark">
       {pageState === "landing" && <StyleMatchPromoHero />}
 
       <div className="px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-2xl">
         {pageState === "landing" && (
           <>
-            <h1 className="font-serif text-[28px] font-semibold text-cream">Style Match</h1>
-            <p className="mt-2 text-sm text-cream/70">
+            <h1 className="font-serif text-[28px] font-semibold text-dark">Style Match</h1>
+            <p className="mt-2 text-sm text-dark/70">
               Upload a photo of the style you want or browse our style library — we will
               find tutorials, build your complete shopping list, and match you with a
               local stylist.
@@ -1223,18 +1223,18 @@ function StyleMatchContent() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
                   <CameraIcon />
                 </div>
-                <p className="mt-4 font-serif text-xl font-semibold text-cream">Upload a photo</p>
-                <p className="mt-1 text-sm text-cream/70">A picture of the style you want.</p>
+                <p className="mt-4 font-serif text-xl font-semibold text-dark">Upload a photo</p>
+                <p className="mt-1 text-sm text-dark/70">A picture of the style you want.</p>
 
                 <input
                   type="file"
                   accept="image/jpeg,image/png,image/gif,image/webp"
                   onChange={handlePhotoChange}
-                  className="mt-4 block w-full text-xs text-cream/70 file:mr-3 file:rounded-full file:border file:border-bronze/40 file:bg-transparent file:px-3 file:py-1.5 file:text-xs file:text-bronze2"
+                  className="mt-4 block w-full text-xs text-dark/70 file:mr-3 file:rounded-full file:border file:border-bronze/40 file:bg-transparent file:px-3 file:py-1.5 file:text-xs file:text-bronze2"
                 />
 
                 {imagePreviewUrl && (
-                  <div className="relative mt-3 h-40 w-full overflow-hidden rounded-lg bg-[#2C2420]">
+                  <div className="relative mt-3 h-40 w-full overflow-hidden rounded-lg bg-[#f5f5f5]">
                     <Image src={imagePreviewUrl} alt="Selected style" fill className="object-cover" />
                   </div>
                 )}
@@ -1246,7 +1246,7 @@ function StyleMatchContent() {
                   type="button"
                   onClick={handlePrimarySubmit}
                   disabled={!imageFile && !prefilledImage}
-                  className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-40"
+                  className="mt-4 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-40"
                 >
                   Analyze this style →
                 </button>
@@ -1260,8 +1260,8 @@ function StyleMatchContent() {
                 <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
                   <CompassIcon />
                 </div>
-                <p className="mt-4 font-serif text-xl font-semibold text-cream">Browse styles</p>
-                <p className="mt-1 text-sm text-cream/70">
+                <p className="mt-4 font-serif text-xl font-semibold text-dark">Browse styles</p>
+                <p className="mt-1 text-sm text-dark/70">
                   Not sure? Browse styles for your hair type.
                 </p>
               </button>
@@ -1270,7 +1270,7 @@ function StyleMatchContent() {
             {hasHairPhoto === false && (
               <Link
                 href="/profile"
-                className="mt-6 block text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+                className="mt-6 block text-sm text-bronze2 underline underline-offset-2 hover:text-dark"
               >
                 Add a hair photo to your profile for a more personalized style analysis →
               </Link>
@@ -1283,11 +1283,11 @@ function StyleMatchContent() {
             <button
               type="button"
               onClick={() => setPageState("landing")}
-              className="text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70"
+              className="text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70"
             >
               ← Back
             </button>
-            <h1 className="mt-3 font-serif text-[28px] font-semibold text-cream">Find your next style</h1>
+            <h1 className="mt-3 font-serif text-[28px] font-semibold text-dark">Find your next style</h1>
 
             <div className="mt-6">
               <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Vibe</p>
@@ -1299,7 +1299,7 @@ function StyleMatchContent() {
                     onClick={() => toggleVibe(v)}
                     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                       selectedVibes.includes(v)
-                        ? "border-bronze bg-bronze text-dark"
+                        ? "border-bronze bg-bronze text-cream"
                         : "border-bronze/40 text-bronze2 hover:bg-bronze/10"
                     }`}
                   >
@@ -1322,7 +1322,7 @@ function StyleMatchContent() {
                       onClick={() => setSelectedLength(isAny ? null : l)}
                       className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                         selected
-                          ? "border-bronze bg-bronze text-dark"
+                          ? "border-bronze bg-bronze text-cream"
                           : "border-bronze/40 text-bronze2 hover:bg-bronze/10"
                       }`}
                     >
@@ -1333,7 +1333,7 @@ function StyleMatchContent() {
               </div>
             </div>
 
-            {inspoLoading && <p className="mt-8 text-sm text-cream/50">Loading styles...</p>}
+            {inspoLoading && <p className="mt-8 text-sm text-dark/50">Loading styles...</p>}
 
             {!inspoLoading && (
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -1352,13 +1352,13 @@ function StyleMatchContent() {
                         className="aspect-[4/5] w-full object-cover"
                       />
                     ) : (
-                      <div className="flex aspect-[4/5] w-full items-center justify-center bg-gradient-to-br from-[#1C1612] to-[#2C2420] p-4 text-center">
-                        <p className="font-serif text-lg text-cream">{style.name}</p>
+                      <div className="flex aspect-[4/5] w-full items-center justify-center bg-gradient-to-br from-[#ffffff] to-[#f5f5f5] p-4 text-center">
+                        <p className="font-serif text-lg text-dark">{style.name}</p>
                       </div>
                     )}
                     <div className="p-4">
                       {style.image_url && (
-                        <p className="font-serif text-lg text-cream">{style.name}</p>
+                        <p className="font-serif text-lg text-dark">{style.name}</p>
                       )}
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {style.difficulty && (
@@ -1372,7 +1372,7 @@ function StyleMatchContent() {
                           </span>
                         )}
                         {style.requires_fake_hair && (
-                          <span className="rounded-full bg-dark px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-bronze">
+                          <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-bronze">
                             Fake hair
                           </span>
                         )}
@@ -1381,7 +1381,7 @@ function StyleMatchContent() {
                   </button>
                 ))}
                 {visibleInspoStyles.length === 0 && (
-                  <p className="col-span-full text-sm text-cream/50">No styles match those filters yet.</p>
+                  <p className="col-span-full text-sm text-dark/50">No styles match those filters yet.</p>
                 )}
               </div>
             )}
@@ -1393,7 +1393,7 @@ function StyleMatchContent() {
             <button
               type="button"
               onClick={() => (deepStep === 1 ? setPageState("landing") : setDeepStep((s) => s - 1))}
-              className="text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70"
+              className="text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70"
             >
               ← Back
             </button>
@@ -1401,7 +1401,7 @@ function StyleMatchContent() {
 
             {deepStep === 1 && (
               <div className="mt-4">
-                <h2 className="font-serif text-2xl font-semibold text-cream">
+                <h2 className="font-serif text-2xl font-semibold text-dark">
                   Are you trying to achieve the hair color in this photo too?
                 </h2>
                 <div className="mt-4 space-y-3">
@@ -1409,7 +1409,7 @@ function StyleMatchContent() {
                   <SelectableCard label="No - just the style" selected={colorMatch === false} onClick={() => setColorMatch(false)} />
                 </div>
                 {colorMatch === true && (
-                  <p className="mt-4 rounded-lg border-l-2 border-bronze bg-amber/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
+                  <p className="mt-4 border-l-2 border-bronze bg-amber/10 px-4 py-3 text-sm leading-relaxed text-dark/90">
                     Color work - especially bleaching or significant color changes - can cause
                     serious damage without professional help. We will include color tutorial
                     videos in your results, but we strongly recommend consulting a licensed
@@ -1420,7 +1420,7 @@ function StyleMatchContent() {
                   type="button"
                   onClick={() => setDeepStep(2)}
                   disabled={colorMatch === null}
-                  className="mt-6 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-40"
+                  className="mt-6 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-40"
                 >
                   Continue →
                 </button>
@@ -1429,7 +1429,7 @@ function StyleMatchContent() {
 
             {deepStep === 2 && (
               <div className="mt-4">
-                <h2 className="font-serif text-2xl font-semibold text-cream">
+                <h2 className="font-serif text-2xl font-semibold text-dark">
                   How does this length compare to your current hair?
                 </h2>
                 <div className="mt-4 space-y-3">
@@ -1438,8 +1438,8 @@ function StyleMatchContent() {
                   <SelectableCard label="Shorter than my current hair" selected={lengthDifference === "shorter"} onClick={() => setLengthDifference("shorter")} />
                 </div>
                 {lengthDifference === "longer" && (
-                  <div className="mt-4 rounded-lg border-l-2 border-bronze bg-warm/10 px-4 py-3">
-                    <p className="text-sm leading-relaxed text-cream/90">
+                  <div className="mt-4 border-l-2 border-bronze bg-warm/10 px-4 py-3">
+                    <p className="text-sm leading-relaxed text-dark/90">
                       Achieving this length on your natural hair takes time. We can include
                       extension options to achieve this look now.
                     </p>
@@ -1448,7 +1448,7 @@ function StyleMatchContent() {
                         type="button"
                         onClick={() => setWantsLengthExtensions(true)}
                         className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                          wantsLengthExtensions ? "border-bronze bg-bronze text-dark" : "border-bronze/40 text-bronze2"
+                          wantsLengthExtensions ? "border-bronze bg-bronze text-cream" : "border-bronze/40 text-bronze2"
                         }`}
                       >
                         Yes, include extension options
@@ -1457,7 +1457,7 @@ function StyleMatchContent() {
                         type="button"
                         onClick={() => setWantsLengthExtensions(false)}
                         className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                          !wantsLengthExtensions ? "border-bronze bg-bronze text-dark" : "border-bronze/40 text-bronze2"
+                          !wantsLengthExtensions ? "border-bronze bg-bronze text-cream" : "border-bronze/40 text-bronze2"
                         }`}
                       >
                         No, I want to grow my hair to this length
@@ -1469,7 +1469,7 @@ function StyleMatchContent() {
                   type="button"
                   onClick={() => setDeepStep(3)}
                   disabled={lengthDifference === null}
-                  className="mt-6 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-40"
+                  className="mt-6 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-40"
                 >
                   Continue →
                 </button>
@@ -1478,7 +1478,7 @@ function StyleMatchContent() {
 
             {deepStep === 3 && (
               <div className="mt-4">
-                <h2 className="font-serif text-2xl font-semibold text-cream">Does this style involve added hair?</h2>
+                <h2 className="font-serif text-2xl font-semibold text-dark">Does this style involve added hair?</h2>
                 <div className="mt-4 space-y-3">
                   <SelectableCard label="No - natural hair only" selected={involvesExtensions === "none"} onClick={() => setInvolvesExtensions("none")} />
                   <SelectableCard label="Braiding hair" selected={involvesExtensions === "braiding_hair"} onClick={() => setInvolvesExtensions("braiding_hair")} />
@@ -1489,7 +1489,7 @@ function StyleMatchContent() {
 
                 {involvesExtensions && involvesExtensions !== "none" && (
                   <div className="mt-6">
-                    <h3 className="font-serif text-lg font-semibold text-cream">What type of added hair do you prefer?</h3>
+                    <h3 className="font-serif text-lg font-semibold text-dark">What type of added hair do you prefer?</h3>
                     <div className="mt-3 space-y-3">
                       {DEEP_MATCH_HAIR_ADDITION_OPTIONS.map((option) => (
                         <SelectableCard
@@ -1511,7 +1511,7 @@ function StyleMatchContent() {
                     involvesExtensions === null ||
                     (involvesExtensions !== "none" && deepMatchHairPreference === null)
                   }
-                  className="mt-6 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-40"
+                  className="mt-6 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-40"
                 >
                   Continue →
                 </button>
@@ -1520,7 +1520,7 @@ function StyleMatchContent() {
 
             {deepStep === 4 && (
               <div className="mt-4">
-                <h2 className="font-serif text-2xl font-semibold text-cream">
+                <h2 className="font-serif text-2xl font-semibold text-dark">
                   The hair in this photo may look different from yours. How would you like your results?
                 </h2>
                 <div className="mt-4 space-y-3">
@@ -1539,7 +1539,7 @@ function StyleMatchContent() {
                   type="button"
                   onClick={handleDeepSurveyFinish}
                   disabled={translateForHairType === null}
-                  className="mt-6 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-40"
+                  className="mt-6 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-40"
                 >
                   See my results →
                 </button>
@@ -1551,7 +1551,7 @@ function StyleMatchContent() {
         {pageState === "confirm" && detected && (
           <div>
             <div className="flex items-start justify-between gap-4">
-              <h2 className="font-serif text-2xl font-semibold text-cream">{detected.style_name}</h2>
+              <h2 className="font-serif text-2xl font-semibold text-dark">{detected.style_name}</h2>
               <button
                 type="button"
                 onClick={handleToggleSave}
@@ -1562,7 +1562,7 @@ function StyleMatchContent() {
                 <HeartIcon filled={Boolean(savedStyleId)} />
               </button>
             </div>
-            <p className="mt-2 text-sm text-cream/70">{detected.style_description}</p>
+            <p className="mt-2 text-sm text-dark/70">{detected.style_description}</p>
 
             {justUsedFreeMatch && !subscribed && (
               <p className="mt-3 text-xs text-bronze2">
@@ -1589,7 +1589,7 @@ function StyleMatchContent() {
 
             <div className="mt-4 flex flex-wrap gap-2">
               {(detected.compatible_hair_types ?? []).map((t) => (
-                <span key={t} className="rounded-full bg-dark px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-bronze">
+                <span key={t} className="rounded-full bg-white px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-bronze">
                   {t}
                 </span>
               ))}
@@ -1609,14 +1609,14 @@ function StyleMatchContent() {
               <button
                 type="button"
                 onClick={() => setPageState("results")}
-                className="flex-1 rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+                className="flex-1 bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
               >
                 Yes, this is it →
               </button>
               <button
                 type="button"
                 onClick={resetToLanding}
-                className="flex-1 rounded-lg border border-bronze/40 py-3 text-sm font-semibold text-cream/80 transition-colors hover:border-bronze"
+                className="flex-1 border border-bronze/40 py-3 text-sm font-semibold text-dark/80 transition-colors hover:border-bronze"
               >
                 Not quite - try again
               </button>
@@ -1627,7 +1627,7 @@ function StyleMatchContent() {
         {pageState === "results" && detected && (
           <div>
             <div className="flex items-start justify-between gap-4">
-              <h2 className="font-serif text-2xl font-semibold text-cream">{detected.style_name}</h2>
+              <h2 className="font-serif text-2xl font-semibold text-dark">{detected.style_name}</h2>
               <button
                 type="button"
                 onClick={handleToggleSave}
@@ -1639,7 +1639,7 @@ function StyleMatchContent() {
               </button>
             </div>
             {detected.maintenance_tips && (
-              <p className="mt-1 text-sm text-cream/60">{detected.maintenance_tips}</p>
+              <p className="mt-1 text-sm text-dark/60">{detected.maintenance_tips}</p>
             )}
 
             {justUsedFreeMatch && !subscribed && (
@@ -1649,23 +1649,23 @@ function StyleMatchContent() {
             )}
 
             {translateForHairType === true && detected.hair_type_translation && (
-              <div className="mt-4 rounded-lg border-l-2 border-bronze bg-warm/10 px-4 py-3">
-                <p className="text-sm leading-relaxed text-cream/90">
+              <div className="mt-4 border-l-2 border-bronze bg-warm/10 px-4 py-3">
+                <p className="text-sm leading-relaxed text-dark/90">
                   Style adapted for your {hairProfile?.curl_type ?? ""} hair: {detected.hair_type_translation}
                 </p>
               </div>
             )}
 
             {translationLoading && !detected.current_to_desired_translation && (
-              <p className="mt-4 text-xs text-cream/50">Personalizing for your hair...</p>
+              <p className="mt-4 text-xs text-dark/50">Personalizing for your hair...</p>
             )}
 
             {detected.current_to_desired_translation && (
-              <div className="mt-4 rounded-lg border-l-2 border-bronze bg-warm/10 px-4 py-3">
+              <div className="mt-4 border-l-2 border-bronze bg-warm/10 px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
                   From your current hair to this style
                 </p>
-                <p className="mt-2 text-sm leading-relaxed text-cream/90">
+                <p className="mt-2 text-sm leading-relaxed text-dark/90">
                   {detected.current_to_desired_translation}
                 </p>
                 {detected.length_gap && (
@@ -1676,7 +1676,7 @@ function StyleMatchContent() {
                 {detected.prep_needed && detected.prep_needed.length > 0 && (
                   <ul className="mt-2 space-y-1">
                     {detected.prep_needed.map((step) => (
-                      <li key={step} className="text-xs text-cream/70">
+                      <li key={step} className="text-xs text-dark/70">
                         • {step}
                       </li>
                     ))}
@@ -1698,7 +1698,7 @@ function StyleMatchContent() {
                     type="button"
                     onClick={() => setActiveTab(tab)}
                     className={`px-4 py-2 text-sm font-medium capitalize transition-colors ${
-                      activeTab === tab ? "border-b-2 border-bronze text-cream" : "text-cream/50 hover:text-cream/80"
+                      activeTab === tab ? "border-b-2 border-bronze text-dark" : "text-dark/50 hover:text-dark/80"
                     }`}
                   >
                     {tab === "tutorials"
@@ -1714,7 +1714,7 @@ function StyleMatchContent() {
 
             {activeTab === "tutorials" && (
               <div className="mt-6 space-y-8">
-                {tutorialsLoading && <p className="text-sm text-cream/50">Loading tutorials...</p>}
+                {tutorialsLoading && <p className="text-sm text-dark/50">Loading tutorials...</p>}
 
                 {!tutorialsLoading && internalTutorials.length > 0 && (
                   <div>
@@ -1739,31 +1739,31 @@ function StyleMatchContent() {
                           rel="noopener noreferrer"
                           className="flex flex-col overflow-hidden rounded-xl border border-bronze/30 transition-colors hover:border-bronze"
                         >
-                          <div className="relative h-28 w-full bg-[#2C2420]">
+                          <div className="relative h-28 w-full bg-[#f5f5f5]">
                             {v.thumbnailUrl && <Image src={v.thumbnailUrl} alt={v.title} fill className="object-cover" />}
                           </div>
                           <div className="flex flex-1 flex-col gap-1 p-4">
-                            <p className="line-clamp-2 font-serif text-sm text-cream">{v.title}</p>
-                            <p className="text-xs text-cream/50">{v.channelTitle}</p>
+                            <p className="line-clamp-2 font-serif text-sm text-dark">{v.title}</p>
+                            <p className="text-xs text-dark/50">{v.channelTitle}</p>
                             <span className="mt-1 text-xs text-bronze2">Watch on YouTube →</span>
                           </div>
                         </a>
                       ))}
                     </div>
-                    <p className="mt-3 text-[10px] text-cream/40">Videos from YouTube - not affiliated with Qoyl.</p>
+                    <p className="mt-3 text-[10px] text-dark/40">Videos from YouTube - not affiliated with Qoyl.</p>
                   </div>
                 )}
 
                 {!tutorialsLoading && internalTutorials.length === 0 && youtubeVideos.length === 0 && (
-                  <p className="text-sm text-cream/50">No tutorials found for this style yet.</p>
+                  <p className="text-sm text-dark/50">No tutorials found for this style yet.</p>
                 )}
               </div>
             )}
 
             {activeTab === "color" && (
               <div className="mt-6 space-y-6">
-                <div className="rounded-lg border-l-[3px] border-bronze bg-amber/10 px-4 py-3">
-                  <p className="text-sm font-medium leading-relaxed text-cream/90">
+                <div className="border-l-[3px] border-bronze bg-amber/10 px-4 py-3">
+                  <p className="text-sm font-medium leading-relaxed text-dark/90">
                     Professional recommendation: Color services - especially lightening or
                     bleaching - should be done by a licensed colorist. DIY color on textured hair
                     carries significant risk of damage. The tutorials below are for reference.
@@ -1776,13 +1776,13 @@ function StyleMatchContent() {
                     href={colorMapsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-block rounded-lg border border-bronze/40 px-4 py-2 text-sm font-semibold text-cream transition-colors hover:border-bronze"
+                    className="inline-block border border-bronze/40 px-4 py-2 text-sm font-semibold text-dark transition-colors hover:border-bronze"
                   >
                     Find a colorist near me →
                   </a>
                 )}
 
-                {colorVideosLoading && <p className="text-sm text-cream/50">Loading color tutorials...</p>}
+                {colorVideosLoading && <p className="text-sm text-dark/50">Loading color tutorials...</p>}
 
                 {!colorVideosLoading && colorVideos.length > 0 && (
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1794,12 +1794,12 @@ function StyleMatchContent() {
                         rel="noopener noreferrer"
                         className="flex flex-col overflow-hidden rounded-xl border border-bronze/30 transition-colors hover:border-bronze"
                       >
-                        <div className="relative h-28 w-full bg-[#2C2420]">
+                        <div className="relative h-28 w-full bg-[#f5f5f5]">
                           {v.thumbnailUrl && <Image src={v.thumbnailUrl} alt={v.title} fill className="object-cover" />}
                         </div>
                         <div className="flex flex-1 flex-col gap-1 p-4">
-                          <p className="line-clamp-2 font-serif text-sm text-cream">{v.title}</p>
-                          <p className="text-xs text-cream/50">{v.channelTitle}</p>
+                          <p className="line-clamp-2 font-serif text-sm text-dark">{v.title}</p>
+                          <p className="text-xs text-dark/50">{v.channelTitle}</p>
                           <span className="mt-1 text-xs text-bronze2">Watch on YouTube →</span>
                         </div>
                       </a>
@@ -1808,14 +1808,14 @@ function StyleMatchContent() {
                 )}
 
                 {!colorVideosLoading && colorVideos.length === 0 && (
-                  <p className="text-sm text-cream/50">No color tutorials found yet.</p>
+                  <p className="text-sm text-dark/50">No color tutorials found yet.</p>
                 )}
               </div>
             )}
 
             {activeTab === "shopping" && (
               <div className="mt-6 space-y-8">
-                {shoppingLoading && <p className="text-sm text-cream/50">Building your shopping list...</p>}
+                {shoppingLoading && <p className="text-sm text-dark/50">Building your shopping list...</p>}
 
                 {!shoppingLoading && shoppingList && (
                   <>
@@ -1830,14 +1830,14 @@ function StyleMatchContent() {
                           )}
                         </div>
                         {shoppingList.fakeHairPreferenceNote && (
-                          <p className="mt-2 text-xs text-cream/70">{shoppingList.fakeHairPreferenceNote}</p>
+                          <p className="mt-2 text-xs text-dark/70">{shoppingList.fakeHairPreferenceNote}</p>
                         )}
                         <ul className="mt-3 space-y-3">
                           {shoppingList.fakeHair.map((item) => (
-                            <li key={item.name} className="rounded-lg border border-bronze/30 px-4 py-3">
-                              <p className="text-sm text-cream">{item.name}</p>
-                              <p className="mt-1 text-xs text-cream/60">{item.description}</p>
-                              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-cream/50">
+                            <li key={item.name} className="border border-bronze/30 px-4 py-3">
+                              <p className="text-sm text-dark">{item.name}</p>
+                              <p className="mt-1 text-xs text-dark/60">{item.description}</p>
+                              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-dark/50">
                                 <span>{item.packsNeeded}</span>
                                 <span>{item.priceRange}</span>
                               </div>
@@ -1858,7 +1858,7 @@ function StyleMatchContent() {
                         {shoppingList.fakeHairPreferenceTip && (
                           <p className="mt-2 text-xs text-bronze2">Tip: {shoppingList.fakeHairPreferenceTip}</p>
                         )}
-                        {shoppingList.fakeHairNote && <p className="mt-3 text-xs text-cream/50">{shoppingList.fakeHairNote}</p>}
+                        {shoppingList.fakeHairNote && <p className="mt-3 text-xs text-dark/50">{shoppingList.fakeHairNote}</p>}
                         {shoppingList.fakeHairTip && (
                           <p className="mt-2 text-xs text-bronze2">Tip: {shoppingList.fakeHairTip}</p>
                         )}
@@ -1866,8 +1866,8 @@ function StyleMatchContent() {
                     )}
 
                     {shoppingList.naturalHairAlternativeNote && (
-                      <div className="rounded-lg border border-bronze/30 bg-warm/10 px-4 py-3">
-                        <p className="text-sm text-cream/90">{shoppingList.naturalHairAlternativeNote}</p>
+                      <div className="border border-bronze/30 bg-warm/10 px-4 py-3">
+                        <p className="text-sm text-dark/90">{shoppingList.naturalHairAlternativeNote}</p>
                         {shoppingList.naturalHairAlternativeStyles.length > 0 && (
                           <ul className="mt-2 flex flex-wrap gap-2">
                             {shoppingList.naturalHairAlternativeStyles.map((style) => (
@@ -1888,8 +1888,8 @@ function StyleMatchContent() {
                         <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Additional Length Options</p>
                         <ul className="mt-3 space-y-2">
                           {shoppingList.lengthExtensionOptions.map((item) => (
-                            <li key={item.name} className="flex items-center justify-between rounded-lg border border-bronze/30 px-4 py-3">
-                              <span className="text-sm text-cream">{item.name}</span>
+                            <li key={item.name} className="flex items-center justify-between border border-bronze/30 px-4 py-3">
+                              <span className="text-sm text-dark">{item.name}</span>
                               <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-bronze2 underline">
                                 {item.retailer} →
                               </a>
@@ -1906,7 +1906,7 @@ function StyleMatchContent() {
                           {shoppingList.brandProducts.map((item) => (
                             <li
                               key={item.id}
-                              className="rounded-lg border border-bronze/40 bg-cream px-4 py-3 shadow-sm"
+                              className="border border-bronze/40 bg-cream px-4 py-3 shadow-sm"
                             >
                               <div className="flex items-start gap-3">
                                 {item.imageUrl && (
@@ -1975,11 +1975,11 @@ function StyleMatchContent() {
                       <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Hair Care Products</p>
                       <ul className="mt-3 space-y-2">
                         {shoppingList.hairCare.map((item) => (
-                          <li key={item.catalogProductId} className="rounded-lg border border-bronze/30 px-4 py-3">
+                          <li key={item.catalogProductId} className="border border-bronze/30 px-4 py-3">
                             <div className="flex items-start justify-between gap-3">
                               <div className="min-w-0">
-                                <p className="text-sm text-cream">{item.name}</p>
-                                <p className="text-xs text-cream/50">
+                                <p className="text-sm text-dark">{item.name}</p>
+                                <p className="text-xs text-dark/50">
                                   {item.brand} · {item.categoryLabel}
                                 </p>
                               </div>
@@ -1991,7 +1991,7 @@ function StyleMatchContent() {
                           </li>
                         ))}
                         {shoppingList.hairCare.length === 0 && shoppingList.brandProducts.length === 0 && (
-                          <p className="text-sm text-cream/50">No matching products found yet.</p>
+                          <p className="text-sm text-dark/50">No matching products found yet.</p>
                         )}
                       </ul>
                     </div>
@@ -2002,13 +2002,13 @@ function StyleMatchContent() {
                           {shoppingList.amazonFallback.map((item) => (
                             <li
                               key={item.name}
-                              className="flex items-center justify-between rounded-lg border border-cream/10 bg-dark/40 px-3 py-2"
+                              className="flex items-center justify-between rounded-lg border border-cream/10 bg-white/40 px-3 py-2"
                             >
                               <div>
-                                <p className="text-xs text-cream/70">{item.name}</p>
-                                <p className="text-[10px] uppercase tracking-wide text-cream/30">Also available on Amazon</p>
+                                <p className="text-xs text-dark/70">{item.name}</p>
+                                <p className="text-[10px] uppercase tracking-wide text-dark/30">Also available on Amazon</p>
                               </div>
-                              <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-cream/50 underline shrink-0">
+                              <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-dark/50 underline shrink-0">
                                 View →
                               </a>
                             </li>
@@ -2021,8 +2021,8 @@ function StyleMatchContent() {
                       <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Tools</p>
                       <ul className="mt-3 space-y-2">
                         {shoppingList.tools.map((item) => (
-                          <li key={item.name} className="flex items-center justify-between rounded-lg border border-bronze/30 px-4 py-3">
-                            <span className="text-sm text-cream">{item.name}</span>
+                          <li key={item.name} className="flex items-center justify-between border border-bronze/30 px-4 py-3">
+                            <span className="text-sm text-dark">{item.name}</span>
                             <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-bronze2 underline">
                               {item.retailer} →
                             </a>
@@ -2036,8 +2036,8 @@ function StyleMatchContent() {
                         <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Accessories</p>
                         <ul className="mt-3 space-y-2">
                           {shoppingList.accessories.map((item) => (
-                            <li key={item.name} className="flex items-center justify-between rounded-lg border border-bronze/30 px-4 py-3">
-                              <span className="text-sm text-cream">{item.name}</span>
+                            <li key={item.name} className="flex items-center justify-between border border-bronze/30 px-4 py-3">
+                              <span className="text-sm text-dark">{item.name}</span>
                               <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-bronze2 underline">
                                 {item.retailer} →
                               </a>
@@ -2051,7 +2051,7 @@ function StyleMatchContent() {
                       type="button"
                       onClick={() => handleComplete("diy", null)}
                       disabled={savingChoice === "diy" || savedChoice !== null || !matchId}
-                      className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-60"
+                      className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-60"
                     >
                       {savedChoice ? "Saved to your profile ✓" : savingChoice === "diy" ? "Saving..." : "Save this shopping list to my profile →"}
                     </button>
@@ -2064,7 +2064,7 @@ function StyleMatchContent() {
               <div className="mt-6 space-y-4">
                 <ShareWithStylistCard matchId={matchId} onShowToast={showToast} compact />
 
-                {stylistsLoading && <p className="text-sm text-cream/50">Finding stylists near you...</p>}
+                {stylistsLoading && <p className="text-sm text-dark/50">Finding stylists near you...</p>}
 
                 {!stylistsLoading && stylists.length > 0 && (
                   <button
@@ -2074,7 +2074,7 @@ function StyleMatchContent() {
                     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                       humanHairOnlyFilter
                         ? "border-bronze bg-bronze/20 text-cream"
-                        : "border-bronze/40 text-cream/70 hover:border-bronze"
+                        : "border-bronze/40 text-dark/70 hover:border-bronze"
                     }`}
                   >
                     Human hair installs only
@@ -2085,7 +2085,7 @@ function StyleMatchContent() {
                   humanHairOnlyFilter &&
                   stylists.filter((s) => s.matchedService?.hair_addition_types?.includes("human_hair_only"))
                     .length === 0 && (
-                    <p className="text-xs text-cream/50">
+                    <p className="text-xs text-dark/50">
                       No stylists have marked human hair services for this style yet.
                     </p>
                   )}
@@ -2100,18 +2100,18 @@ function StyleMatchContent() {
                     .map((stylist) => (
                     <div key={stylist.id} className="rounded-xl border border-bronze/30 p-5">
                       <div className="flex items-start gap-4">
-                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#2C2420]">
+                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[#f5f5f5]">
                           {stylist.photoUrl && <Image src={stylist.photoUrl} alt={stylist.displayName} fill className="object-cover" />}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-serif text-lg text-cream">{stylist.displayName}</p>
-                          {stylist.salonName && <p className="text-sm text-cream/60">{stylist.salonName}</p>}
+                          <p className="font-serif text-lg text-dark">{stylist.displayName}</p>
+                          {stylist.salonName && <p className="text-sm text-dark/60">{stylist.salonName}</p>}
                         </div>
                       </div>
 
                       {stylist.matchedService ? (
-                        <div className="mt-3 rounded-lg bg-bronze/10 px-3 py-2.5">
-                          <p className="text-sm font-medium text-cream">
+                        <div className="mt-3 bg-bronze/10 px-3 py-2.5">
+                          <p className="text-sm font-medium text-dark">
                             {stylist.matchedService.name}
                             {stylist.matchedService.price_min != null &&
                               `: $${stylist.matchedService.price_min}-${stylist.matchedService.price_max ?? stylist.matchedService.price_min}`}
@@ -2119,18 +2119,18 @@ function StyleMatchContent() {
                               ` · ${stylist.matchedService.duration_min}-${stylist.matchedService.duration_max} hours`}
                           </p>
                           {stylist.matchedService.deposit_required && (
-                            <p className="mt-1 text-xs text-cream/60">
+                            <p className="mt-1 text-xs text-dark/60">
                               Deposit: {stylist.matchedService.deposit_amount != null ? `$${stylist.matchedService.deposit_amount}` : "Required"} to book
                             </p>
                           )}
                         </div>
                       ) : stylist.hasAnyServices ? (
-                        <div className="mt-3 rounded-lg bg-bronze/10 px-3 py-2.5">
-                          <p className="text-sm text-cream/80">
+                        <div className="mt-3 bg-bronze/10 px-3 py-2.5">
+                          <p className="text-sm text-dark/80">
                             Contact for pricing on {detected?.style_name}
                           </p>
                           {stylist.otherServiceNames.length > 0 && (
-                            <p className="mt-1 text-xs text-cream/50">
+                            <p className="mt-1 text-xs text-dark/50">
                               Other services: {stylist.otherServiceNames.join(", ")}
                             </p>
                           )}
@@ -2144,7 +2144,7 @@ function StyleMatchContent() {
                           if (stylist.bookingUrl) window.open(stylist.bookingUrl, "_blank", "noopener,noreferrer");
                         }}
                         disabled={savingChoice === "stylist" || !matchId}
-                        className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-60"
+                        className="mt-4 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-60"
                       >
                         {savedChoice === "stylist" ? "Booking request sent ✓" : "Book →"}
                       </button>
@@ -2153,26 +2153,26 @@ function StyleMatchContent() {
 
                 {!stylistsLoading && stylists.length === 0 && (
                   <div className="rounded-xl border border-bronze/30 p-5">
-                    <p className="text-sm text-cream/80">
+                    <p className="text-sm text-dark/80">
                       No Qoyl stylists in your area yet for this style. Here is what to expect
                       when booking locally:
                     </p>
 
                     {marketEstimate ? (
-                      <div className="mt-4 rounded-lg bg-bronze/10 px-4 py-3">
-                        <p className="text-sm font-medium text-cream">
+                      <div className="mt-4 bg-bronze/10 px-4 py-3">
+                        <p className="text-sm font-medium text-dark">
                           General market rate for {marketEstimate.styleName}
                         </p>
-                        <p className="mt-1 text-sm text-cream/70">
+                        <p className="mt-1 text-sm text-dark/70">
                           ${marketEstimate.priceMin}-{marketEstimate.priceMax} ·{" "}
                           {marketEstimate.durationMin}-{marketEstimate.durationMax} hours
                         </p>
                         {marketEstimate.priceNotes && (
-                          <p className="mt-1 text-xs text-cream/50">{marketEstimate.priceNotes}</p>
+                          <p className="mt-1 text-xs text-dark/50">{marketEstimate.priceNotes}</p>
                         )}
                       </div>
                     ) : (
-                      <p className="mt-3 text-sm text-cream/50">
+                      <p className="mt-3 text-sm text-dark/50">
                         No market estimate available for this style yet.
                       </p>
                     )}
@@ -2181,7 +2181,7 @@ function StyleMatchContent() {
                       href="https://business.qoyl.live/apply/stylist"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-4 inline-block text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+                      className="mt-4 inline-block text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
                     >
                       Know a great stylist? Refer them →
                     </a>

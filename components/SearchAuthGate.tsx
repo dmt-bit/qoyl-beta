@@ -32,15 +32,15 @@ export default function SearchAuthGate({
   const { headline, subheadline } = COPY[variant];
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-dark px-4 py-12 font-sans text-cream sm:px-6">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-white px-4 py-12 font-sans text-dark sm:px-6">
       <div className="mx-auto w-full max-w-sm text-center">
-        <h1 className="font-serif text-3xl italic text-cream">Qoyl</h1>
+        <h1 className="font-serif text-3xl font-bold lowercase text-dark">qoyl</h1>
 
         <div className="mx-auto mt-8 max-w-[260px]">
           <ScoreExampleCard />
         </div>
 
-        <h2 className="mt-8 font-serif text-[28px] leading-tight text-cream">
+        <h2 className="mt-8 font-serif text-[28px] leading-tight text-dark">
           {headline}
         </h2>
         <p className="mt-3 font-sans text-sm leading-relaxed text-muted">

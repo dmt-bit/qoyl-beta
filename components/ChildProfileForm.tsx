@@ -169,7 +169,7 @@ export default function ChildProfileForm({
 
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-8">
-      <div className="rounded-lg border border-bronze/40 bg-warm/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
+      <div className="border border-bronze/40 bg-warm/10 px-4 py-3 text-sm leading-relaxed text-dark/90">
         Building a hair profile for your child. These recommendations are tailored for
         children&apos;s hair and prioritize gentle, age-appropriate products.
       </div>
@@ -197,10 +197,10 @@ export default function ChildProfileForm({
           ))}
         </div>
         {ageRange === "13+" && (
-          <div className="mt-3 rounded-lg border-l-2 border-bronze bg-amber/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
+          <div className="mt-3 border-l-2 border-bronze bg-amber/10 px-4 py-3 text-sm leading-relaxed text-dark/90">
             For teens we recommend using our standard adult profile for more detailed
             personalization →{" "}
-            <Link href="/profile" className="underline underline-offset-2 hover:text-cream">
+            <Link href="/profile" className="underline underline-offset-2 hover:text-dark">
               Go to adult profile
             </Link>
           </div>
@@ -259,7 +259,7 @@ export default function ChildProfileForm({
               className={`flex items-center gap-2 rounded-lg border px-3 py-3 text-sm transition-colors ${
                 hairConcerns.includes(option.value)
                   ? "border-bronze bg-bronze/20 text-cream"
-                  : "border-bronze/40 text-cream/80 hover:border-bronze"
+                  : "border-bronze/40 text-dark/80 hover:border-bronze"
               }`}
             >
               <input
@@ -371,10 +371,10 @@ export default function ChildProfileForm({
         </label>
         <TextInput id="child-zip" value={zipCode} onChange={setZipCode} placeholder="e.g. 90210" />
         {climate && (
-          <p className="mt-2 text-xs text-cream/50">Detected climate: {CLIMATE_LABELS[climate]}</p>
+          <p className="mt-2 text-xs text-dark/50">Detected climate: {CLIMATE_LABELS[climate]}</p>
         )}
         {waterHardness && (
-          <p className="mt-1 text-xs text-cream/50">
+          <p className="mt-1 text-xs text-dark/50">
             Detected water hardness: {WATER_HARDNESS_LABELS[waterHardness]}
           </p>
         )}
@@ -398,7 +398,7 @@ export default function ChildProfileForm({
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+        className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
       >
         {submitting
           ? "Saving..."

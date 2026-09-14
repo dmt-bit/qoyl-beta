@@ -8,7 +8,7 @@ export function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 
 export function FieldHelper({ children }: { children: React.ReactNode }) {
-  return <p className="mt-1 text-sm text-cream/60">{children}</p>;
+  return <p className="mt-1 text-sm text-dark/60">{children}</p>;
 }
 
 export function SelectPill({
@@ -26,8 +26,8 @@ export function SelectPill({
       onClick={onClick}
       className={`rounded-lg border px-4 py-3 text-left text-sm font-medium transition-colors ${
         selected
-          ? "border-bronze bg-bronze text-dark"
-          : "border-bronze/40 bg-transparent text-cream hover:border-bronze"
+          ? "border-bronze bg-bronze text-cream"
+          : "border-bronze/40 bg-transparent text-dark hover:border-bronze"
       }`}
     >
       {label}
@@ -53,7 +53,7 @@ export function TextInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+      className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
     />
   );
 }
@@ -76,7 +76,7 @@ export function TextAreaInput({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       rows={4}
-      className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+      className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
     />
   );
 }
@@ -102,7 +102,7 @@ export function YesNoToggle({
 // framing, amber for "here's what we'll adjust because of your answer."
 export function BronzeCallout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-bronze/40 bg-bronze/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
+    <div className="border border-bronze/40 bg-bronze/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
       {children}
     </div>
   );
@@ -110,7 +110,7 @@ export function BronzeCallout({ children }: { children: React.ReactNode }) {
 
 export function AmberCallout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border-l-2 border-bronze bg-amber/10 px-4 py-3 text-sm leading-relaxed text-cream/90">
+    <div className="border-l-2 border-bronze bg-amber/10 px-4 py-3 text-sm leading-relaxed text-dark/90">
       {children}
     </div>
   );
@@ -135,11 +135,11 @@ export function TextureCard({
       onClick={onClick}
       aria-pressed={selected}
       className={`flex flex-col overflow-hidden rounded-xl text-left transition-colors ${
-        selected ? "border-2 border-bronze" : "border border-[#2C2420]"
+        selected ? "border-2 border-bronze" : "border border-[#e8e8e8]"
       }`}
     >
       <div
-        className={`flex aspect-[4/5] w-full items-center justify-center bg-gradient-to-br from-[#2C2420] to-[#1C1612] ${
+        className={`flex aspect-[4/5] w-full items-center justify-center bg-gradient-to-br from-[#f5f5f5] to-[#ffffff] ${
           selected ? "brightness-110" : ""
         }`}
       >
@@ -155,7 +155,7 @@ export function TextureCard({
           <path strokeLinecap="round" d="M4 18c2-6 2-10 0-14M9 18c2-6 2-10 0-14M14 18c2-6 2-10 0-14M19 18c2-6 2-10 0-14" />
         </svg>
       </div>
-      <div className="bg-dark px-2.5 py-2">
+      <div className="bg-white px-2.5 py-2">
         <span className="block font-serif text-sm font-semibold text-bronze">{label}</span>
       </div>
     </button>

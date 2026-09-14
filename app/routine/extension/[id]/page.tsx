@@ -29,7 +29,7 @@ function ExtensionRoutineContent({ id }: { id: string }) {
   return (
     <>
       {error && <p className="text-sm text-red">{error}</p>}
-      {!profile && !error && <p className="text-sm text-cream/60">Loading...</p>}
+      {!profile && !error && <p className="text-sm text-dark/60">Loading...</p>}
       {profile && <ExtensionRoutine profile={profile} initialTab={tab === "blending" ? "blending" : "extensions"} />}
     </>
   );
@@ -37,9 +37,9 @@ function ExtensionRoutineContent({ id }: { id: string }) {
 
 export default function ExtensionRoutinePage({ params }: { params: { id: string } }) {
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-2xl">
-        <Suspense fallback={<p className="text-sm text-cream/60">Loading...</p>}>
+        <Suspense fallback={<p className="text-sm text-dark/60">Loading...</p>}>
           <ExtensionRoutineContent id={params.id} />
         </Suspense>
       </div>

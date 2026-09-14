@@ -41,7 +41,7 @@ export default function InfoTooltip({
         onMouseEnter={() => {
           if (window.matchMedia("(hover: hover)").matches) setOpen(true);
         }}
-        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-bronze/50 text-[11px] leading-none text-bronze2 transition-colors hover:border-bronze hover:text-cream"
+        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-bronze/50 text-[11px] leading-none text-bronze2 transition-colors hover:border-bronze hover:text-dark"
       >
         ℹ
       </button>
@@ -50,7 +50,7 @@ export default function InfoTooltip({
         mounted &&
         createPortal(
           <div
-            className="fixed inset-0 z-50 flex items-end justify-center bg-dark/70 sm:items-center sm:p-4"
+            className="fixed inset-0 z-50 flex items-end justify-center bg-white/70 sm:items-center sm:p-4"
             onClick={() => setOpen(false)}
           >
             <div
@@ -58,17 +58,17 @@ export default function InfoTooltip({
               aria-modal="true"
               aria-label={label}
               onClick={(e) => e.stopPropagation()}
-              className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-bronze/30 bg-dark p-6 sm:rounded-2xl"
+              className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-bronze/30 bg-white p-6 sm:rounded-2xl"
             >
               <div className="flex items-start justify-between gap-4">
-                <h3 className="font-serif text-xl font-semibold text-cream">
+                <h3 className="font-serif text-xl font-semibold text-dark">
                   {label}
                 </h3>
                 <button
                   type="button"
                   aria-label="Close"
                   onClick={() => setOpen(false)}
-                  className="text-lg leading-none text-cream/50 transition-colors hover:text-cream"
+                  className="text-lg leading-none text-dark/50 transition-colors hover:text-dark"
                 >
                   ✕
                 </button>
@@ -83,7 +83,7 @@ export default function InfoTooltip({
                 />
               )}
 
-              <p className="mt-4 text-sm leading-relaxed text-cream/80">
+              <p className="mt-4 text-sm leading-relaxed text-dark/80">
                 {description}
               </p>
             </div>

@@ -24,7 +24,7 @@ function CommunityCard({ photo, onOpen }: { photo: CommunityPhoto; onOpen: () =>
     <button
       type="button"
       onClick={onOpen}
-      className="group relative block aspect-square w-full overflow-hidden bg-[#1C1612] text-left"
+      className="group relative block aspect-square w-full overflow-hidden bg-[#ffffff] text-left"
     >
       <Image
         src={photo.url}
@@ -36,12 +36,12 @@ function CommunityCard({ photo, onOpen }: { photo: CommunityPhoto; onOpen: () =>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[35%] bg-gradient-to-t from-black/75 to-transparent" />
       <div className="absolute bottom-2 left-2 flex flex-wrap gap-1">
         {photo.curlType && (
-          <span className="rounded-full bg-dark/80 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-bronze">
+          <span className="rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-medium uppercase tracking-wide text-bronze">
             {photo.curlType}
           </span>
         )}
         {photo.porosity && (
-          <span className="rounded-full bg-dark/80 px-2 py-0.5 text-[9px] font-medium capitalize text-bronze2">
+          <span className="rounded-full bg-white/80 px-2 py-0.5 text-[9px] font-medium capitalize text-bronze2">
             {photo.porosity} porosity
           </span>
         )}
@@ -86,14 +86,14 @@ export default function CommunityGrid() {
   }
 
   if (!loaded) {
-    return <p className="mt-8 text-sm text-cream/50">Loading community photos...</p>;
+    return <p className="mt-8 text-sm text-dark/50">Loading community photos...</p>;
   }
 
   if (photos.length === 0) {
     return (
-      <p className="mt-8 text-sm text-cream/50">
+      <p className="mt-8 text-sm text-dark/50">
         Be the first to share your hair journey.{" "}
-        <Link href="/profile" className="text-bronze2 underline underline-offset-2 hover:text-cream">
+        <Link href="/profile" className="text-bronze2 underline underline-offset-2 hover:text-dark">
           Add photos on your profile page →
         </Link>
       </p>
@@ -102,7 +102,7 @@ export default function CommunityGrid() {
 
   return (
     <>
-      <div className="-mx-4 mt-8 grid grid-cols-2 gap-px bg-[#1C1612] sm:mx-0 sm:grid-cols-3">
+      <div className="-mx-4 mt-8 grid grid-cols-2 gap-px bg-[#ffffff] sm:mx-0 sm:grid-cols-3">
         {photos.map((photo) => (
           <CommunityCard key={photo.id} photo={photo} onOpen={() => setSelected(photo)} />
         ))}
@@ -114,11 +114,11 @@ export default function CommunityGrid() {
           onClick={() => setSelected(null)}
         >
           <div className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="relative h-[360px] w-full overflow-hidden rounded-xl bg-[#1C1612]">
+            <div className="relative h-[360px] w-full overflow-hidden rounded-xl bg-[#ffffff]">
               <Image src={selected.url} alt="Community hair photo" fill className="object-cover" />
             </div>
             {selected.caption && (
-              <p className="mt-3 text-sm text-cream/80">{selected.caption}</p>
+              <p className="mt-3 text-sm text-dark/80">{selected.caption}</p>
             )}
             <div className="mt-2 flex flex-wrap gap-1.5">
               {selected.curlType && (
@@ -136,14 +136,14 @@ export default function CommunityGrid() {
               type="button"
               onClick={() => handleStyleMatchThis(selected)}
               disabled={sending}
-              className="mt-4 w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+              className="mt-4 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
             >
               {sending ? "Loading..." : "Style Match this →"}
             </button>
             <button
               type="button"
               onClick={() => setSelected(null)}
-              className="mt-2 w-full text-center text-xs text-cream/50 underline"
+              className="mt-2 w-full text-center text-xs text-dark/50 underline"
             >
               Close
             </button>

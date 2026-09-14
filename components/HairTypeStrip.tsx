@@ -32,7 +32,7 @@ export default function HairTypeStrip({
         {[...HAIR_TYPE_STRIP_IMAGES, ...HAIR_TYPE_STRIP_IMAGES].map((src, i) => (
           <div
             key={`${src}-${i}`}
-            className="relative shrink-0 bg-[#2C2420]"
+            className="relative shrink-0 bg-[#f5f5f5]"
             style={{ height: tileSize, width: tileSize }}
           >
             <Image

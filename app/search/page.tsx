@@ -176,7 +176,7 @@ function IngredientRow({ match }: { match: Match }) {
 
   return (
     <div className={`border-l-4 py-1.5 pl-2.5 ${borderClass}`}>
-      <span className="font-sans text-[12px] text-cream">
+      <span className="font-sans text-[12px] text-dark">
         {match.ingredient_name}
       </span>
       <span className="ml-1.5 font-sans text-[10px] text-muted">{label}</span>
@@ -232,7 +232,7 @@ function ResultCard({
     scoreState?.status === "done" ? matches.some((m) => isSulfate(m.ingredient_name)) : false;
 
   return (
-    <li className="border-b border-[#2C2420]">
+    <li className="border-b border-[#e8e8e8]">
       <div
         role="button"
         tabIndex={0}
@@ -246,7 +246,7 @@ function ResultCard({
         className="cursor-pointer px-4 py-3"
       >
         <div className="flex items-start gap-3">
-          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#2C2420]">
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[#f5f5f5]">
             {product.imageUrl ? (
               <Image
                 src={product.imageUrl}
@@ -262,7 +262,7 @@ function ResultCard({
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-              <span className="font-sans text-[13px] font-medium text-cream">
+              <span className="font-sans text-[13px] font-medium text-dark">
                 {product.name}
               </span>
               <span className="font-sans text-[11px] text-muted">
@@ -272,7 +272,7 @@ function ResultCard({
                 Verified by Qoyl ✓
               </span>
               {product.categorySlug && (
-                <span className="shrink-0 rounded-full bg-dark px-2 py-1 font-sans text-[8px] font-medium uppercase tracking-wide text-bronze">
+                <span className="shrink-0 rounded-full bg-white px-2 py-1 font-sans text-[8px] font-medium uppercase tracking-wide text-bronze">
                   {CATEGORY_LABEL_BY_SLUG[product.categorySlug] ?? product.categorySlug}
                 </span>
               )}
@@ -285,7 +285,7 @@ function ResultCard({
             )}
 
             {cardExpanded && scoreState?.status === "loading" && (
-              <p className="mt-1 font-sans text-[10px] text-cream/50">
+              <p className="mt-1 font-sans text-[10px] text-dark/50">
                 Scoring...
               </p>
             )}
@@ -323,7 +323,7 @@ function ResultCard({
                   )}
                 </div>
                 {fitNote && (
-                  <p className="mt-1.5 font-sans text-[11px] leading-snug text-cream/60">
+                  <p className="mt-1.5 font-sans text-[11px] leading-snug text-dark/60">
                     {fitNote}
                   </p>
                 )}
@@ -366,7 +366,7 @@ function ResultCard({
                 <button
                   type="button"
                   onClick={onToggleIngredients}
-                  className="font-sans text-[11px] text-bronze2 hover:text-cream"
+                  className="font-sans text-[11px] text-bronze2 hover:text-dark"
                 >
                   {ingredientsExpanded
                     ? "Hide ingredients ↑"
@@ -379,7 +379,7 @@ function ResultCard({
               <ShopButton
                 productName={product.name}
                 brandName={product.brand}
-                className="font-sans text-[11px] text-bronze2 hover:text-cream"
+                className="font-sans text-[11px] text-bronze2 hover:text-dark"
               />
             </div>
           </div>
@@ -861,16 +861,16 @@ function SearchPageContent() {
   if (resolvingAccess) {
     if (showAccessSkeleton) {
       return (
-        <main className="flex min-h-screen items-center justify-center bg-dark px-4 font-sans sm:px-6">
+        <main className="flex min-h-screen items-center justify-center bg-white px-4 font-sans sm:px-6">
           <div className="w-full max-w-md">
-            <div className="h-12 w-full animate-pulse rounded-lg bg-[#2C2420]" />
+            <div className="h-12 w-full animate-pulse rounded-lg bg-[#f5f5f5]" />
           </div>
         </main>
       );
     }
     return (
-      <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
-        <p className="text-sm text-cream/60">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-white font-sans">
+        <p className="text-sm text-dark/60">Loading...</p>
       </main>
     );
   }
@@ -913,23 +913,23 @@ function SearchPageContent() {
   }
 
   return (
-    <main className="min-h-screen bg-dark font-sans text-cream">
+    <main className="min-h-screen bg-white font-sans text-dark">
       <HairTypeStrip tileSize={120} />
 
       <div className="px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-md">
         <DisclaimerBanner />
 
-        <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+        <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
           Search a Product
         </h1>
-        <p className="mt-2 text-sm text-cream/70">
+        <p className="mt-2 text-sm text-dark/70">
           Find a product to check its compatibility with your hair profile.
         </p>
 
         {extensionProfile && (
-          <div className="mt-5 rounded-lg border border-bronze/40 bg-bronze/10 px-4 py-3">
-            <p className="text-sm font-medium text-cream">
+          <div className="mt-5 border border-bronze/40 bg-bronze/10 px-4 py-3">
+            <p className="text-sm font-medium text-dark">
               Products safe for your{" "}
               {(extensionProfile.extension_types ?? [])
                 .map((t) => EXTENSION_TYPE_LABELS[t])
@@ -947,7 +947,7 @@ function SearchPageContent() {
                     onClick={() => setExtensionFilter(isActive ? null : filter.key)}
                     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                       isActive
-                        ? "border-bronze bg-bronze text-dark"
+                        ? "border-bronze bg-bronze text-cream"
                         : "border-bronze/40 text-bronze2 hover:border-bronze"
                     }`}
                   >
@@ -973,7 +973,7 @@ function SearchPageContent() {
                   onClick={() => handleCategoryTap(c.slug)}
                   className={`shrink-0 whitespace-nowrap rounded-full border border-bronze px-3 py-1.5 font-sans text-xs font-medium transition-colors ${
                     isActive
-                      ? "bg-dark text-cream"
+                      ? "bg-white text-dark"
                       : "bg-transparent text-bronze hover:bg-bronze/10"
                   }`}
                 >
@@ -994,11 +994,11 @@ function SearchPageContent() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by product name or brand..."
-          className="mt-4 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+          className="mt-4 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
         />
 
         {!categorySlug && query.trim() === "" && (
-          <p className="mt-2 font-sans text-[11px] text-cream/40">
+          <p className="mt-2 font-sans text-[11px] text-dark/40">
             Or browse by category above ↑
           </p>
         )}
@@ -1024,13 +1024,13 @@ function SearchPageContent() {
         )}
 
         {!limitReached && !categorySlug && query.trim() === "" && !hasSearched && (
-          <p className="mt-6 text-sm text-cream/50">
+          <p className="mt-6 text-sm text-dark/50">
             Search a product or browse by category above
           </p>
         )}
 
         {!limitReached && loading && (
-          <p className="mt-4 text-sm text-cream/50">Searching...</p>
+          <p className="mt-4 text-sm text-dark/50">Searching...</p>
         )}
 
         {!limitReached && searchError && (
@@ -1042,7 +1042,7 @@ function SearchPageContent() {
           hasSearched &&
           categorySlug &&
           query.trim() === "" && (
-            <p className="mt-6 text-sm text-cream/70">
+            <p className="mt-6 text-sm text-dark/70">
               All {CATEGORY_LABEL_BY_SLUG[categorySlug] ?? categorySlug}s in
               the Qoyl catalog ({results.length} products)
             </p>
@@ -1064,7 +1064,7 @@ function SearchPageContent() {
                 onClick={() => setWeightFilter(opt.key)}
                 className={`shrink-0 whitespace-nowrap rounded-full border border-bronze2/50 px-3 py-1 font-sans text-[11px] font-medium transition-colors ${
                   weightFilter === opt.key
-                    ? "bg-bronze2 text-dark"
+                    ? "bg-bronze2 text-cream"
                     : "bg-transparent text-bronze2 hover:bg-bronze2/10"
                 }`}
               >
@@ -1077,7 +1077,7 @@ function SearchPageContent() {
         {!limitReached && !loading && results.length > 0 && (
           <ul className="mt-2">
             {filteredResults.length === 0 && (
-              <p className="mt-4 font-sans text-[12px] text-cream/50">
+              <p className="mt-4 font-sans text-[12px] text-dark/50">
                 No results match this weight filter yet - results are still scoring, or none of
                 these products match.
               </p>
@@ -1105,21 +1105,21 @@ function SearchPageContent() {
         {showNoResults && (
           <div className="mt-6 space-y-6">
             <div className="rounded-lg border border-bronze/30 p-4">
-              <p className="text-sm text-cream/80">
+              <p className="text-sm text-dark/80">
                 We don&apos;t have &quot;{query}&quot; in our database yet.
                 Request an evaluation and we&apos;ll score it for you within
                 48 hours.
               </p>
               <Link
                 href={`/request?product=${encodeURIComponent(query)}`}
-                className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+                className="mt-3 inline-flex w-full items-center justify-center bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
               >
                 Request an evaluation
               </Link>
             </div>
 
             <div>
-              <p className="text-sm text-cream/70">
+              <p className="text-sm text-dark/70">
                 Or paste an ingredient list to check compatibility instead.
               </p>
               <form onSubmit={handleManualSubmit} className="mt-3 space-y-3">
@@ -1128,12 +1128,12 @@ function SearchPageContent() {
                   onChange={(e) => setManualIngredients(e.target.value)}
                   placeholder="Aqua, Cetyl Alcohol, Glycerin, ..."
                   rows={5}
-                  className="w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+                  className="w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
                 />
                 <button
                   type="submit"
                   disabled={!manualIngredients.trim() || manualScoring}
-                  className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+                  className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
                 >
                   {manualScoring ? "Checking..." : "Check Compatibility"}
                 </button>

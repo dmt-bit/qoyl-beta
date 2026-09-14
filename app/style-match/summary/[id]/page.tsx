@@ -138,17 +138,17 @@ function StyleMatchSummaryContent({ id }: { id: string }) {
   return (
     <main className="min-h-screen bg-cream font-sans text-dark">
       {/* HEADER */}
-      <div className="print-hide bg-dark px-6 py-8 text-center sm:px-10">
-        <p className="font-serif text-2xl italic text-cream">Qoyl</p>
+      <div className="print-hide bg-white px-6 py-8 text-center sm:px-10">
+        <p className="font-serif text-2xl font-bold lowercase text-dark">qoyl</p>
         <p className="mt-2 font-serif text-sm text-bronze2">Style Match Summary</p>
-        <p className="mt-1 text-[10px] text-cream/50">Created {formatDate(data.createdAt)}</p>
-        <p className="mt-3 break-all text-[11px] text-cream/60">{shareUrl}</p>
+        <p className="mt-1 text-[10px] text-dark/50">Created {formatDate(data.createdAt)}</p>
+        <p className="mt-3 break-all text-[11px] text-dark/60">{shareUrl}</p>
       </div>
       {/* Print-only compact header - the dark block above is hidden when
           printing (main * forces black-on-white anyway), this keeps the
           essentials visible on a printed page. */}
       <div className="hidden px-6 pt-6 text-center print:block">
-        <p className="font-serif text-xl italic">Qoyl — Style Match Summary</p>
+        <p className="font-serif text-xl">Qoyl — Style Match Summary</p>
         <p className="mt-1 text-[10px] text-dark/50">Created {formatDate(data.createdAt)}</p>
       </div>
 
@@ -160,7 +160,7 @@ function StyleMatchSummaryContent({ id }: { id: string }) {
           </h1>
 
           {details.image_url && (
-            <div className="relative mt-4 h-[200px] w-[200px] overflow-hidden rounded-lg bg-dark/5">
+            <div className="relative mt-4 h-[200px] w-[200px] overflow-hidden rounded-lg bg-white/5">
               <Image src={details.image_url} alt={data.detectedStyle} fill className="object-cover" />
             </div>
           )}
@@ -261,7 +261,7 @@ function StyleMatchSummaryContent({ id }: { id: string }) {
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-3">
               {data.tutorials.map((video) => (
                 <div key={video.videoId} className="overflow-hidden rounded-lg border border-dark/10">
-                  <div className="relative h-24 w-full bg-dark/5">
+                  <div className="relative h-24 w-full bg-white/5">
                     {video.thumbnailUrl && (
                       <Image src={video.thumbnailUrl} alt={video.title} fill className="object-cover" />
                     )}
@@ -412,7 +412,7 @@ function StyleMatchSummaryContent({ id }: { id: string }) {
             }}
             rows={4}
             placeholder="Anything else your stylist should know..."
-            className="print-hide mt-2 w-full rounded-lg border border-dark/20 bg-white px-3 py-2 text-sm text-dark placeholder:text-dark/30 focus:border-bronze focus:outline-none"
+            className="print-hide mt-2 w-full border border-dark/20 bg-white px-3 py-2 text-sm text-dark placeholder:text-dark/30 focus:border-bronze focus:outline-none"
           />
           <p className="hidden whitespace-pre-wrap text-sm text-dark/80 print:block">
             {notes || "-"}
@@ -421,7 +421,7 @@ function StyleMatchSummaryContent({ id }: { id: string }) {
             type="button"
             onClick={handleSaveNotes}
             disabled={notesSaved || savingNotes}
-            className="print-hide mt-2 rounded-lg bg-bronze px-4 py-2 text-xs font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+            className="print-hide mt-2 bg-bronze px-4 py-2 text-xs font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
           >
             {savingNotes ? "Saving..." : notesSaved ? "Saved ✓" : "Save notes"}
           </button>

@@ -20,11 +20,11 @@ export default async function PostsPage({
   const initialTab = isTabKey(searchParams.type) ? searchParams.type : "all";
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-5xl">
         <Link
           href="/"
-          className="text-sm text-cream/50 underline underline-offset-2 hover:text-cream/70"
+          className="text-sm text-dark/50 underline underline-offset-2 hover:text-dark/70"
         >
           ← Back to home
         </Link>
@@ -32,10 +32,10 @@ export default async function PostsPage({
         <p className="mt-6 text-xs font-semibold uppercase tracking-widest text-bronze">
           From the Qoyl feed
         </p>
-        <h1 className="mt-2 font-serif text-3xl font-semibold text-cream sm:text-4xl">
+        <h1 className="mt-2 font-serif text-3xl font-semibold text-dark sm:text-4xl">
           All posts
         </h1>
-        <p className="mt-2 text-sm text-cream/70">
+        <p className="mt-2 text-sm text-dark/70">
           Ingredient breakdowns, product evaluations, and hair science for
           every texture.
         </p>

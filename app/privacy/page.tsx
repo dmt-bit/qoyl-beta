@@ -3,40 +3,38 @@
 // preserve the legal text exactly as authored - selectors are scoped
 // under .privacy-doc so they can't leak into the rest of the app (the
 // original document's own bare `body{...}` rule would otherwise override
-// the site-wide dark theme). Font-family declarations reuse the same
-// Cormorant Garamond/DM Sans already loaded via next/font in the root
-// layout instead of loading Google Fonts a second time.
+// the site-wide theme). Font-family declarations reuse the same Space
+// Grotesk already loaded via next/font in the root layout instead of
+// loading Google Fonts a second time.
 
 const PRIVACY_STYLES = `
 .privacy-doc * {margin:0;padding:0;box-sizing:border-box}
-.privacy-doc {background:#F5F0EA;font-family: var(--font-dm-sans), sans-serif;color:#1C1612;padding:2rem}
+.privacy-doc {background:#ffffff;font-family: var(--font-space-grotesk), sans-serif;color:#0a0a0a;padding:2rem}
 .privacy-doc .page {max-width:680px;margin:0 auto;background:white;padding:0}
-.privacy-doc .top-bar {height:4px;background:linear-gradient(90deg,#9C7B5A,#C4A882,#9C7B5A)}
-.privacy-doc .header {background:#1C1612;padding:1.5rem 2rem}
-.privacy-doc .wordmark {font-family: var(--font-cormorant), serif;font-size:1.8rem;font-weight:600;color:#F5F0EA}
-.privacy-doc .wordmark span {color:#C4A882;font-style:italic}
-.privacy-doc .doc-label {font-size:0.65rem;color:#9C7B5A;letter-spacing:0.14em;text-transform:uppercase;margin-top:4px}
+.privacy-doc .top-bar {height:4px;background:#0a0a0a}
+.privacy-doc .header {background:#ffffff;padding:1.5rem 2rem;border-bottom:1px solid #0a0a0a}
+.privacy-doc .wordmark {font-family: var(--font-space-grotesk), sans-serif;font-size:1.8rem;font-weight:700;color:#0a0a0a;text-transform:lowercase}
+.privacy-doc .doc-label {font-size:0.65rem;color:#888888;letter-spacing:0.14em;text-transform:lowercase;margin-top:4px}
 .privacy-doc .body {padding:2rem}
-.privacy-doc .effective {background:#F5F0EA;border-radius:6px;padding:0.75rem 1rem;margin-bottom:1.5rem;font-size:0.8rem;color:#7A6A5A;line-height:1.6}
-.privacy-doc .effective strong {color:#1C1612}
-.privacy-doc h2 {font-family: var(--font-cormorant), serif;font-size:1.2rem;font-weight:400;color:#1C1612;margin:1.5rem 0 0.5rem;padding-top:1rem;border-top:1px solid #EDE5D8}
+.privacy-doc .effective {background:#f5f5f5;border-radius:0;padding:0.75rem 1rem;margin-bottom:1.5rem;font-size:0.8rem;color:#888888;line-height:1.6}
+.privacy-doc .effective strong {color:#0a0a0a}
+.privacy-doc h2 {font-family: var(--font-space-grotesk), sans-serif;font-size:1.2rem;font-weight:500;color:#0a0a0a;margin:1.5rem 0 0.5rem;padding-top:1rem;border-top:1px solid #e8e8e8}
 .privacy-doc h2:first-of-type {border-top:none;margin-top:0}
-.privacy-doc h3 {font-size:0.85rem;font-weight:600;color:#1C1612;margin:1rem 0 0.3rem}
-.privacy-doc p {font-size:0.83rem;color:#3A2E28;line-height:1.75;margin-bottom:0.75rem}
+.privacy-doc h3 {font-size:0.85rem;font-weight:600;color:#0a0a0a;margin:1rem 0 0.3rem}
+.privacy-doc p {font-size:0.83rem;color:#0a0a0a;line-height:1.75;margin-bottom:0.75rem}
 .privacy-doc ul {margin:0.5rem 0 0.75rem 1.2rem}
-.privacy-doc li {font-size:0.83rem;color:#3A2E28;line-height:1.7;margin-bottom:0.3rem}
-.privacy-doc a {color:#9C7B5A;text-decoration:none}
-.privacy-doc a:hover {text-decoration:underline}
-.privacy-doc .highlight {background:#F5F0EA;border-left:3px solid #9C7B5A;padding:0.75rem 1rem;border-radius:0 6px 6px 0;margin:1rem 0;font-size:0.82rem;color:#3A2E28;line-height:1.65}
-.privacy-doc .footer {background:#1C1612;padding:1rem 2rem;margin-top:0}
-.privacy-doc .footer-text {font-size:0.68rem;color:#5A4A3A;line-height:1.8}
+.privacy-doc li {font-size:0.83rem;color:#0a0a0a;line-height:1.7;margin-bottom:0.3rem}
+.privacy-doc a {color:#0a0a0a;text-decoration:underline}
+.privacy-doc .highlight {background:#f5f5f5;border-left:3px solid #0a0a0a;padding:0.75rem 1rem;border-radius:0;margin:1rem 0;font-size:0.82rem;color:#0a0a0a;line-height:1.65}
+.privacy-doc .footer {background:#ffffff;padding:1rem 2rem;margin-top:0;border-top:1px solid #0a0a0a}
+.privacy-doc .footer-text {font-size:0.68rem;color:#888888;line-height:1.8}
 `;
 
 const PRIVACY_CONTENT = `
 <div class="top-bar"></div>
 
 <div class="header">
-  <div class="wordmark">Q<span>oyl</span></div>
+  <div class="wordmark">qoyl</div>
   <div class="doc-label">Privacy Policy</div>
 </div>
 
@@ -180,9 +178,9 @@ const PRIVACY_CONTENT = `
 <div class="footer">
   <div class="footer-text">
     Qoyl · Privacy Policy · Effective July 28, 2026<br/>
-    <a href="https://qoyl-beta-alpha.vercel.app" style="color:#9C7B5A">Consumer app</a> ·
-    <a href="https://business.qoyl.live" style="color:#9C7B5A">Brand portal</a> ·
-    <a href="mailto:hey@qoyl.live" style="color:#9C7B5A">hey@qoyl.live</a>
+    <a href="https://qoyl-beta-alpha.vercel.app" style="color:#0a0a0a">Consumer app</a> ·
+    <a href="https://business.qoyl.live" style="color:#0a0a0a">Brand portal</a> ·
+    <a href="mailto:hey@qoyl.live" style="color:#0a0a0a">hey@qoyl.live</a>
   </div>
 </div>
 `;

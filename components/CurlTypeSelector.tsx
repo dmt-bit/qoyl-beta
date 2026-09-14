@@ -131,7 +131,7 @@ function CurlTypeCard({
       onClick={onClick}
       aria-pressed={selected}
       className={`flex flex-col overflow-hidden rounded-xl text-left transition-colors ${
-        selected ? "border-2 border-bronze" : "border border-[#2C2420]"
+        selected ? "border-2 border-bronze" : "border border-[#e8e8e8]"
       }`}
     >
       <div className="relative aspect-[4/5] w-full shrink-0">
@@ -143,13 +143,13 @@ function CurlTypeCard({
           className={`object-cover object-top ${selected ? "brightness-110" : ""}`}
         />
         {selected && (
-          <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-dark text-[11px] font-semibold text-bronze">
+          <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-bronze">
             ✓
           </span>
         )}
       </div>
-      <div className="bg-dark px-2.5 py-2">
-        <span className="block font-serif text-[18px] font-semibold text-cream">{option.label}</span>
+      <div className="bg-white px-2.5 py-2">
+        <span className="block font-serif text-[18px] font-semibold text-dark">{option.label}</span>
         <span className="block font-sans text-[11px] text-bronze">{option.type}</span>
         <span className="mt-0.5 line-clamp-2 block font-sans text-[10px] leading-[1.4] text-muted">
           {option.descriptor}
@@ -175,12 +175,12 @@ function NotSureCurlCard({ selected, onClick }: { selected: boolean; onClick: ()
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`col-span-2 flex flex-col items-center justify-center gap-1 rounded-xl bg-dark px-4 py-6 text-center transition-colors sm:col-span-3 ${
-        selected ? "border-2 border-bronze" : "border border-[#2C2420]"
+      className={`col-span-2 flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-4 py-6 text-center transition-colors sm:col-span-3 ${
+        selected ? "border-2 border-bronze" : "border border-[#e8e8e8]"
       }`}
     >
       <span className="font-serif text-[32px] leading-none text-bronze">?</span>
-      <span className="mt-1 font-serif text-[18px] font-semibold text-cream">Not sure yet</span>
+      <span className="mt-1 font-serif text-[18px] font-semibold text-dark">Not sure yet</span>
       <span className="max-w-xs font-sans text-[10px] leading-[1.4] text-muted">
         We&apos;ll use your other answers to make our best recommendation.
       </span>

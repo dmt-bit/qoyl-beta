@@ -51,7 +51,7 @@ export default function PostCard({
     return (
       <Link
         href={`/posts/${post.slug}`}
-        className="flex flex-col overflow-hidden rounded-xl border border-bronze/30 transition-colors hover:border-bronze"
+        className="flex flex-col overflow-hidden border border-[#e8e8e8] transition-colors hover:border-bronze"
       >
         <div className="relative h-28 w-full">
           {post.hero_image_url ? (
@@ -66,19 +66,19 @@ export default function PostCard({
             <div className="h-full w-full bg-gradient-to-br from-bronze/30 via-warm/10 to-dark" />
           )}
           {isVideo && (
-            <span className="absolute left-2 top-2 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold text-dark">
+            <span className="absolute left-2 top-2 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold text-cream">
               ▶ Video
             </span>
           )}
           {isRepost && (
-            <span className="absolute left-2 top-2 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold text-dark">
+            <span className="absolute left-2 top-2 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold text-cream">
               ↗ Repost
             </span>
           )}
         </div>
         <div className="flex flex-1 flex-col gap-2 p-4">
           <CategoryLabel category={post.category} />
-          <h2 className="font-serif text-base font-semibold text-cream">
+          <h2 className="font-serif text-base font-semibold text-dark">
             {post.title}
           </h2>
         </div>
@@ -92,7 +92,7 @@ export default function PostCard({
   return (
     <Link
       href={`/posts/${post.slug}`}
-      className="group relative block aspect-square w-full overflow-hidden bg-[#1C1612]"
+      className="group relative block aspect-square w-full overflow-hidden bg-[#ffffff]"
     >
       {post.hero_image_url ? (
         <Image
@@ -103,19 +103,19 @@ export default function PostCard({
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
       ) : (
-        <div className="h-full w-full bg-gradient-to-br from-[#1C1612] to-[#2C2420]" />
+        <div className="h-full w-full bg-gradient-to-br from-[#ffffff] to-[#f5f5f5]" />
       )}
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-black/75 to-transparent" />
 
       {(isVideo || isRepost) && (
-        <span className="absolute left-2 top-2 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold text-dark">
+        <span className="absolute left-2 top-2 rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold text-cream">
           {isVideo ? "▶ Video" : "↗ Repost"}
         </span>
       )}
 
       {post.hair_type && (
-        <span className="absolute right-2 top-2 rounded-full bg-[#1C1612] px-2 py-1 text-[8px] font-medium uppercase tracking-wide text-bronze">
+        <span className="absolute right-2 top-2 rounded-full bg-[#ffffff] px-2 py-1 text-[8px] font-medium uppercase tracking-wide text-bronze">
           {post.hair_type}
         </span>
       )}
@@ -128,7 +128,7 @@ export default function PostCard({
         </div>
       )}
 
-      <h2 className="absolute bottom-0 left-0 right-0 line-clamp-2 p-[10px] font-serif text-sm leading-tight text-cream">
+      <h2 className="absolute bottom-0 left-0 right-0 line-clamp-2 p-[10px] font-serif text-sm leading-tight text-dark">
         {post.title}
       </h2>
     </Link>

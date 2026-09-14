@@ -29,7 +29,7 @@ export default function ScoreExampleCard({
           {SCORE_EXAMPLE_ROWS.map((row) => (
             <div
               key={row.name}
-              className={`border-b border-l-4 border-b-[#EDE5D8] py-3 pl-3 pr-1 font-sans text-[12px] text-dark ${row.borderClass}`}
+              className={`border-b border-l-4 border-b-[#f5f5f5] py-3 pl-3 pr-1 font-sans text-[12px] text-dark ${row.borderClass}`}
             >
               {row.name} · {row.rating}
             </div>
@@ -40,9 +40,9 @@ export default function ScoreExampleCard({
   }
 
   return (
-    <div className="rounded-2xl bg-dark p-6 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
-      <p className="font-serif text-[16px] text-cream">Curl Defining Cream</p>
-      <p className="mt-4 text-center font-serif text-[64px] leading-none text-cream">
+    <div className="rounded-2xl bg-white p-6 shadow-[0_20px_50px_-15px_rgba(0,0,0,0.6)]">
+      <p className="font-serif text-[16px] text-dark">Curl Defining Cream</p>
+      <p className="mt-4 text-center font-serif text-[64px] leading-none text-dark">
         87
       </p>
       <p className="text-center font-sans text-[9px] tracking-[0.15em] text-bronze">
@@ -52,7 +52,7 @@ export default function ScoreExampleCard({
         {SCORE_EXAMPLE_ROWS.map((row) => (
           <div
             key={row.name}
-            className={`border-b border-l-4 border-b-[#2C2420] py-3 pl-3 pr-1 font-sans text-[12px] text-cream ${row.borderClass}`}
+            className={`border-b border-l-4 border-b-[#e8e8e8] py-3 pl-3 pr-1 font-sans text-[12px] text-dark ${row.borderClass}`}
           >
             {row.name} · {row.rating}
           </div>

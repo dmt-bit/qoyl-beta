@@ -87,10 +87,12 @@ export function positionWeight(position: number): number {
   return 0.6;
 }
 
+// Redesign item 8 - score badges dropped their background fill; the
+// number itself now carries the tier color, set in Space Mono.
 export const TIER_CLASSES: Record<"green" | "amber" | "red", string> = {
-  green: "bg-green text-dark",
-  amber: "bg-amber text-dark",
-  red: "bg-red text-cream",
+  green: "font-mono font-bold text-green",
+  amber: "font-mono font-bold text-amber",
+  red: "font-mono font-bold text-red",
 };
 
 export const RATING_DOT_CLASSES: Record<string, string> = {

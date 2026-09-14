@@ -28,7 +28,7 @@ export function ScoreResultView({
 }) {
   if (result.matches.length === 0) {
     return (
-      <p className="mt-4 text-sm text-cream/70">
+      <p className="mt-4 text-sm text-dark/70">
         No compatibility data found yet for these ingredients.
       </p>
     );
@@ -44,9 +44,9 @@ export function ScoreResultView({
         {result.matches.map((match, i) => (
           <li
             key={`${match.ingredient_name}-${i}`}
-            className="flex items-center justify-between rounded-lg border border-bronze/30 px-4 py-3"
+            className="flex items-center justify-between border border-bronze/30 px-4 py-3"
           >
-            <span className="text-sm capitalize text-cream">
+            <span className="text-sm capitalize text-dark">
               {match.ingredient_name}
             </span>
             <span className="flex items-center gap-2">
@@ -55,7 +55,7 @@ export function ScoreResultView({
                   RATING_DOT_CLASSES[match.rating] ?? "bg-muted"
                 }`}
               />
-              <span className="text-xs capitalize text-cream/70">
+              <span className="text-xs capitalize text-dark/70">
                 {match.rating}
               </span>
             </span>

@@ -44,13 +44,13 @@ const TESTIMONIALS = [
 
 function TestimonialCard({ t }: { t: (typeof TESTIMONIALS)[number] }) {
   return (
-    <div className="rounded-xl bg-[#2C2420] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
+    <div className="rounded-xl bg-[#f5f5f5] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.12)]">
       <div className="flex gap-1">
         {Array.from({ length: t.stars }).map((_, i) => (
           <StarIcon key={i} />
         ))}
       </div>
-      <p className="mt-4 font-serif text-lg italic text-cream">
+      <p className="mt-4 font-serif text-lg italic text-dark">
         &quot;{t.review}&quot;
       </p>
       <p
@@ -106,7 +106,7 @@ export default function Testimonials() {
               <span
                 key={t.name}
                 className={`h-2 w-2 rounded-full transition-colors ${
-                  i === activeIndex ? "bg-bronze" : "bg-dark/15"
+                  i === activeIndex ? "bg-bronze" : "bg-white/15"
                 }`}
               />
             ))}
@@ -123,7 +123,7 @@ export default function Testimonials() {
         <div className="mt-10 text-center">
           <Link
             href="/profile"
-            className="inline-flex items-center justify-center rounded-lg bg-bronze px-6 py-4 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+            className="inline-flex items-center justify-center rounded-lg bg-bronze px-6 py-4 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
           >
             Try Qoyl free - no credit card needed →
           </Link>

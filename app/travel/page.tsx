@@ -111,10 +111,10 @@ function Pill({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full rounded-lg border px-4 py-3 text-left text-sm font-medium transition-colors ${
+      className={`w-full border px-4 py-3 text-left text-sm font-medium transition-colors ${
         selected
-          ? "border-bronze bg-bronze text-dark"
-          : "border-bronze/40 text-cream hover:border-bronze"
+          ? "border-bronze bg-bronze text-cream"
+          : "border-bronze/40 text-dark hover:border-bronze"
       }`}
     >
       {label}
@@ -144,7 +144,7 @@ function TravelKitProductCard({ item }: { item: TravelKitProduct }) {
     <li className={`rounded-lg border p-4 ${item.isBrandProduct ? "border-[#B08D57]/60 bg-cream/5" : "border-bronze/30"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-serif text-lg text-cream">{item.name}</p>
+          <p className="font-serif text-lg text-dark">{item.name}</p>
           <p className="text-xs text-muted">{item.brand}</p>
         </div>
         {item.score > 0 && (
@@ -160,7 +160,7 @@ function TravelKitProductCard({ item }: { item: TravelKitProduct }) {
           Qoyl Partner Brand
         </span>
       )}
-      <p className="mt-2 text-sm text-cream/70">{item.reason}</p>
+      <p className="mt-2 text-sm text-dark/70">{item.reason}</p>
       <div className="mt-2 flex flex-wrap gap-3">
         {item.isBrandProduct ? (
           <>
@@ -168,7 +168,7 @@ function TravelKitProductCard({ item }: { item: TravelKitProduct }) {
               href={item.brandProductUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+              className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
             >
               Shop at {item.brand} →
             </a>
@@ -177,7 +177,7 @@ function TravelKitProductCard({ item }: { item: TravelKitProduct }) {
                 href={item.brandShopperUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
               >
                 Shop at Shopper →
               </a>
@@ -187,7 +187,7 @@ function TravelKitProductCard({ item }: { item: TravelKitProduct }) {
           <ShopButton
             productName={item.name}
             brandName={item.brand}
-            className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+            className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
           />
         )}
       </div>
@@ -207,19 +207,19 @@ function LandingView({
   cancelled: boolean;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-dark px-4 py-16 font-sans text-cream sm:px-6">
+    <main className="flex min-h-screen items-center justify-center bg-white px-4 py-16 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-xl text-center">
-        <h1 className="font-serif text-4xl font-semibold leading-tight text-cream sm:text-5xl">
+        <h1 className="font-serif text-4xl font-semibold leading-tight text-dark sm:text-5xl">
           Your hair goes where you go.
         </h1>
-        <p className="mx-auto mt-5 max-w-lg text-base text-cream/70">
+        <p className="mx-auto mt-5 max-w-lg text-base text-dark/70">
           Different climates, different water, different routines. Tell us
           where you&apos;re headed and we will build you a personalized list
           of 5 products matched to your hair profile and your destination.
         </p>
 
         {cancelled && (
-          <p className="mt-4 text-sm text-cream/60">
+          <p className="mt-4 text-sm text-dark/60">
             No worries - you can build your kit anytime.
           </p>
         )}
@@ -228,12 +228,12 @@ function LandingView({
         <button
           type="button"
           onClick={onBuildClick}
-          className="mx-auto mt-8 flex h-[52px] w-full max-w-sm items-center justify-center rounded-full bg-bronze px-6 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 sm:w-auto sm:px-10"
+          className="mx-auto mt-8 flex h-[52px] w-full max-w-sm items-center justify-center rounded-full bg-bronze px-6 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 sm:w-auto sm:px-10"
         >
           Build my travel kit - $4.99 →
         </button>
 
-        <p className="mt-4 text-xs text-cream/50">
+        <p className="mt-4 text-xs text-dark/50">
           One-time purchase. Yours to keep and shop from before you leave.
         </p>
       </div>
@@ -304,14 +304,14 @@ function SurveyView({
   const step3Valid = Boolean(protectiveStyle) && Boolean(hairPriority);
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-md">
         <ProgressBar step={step} totalSteps={totalSteps} />
 
         <div key={step} className="fade-step mt-8">
           {step === 1 && (
             <div>
-              <h2 className="font-serif text-2xl font-semibold text-cream">
+              <h2 className="font-serif text-2xl font-semibold text-dark">
                 Where are you headed?
               </h2>
               <input
@@ -319,7 +319,7 @@ function SurveyView({
                 value={destination}
                 onChange={(e) => setDestination(e.target.value)}
                 placeholder="Miami, FL or Paris, France"
-                className="mt-4 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+                className="mt-4 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
               />
 
               {climate && (
@@ -347,7 +347,7 @@ function SurveyView({
               {dateMode === "exact" ? (
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <div>
-                    <label htmlFor="departure-date" className="text-xs font-medium text-cream/70">
+                    <label htmlFor="departure-date" className="text-xs font-medium text-dark/70">
                       Departure date
                     </label>
                     <input
@@ -355,11 +355,11 @@ function SurveyView({
                       type="date"
                       value={departureDate}
                       onChange={(e) => setDepartureDate(e.target.value)}
-                      className="mt-1.5 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2.5 text-sm text-cream focus:border-bronze focus:outline-none"
+                      className="mt-1.5 w-full border border-bronze/40 bg-transparent px-3 py-2.5 text-sm text-dark focus:border-bronze focus:outline-none"
                     />
                   </div>
                   <div>
-                    <label htmlFor="return-date" className="text-xs font-medium text-cream/70">
+                    <label htmlFor="return-date" className="text-xs font-medium text-dark/70">
                       Return date
                     </label>
                     <input
@@ -368,13 +368,13 @@ function SurveyView({
                       value={returnDate}
                       min={departureDate || undefined}
                       onChange={(e) => setReturnDate(e.target.value)}
-                      className="mt-1.5 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2.5 text-sm text-cream focus:border-bronze focus:outline-none"
+                      className="mt-1.5 w-full border border-bronze/40 bg-transparent px-3 py-2.5 text-sm text-dark focus:border-bronze focus:outline-none"
                     />
                   </div>
                 </div>
               ) : (
                 <div className="mt-4">
-                  <label htmlFor="travel-month" className="text-xs font-medium text-cream/70">
+                  <label htmlFor="travel-month" className="text-xs font-medium text-dark/70">
                     Month of travel
                   </label>
                   <input
@@ -382,12 +382,12 @@ function SurveyView({
                     type="month"
                     value={travelMonthInput}
                     onChange={(e) => setTravelMonthInput(e.target.value)}
-                    className="mt-1.5 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2.5 text-sm text-cream focus:border-bronze focus:outline-none"
+                    className="mt-1.5 w-full border border-bronze/40 bg-transparent px-3 py-2.5 text-sm text-dark focus:border-bronze focus:outline-none"
                   />
                 </div>
               )}
 
-              <div className="mt-4 rounded-lg border-l-2 border-bronze bg-warm px-4 py-3">
+              <div className="mt-4 border-l-2 border-bronze bg-warm px-4 py-3">
                 <p className="text-[12px] leading-relaxed text-dark/80">
                   Why we ask for your travel dates: if you have a Qoyl routine subscription, we
                   will send you updated routine reminders specific to your destination climate
@@ -400,7 +400,7 @@ function SurveyView({
 
           {step === 2 && (
             <div>
-              <h2 className="font-serif text-2xl font-semibold text-cream">
+              <h2 className="font-serif text-2xl font-semibold text-dark">
                 Will you be swimming or in water?
               </h2>
               <div className="mt-4 space-y-2.5">
@@ -413,7 +413,7 @@ function SurveyView({
                   />
                 ))}
               </div>
-              <p className="mt-4 text-xs text-cream/50">
+              <p className="mt-4 text-xs text-dark/50">
                 Chlorine, salt water, and minerals affect your hair
                 differently. This helps us include the right protective and
                 clarifying products.
@@ -423,7 +423,7 @@ function SurveyView({
 
           {step === 3 && (
             <div>
-              <h2 className="font-serif text-2xl font-semibold text-cream">
+              <h2 className="font-serif text-2xl font-semibold text-dark">
                 Are you planning a protective style for this trip?
               </h2>
               <div className="mt-4 space-y-2.5">
@@ -437,7 +437,7 @@ function SurveyView({
                 ))}
               </div>
 
-              <h2 className="mt-8 font-serif text-2xl font-semibold text-cream">
+              <h2 className="mt-8 font-serif text-2xl font-semibold text-dark">
                 What&apos;s your hair priority on this trip?
               </h2>
               <div className="mt-4 space-y-2.5">
@@ -455,10 +455,10 @@ function SurveyView({
 
           {step === 4 && (
             <div>
-              <h2 className="font-serif text-2xl font-semibold text-cream">
+              <h2 className="font-serif text-2xl font-semibold text-dark">
                 Review your trip
               </h2>
-              <p className="mt-3 text-sm text-cream/80">
+              <p className="mt-3 text-sm text-dark/80">
                 Your trip to {destination || "-"} ·{" "}
                 {dateMode === "exact"
                   ? formatTripDateRange(departureDate || null, returnDate || null, null)
@@ -468,7 +468,7 @@ function SurveyView({
                 {labelFor(SWIMMING_OPTIONS, swimming)} ·{" "}
                 {labelFor(PROTECTIVE_STYLE_OPTIONS, protectiveStyle)}
               </p>
-              <p className="mt-4 text-sm text-cream/70">
+              <p className="mt-4 text-sm text-dark/70">
                 Based on your profile and trip details we will build you a
                 personalized list of 5 products. Ready?
               </p>
@@ -481,7 +481,7 @@ function SurveyView({
                 type="button"
                 onClick={onSubmit}
                 disabled={submitting}
-                className="mt-6 w-full rounded-lg bg-bronze py-4 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+                className="mt-6 w-full rounded-lg bg-bronze py-4 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
               >
                 {submitting ? "Please wait..." : "Get my travel kit - $4.99 →"}
               </button>
@@ -495,7 +495,7 @@ function SurveyView({
               <button
                 type="button"
                 onClick={onBack}
-                className="text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+                className="text-sm text-bronze2 underline underline-offset-2 hover:text-dark"
               >
                 ← Back
               </button>
@@ -510,7 +510,7 @@ function SurveyView({
                 (step === 2 && !step2Valid) ||
                 (step === 3 && !step3Valid)
               }
-              className="rounded-lg bg-bronze px-6 py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+              className="bg-bronze px-6 py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
             >
               Next →
             </button>
@@ -521,7 +521,7 @@ function SurveyView({
             <button
               type="button"
               onClick={onBack}
-              className="text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+              className="text-sm text-bronze2 underline underline-offset-2 hover:text-dark"
             >
               ← Back
             </button>
@@ -536,8 +536,8 @@ function SurveyView({
 
 function GeneratingView({ destination }: { destination: string }) {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-dark px-4 font-sans text-cream">
-      <h1 className="font-serif text-2xl italic text-cream">Qoyl</h1>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-white px-4 font-sans text-dark">
+      <h1 className="font-serif text-2xl font-bold lowercase text-dark">qoyl</h1>
       <div className="mt-8 flex gap-2">
         {[0, 1, 2].map((i) => (
           <span
@@ -547,7 +547,7 @@ function GeneratingView({ destination }: { destination: string }) {
           />
         ))}
       </div>
-      <p className="mt-8 font-serif text-xl text-cream">
+      <p className="mt-8 font-serif text-xl text-dark">
         Building your kit for {destination}...
       </p>
     </main>
@@ -577,10 +577,10 @@ function KitView({
   const ready = isKitReady(kit);
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-md">
         {welcome && ready && !welcomeDismissed && (
-          <div className="mb-4 flex items-start justify-between gap-4 rounded-lg bg-bronze px-4 py-3">
+          <div className="mb-4 flex items-start justify-between gap-4 bg-bronze px-4 py-3">
             <p className="text-sm text-dark">
               Your travel kit for {kit.destination} is ready. Shop each
               product before you pack.
@@ -597,7 +597,7 @@ function KitView({
         )}
 
         <div className="flex items-start justify-between gap-4">
-          <h1 className="font-serif text-3xl font-semibold text-cream">
+          <h1 className="font-serif text-3xl font-semibold text-dark">
             Your travel kit
           </h1>
           {otherKits.length > 0 && (
@@ -605,7 +605,7 @@ function KitView({
               value=""
               onChange={(e) => e.target.value && onSwitchKit(e.target.value)}
               aria-label="View a different trip"
-              className="shrink-0 rounded-lg border border-bronze/40 bg-dark px-2 py-1.5 text-xs text-cream/70 focus:border-bronze focus:outline-none"
+              className="shrink-0 border border-bronze/40 bg-white px-2 py-1.5 text-xs text-dark/70 focus:border-bronze focus:outline-none"
             >
               <option value="">View a different trip →</option>
               {otherKits.map((k) => (
@@ -640,7 +640,7 @@ function KitView({
         </div>
 
         {!ready && (
-          <div className="mt-6 flex items-center gap-3 rounded-lg border border-bronze/30 px-4 py-3">
+          <div className="mt-6 flex items-center gap-3 border border-bronze/30 px-4 py-3">
             {!pollExhausted && (
               <div className="flex shrink-0 gap-1.5">
                 {[0, 1, 2].map((i) => (
@@ -652,7 +652,7 @@ function KitView({
                 ))}
               </div>
             )}
-            <p className="text-sm text-cream/70">
+            <p className="text-sm text-dark/70">
               {pollExhausted
                 ? "Your kit is being prepared - check back in a moment or refresh this page. We have also sent your kit to your email."
                 : kit.status === "pending_payment"
@@ -671,12 +671,12 @@ function KitView({
         )}
 
         {ready && products.length < 5 && (
-          <p className="mt-4 text-sm text-cream/60">
+          <p className="mt-4 text-sm text-dark/60">
             We found {products.length} product
             {products.length === 1 ? "" : "s"} for your trip.{" "}
             <Link
               href="/request"
-              className="text-bronze2 underline underline-offset-2 hover:text-cream"
+              className="text-bronze2 underline underline-offset-2 hover:text-dark"
             >
               Request a product evaluation
             </Link>{" "}
@@ -684,7 +684,7 @@ function KitView({
           </p>
         )}
 
-        <p className="mt-6 text-xs text-cream/50">
+        <p className="mt-6 text-xs text-dark/50">
           Your kit is a curated digital guide - click each link to purchase
           directly from the brand or retailer. All products are
           independently evaluated by Qoyl with no brand partnerships
@@ -694,7 +694,7 @@ function KitView({
         <button
           type="button"
           onClick={onBuildAnother}
-          className="mt-8 w-full rounded-lg border border-bronze/40 py-3 text-sm font-semibold text-cream transition-colors hover:border-bronze"
+          className="mt-8 w-full border border-bronze/40 py-3 text-sm font-semibold text-dark transition-colors hover:border-bronze"
         >
           Plan another trip →
         </button>
@@ -1057,8 +1057,8 @@ function TravelPageContent() {
 
   if (authLoading || resolvingKit) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
-        <p className="text-sm text-cream/60">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-white font-sans">
+        <p className="text-sm text-dark/60">Loading...</p>
       </main>
     );
   }

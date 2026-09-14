@@ -136,12 +136,12 @@ function RecentCompletionsStrip({ userId }: { userId: string }) {
               >
                 {entry.status === "rest" && <span className="h-1.5 w-1.5 rounded-full bg-bronze" />}
               </div>
-              <span className="text-[10px] text-cream/40">{weekday}</span>
+              <span className="text-[10px] text-dark/40">{weekday}</span>
             </div>
           );
         })}
       </div>
-      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-cream/40">
+      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-dark/40">
         <span>● Completed</span>
         <span>· Rest day</span>
         <span>○ Missed</span>
@@ -246,7 +246,7 @@ function SparkleIcon() {
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
     <svg
-      className={`h-5 w-5 ${filled ? "text-bronze" : "text-cream/50"}`}
+      className={`h-5 w-5 ${filled ? "text-bronze" : "text-dark/50"}`}
       viewBox="0 0 24 24"
       fill={filled ? "currentColor" : "none"}
       stroke="currentColor"
@@ -271,10 +271,10 @@ function QuickActions() {
         <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
           <SparkleIcon />
         </div>
-        <p className="mt-4 font-serif text-xl font-semibold text-cream">
+        <p className="mt-4 font-serif text-xl font-semibold text-dark">
           Style Match
         </p>
-        <p className="mt-1 text-sm text-cream/70">
+        <p className="mt-1 text-sm text-dark/70">
           Upload a photo or describe a style - get matching tutorials, a
           scored shopping list, and a local stylist if one&apos;s available.
         </p>
@@ -290,10 +290,10 @@ function QuickActions() {
         <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
           <SearchIcon />
         </div>
-        <p className="mt-4 font-serif text-xl font-semibold text-cream">
+        <p className="mt-4 font-serif text-xl font-semibold text-dark">
           Search a product
         </p>
-        <p className="mt-1 text-sm text-cream/70">
+        <p className="mt-1 text-sm text-dark/70">
           Check any product&apos;s compatibility with your hair.
         </p>
       </Link>
@@ -305,10 +305,10 @@ function QuickActions() {
         <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
           <TravelIcon />
         </div>
-        <p className="mt-4 font-serif text-xl font-semibold text-cream">
+        <p className="mt-4 font-serif text-xl font-semibold text-dark">
           Get your travel kit
         </p>
-        <p className="mt-1 text-sm text-cream/70">
+        <p className="mt-1 text-sm text-dark/70">
           5 products matched to your destination climate.
         </p>
       </Link>
@@ -575,8 +575,8 @@ function DashboardContent() {
 
   if (!checkedAccess) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
-        <p className="text-sm text-cream/60">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-white font-sans">
+        <p className="text-sm text-dark/60">Loading...</p>
       </main>
     );
   }
@@ -589,31 +589,31 @@ function DashboardContent() {
   const childSafetyNote = getChildSafetyNote(hairProfile?.profile_for ?? null);
 
   return (
-    <main className="min-h-screen bg-dark px-4 py-10 font-sans text-cream sm:px-6">
+    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-2xl">
         <div className="flex items-start justify-between gap-4">
-          <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+          <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
             {greeting}
           </h1>
           <Link
             href="/profile"
-            className="print-hide mt-2 shrink-0 text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70"
+            className="print-hide mt-2 shrink-0 text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70"
           >
             View my profile
           </Link>
         </div>
 
         {!entitlementLoading && hasRoutineSubscription && (
-          <span className="mt-3 inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-dark">
+          <span className="mt-3 inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-cream">
             Monthly Routine
           </span>
         )}
 
         {user?.email && (
-          <p className="mt-3 flex items-center gap-2 text-xs text-cream/50">
+          <p className="mt-3 flex items-center gap-2 text-xs text-dark/50">
             {user.email}
             {!entitlementLoading && isAdminUser && (
-              <span className="rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-dark">
+              <span className="rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
                 Admin
               </span>
             )}
@@ -623,7 +623,7 @@ function DashboardContent() {
         <ProfileChips />
 
         {childSafetyNote && (
-          <p className="mt-4 rounded-lg border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-cream/90">
+          <p className="mt-4 border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-dark/90">
             {childSafetyNote}
           </p>
         )}
@@ -636,7 +636,7 @@ function DashboardContent() {
           </p>
         )}
         {paymentStatus === "cancelled" && (
-          <p className="print-hide mt-4 rounded-lg border border-bronze/40 bg-bronze/10 px-4 py-3 text-sm text-cream/80">
+          <p className="print-hide mt-4 border border-bronze/40 bg-bronze/10 px-4 py-3 text-sm text-cream/80">
             No worries - you can unlock this anytime.
           </p>
         )}
@@ -647,7 +647,7 @@ function DashboardContent() {
 
         {savedStylesLoaded && (
           <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-cream">My Style Inspo</h2>
+            <h2 className="font-serif text-2xl font-semibold text-dark">My Style Inspo</h2>
 
             {savedStyles.length === 0 ? (
               <Link
@@ -655,7 +655,7 @@ function DashboardContent() {
                 className="mt-4 flex items-center gap-3 rounded-xl border border-bronze/30 px-5 py-6 transition-colors hover:border-bronze"
               >
                 <HeartIcon filled={false} />
-                <span className="text-sm text-cream/70">
+                <span className="text-sm text-dark/70">
                   Save styles you love and build your inspiration board. →
                 </span>
               </Link>
@@ -664,7 +664,7 @@ function DashboardContent() {
                 {savedStyles.map((style) => (
                   <div key={style.id} className="rounded-xl border border-bronze/30 p-4">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-serif text-base leading-tight text-cream">{style.style_name}</p>
+                      <p className="font-serif text-base leading-tight text-dark">{style.style_name}</p>
                       <button
                         type="button"
                         onClick={() => handleUnsaveStyle(style.id)}
@@ -679,7 +679,7 @@ function DashboardContent() {
                     </span>
                     <Link
                       href={`/style-match?prefill=${encodeURIComponent(style.style_name)}`}
-                      className="mt-3 block text-xs font-semibold text-bronze2 underline underline-offset-2 hover:text-cream"
+                      className="mt-3 block text-xs font-semibold text-bronze2 underline underline-offset-2 hover:text-dark"
                     >
                       Match this style →
                     </Link>
@@ -691,13 +691,13 @@ function DashboardContent() {
         )}
 
         {hairProfileLoading && (
-          <p className="mt-8 text-sm text-cream/50">
+          <p className="mt-8 text-sm text-dark/50">
             Loading your profile...
           </p>
         )}
 
         {!hairProfileLoading && !hairProfile && (
-          <p className="mt-8 text-sm text-cream/70">
+          <p className="mt-8 text-sm text-dark/70">
             Save a{" "}
             <Link href="/profile" className="underline">
               hair profile
@@ -708,17 +708,17 @@ function DashboardContent() {
 
         {hairProfile && (
           <section className="mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-cream">
+            <h2 className="font-serif text-2xl font-semibold text-dark">
               Your Routine
             </h2>
-            <div className="mt-4 rounded-xl border border-bronze/30 bg-dark p-6">
+            <div className="mt-4 rounded-xl border border-bronze/30 bg-white p-6">
               <div className="space-y-4">
                 {steps.map((step) => (
                   <div key={step.title}>
                     <p className="font-serif text-lg text-bronze2">
                       {step.title}
                     </p>
-                    <p className="mt-1 text-sm text-cream/70">
+                    <p className="mt-1 text-sm text-dark/70">
                       {step.description}
                     </p>
                   </div>
@@ -733,10 +733,10 @@ function DashboardContent() {
                       className="print-hide flex items-center justify-between rounded-xl border border-bronze/40 bg-bronze/10 px-5 py-4 transition-colors hover:border-bronze"
                     >
                       <div>
-                        <p className="font-serif text-lg text-cream">
+                        <p className="font-serif text-lg text-dark">
                           Your routine is ready →
                         </p>
-                        <p className="mt-1 text-sm text-cream/60">
+                        <p className="mt-1 text-sm text-dark/60">
                           Full wash calendar, personalized steps, and curated
                           products for this month.
                         </p>
@@ -759,10 +759,10 @@ function DashboardContent() {
 
         {extensionProfile && (
           <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-cream">
+            <h2 className="font-serif text-2xl font-semibold text-dark">
               My extensions &amp; wig care
             </h2>
-            <div className="mt-4 rounded-xl border border-bronze/30 bg-dark p-5">
+            <div className="mt-4 rounded-xl border border-bronze/30 bg-white p-5">
               <div className="flex flex-wrap gap-2">
                 {Array.from(
                   new Set((extensionProfile.extension_types ?? []).map((t) => EXTENSION_TYPE_LABELS[t] ?? t))
@@ -788,14 +788,14 @@ function DashboardContent() {
               <div className="mt-4 flex flex-wrap gap-3">
                 <Link
                   href={`/routine/extension/${extensionProfile.id}`}
-                  className="rounded-lg bg-bronze px-4 py-2 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+                  className="bg-bronze px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
                 >
                   View my extension routine →
                 </Link>
                 {extensionProfile.needs_blending && (
                   <Link
                     href={`/routine/extension/${extensionProfile.id}?tab=blending`}
-                    className="rounded-lg border border-bronze/40 px-4 py-2 text-sm font-semibold text-cream transition-colors hover:border-bronze"
+                    className="border border-bronze/40 px-4 py-2 text-sm font-semibold text-dark transition-colors hover:border-bronze"
                   >
                     Blending guide →
                   </Link>
@@ -807,11 +807,11 @@ function DashboardContent() {
 
         {!familyProfilesLoading && (babyProfiles.length > 0 || childProfiles.length > 0) && (
           <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-cream">Family profiles</h2>
+            <h2 className="font-serif text-2xl font-semibold text-dark">Family profiles</h2>
             <div className="mt-4 space-y-3">
               {babyProfiles.map((baby) => (
-                <div key={baby.id} className="rounded-xl border border-bronze/30 bg-dark p-5">
-                  <p className="font-serif text-lg text-cream">{baby.name || "Baby"}</p>
+                <div key={baby.id} className="rounded-xl border border-bronze/30 bg-white p-5">
+                  <p className="font-serif text-lg text-dark">{baby.name || "Baby"}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {baby.age_range && (
                       <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
@@ -827,13 +827,13 @@ function DashboardContent() {
                   <div className="mt-3 flex gap-4">
                     <Link
                       href={`/routine/baby/${baby.id}`}
-                      className="text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+                      className="text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
                     >
                       View routine →
                     </Link>
                     <Link
                       href={`/profile?editBaby=${baby.id}`}
-                      className="text-sm font-medium text-cream/60 underline underline-offset-2 hover:text-cream"
+                      className="text-sm font-medium text-dark/60 underline underline-offset-2 hover:text-dark"
                     >
                       Edit profile →
                     </Link>
@@ -842,8 +842,8 @@ function DashboardContent() {
               ))}
 
               {childProfiles.map((child) => (
-                <div key={child.id} className="rounded-xl border border-bronze/30 bg-dark p-5">
-                  <p className="font-serif text-lg text-cream">{child.name || "Child"}</p>
+                <div key={child.id} className="rounded-xl border border-bronze/30 bg-white p-5">
+                  <p className="font-serif text-lg text-dark">{child.name || "Child"}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {child.age_range && (
                       <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
@@ -859,13 +859,13 @@ function DashboardContent() {
                   <div className="mt-3 flex gap-4">
                     <Link
                       href={`/routine/child/${child.id}`}
-                      className="text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-cream"
+                      className="text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
                     >
                       View routine →
                     </Link>
                     <Link
                       href={`/profile?editChild=${child.id}`}
-                      className="text-sm font-medium text-cream/60 underline underline-offset-2 hover:text-cream"
+                      className="text-sm font-medium text-dark/60 underline underline-offset-2 hover:text-dark"
                     >
                       Edit profile →
                     </Link>
@@ -885,7 +885,7 @@ function DashboardContent() {
 
         {recentSearches.length > 0 && (
           <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-cream">
+            <h2 className="font-serif text-2xl font-semibold text-dark">
               Recently searched
             </h2>
             <ul className="mt-4 space-y-2">
@@ -894,9 +894,9 @@ function DashboardContent() {
                 return (
                   <li
                     key={search.id}
-                    className="flex items-center justify-between gap-4 rounded-lg border border-bronze/30 px-4 py-3"
+                    className="flex items-center justify-between gap-4 border border-bronze/30 px-4 py-3"
                   >
-                    <span className="text-sm text-cream">
+                    <span className="text-sm text-dark">
                       {search.product_name || "Unknown product"}
                     </span>
                     <div className="flex shrink-0 items-center gap-3">
@@ -913,7 +913,7 @@ function DashboardContent() {
                         href={`/search?q=${encodeURIComponent(
                           search.product_name ?? ""
                         )}`}
-                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
                       >
                         Search again →
                       </Link>
@@ -927,7 +927,7 @@ function DashboardContent() {
 
         {recentStyleMatches.length > 0 && (
           <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-cream">
+            <h2 className="font-serif text-2xl font-semibold text-dark">
               Recent Style Matches
             </h2>
             {user && <StyleMatchFollowUp candidates={followUpCandidates} userId={user.id} />}
@@ -937,14 +937,14 @@ function DashboardContent() {
                 return (
                   <li
                     key={match.id}
-                    className="rounded-lg border border-bronze/30 px-4 py-3"
+                    className="border border-bronze/30 px-4 py-3"
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="text-sm text-cream">
+                        <p className="text-sm text-dark">
                           {match.detected_style || "Unknown style"}
                         </p>
-                        <p className="mt-0.5 text-xs text-cream/50">
+                        <p className="mt-0.5 text-xs text-dark/50">
                           {formatMatchDate(match.created_at)}
                         </p>
                       </div>
@@ -953,7 +953,7 @@ function DashboardContent() {
                         onClick={() =>
                           setExpandedMatchId(expanded ? null : match.id)
                         }
-                        className="shrink-0 text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                        className="shrink-0 text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
                       >
                         {expanded ? "Hide" : "View →"}
                       </button>
@@ -961,12 +961,12 @@ function DashboardContent() {
                     {expanded && match.detected_details && (
                       <div className="mt-3 border-t border-bronze/20 pt-3">
                         {match.detected_details.style_description && (
-                          <p className="text-sm text-cream/70">
+                          <p className="text-sm text-dark/70">
                             {match.detected_details.style_description}
                           </p>
                         )}
                         {match.detected_details.maintenance_tips && (
-                          <p className="mt-2 text-xs text-cream/50">
+                          <p className="mt-2 text-xs text-dark/50">
                             {match.detected_details.maintenance_tips}
                           </p>
                         )}
@@ -978,7 +978,7 @@ function DashboardContent() {
             </ul>
             <Link
               href="/style-match"
-              className="mt-4 inline-block text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+              className="mt-4 inline-block text-sm text-bronze2 underline underline-offset-2 hover:text-dark"
             >
               Try another style →
             </Link>
@@ -987,7 +987,7 @@ function DashboardContent() {
 
         {travelKits.length > 0 && (
           <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-cream">
+            <h2 className="font-serif text-2xl font-semibold text-dark">
               My Travel Kits
             </h2>
             <ul className="mt-4 space-y-2">
@@ -998,11 +998,11 @@ function DashboardContent() {
                 return (
                   <li
                     key={kit.id}
-                    className="flex items-center justify-between gap-4 rounded-lg border border-bronze/30 px-4 py-3"
+                    className="flex items-center justify-between gap-4 border border-bronze/30 px-4 py-3"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm text-cream">{kit.destination}</p>
-                      <p className="mt-0.5 text-xs text-cream/50">
+                      <p className="text-sm text-dark">{kit.destination}</p>
+                      <p className="mt-0.5 text-xs text-dark/50">
                         {kit.travel_month
                           ? kit.travel_month
                           : `${formatTravelDate(kit.departure_date)} – ${formatTravelDate(kit.return_date)}`}
@@ -1020,7 +1020,7 @@ function DashboardContent() {
                       </span>
                       <Link
                         href={`/travel?kit=${kit.id}`}
-                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-cream"
+                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
                       >
                         View kit →
                       </Link>
@@ -1031,7 +1031,7 @@ function DashboardContent() {
             </ul>
             <Link
               href="/travel?new=true"
-              className="mt-4 inline-block text-sm text-bronze2 underline underline-offset-2 hover:text-cream"
+              className="mt-4 inline-block text-sm text-bronze2 underline underline-offset-2 hover:text-dark"
             >
               Plan another trip →
             </Link>
@@ -1040,7 +1040,7 @@ function DashboardContent() {
 
         {recentPosts.length > 0 && (
           <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-cream">
+            <h2 className="font-serif text-2xl font-semibold text-dark">
               From the Qoyl feed.
             </h2>
             <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">

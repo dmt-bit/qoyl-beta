@@ -1,20 +1,20 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond, DM_Sans } from "next/font/google";
+import { Space_Grotesk, Space_Mono } from "next/font/google";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { AuthProvider } from "@/lib/auth-context";
 import "./globals.css";
 
-const cormorantGaramond = Cormorant_Garamond({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
-  style: ["normal", "italic"],
-  variable: "--font-cormorant",
+  variable: "--font-space-grotesk",
 });
 
-const dmSans = DM_Sans({
+const spaceMono = Space_Mono({
   subsets: ["latin"],
-  variable: "--font-dm-sans",
+  weight: ["400", "700"],
+  variable: "--font-space-mono",
 });
 
 export const metadata: Metadata = {
@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${cormorantGaramond.variable} ${dmSans.variable} antialiased`}
+        className={`${spaceGrotesk.variable} ${spaceMono.variable} antialiased`}
       >
         <AuthProvider>
           <Nav />

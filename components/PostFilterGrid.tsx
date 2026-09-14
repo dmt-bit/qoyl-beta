@@ -209,14 +209,14 @@ export default function PostFilterGrid({
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search the feed - try 'glycerin' or 'porosity'"
-            className="w-full rounded-lg border border-bronze/40 bg-dark py-3 pl-10 pr-10 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+            className="w-full border border-bronze/40 bg-white py-3 pl-10 pr-10 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
           />
           {searchInput && (
             <button
               type="button"
               onClick={() => setSearchInput("")}
               aria-label="Clear search"
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-cream/40 transition-colors hover:text-cream"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-dark/40 transition-colors hover:text-dark"
             >
               ✕
             </button>
@@ -244,7 +244,7 @@ export default function PostFilterGrid({
                 style={{ scrollSnapAlign: "start" }}
                 className={`shrink-0 whitespace-nowrap border-b-2 px-0.5 pb-2 font-sans text-[10px] font-medium uppercase tracking-wide transition-colors ${
                   isActive
-                    ? "border-bronze text-cream"
+                    ? "border-bronze text-dark"
                     : "border-transparent text-bronze/70 hover:text-bronze"
                 }`}
               >
@@ -272,7 +272,7 @@ export default function PostFilterGrid({
             </p>
           )}
           <div
-            className={`-mx-4 grid grid-cols-2 gap-px bg-[#1C1612] sm:mx-0 sm:grid-cols-3 ${
+            className={`-mx-4 grid grid-cols-2 gap-px bg-[#ffffff] sm:mx-0 sm:grid-cols-3 ${
               showForYouLabel ? "mt-3" : "mt-8"
             }`}
           >
@@ -281,7 +281,7 @@ export default function PostFilterGrid({
             ))}
           </div>
           {showComingSoon && (
-            <p className="mt-6 text-sm text-cream/50">
+            <p className="mt-6 text-sm text-dark/50">
               More {activeTabLabel} posts coming soon →
             </p>
           )}
@@ -289,7 +289,7 @@ export default function PostFilterGrid({
             <p className="mt-6 text-sm">
               <Link
                 href={activeTab === "all" ? "/posts" : `/posts?type=${activeTab}`}
-                className="text-bronze2 underline underline-offset-2 hover:text-cream"
+                className="text-bronze2 underline underline-offset-2 hover:text-dark"
               >
                 {activeTab === "all"
                   ? "See all posts →"
@@ -299,17 +299,17 @@ export default function PostFilterGrid({
           )}
         </>
       ) : debouncedSearch ? (
-        <p className="mt-8 text-sm text-cream/50">
+        <p className="mt-8 text-sm text-dark/50">
           No posts found for &apos;{debouncedSearch}&apos; - try a different
           search or browse all posts above.
         </p>
       ) : (
-        <p className="mt-8 text-sm text-cream/50">
+        <p className="mt-8 text-sm text-dark/50">
           No posts yet for this hair type - check back soon. In the
           meantime,{" "}
           <Link
             href="/search"
-            className="text-bronze2 underline underline-offset-2 hover:text-cream"
+            className="text-bronze2 underline underline-offset-2 hover:text-dark"
           >
             search a product →
           </Link>

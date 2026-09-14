@@ -87,7 +87,7 @@ function ConfirmUpdateModal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-dark/70 sm:items-center sm:p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-white/70 sm:items-center sm:p-4"
       onClick={onCancel}
     >
       <div
@@ -95,9 +95,9 @@ function ConfirmUpdateModal({
         aria-modal="true"
         aria-label="Confirm profile update"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-t-2xl border border-bronze/30 bg-dark p-6 sm:rounded-2xl"
+        className="w-full max-w-md rounded-t-2xl border border-bronze/30 bg-white p-6 sm:rounded-2xl"
       >
-        <p className="text-sm leading-relaxed text-cream/90">
+        <p className="text-sm leading-relaxed text-dark/90">
           Are you sure you want to update your hair profile? Updating will
           recalculate all your compatibility scores and may change your
           routine recommendations. You can update your profile once every 30
@@ -107,14 +107,14 @@ function ConfirmUpdateModal({
           <button
             type="button"
             onClick={onConfirm}
-            className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2"
+            className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
           >
             Yes, update my profile
           </button>
           <button
             type="button"
             onClick={onCancel}
-            className="w-full rounded-lg border border-bronze/40 py-3 text-sm font-medium text-cream transition-colors hover:border-bronze"
+            className="w-full border border-bronze/40 py-3 text-sm font-medium text-dark transition-colors hover:border-bronze"
           >
             Cancel
           </button>
@@ -191,20 +191,20 @@ function MyPurchases({ userId }: { userId: string }) {
 
   return (
     <div className="mx-auto mt-12 max-w-md">
-      <h2 className="font-serif text-2xl font-semibold text-cream">
+      <h2 className="font-serif text-2xl font-semibold text-dark">
         My Purchases
       </h2>
 
       {loading ? (
-        <p className="mt-3 text-sm text-cream/50">Loading...</p>
+        <p className="mt-3 text-sm text-dark/50">Loading...</p>
       ) : !routineSubscription && !travelKit ? (
-        <p className="mt-3 text-sm text-cream/70">No active purchases yet.</p>
+        <p className="mt-3 text-sm text-dark/70">No active purchases yet.</p>
       ) : (
         <div className="mt-4 space-y-3">
           {routineSubscription && (
             <div className="rounded-lg border border-bronze/30 p-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-cream">Monthly Routine</p>
+                <p className="text-sm text-dark">Monthly Routine</p>
                 <span className="text-xs uppercase tracking-wide text-green">
                   {routineSubscription.status}
                 </span>
@@ -216,7 +216,7 @@ function MyPurchases({ userId }: { userId: string }) {
                 type="button"
                 onClick={handleCancel}
                 disabled={cancelling}
-                className="mt-3 text-xs text-cream/50 underline underline-offset-2 hover:text-cream/70 disabled:opacity-50"
+                className="mt-3 text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70 disabled:opacity-50"
               >
                 {cancelling ? "Cancelling..." : "Cancel subscription"}
               </button>
@@ -225,7 +225,7 @@ function MyPurchases({ userId }: { userId: string }) {
 
           {travelKit && (
             <div className="flex items-center justify-between rounded-lg border border-bronze/30 p-4">
-              <p className="text-sm text-cream">Travel Kit</p>
+              <p className="text-sm text-dark">Travel Kit</p>
               <span className="text-xs uppercase tracking-wide text-green">
                 {travelKit.status}
               </span>
@@ -469,8 +469,8 @@ function SelectButton({
       onClick={onClick}
       className={`${fullWidth ? "w-full" : ""} rounded-lg border px-4 py-3 text-sm font-medium capitalize transition-colors ${
         selected
-          ? "border-bronze bg-bronze text-dark"
-          : "border-bronze/40 bg-transparent text-cream hover:border-bronze"
+          ? "border-bronze bg-bronze text-cream"
+          : "border-bronze/40 bg-transparent text-dark hover:border-bronze"
       }`}
     >
       {label}
@@ -499,9 +499,9 @@ function ProfileForOption({
           : "border-bronze/40 bg-transparent hover:border-bronze"
       }`}
     >
-      <span className="block text-sm font-medium text-cream">{label}</span>
+      <span className="block text-sm font-medium text-dark">{label}</span>
       {subtext && (
-        <span className="mt-1 block text-xs leading-snug text-cream/60">
+        <span className="mt-1 block text-xs leading-snug text-dark/60">
           {subtext}
         </span>
       )}
@@ -557,11 +557,11 @@ function HairAdditionPreferenceCard({
       onClick={onClick}
       aria-pressed={selected}
       className={`flex flex-col items-start gap-1.5 rounded-xl p-4 text-left transition-colors ${
-        selected ? "border-2 border-bronze bg-bronze/10" : "border border-[#2C2420] hover:border-bronze/50"
+        selected ? "border-2 border-bronze bg-bronze/10" : "border border-[#e8e8e8] hover:border-bronze/50"
       }`}
     >
-      <span className="font-serif text-base font-semibold text-cream">{label}</span>
-      <span className="text-xs leading-relaxed text-cream/60">{description}</span>
+      <span className="font-serif text-base font-semibold text-dark">{label}</span>
+      <span className="text-xs leading-relaxed text-dark/60">{description}</span>
     </button>
   );
 }
@@ -586,7 +586,7 @@ function RoutineFocusCard({
       }`}
     >
       <span className="mb-2 block">{icon}</span>
-      <span className="block text-sm font-medium text-cream">{label}</span>
+      <span className="block text-sm font-medium text-dark">{label}</span>
     </button>
   );
 }
@@ -606,7 +606,7 @@ function CurlTypeCard({
       onClick={onClick}
       aria-pressed={selected}
       className={`flex flex-col overflow-hidden rounded-xl text-left transition-colors ${
-        selected ? "border-2 border-bronze" : "border border-[#2C2420]"
+        selected ? "border-2 border-bronze" : "border border-[#e8e8e8]"
       }`}
     >
       <div className="relative aspect-[4/5] w-full shrink-0">
@@ -618,13 +618,13 @@ function CurlTypeCard({
           className={`object-cover object-top ${selected ? "brightness-110" : ""}`}
         />
         {selected && (
-          <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-dark text-[11px] font-semibold text-bronze">
+          <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-bronze">
             ✓
           </span>
         )}
       </div>
-      <div className="bg-dark px-2.5 py-2">
-        <span className="block font-serif text-[18px] font-semibold text-cream">
+      <div className="bg-white px-2.5 py-2">
+        <span className="block font-serif text-[18px] font-semibold text-dark">
           {option.label}
         </span>
         <span className="block font-sans text-[11px] text-bronze">
@@ -662,12 +662,12 @@ function NotSureCurlCard({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`col-span-2 flex flex-col items-center justify-center gap-1 rounded-xl bg-dark px-4 py-6 text-center transition-colors sm:col-span-3 ${
-        selected ? "border-2 border-bronze" : "border border-[#2C2420]"
+      className={`col-span-2 flex flex-col items-center justify-center gap-1 rounded-xl bg-white px-4 py-6 text-center transition-colors sm:col-span-3 ${
+        selected ? "border-2 border-bronze" : "border border-[#e8e8e8]"
       }`}
     >
       <span className="font-serif text-[32px] leading-none text-bronze">?</span>
-      <span className="mt-1 font-serif text-[18px] font-semibold text-cream">
+      <span className="mt-1 font-serif text-[18px] font-semibold text-dark">
         Not sure yet
       </span>
       <span className="max-w-xs font-sans text-[10px] leading-[1.4] text-muted">
@@ -1058,8 +1058,8 @@ function ProfileForm() {
 
   if (user && hairProfileLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
-        <p className="text-sm text-cream/60">Loading...</p>
+      <main className="flex min-h-screen items-center justify-center bg-white font-sans">
+        <p className="text-sm text-dark/60">Loading...</p>
       </main>
     );
   }
@@ -1067,19 +1067,19 @@ function ProfileForm() {
   if (editBabyId || editChildId || editExtensionId) {
     if (!user || editProfileLoading) {
       return (
-        <main className="flex min-h-screen items-center justify-center bg-dark font-sans">
-          <p className="text-sm text-cream/60">Loading...</p>
+        <main className="flex min-h-screen items-center justify-center bg-white font-sans">
+          <p className="text-sm text-dark/60">Loading...</p>
         </main>
       );
     }
     return (
-      <main className="min-h-screen bg-dark font-sans text-cream">
+      <main className="min-h-screen bg-white font-sans text-dark">
         <div className="px-4 py-10 sm:px-6">
           <div className={editExtensionId ? "mx-auto max-w-2xl" : "mx-auto max-w-md"}>
-            <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+            <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
               {editBabyId ? "Edit Baby Profile" : editChildId ? "Edit Child Profile" : "Edit Extension Profile"}
             </h1>
-            <p className="mt-2 text-sm text-cream/70">
+            <p className="mt-2 text-sm text-dark/70">
               Update the details below and save to refresh your recommendations.
             </p>
             {editBabyId && editBabyProfile && (
@@ -1098,22 +1098,22 @@ function ProfileForm() {
   }
 
   return (
-    <main className="min-h-screen bg-dark font-sans text-cream">
+    <main className="min-h-screen bg-white font-sans text-dark">
       <HairTypeStrip tileSize={160} />
 
       <div className="px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-md">
-        <h1 className="font-serif text-3xl font-semibold text-cream sm:text-4xl">
+        <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
           {showForm ? "Hair Profile" : "Your Hair Profile"}
         </h1>
-        <p className="mt-2 text-sm text-cream/70">
+        <p className="mt-2 text-sm text-dark/70">
           {showForm
             ? "Tell us about your hair so we can personalize your routine."
             : "This is what we're using to personalize your scores and routine."}
         </p>
 
         {isAdminUser && (
-          <span className="mt-3 inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-dark">
+          <span className="mt-3 inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-cream">
             Admin - unlimited edits
           </span>
         )}
@@ -1232,7 +1232,7 @@ function ProfileForm() {
                 <p className="font-serif text-lg text-bronze2">
                   Extension Care
                 </p>
-                <p className="mt-3 text-sm text-cream/80">
+                <p className="mt-3 text-sm text-dark/80">
                   {hairProfile.extension_care}
                 </p>
               </div>
@@ -1251,7 +1251,7 @@ function ProfileForm() {
             {hairProfile.notes && (
               <div>
                 <p className="font-serif text-lg text-bronze2">Notes</p>
-                <p className="mt-3 text-sm text-cream/80">
+                <p className="mt-3 text-sm text-dark/80">
                   {hairProfile.notes}
                 </p>
               </div>
@@ -1264,7 +1264,7 @@ function ProfileForm() {
             <button
               type="button"
               onClick={handleUpdateClick}
-              className="w-full rounded-lg border border-bronze/40 py-3 text-sm font-semibold text-cream transition-colors hover:border-bronze"
+              className="w-full border border-bronze/40 py-3 text-sm font-semibold text-dark transition-colors hover:border-bronze"
             >
               Update my profile
             </button>
@@ -1300,7 +1300,7 @@ function ProfileForm() {
             </div>
           </div>
 
-          <div className="rounded-lg border-l-2 border-bronze bg-warm/10 px-4 py-3 text-xs leading-relaxed text-cream/70">
+          <div className="border-l-2 border-bronze bg-warm/10 px-4 py-3 text-xs leading-relaxed text-dark/70">
             Qoyl provides cosmetic hair care recommendations only. We do not
             address medical conditions, serious scalp disorders, or hair
             loss related to health conditions (such as alopecia,
@@ -1327,7 +1327,7 @@ function ProfileForm() {
               >
                 What is your age range?
               </p>
-              <p className="mt-1 text-xs text-cream/60">
+              <p className="mt-1 text-xs text-dark/60">
                 Age affects hair texture, thickness, and scalp health. This
                 helps us give you more accurate recommendations.
               </p>
@@ -1355,7 +1355,7 @@ function ProfileForm() {
               className="flex items-center gap-2 font-serif text-lg text-bronze2"
             >
               Gender
-              <span className="text-xs font-normal normal-case text-cream/50">
+              <span className="text-xs font-normal normal-case text-dark/50">
                 (optional)
               </span>
             </p>
@@ -1388,7 +1388,7 @@ function ProfileForm() {
                     className={`flex items-center gap-2 rounded-lg border px-3 py-3 text-sm transition-colors ${
                       hairGoals.includes(option.value)
                         ? "border-bronze bg-bronze/20 text-cream"
-                        : "border-bronze/40 text-cream/80 hover:border-bronze"
+                        : "border-bronze/40 text-dark/80 hover:border-bronze"
                     }`}
                   >
                     <input
@@ -1479,7 +1479,7 @@ function ProfileForm() {
               id="scalp-condition"
               value={scalpCondition}
               onChange={(e) => setScalpCondition(e.target.value)}
-              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream focus:border-bronze focus:outline-none"
+              className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark focus:border-bronze focus:outline-none"
             >
               <option value="" disabled className="text-dark">
                 Select an option
@@ -1538,13 +1538,13 @@ function ProfileForm() {
               value={zipCode}
               onChange={(e) => setZipCode(e.target.value)}
               placeholder="e.g. 90210"
-              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
             />
 
             {climate && (
               <div className="mt-3">
                 <Chip label={`Detected climate: ${CLIMATE_LABELS[climate]}`} />
-                <p className="mt-1.5 text-xs text-cream/50">
+                <p className="mt-1.5 text-xs text-dark/50">
                   Based on your region&apos;s 30-year climate patterns.
                 </p>
               </div>
@@ -1555,7 +1555,7 @@ function ProfileForm() {
                 <Chip
                   label={`Detected water hardness: ${WATER_HARDNESS_LABELS[waterHardness]}`}
                 />
-                <p className="mt-1.5 text-xs text-cream/50">
+                <p className="mt-1.5 text-xs text-dark/50">
                   Based on published municipal water quality data for
                   your region. Actual hardness may vary by
                   neighborhood.
@@ -1582,7 +1582,7 @@ function ProfileForm() {
                   className={`flex items-center gap-2 rounded-lg border px-3 py-3 text-sm capitalize transition-colors ${
                     hairConcerns.includes(option.value)
                       ? "border-bronze bg-bronze/20 text-cream"
-                      : "border-bronze/40 text-cream/80 hover:border-bronze"
+                      : "border-bronze/40 text-dark/80 hover:border-bronze"
                   }`}
                 >
                   <input
@@ -1601,7 +1601,7 @@ function ProfileForm() {
             <p id="budget-label" className="font-serif text-lg text-bronze2">
               Monthly hair care budget (optional)
             </p>
-            <p className="mt-1 text-sm text-cream/60">
+            <p className="mt-1 text-sm text-dark/60">
               This helps us prioritize recommendations within your range. We
               will always show you the best formula match regardless of
               price.
@@ -1627,7 +1627,7 @@ function ProfileForm() {
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="First name"
-                className="w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+                className="w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
               />
               <input
                 type="text"
@@ -1635,7 +1635,7 @@ function ProfileForm() {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Last name"
-                className="w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+                className="w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
               />
             </div>
           </div>
@@ -1650,7 +1650,7 @@ function ProfileForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
             />
           </fieldset>
 
@@ -1707,7 +1707,7 @@ function ProfileForm() {
                   id="color-type"
                   value={colorType}
                   onChange={(e) => setColorType(e.target.value)}
-                  className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream focus:border-bronze focus:outline-none"
+                  className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark focus:border-bronze focus:outline-none"
                 >
                   <option value="" disabled className="text-dark">
                     Select an option
@@ -1772,7 +1772,7 @@ function ProfileForm() {
                   onChange={(e) => setExtensionCare(e.target.value)}
                   placeholder="e.g. I moisturize my scalp weekly and wash every 2-3 weeks."
                   rows={4}
-                  className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+                  className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
                 />
               </div>
 
@@ -1839,7 +1839,7 @@ function ProfileForm() {
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Tell us anything that might help us understand your hair better."
               rows={4}
-              className="mt-3 w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-cream placeholder:text-cream/40 focus:border-bronze focus:outline-none"
+              className="mt-3 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
             />
           </fieldset>
 
@@ -1853,7 +1853,7 @@ function ProfileForm() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-bronze py-3 text-sm font-semibold text-dark transition-colors hover:bg-bronze2 disabled:opacity-50"
+            className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
           >
             {submitting ? "Saving..." : "Save Profile"}
           </button>
