@@ -10,6 +10,10 @@ export type ScoredProduct = {
   name: string;
   brand: string;
   imageUrl: string | null;
+  // null when no signed-in profile was available to score against (see
+  // MasonryFeed.tsx) - the meme card falls back to a no-score treatment
+  // rather than claiming a compatibility number that was never computed.
+  score: number | null;
 };
 
 export type CommunityPhoto = {
@@ -146,36 +150,53 @@ function LockIcon() {
   );
 }
 
-// ---- shared card chrome -----------------------------------------------
+// ---- shared meme card chrome -----------------------------------------
+//
+// Every card (types 1-3) is a vertical stack: a white top bar (always),
+// a square image/content area, and an optional white bottom bar - see
+// the request this shipped from for the exact anatomy/spec. Type 4
+// (Style Match inspo) is full-width and built separately below since
+// its layout is a left/right split, not this vertical stack.
 
 const CARD_CLASS =
-  "group relative block w-full overflow-hidden bg-[#ffffff] text-left";
+  "group relative flex w-full flex-col overflow-hidden bg-white text-left";
 
-function BottomTitleOverlay({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-black/70 to-transparent" />
-      <p className="absolute bottom-0 left-0 right-0 line-clamp-2 p-2.5 font-sans text-[12px] font-medium leading-tight text-dark">
-        {children}
-      </p>
-    </>
-  );
+// maxWords is a display truncation only - never mutates the underlying
+// title/excerpt string that's used elsewhere (alt text, share sheets).
+function truncateWords(text: string, maxWords: number): string {
+  const words = text.trim().split(/\s+/);
+  if (words.length <= maxWords) return text.trim();
+  return words.slice(0, maxWords).join(" ");
 }
 
-function TextPin({ title, subtitle }: { title: string; subtitle?: string }) {
+function firstSentence(text: string): string {
+  const match = text.match(/^[^.!?]*[.!?]/);
+  return (match ? match[0] : text).trim();
+}
+
+function MemeTopBar({ text, tag }: { text: string; tag: string }) {
   return (
-    <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-1.5 bg-gradient-to-br from-[#ffffff] to-[#f5f5f5] p-5 text-center">
-      <p className="font-serif text-lg leading-snug text-dark">{title}</p>
-      {subtitle && <p className="text-xs text-bronze2">{subtitle}</p>}
+    <div className="border-b-[1.5px] border-dark bg-white px-2.5 pb-1.5 pt-2">
+      <p
+        className="font-sans font-bold lowercase text-dark"
+        style={{ fontSize: "11px", lineHeight: 1.25, letterSpacing: "-0.2px" }}
+      >
+        {text}
+      </p>
+      <p className="mt-0.5 font-mono lowercase text-muted" style={{ fontSize: "8px" }}>
+        {tag}
+      </p>
     </div>
   );
 }
 
-function HairTypeChip({ label }: { label: string }) {
+function MemeBottomBar({ text }: { text: string }) {
   return (
-    <span className="absolute right-1.5 top-1.5 rounded-full bg-[#ffffff]/80 px-2 py-1.5 text-[9px] font-medium uppercase tracking-wide text-dark">
-      {label}
-    </span>
+    <div className="border-t-[1.5px] border-dark bg-white px-2.5 pb-2 pt-1.5">
+      <p className="font-sans font-bold lowercase text-dark" style={{ fontSize: "9px" }}>
+        {text}
+      </p>
+    </div>
   );
 }
 
@@ -207,39 +228,46 @@ export function EditorialMasonryCard({
     onGateTap,
   });
 
+  const topText = truncateWords(post.title, 8);
+  const tag = [post.hair_type, post.category.replace(/-/g, " ")].filter(Boolean).join(" · ");
+  const punchline = post.excerpt ? truncateWords(firstSentence(post.excerpt), 10) : null;
+
   return (
     <Link href={`/posts/${post.slug}`} className={CARD_CLASS} {...longPress}>
-      {post.hero_image_url ? (
-        <>
-          {/* Plain <img>, not next/image - masonry needs the browser's
-              natural intrinsic aspect ratio per image, and next/image
-              requires a known width/height (or a sized ancestor for
-              `fill`) that this feed doesn't have ahead of render. */}
+      <MemeTopBar text={topText} tag={tag} />
+
+      <div className="relative aspect-square w-full overflow-hidden">
+        {post.hero_image_url ? (
+          // Plain <img>, not next/image - the feed doesn't have a known
+          // width/height (or a sized ancestor for `fill`) ahead of
+          // render for every card in the grid.
           <img
             src={post.hero_image_url}
             alt={post.title}
             loading="lazy"
-            className="block w-full h-auto"
+            className="absolute inset-0 h-full w-full object-cover"
           />
-          <BottomTitleOverlay>{post.title}</BottomTitleOverlay>
-        </>
-      ) : (
-        <TextPin title={post.title} />
-      )}
-
-      {(isVideo || isRepost) && (
-        <span className="absolute left-1.5 top-1.5 rounded-full bg-bronze px-2 py-1 text-[9px] font-semibold text-cream">
-          {isVideo ? "▶ Video" : "↗ Repost"}
-        </span>
-      )}
-      {post.hair_type && <HairTypeChip label={post.hair_type} />}
-      {isVideo && post.video_url && post.hero_image_url && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cream/90">
-            <PlayIcon />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a1a] p-4 text-center">
+            <p className="font-sans text-sm leading-snug text-white">{post.excerpt}</p>
           </div>
-        </div>
-      )}
+        )}
+
+        {(isVideo || isRepost) && (
+          <span className="absolute left-1.5 top-1.5 bg-dark px-2 py-1 text-[9px] font-semibold lowercase text-white">
+            {isVideo ? "▶ video" : "↗ repost"}
+          </span>
+        )}
+        {isVideo && post.video_url && post.hero_image_url && (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90">
+              <PlayIcon />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {punchline && <MemeBottomBar text={punchline} />}
     </Link>
   );
 }
@@ -249,12 +277,14 @@ export function EditorialMasonryCard({
 export function CommunityMasonryCard({
   photo,
   onOpen,
+  onStyleMatchThis,
   onLongPress,
   gated,
   onGateTap,
 }: {
   photo: CommunityPhoto;
   onOpen: (photo: CommunityPhoto) => void;
+  onStyleMatchThis: (photo: CommunityPhoto) => void;
   onLongPress: (target: SheetTarget) => void;
   gated: boolean;
   onGateTap: () => void;
@@ -271,32 +301,44 @@ export function CommunityMasonryCard({
     onGateTap,
   });
 
+  const topText = photo.caption?.trim() || `wash day · ${photo.curlType ?? "your"} hair`;
+
   return (
     <button type="button" onClick={() => onOpen(photo)} className={CARD_CLASS} {...longPress}>
-      <img src={photo.url} alt="Community hair photo" loading="lazy" className="block w-full h-auto" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[35%] bg-gradient-to-t from-black/70 to-transparent" />
-      <span
-        role="button"
-        aria-label="Save to inspo"
-        onClick={(e) => {
-          e.stopPropagation();
-          saveLocalBookmark("community", photo.id);
-        }}
-        className="absolute right-1.5 top-1.5 text-bronze2 transition-transform hover:scale-110"
-      >
-        <HeartOutlineIcon />
-      </span>
-      <div className="absolute bottom-1.5 left-1.5 flex flex-wrap gap-1">
-        {photo.curlType && (
-          <span className="rounded-full bg-white/80 px-2 py-1 text-[9px] font-medium uppercase tracking-wide text-bronze">
-            {photo.curlType}
-          </span>
-        )}
-        {photo.porosity && (
-          <span className="rounded-full bg-white/80 px-2 py-1 text-[9px] font-medium capitalize text-bronze2">
-            {photo.porosity} porosity
-          </span>
-        )}
+      <MemeTopBar text={topText} tag="community" />
+
+      <div className="relative aspect-square w-full overflow-hidden">
+        <img
+          src={photo.url}
+          alt="Community hair photo"
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <span className="absolute left-1.5 top-1.5 bg-dark px-2 py-1 text-[9px] font-semibold lowercase text-white">
+          community
+        </span>
+        <span
+          role="button"
+          aria-label="Save to inspo"
+          onClick={(e) => {
+            e.stopPropagation();
+            saveLocalBookmark("community", photo.id);
+          }}
+          className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/40 text-white transition-transform hover:scale-110"
+        >
+          <HeartOutlineIcon />
+        </span>
+        <span
+          role="button"
+          aria-label="Style Match this"
+          onClick={(e) => {
+            e.stopPropagation();
+            onStyleMatchThis(photo);
+          }}
+          className="absolute bottom-1.5 right-1.5 border border-white bg-black/40 px-2 py-1 text-[9px] font-semibold lowercase text-white"
+        >
+          style match this
+        </span>
       </div>
     </button>
   );
@@ -304,15 +346,31 @@ export function CommunityMasonryCard({
 
 // ---- TYPE 3: product spotlight cards --------------------------------------
 
+// Score-color thresholds for the big number itself (item 8's 50/70
+// split) are deliberately different from the top bar's 65 threshold
+// for "scored X" vs "avoid for X hair" copy - both given explicitly,
+// so a score in 65-69 can legitimately read "avoid" in the top bar
+// while still showing in the neutral black number tier.
+function scoreNumberColorClass(score: number): string {
+  if (score < 50) return "text-red";
+  if (score < 70) return "text-dark";
+  return "text-green";
+}
+
 export function ProductMasonryCard({
   product,
   affiliateLink,
+  curlType,
   onLongPress,
   gated,
   onGateTap,
 }: {
   product: ScoredProduct;
   affiliateLink: string;
+  // The signed-in viewer's curl type (not the product's) - drives the
+  // "avoid for [curl_type] hair" copy. Null when signed out/no profile,
+  // which also means product.score is null (see MasonryFeed.tsx).
+  curlType: string | null;
   onLongPress: (target: SheetTarget) => void;
   gated: boolean;
   onGateTap: () => void;
@@ -331,21 +389,50 @@ export function ProductMasonryCard({
     onGateTap,
   });
 
+  const hasScore = product.score != null;
+  const topText = hasScore
+    ? product.score! >= 65
+      ? `scored ${product.score} for your profile`
+      : `avoid for ${curlType ?? "your"} hair`
+    : "tap to see your score";
+  const tag = `shop · ${product.brand}`;
+
   const body = (
     <>
-      {product.imageUrl ? (
-        <>
-          <img src={product.imageUrl} alt={product.name} loading="lazy" className="block w-full h-auto" />
-          <BottomTitleOverlay>
+      <MemeTopBar text={topText} tag={tag} />
+
+      <div className="relative aspect-square w-full overflow-hidden bg-white">
+        {hasScore ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <span className={`font-mono text-[48px] font-bold ${scoreNumberColorClass(product.score!)}`}>
+              {product.score}
+            </span>
+            <span className="mt-1 font-mono lowercase text-muted" style={{ fontSize: "8px" }}>
+              compatibility
+            </span>
+          </div>
+        ) : product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#f5f5f5] p-4 text-center">
+            <p className="font-sans text-sm leading-snug text-dark">{product.name}</p>
+          </div>
+        )}
+
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 border-t-[1.5px] border-dark bg-white px-2.5 py-1.5">
+          <p className="truncate font-sans font-bold lowercase text-dark" style={{ fontSize: "9px" }}>
             {product.name} · {product.brand}
-          </BottomTitleOverlay>
-        </>
-      ) : (
-        <TextPin title={product.name} subtitle={product.brand} />
-      )}
-      <span className="absolute left-1.5 top-1.5 rounded-full bg-bronze px-2 py-1 text-[9px] font-semibold uppercase tracking-wide text-cream">
-        Shop
-      </span>
+          </p>
+          <span className="shrink-0 font-mono lowercase text-dark" style={{ fontSize: "9px" }}>
+            shop →
+          </span>
+        </div>
+      </div>
     </>
   );
 
@@ -396,22 +483,47 @@ export function StyleMasonryCard({
     onGateTap,
   });
 
+  // Full-width (col-span-2 in the 2-col feed grid) rather than the
+  // vertical top/image/bottom stack every other card type uses - a
+  // left/right split instead, per the request's TYPE 4 spec.
   return (
-    <Link href={href} className={CARD_CLASS} {...longPress}>
-      {style.image_url ? (
-        <>
-          <img src={style.image_url} alt={style.name} loading="lazy" className="block w-full h-auto" />
-          <BottomTitleOverlay>{style.name}</BottomTitleOverlay>
-        </>
-      ) : (
-        <div className="flex aspect-[4/5] w-full flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#ffffff] to-[#f5f5f5] p-5 text-center">
-          <p className="font-serif text-xl italic leading-snug text-dark">{style.name}</p>
+    <Link
+      href={href}
+      className="group relative col-span-2 flex w-full overflow-hidden bg-white text-left"
+      {...longPress}
+    >
+      <div className="flex w-1/2 flex-col justify-between border-r-[1.5px] border-dark p-4">
+        <div>
+          <p className="font-sans font-bold lowercase leading-tight text-dark" style={{ fontSize: "15px" }}>
+            {style.name}
+          </p>
           {style.description && (
-            <p className="line-clamp-2 text-xs text-dark/60">{style.description}</p>
+            <p className="mt-1.5 line-clamp-2 font-sans text-[11px] leading-snug text-dark/70">
+              {style.description}
+            </p>
           )}
-          <p className="mt-2 text-xs font-medium text-bronze2">Style Match this →</p>
+          <p className="mt-2 font-mono lowercase text-muted" style={{ fontSize: "9px" }}>
+            tutorials · shopping list · book a stylist
+          </p>
         </div>
-      )}
+        <span className="mt-3 inline-block self-start bg-dark px-3 py-1.5 font-sans font-bold lowercase text-white" style={{ fontSize: "11px" }}>
+          style match this →
+        </span>
+      </div>
+
+      <div className="relative w-1/2 overflow-hidden bg-[#1a1a1a]">
+        {style.image_url && (
+          <img
+            src={style.image_url}
+            alt={style.name}
+            loading="lazy"
+            className="absolute inset-0 h-full w-full object-cover opacity-70"
+          />
+        )}
+        <span className="absolute right-2 top-2 font-mono font-bold lowercase text-white" style={{ fontSize: "10px" }}>
+          ✦ new
+        </span>
+      </div>
     </Link>
   );
 }

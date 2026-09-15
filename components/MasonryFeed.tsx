@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import Masonry from "react-masonry-css";
 import { COMMUNITY_PREFILL_KEY } from "@/components/CommunityGrid";
 import type { Post } from "@/components/PostCard";
 import {
@@ -60,7 +59,6 @@ const TABS: { key: TabKey; label: string }[] = [
 
 const HAIR_TYPE_TABS = new Set<TabKey>(["straight", "wavy", "curly", "coily"]);
 const PAGE_SIZE = 12;
-const BREAKPOINT_COLUMNS = { default: 2, 640: 2, 480: 2 };
 
 function shuffle<T>(arr: T[]): T[] {
   const copy = [...arr];
@@ -391,6 +389,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
         name: c.name as string,
         brand: (c.catalog_brands as unknown as { name: string } | null)?.name ?? "Unknown brand",
         imageUrl: (c.image_url as string | null) ?? null,
+        score: null,
       }));
 
       if (!hairProfile) {
@@ -403,9 +402,9 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
         candidates.map((c) => c.id as string),
         profile
       );
-      const ranked = [...base].sort(
-        (a, b) => (scores[b.id]?.result?.normalizedScore ?? -1) - (scores[a.id]?.result?.normalizedScore ?? -1)
-      );
+      const ranked = [...base]
+        .map((p) => ({ ...p, score: scores[p.id]?.result?.normalizedScore ?? null }))
+        .sort((a, b) => (b.score ?? -1) - (a.score ?? -1));
       if (!cancelled) setScoredProducts(ranked);
     })();
     return () => {
@@ -552,14 +551,17 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
         </div>
       </div>
 
-      {/* Grid */}
+      {/* Grid - a real CSS grid rather than react-masonry-css's JS
+          column-splitting, which can't support a full-width (col-span)
+          style inspo card since it renders each column as a separate
+          DOM subtree. Every card is now a near-uniform height (a square
+          image area + fixed-height text bars) so nothing here needs
+          masonry's height-balancing in the first place. The grid's own
+          background is black so the 1px gaps between cards read as
+          hairline black borders. */}
       {composedFeed.length > 0 ? (
         <div className="mt-4 -mx-4 pl-4 pr-4 sm:mx-0 sm:pl-0 sm:pr-0">
-          <Masonry
-            breakpointCols={BREAKPOINT_COLUMNS}
-            className="flex w-auto gap-1.5 sm:gap-1"
-            columnClassName="flex flex-col gap-1.5 bg-clip-padding sm:gap-1"
-          >
+          <div className="grid grid-cols-2 gap-px bg-dark">
             {visibleCards.map((card) => {
               const onGateTap = () => setShowAuthGateSheet(true);
               if (card.type === "editorial") {
@@ -579,6 +581,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
                     key={card.feedId}
                     photo={card.photo}
                     onOpen={setOpenPhoto}
+                    onStyleMatchThis={handleStyleMatchThis}
                     onLongPress={setSheetTarget}
                     gated={isSignedOut}
                     onGateTap={onGateTap}
@@ -594,6 +597,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
                     key={card.feedId}
                     product={card.product}
                     affiliateLink={link}
+                    curlType={hairProfile?.curl_type ?? null}
                     onLongPress={setSheetTarget}
                     gated={isSignedOut}
                     onGateTap={onGateTap}
@@ -611,7 +615,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
                 />
               );
             })}
-          </Masonry>
+          </div>
 
           {showScrollGate ? (
             <ScrollGateCard needsProfileOnly={Boolean(user) && !hairProfile} />
