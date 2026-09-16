@@ -258,7 +258,7 @@ const STYLE_MATCH_FEATURE_PILLS = ["Tutorials", "Shopping list", "Stylist match"
 function StyleMatchPromoHero() {
   return (
     <div className="relative">
-      <div className="relative h-[420px] w-full overflow-hidden bg-white sm:h-[480px]">
+      <div className="relative h-[380px] w-full overflow-hidden bg-white sm:h-[440px]">
         <Image
           src="https://res.cloudinary.com/kumxntij/image/upload/v1787276711/pexels-casa-rio-beauty-salon-2162626170-38421531.jpg"
           alt=""
@@ -266,20 +266,26 @@ function StyleMatchPromoHero() {
           sizes="100vw"
           className="object-cover object-top"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-dark/70 via-dark/10 to-dark" />
+        {/* Light scrim behind just the wordmark - the headline moved
+            off the photo entirely into the white banner below, so the
+            rest of the image stays clean with no overlay/text on it. */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-dark/60 to-transparent" />
 
         <div className="absolute inset-x-0 top-6 flex justify-center">
-          <p className="font-serif text-2xl font-bold lowercase text-dark">qoyl</p>
+          <p className="font-serif text-2xl font-bold lowercase text-white">qoyl</p>
         </div>
+      </div>
 
-        <div className="absolute inset-x-0 bottom-6 px-6 text-center">
-          <h2 className="font-serif text-[28px] leading-tight text-dark">
-            Show us the style.
-          </h2>
-          <p className="font-serif text-[28px] italic leading-tight text-dark">
-            We will build your plan.
-          </p>
-        </div>
+      {/* Meme-card treatment (item: feed card aesthetic) - a solid
+          white banner in normal flow below the image, not floated over
+          it, so the headline never fights the photo for contrast. */}
+      <div className="border-t-2 border-dark bg-white px-5 py-4">
+        <h2 className="font-sans font-bold lowercase text-dark" style={{ fontSize: "22px", letterSpacing: "-0.5px" }}>
+          show us the style.
+        </h2>
+        <p className="mt-0.5 font-sans font-light lowercase text-muted" style={{ fontSize: "16px" }}>
+          we will build your plan.
+        </p>
       </div>
 
       <div className="flex flex-wrap justify-center gap-2 px-4 py-6">
