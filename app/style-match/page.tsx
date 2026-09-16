@@ -8,7 +8,7 @@ import { COMMUNITY_PREFILL_KEY } from "@/components/CommunityGrid";
 import PostCard, { Post } from "@/components/PostCard";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
-import { TIER_CLASSES, curlFamily, scoreTier } from "@/lib/compatibility";
+import { TIER_CLASSES, curlFamily, scoreTier, type CurlFamily } from "@/lib/compatibility";
 import {
   StyleShoppingList,
   buildStyleShoppingList,
@@ -90,6 +90,9 @@ type StyleRow = {
   estimated_time: string | null;
   difficulty: string | null;
   image_url?: string | null;
+  // Resolved once in loadInspoStyles() for any row with no image_url -
+  // never re-fetched per render (see lib/visualLibrary.ts).
+  fallback_image_url?: string | null;
 };
 
 type LengthDifference = "same" | "longer" | "shorter";
@@ -104,52 +107,72 @@ type PageState =
   | "results";
 type ResultTab = "tutorials" | "color" | "shopping" | "stylist";
 
-// Vibe/length tags for the inspo browse filters (Part 5). The `styles`
-// table has no vibe/length columns - this is editorial curation keyed
-// by slug, not a derived/algorithmic attribute, so it's kept as a small
-// local map rather than pretending it's a real database filter. Falls
-// back to an empty tag set (never filtered out) for any style not in
-// this list, e.g. ones added to the table later.
-const VIBE_TAGS_BY_SLUG: Record<string, string[]> = {
-  "bantu-knots": ["Protective", "Editorial", "Defined Curls"],
-  "box-braids": ["Protective", "Low Maintenance"],
-  "braid-out": ["Defined Curls", "Big and Voluminous"],
-  "faux-locs": ["Protective", "Editorial", "Low Maintenance"],
-  "goddess-braids": ["Protective", "Editorial", "Big and Voluminous"],
-  "high-puff": ["Sleek and Smooth", "Low Maintenance"],
-  "knotless-braids": ["Protective", "Low Maintenance"],
-  locs: ["Protective", "Low Maintenance", "Editorial"],
-  "passion-twists": ["Protective", "Big and Voluminous", "Editorial"],
-  "silk-press": ["Sleek and Smooth"],
-  "twist-out": ["Defined Curls", "Big and Voluminous"],
-  "wash-and-go": ["Defined Curls", "Low Maintenance"],
-};
-
-const LENGTH_TAG_BY_SLUG: Record<string, string> = {
-  "bantu-knots": "Short",
-  "box-braids": "Long",
-  "braid-out": "Medium",
-  "faux-locs": "Long",
-  "goddess-braids": "Medium",
-  "high-puff": "Short",
-  "knotless-braids": "Long",
-  locs: "Long",
-  "passion-twists": "Long",
-  "silk-press": "Medium",
-  "twist-out": "Medium",
-  "wash-and-go": "Medium",
-};
-
+// Vibe tags for the inspo browse filters. The `styles` table has no
+// vibe column - this is editorial curation keyed by slug, not a
+// derived/algorithmic attribute, so it's kept as a small local map
+// rather than pretending it's a real database filter. Falls back to no
+// tags (only ever shown under "all") for any style not in this list,
+// e.g. ones added to the table later.
 const VIBE_OPTIONS = [
-  "Protective",
-  "Defined Curls",
-  "Sleek and Smooth",
-  "Big and Voluminous",
-  "Editorial",
-  "Low Maintenance",
-  "Colorful",
+  "all",
+  "protective",
+  "defined",
+  "sleek",
+  "voluminous",
+  "low maintenance",
+  "bold",
+  "natural texture",
 ];
-const LENGTH_OPTIONS = ["Short", "Medium", "Long"];
+
+const VIBE_TAGS_BY_SLUG: Record<string, string[]> = {
+  "box-braids": ["protective", "low maintenance"],
+  "knotless-braids": ["protective", "low maintenance"],
+  "faux-locs": ["protective", "low maintenance"],
+  "passion-twists": ["protective", "low maintenance"],
+  crochet: ["protective", "low maintenance"],
+  cornrows: ["protective", "low maintenance"],
+  wigs: ["protective", "low maintenance"],
+  "wash-and-go": ["defined", "voluminous", "natural texture"],
+  "twist-out": ["defined", "natural texture"],
+  "braid-out": ["defined", "voluminous"],
+  "flexi-rod-set": ["defined"],
+  "flat-twist-out": ["defined"],
+  "bantu-knots": ["defined", "bold"],
+  "silk-press": ["sleek"],
+  blowout: ["sleek"],
+  "sleek-bun": ["sleek"],
+  "high-puff": ["voluminous", "low maintenance", "natural texture"],
+  "pineapple-updo": ["low maintenance", "natural texture"],
+  "goddess-braids": ["bold"],
+  locs: ["low maintenance"],
+  twa: ["natural texture"],
+};
+
+// Four curl-type families driving the inspo tabs (item 1-3) - reuses
+// lib/compatibility.ts's curlFamily() (already imported for scoring
+// elsewhere on this page) rather than a second code->family mapping.
+const FAMILY_CODES: Record<CurlFamily, string[]> = {
+  straight: ["1a", "1b", "1c"],
+  wavy: ["2a", "2b", "2c"],
+  curly: ["3a", "3b", "3c"],
+  coily: ["4a", "4b", "4c"],
+};
+
+const FAMILY_TAB_LABEL: Record<CurlFamily, string> = {
+  straight: "type 1",
+  wavy: "type 2",
+  curly: "type 3",
+  coily: "type 4",
+};
+
+const FAMILY_SUBTITLE: Record<CurlFamily, string> = {
+  straight: "straight — 1a · 1b · 1c",
+  wavy: "wavy — 2a · 2b · 2c",
+  curly: "curly — 3a · 3b · 3c",
+  coily: "coily — 4a · 4b · 4c",
+};
+
+const FAMILY_ORDER: CurlFamily[] = ["straight", "wavy", "curly", "coily"];
 
 // Matches supabase/create_style_match.sql's seeded rows exactly, so the
 // browse experience is identical whether or not the styles table has
@@ -751,8 +774,12 @@ function StyleMatchContent() {
   // Inspo mode state (Part 5)
   const [inspoStyles, setInspoStyles] = useState<StyleRow[]>([]);
   const [inspoLoading, setInspoLoading] = useState(false);
-  const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
-  const [selectedLength, setSelectedLength] = useState<string | null>(null);
+  const [selectedVibe, setSelectedVibe] = useState<string>("all");
+  const [selectedFamily, setSelectedFamily] = useState<CurlFamily>("curly");
+  // True only until the user taps a tab themselves - drives the
+  // "showing styles for your hair type" note (item 3), which only
+  // makes sense while the pre-selected tab hasn't been overridden.
+  const [familyAutoSelected, setFamilyAutoSelected] = useState(false);
 
   function resetToLanding() {
     setPageState("landing");
@@ -1133,40 +1160,66 @@ function StyleMatchContent() {
     }
   }
 
-  // Inspo mode (Part 5)
+  // Inspo mode - fetches every style once (no family/vibe filter at the
+  // query level, same "fetch once, filter client-side" pattern the vibe
+  // filter already used before this change) and resolves a visual
+  // library fallback image for any row missing image_url, once here
+  // rather than per card render.
   async function loadInspoStyles() {
     setInspoLoading(true);
     try {
       const { data, error: fetchError } = await supabase
         .from("styles")
-        .select("id, name, slug, description, hair_types_compatible, requires_fake_hair, estimated_time, difficulty, image_url");
+        .select("id, name, slug, description, hair_types_compatible, requires_fake_hair, estimated_time, difficulty, image_url")
+        .order("name", { ascending: true });
 
       const rows = !fetchError && data && data.length > 0 ? (data as StyleRow[]) : STATIC_STYLES;
-      const curlType = hairProfile?.curl_type ?? null;
-      const filtered = curlType
-        ? rows.filter((s) => (s.hair_types_compatible ?? []).includes(curlType))
-        : rows;
-      setInspoStyles(filtered);
+
+      const withFallback = await Promise.all(
+        rows.map(async (style) => {
+          if (style.image_url) return style;
+          const params = new URLSearchParams({ category: "style" });
+          if (style.hair_types_compatible?.length) {
+            params.set("hair_types", style.hair_types_compatible.join(","));
+          }
+          try {
+            const res = await fetch(`/api/visual-library/fallback?${params.toString()}`);
+            const json = await res.json();
+            return { ...style, fallback_image_url: json.url ?? null };
+          } catch {
+            return style;
+          }
+        })
+      );
+
+      setInspoStyles(withFallback);
     } finally {
       setInspoLoading(false);
     }
   }
 
+  // Pre-selects the tab matching the signed-in user's curl_type (item
+  // 3), defaulting to curly (most content, most common searches) with
+  // no profile or an unrecognized curl_type.
   function openInspoMode() {
+    setSelectedFamily(curlFamily(hairProfile?.curl_type ?? null) ?? "curly");
+    setFamilyAutoSelected(true);
+    setSelectedVibe("all");
     setPageState("inspo");
     loadInspoStyles();
   }
 
-  function toggleVibe(vibe: string) {
-    setSelectedVibes((prev) => (prev.includes(vibe) ? prev.filter((v) => v !== vibe) : [...prev, vibe]));
+  function selectFamilyTab(family: CurlFamily) {
+    setSelectedFamily(family);
+    setFamilyAutoSelected(false);
   }
 
   const visibleInspoStyles = inspoStyles.filter((s) => {
+    const codes = s.hair_types_compatible ?? [];
+    const familyOk = codes.some((c) => FAMILY_CODES[selectedFamily].includes(c));
     const vibes = VIBE_TAGS_BY_SLUG[s.slug] ?? [];
-    const length = LENGTH_TAG_BY_SLUG[s.slug] ?? null;
-    const vibeOk = selectedVibes.length === 0 || selectedVibes.some((v) => vibes.includes(v));
-    const lengthOk = !selectedLength || length === selectedLength;
-    return vibeOk && lengthOk;
+    const vibeOk = selectedVibe === "all" || vibes.includes(selectedVibe);
+    return familyOk && vibeOk;
   });
 
   // Tapping an inspo card pre-fills the style name and jumps straight
@@ -1289,97 +1342,104 @@ function StyleMatchContent() {
             </button>
             <h1 className="mt-3 font-serif text-[28px] font-semibold text-dark">Find your next style</h1>
 
-            <div className="mt-6">
-              <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Vibe</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {VIBE_OPTIONS.map((v) => (
-                  <button
-                    key={v}
-                    type="button"
-                    onClick={() => toggleVibe(v)}
-                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                      selectedVibes.includes(v)
-                        ? "border-bronze bg-bronze text-cream"
-                        : "border-bronze/40 text-bronze2 hover:bg-bronze/10"
-                    }`}
-                  >
-                    {v}
-                  </button>
-                ))}
-              </div>
+            {/* Hair-family tabs (items 1-3) */}
+            <div className="mt-6 grid grid-cols-4 border border-dark">
+              {FAMILY_ORDER.map((family) => (
+                <button
+                  key={family}
+                  type="button"
+                  onClick={() => selectFamilyTab(family)}
+                  className={`border-r border-dark py-2 text-center font-sans font-bold lowercase transition-colors last:border-r-0 ${
+                    selectedFamily === family ? "bg-dark text-white" : "bg-white text-dark"
+                  }`}
+                  style={{ fontSize: "12px" }}
+                >
+                  {FAMILY_TAB_LABEL[family]}
+                </button>
+              ))}
             </div>
+            <p className="mt-2 font-mono lowercase text-muted" style={{ fontSize: "9px" }}>
+              {FAMILY_SUBTITLE[selectedFamily]}
+            </p>
+            {familyAutoSelected && hairProfile?.curl_type && (
+              <p className="mt-1 font-mono lowercase text-muted" style={{ fontSize: "9px" }}>
+                showing styles for your hair type ({hairProfile.curl_type}) — tap another tab to browse
+              </p>
+            )}
 
-            <div className="mt-4">
-              <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Length</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {["Any length", ...LENGTH_OPTIONS].map((l) => {
-                  const isAny = l === "Any length";
-                  const selected = isAny ? !selectedLength : selectedLength === l;
-                  return (
-                    <button
-                      key={l}
-                      type="button"
-                      onClick={() => setSelectedLength(isAny ? null : l)}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                        selected
-                          ? "border-bronze bg-bronze text-cream"
-                          : "border-bronze/40 text-bronze2 hover:bg-bronze/10"
-                      }`}
-                    >
-                      {l}
-                    </button>
-                  );
-                })}
-              </div>
+            {/* Vibe filter row (item 6) */}
+            <div className="mt-4 -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0">
+              {VIBE_OPTIONS.map((vibe) => (
+                <button
+                  key={vibe}
+                  type="button"
+                  onClick={() => setSelectedVibe(vibe)}
+                  className={`shrink-0 border px-2.5 py-1 font-mono lowercase transition-colors ${
+                    selectedVibe === vibe
+                      ? "border-dark bg-dark text-white"
+                      : "border-dark/40 bg-white text-muted"
+                  }`}
+                  style={{ fontSize: "9px" }}
+                >
+                  {vibe}
+                </button>
+              ))}
             </div>
 
             {inspoLoading && <p className="mt-8 text-sm text-dark/50">Loading styles...</p>}
 
             {!inspoLoading && (
               <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {visibleInspoStyles.map((style) => (
-                  <button
-                    key={style.id}
-                    type="button"
-                    onClick={() => handleInspoCardTap(style)}
-                    className="overflow-hidden rounded-xl border border-bronze/30 text-left transition-colors hover:border-bronze"
-                  >
-                    {style.image_url ? (
-                      <img
-                        src={style.image_url}
-                        alt={style.name}
-                        loading="lazy"
-                        className="aspect-[4/5] w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex aspect-[4/5] w-full items-center justify-center bg-gradient-to-br from-[#ffffff] to-[#f5f5f5] p-4 text-center">
-                        <p className="font-serif text-lg text-dark">{style.name}</p>
-                      </div>
-                    )}
-                    <div className="p-4">
-                      {style.image_url && (
-                        <p className="font-serif text-lg text-dark">{style.name}</p>
-                      )}
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {style.difficulty && (
-                          <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium capitalize text-bronze2">
-                            {style.difficulty}
-                          </span>
-                        )}
-                        {style.estimated_time && (
-                          <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium text-bronze2">
-                            {style.estimated_time}
-                          </span>
+                {visibleInspoStyles.map((style) => {
+                  const imageUrl = style.image_url || style.fallback_image_url || null;
+                  return (
+                    <button
+                      key={style.id}
+                      type="button"
+                      onClick={() => handleInspoCardTap(style)}
+                      className="flex flex-col overflow-hidden border border-dark bg-white text-left"
+                    >
+                      <div className="relative aspect-square w-full overflow-hidden">
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={style.name}
+                            loading="lazy"
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center bg-[#1a1a1a] p-3 text-center">
+                            <p className="font-sans font-bold lowercase text-white" style={{ fontSize: "13px" }}>
+                              {style.name}
+                            </p>
+                          </div>
                         )}
                         {style.requires_fake_hair && (
-                          <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-bronze">
-                            Fake hair
+                          <span className="absolute left-1.5 top-1.5 bg-dark px-2 py-1 font-mono lowercase text-white" style={{ fontSize: "8px" }}>
+                            + fake hair
                           </span>
                         )}
                       </div>
-                    </div>
-                  </button>
-                ))}
+                      <div className="p-2.5">
+                        <p className="font-sans font-bold lowercase leading-tight text-dark" style={{ fontSize: "11px" }}>
+                          {style.name}
+                        </p>
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {style.estimated_time && (
+                            <span className="font-mono lowercase text-muted" style={{ fontSize: "9px" }}>
+                              {style.estimated_time}
+                            </span>
+                          )}
+                          {style.difficulty && (
+                            <span className="border border-dark/40 px-1.5 py-0.5 font-mono lowercase text-muted" style={{ fontSize: "9px" }}>
+                              {style.difficulty}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
                 {visibleInspoStyles.length === 0 && (
                   <p className="col-span-full text-sm text-dark/50">No styles match those filters yet.</p>
                 )}
