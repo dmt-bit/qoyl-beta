@@ -31,6 +31,9 @@ export type StyleRow = {
   description: string | null;
   hair_types_compatible: string[] | null;
   image_url: string | null;
+  // Resolved once in MasonryFeed.tsx's styleRows fetch when image_url
+  // is null - never re-fetched per render.
+  fallback_image_url?: string | null;
 };
 
 export type FeedCard =
@@ -231,18 +234,22 @@ export function EditorialMasonryCard({
   const topText = truncateWords(post.title, 8);
   const tag = [post.hair_type, post.category.replace(/-/g, " ")].filter(Boolean).join(" · ");
   const punchline = post.excerpt ? truncateWords(firstSentence(post.excerpt), 10) : null;
+  // fallback_image_url is only ever set when hero_image_url is null
+  // (see app/page.tsx) - the dark gradient/excerpt block is the true
+  // last resort, shown only when neither exists.
+  const imageUrl = post.hero_image_url || post.fallback_image_url || null;
 
   return (
     <Link href={`/posts/${post.slug}`} className={CARD_CLASS} {...longPress}>
       <MemeTopBar text={topText} tag={tag} />
 
       <div className="relative aspect-square w-full overflow-hidden">
-        {post.hero_image_url ? (
+        {imageUrl ? (
           // Plain <img>, not next/image - the feed doesn't have a known
           // width/height (or a sized ancestor for `fill`) ahead of
           // render for every card in the grid.
           <img
-            src={post.hero_image_url}
+            src={imageUrl}
             alt={post.title}
             loading="lazy"
             className="absolute inset-0 h-full w-full object-cover"
@@ -402,16 +409,7 @@ export function ProductMasonryCard({
       <MemeTopBar text={topText} tag={tag} />
 
       <div className="relative aspect-square w-full overflow-hidden bg-white">
-        {hasScore ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className={`font-mono text-[48px] font-bold ${scoreNumberColorClass(product.score!)}`}>
-              {product.score}
-            </span>
-            <span className="mt-1 font-mono lowercase text-muted" style={{ fontSize: "8px" }}>
-              compatibility
-            </span>
-          </div>
-        ) : product.imageUrl ? (
+        {product.imageUrl ? (
           <img
             src={product.imageUrl}
             alt={product.name}
@@ -419,8 +417,34 @@ export function ProductMasonryCard({
             className="absolute inset-0 h-full w-full object-cover"
           />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#f5f5f5] p-4 text-center">
-            <p className="font-sans text-sm leading-snug text-dark">{product.name}</p>
+          // No product photo - a branded score card generated on the
+          // fly instead of pulling a generic stock image from the
+          // visual library. Never needs an image; the score is the
+          // visual (item 7).
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-3 text-center">
+            <p className="font-sans font-bold lowercase leading-tight text-dark" style={{ fontSize: "20px" }}>
+              {product.name}
+            </p>
+            <p className="font-mono lowercase text-muted" style={{ fontSize: "10px" }}>
+              {product.brand}
+            </p>
+            {hasScore && (
+              <>
+                <div className="my-1.5 h-px w-10 bg-dark" />
+                <span className={`font-mono font-bold ${scoreNumberColorClass(product.score!)}`} style={{ fontSize: "56px" }}>
+                  {product.score}
+                </span>
+                <p className="-mt-1 font-mono lowercase text-muted" style={{ fontSize: "9px" }}>
+                  compatibility
+                </p>
+                <div className="mt-1.5 h-px w-10 bg-dark" />
+              </>
+            )}
+            {curlType && (
+              <span className="mt-1 border border-dark px-2 py-0.5 font-mono lowercase text-dark" style={{ fontSize: "9px" }}>
+                {curlType}
+              </span>
+            )}
           </div>
         )}
 
@@ -512,9 +536,9 @@ export function StyleMasonryCard({
       </div>
 
       <div className="relative w-1/2 overflow-hidden bg-[#1a1a1a]">
-        {style.image_url && (
+        {(style.image_url || style.fallback_image_url) && (
           <img
-            src={style.image_url}
+            src={style.image_url || style.fallback_image_url || ""}
             alt={style.name}
             loading="lazy"
             className="absolute inset-0 h-full w-full object-cover opacity-70"

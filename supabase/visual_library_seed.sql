@@ -1,0 +1,76 @@
+-- Seeds the visual_library table with the Cloudinary/Pexels images
+-- already used elsewhere in the app (hero carousel, welcome email).
+-- Additive only - safe to run once; running it twice would duplicate
+-- these 10 rows since there's no unique constraint on image_url to key
+-- an upsert off of, so only run this once.
+INSERT INTO visual_library (image_url, hair_types, categories, mood, card_types) VALUES
+(
+  'https://images.pexels.com/photos/4257489/pexels-photo-4257489.jpeg',
+  ARRAY['3a','3b','3c'],
+  ARRAY['lifestyle','texture'],
+  'dark_editorial',
+  ARRAY['post','product','style']
+),
+(
+  'https://images.pexels.com/photos/7956110/pexels-photo-7956110.jpeg',
+  ARRAY['2c','3a'],
+  ARRAY['lifestyle','texture'],
+  'warm_neutral',
+  ARRAY['post','style']
+),
+(
+  'https://images.pexels.com/photos/4584409/pexels-photo-4584409.jpeg',
+  ARRAY['all'],
+  ARRAY['lifestyle'],
+  'light_clean',
+  ARRAY['post','product']
+),
+(
+  'https://images.pexels.com/photos/6101922/pexels-photo-6101922.jpeg',
+  ARRAY['3c','4a'],
+  ARRAY['lifestyle','texture'],
+  'dark_editorial',
+  ARRAY['post','style']
+),
+(
+  'https://images.pexels.com/photos/6945691/pexels-photo-6945691.jpeg',
+  ARRAY['3b','3c'],
+  ARRAY['lifestyle'],
+  'warm_neutral',
+  ARRAY['post','product']
+),
+(
+  'https://images.pexels.com/photos/6616645/pexels-photo-6616645.jpeg',
+  ARRAY['4b','4c'],
+  ARRAY['lifestyle','texture'],
+  'dark_editorial',
+  ARRAY['post','style']
+),
+(
+  'https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-photo-4257489',
+  ARRAY['3a','3b','3c'],
+  ARRAY['lifestyle','texture'],
+  'dark_editorial',
+  ARRAY['post','product','style']
+),
+(
+  'https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-svet-svet-2156448907-35140064',
+  ARRAY['all'],
+  ARRAY['lifestyle'],
+  'dark_editorial',
+  ARRAY['post','style']
+),
+(
+  'https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-pedrofurtadoo-29096365',
+  ARRAY['all'],
+  ARRAY['lifestyle'],
+  'light_clean',
+  ARRAY['post','product']
+),
+(
+  'https://res.cloudinary.com/kumxntij/image/upload/v1787276711/pexels-casa-rio-beauty-salon-2162626170-38421531.jpg',
+  ARRAY['3c','4a','4b','4c'],
+  ARRAY['style','lifestyle'],
+  'warm_neutral',
+  ARRAY['post','style']
+);

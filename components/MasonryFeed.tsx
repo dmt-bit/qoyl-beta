@@ -357,12 +357,35 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
   // be shown to other users). Capped to 3 here per the "2-3 cards" spec.
   useEffect(() => {
     let cancelled = false;
-    supabase
-      .from("styles")
-      .select("id, name, slug, description, hair_types_compatible, image_url")
-      .then(({ data }) => {
-        if (!cancelled) setStyleRows(shuffle((data as StyleRow[]) ?? []).slice(0, 3));
-      });
+    (async () => {
+      const { data } = await supabase
+        .from("styles")
+        .select("id, name, slug, description, hair_types_compatible, image_url");
+      const picked = shuffle((data as StyleRow[]) ?? []).slice(0, 3);
+
+      // Fallback images resolved once here (not per render) for any
+      // picked style with no image_url - visual_library needs the
+      // service role, so this goes through the bridge route rather
+      // than a direct client-side query (see the route's own comment).
+      const withFallback = await Promise.all(
+        picked.map(async (style) => {
+          if (style.image_url) return style;
+          const params = new URLSearchParams({ category: "style" });
+          if (style.hair_types_compatible?.length) {
+            params.set("hair_types", style.hair_types_compatible.join(","));
+          }
+          try {
+            const res = await fetch(`/api/visual-library/fallback?${params.toString()}`);
+            const json = await res.json();
+            return { ...style, fallback_image_url: json.url ?? null };
+          } catch {
+            return style;
+          }
+        })
+      );
+
+      if (!cancelled) setStyleRows(withFallback);
+    })();
     return () => {
       cancelled = true;
     };

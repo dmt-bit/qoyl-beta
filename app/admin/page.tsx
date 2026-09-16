@@ -153,9 +153,17 @@ export default function AdminPage() {
       <div className="mx-auto max-w-4xl">
         <div className="flex items-center justify-between gap-4">
           <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">Admin</h1>
-          <Link href="/admin/products" className="text-sm text-bronze2 underline underline-offset-2 hover:text-dark">
-            Manage products →
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/admin/products" className="text-sm text-bronze2 underline underline-offset-2 hover:text-dark">
+              Manage products →
+            </Link>
+            <Link href="/admin/visuals" className="text-sm text-bronze2 underline underline-offset-2 hover:text-dark">
+              Visual library →
+            </Link>
+            <Link href="/admin/posts" className="text-sm text-bronze2 underline underline-offset-2 hover:text-dark">
+              Posts →
+            </Link>
+          </div>
         </div>
 
         <section className="mt-8">

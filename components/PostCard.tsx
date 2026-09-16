@@ -17,6 +17,10 @@ export type Post = {
   source_creator_url?: string | null;
   source_platform?: string | null;
   video_url?: string | null;
+  // Resolved server-side (see app/page.tsx) from the visual library
+  // when hero_image_url is null - only ever set alongside a null
+  // hero_image_url, never fetched per-render.
+  fallback_image_url?: string | null;
 };
 
 function CategoryLabel({ category }: { category: string }) {
