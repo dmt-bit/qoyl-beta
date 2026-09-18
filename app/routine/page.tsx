@@ -1,12 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Collapse from "@/components/Collapse";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
-import { getAffiliateLink } from "@/lib/affiliateLinks";
 import { curlFamily, CurlFamily, scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import { ProductWeight, WEIGHT_PILL_CLASSES, WEIGHT_PILL_LABEL, weightFitNote } from "@/lib/productWeight";
 import { WashDay, WashDayType } from "@/lib/routineCalendar";
@@ -25,7 +24,7 @@ import {
 } from "@/lib/priceContext";
 import { PROTECTIVE_STYLE_DAY_LABEL } from "@/lib/protectiveStyleRoutine";
 import { markRoutineVisited } from "@/lib/routineVisit";
-import type { RoutineStepDetail, WashDayKey, WashDaySteps } from "@/lib/routineSteps";
+import type { WashDayKey, WashDaySteps } from "@/lib/routineSteps";
 import { lookupCityState } from "@/lib/zipLookup";
 
 type RoutineStep = {
@@ -125,14 +124,6 @@ type ProtectiveStyleData = {
   wigScalpCareNote: string | null;
 };
 
-const SCALP_LABELS: Record<string, string> = {
-  normal: "Normal scalp",
-  dry: "Dry scalp",
-  oily: "Oily scalp",
-  sensitive: "Sensitive scalp",
-  "dandruff-prone": "Dandruff-prone scalp",
-};
-
 // Same color coding as the calendar's DayCell/CalendarLegend below, so a
 // user can see e.g. a green-bordered date and know exactly which product
 // section to scroll to. Labels/order come from lib/categoryGuidance.ts,
@@ -171,17 +162,6 @@ function todayLabelForWashType(type: WashDayType): string {
   if (type === "refresh") return "Between wash day";
   return "Regular wash day";
 }
-
-const FREQUENCY_EXPLANATION: Record<CurlFamily, string> = {
-  straight:
-    "Sebum travels faster down straight hair strands - more frequent washing keeps your scalp healthy and hair looking fresh. This is normal for your hair type.",
-  wavy:
-    "Sebum travels fairly quickly down wavy strands, just not as fast as straight hair - washing every few days keeps your scalp balanced without stripping your wave pattern. This is normal for your hair type.",
-  curly:
-    "Your curl pattern slows sebum travel down the hair shaft compared to straighter textures - going longer between washes protects your curls' natural moisture. Focus your between-wash routine on sealing and protecting.",
-  coily:
-    "Your curl pattern slows sebum travel down the hair shaft - less frequent washing protects your hair's natural moisture. Focus your between-wash routine on sealing and protecting.",
-};
 
 // ---- Calendar grid (Part 2: restores a real month-grid visual instead
 // of the rolling list) -----------------------------------------------
@@ -760,61 +740,20 @@ function ProductCard({
 // Bronze label + hairline rule between product-list groups - wording and
 // color match SECTION_META / CalendarLegend above 1:1.
 function SectionDivider({ section }: { section: RoutineSection }) {
+  const dotClass = section === "protein" ? "bg-green" : "bg-bronze";
+  const textClass = section === "protein" ? "text-green" : "text-bronze";
+  const lineClass = section === "protein" ? "bg-green/20" : "bg-bronze/20";
   return (
     <div className="col-span-full mt-6 flex items-center gap-2 first:mt-0">
-      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-bronze" />
-      <span className="shrink-0 font-sans text-[10px] font-semibold uppercase tracking-wide text-bronze">
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${dotClass}`} />
+      <span className={`shrink-0 font-sans text-[10px] font-semibold uppercase tracking-wide ${textClass}`}>
         {SECTION_META[section].label}
       </span>
-      <span className="h-px flex-1 bg-bronze/20" />
+      <span className={`h-px flex-1 ${lineClass}`} />
     </div>
   );
 }
 
-// "What to use today" - checks today's entry in the generated wash
-// calendar (matched by data.todayIso - calendarDays no longer always
-// has an entry for today, see generateWashCalendar) and shows only the
-// product(s) relevant to that specific day, so a user doesn't have to
-// scroll the full list every morning.
-function TodayProducts({ data }: { data: RoutineData }) {
-  const todayWash = data.calendarDays.find((d) => d.date === data.todayIso);
-
-  if (!todayWash) {
-    return (
-      <div className="print-hide mb-10 rounded-xl border border-bronze/30 bg-bronze/5 p-5">
-        <span className="inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-cream">
-          Today is a rest day
-        </span>
-        <p className="mt-3 text-sm text-dark/60">No wash products needed today.</p>
-      </div>
-    );
-  }
-
-  const label = todayLabelForWashType(todayWash.washType);
-  const relevantSections = sectionsForWashType(todayWash.washType);
-  const todaysPicks = data.products.filter((pick) => relevantSections.includes(pick.section));
-
-  return (
-    <div className="print-hide mb-10 rounded-xl border border-bronze/30 bg-bronze/5 p-5">
-      <span className="inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-cream">
-        Today is a {label}
-      </span>
-      <p className="mt-3 text-sm font-medium text-dark/80">Your products for today:</p>
-      <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {todaysPicks.map((pick) => (
-          <ProductCard
-            key={`today-${pick.category}`}
-            pick={pick}
-            curlType={data.curlType}
-            porosity={data.porosity}
-            budgetRange={data.budgetRange}
-            colorTreated={data.colorTreated === "yes"}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // Braids/locs get a simple date list rather than the natural-hair
 // month-grid calendar - the day types (scalp wash/moisturize/retwist)
@@ -919,282 +858,33 @@ function ProtectiveStyleSection({ data }: { data: RoutineData }) {
   );
 }
 
-function ClockIcon() {
-  return (
-    <svg className="h-3.5 w-3.5 shrink-0 text-bronze" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <circle cx="12" cy="12" r="9" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5V12l3 2" />
-    </svg>
-  );
-}
-
-// Colors/icons mirror SECTION_META/CalendarLegend above, so a wash
-// day's color reads the same whether it's the calendar, the product
-// list dividers, or this accordion header. border is a left-accent
-// (paired with border-l-4 in WashDayAccordion below), not a full
-// perimeter border.
-const WASH_DAY_ACCORDION_STYLE: Record<
-  WashDayKey,
-  { border: string; label: string; icon: () => React.ReactElement; cadenceTypes: WashDayType[]; cadenceUnit: "weeks" | "washes" | null }
-> = {
-  clarifying: { border: "border-l-bronze", label: "text-bronze", icon: SmallCalendarIcon, cadenceTypes: ["chelate", "clarify"], cadenceUnit: "weeks" },
-  regular: { border: "border-l-cream", label: "text-dark", icon: DropIcon, cadenceTypes: [], cadenceUnit: null },
-  protein: { border: "border-l-green", label: "text-green", icon: LeafIcon, cadenceTypes: ["protein"], cadenceUnit: "washes" },
-  between: { border: "border-l-[#0a0a0a]", label: "text-dark/60", icon: MoonIcon, cadenceTypes: [], cadenceUnit: null },
-};
-
-// One step within a wash-day accordion - bronze-filled numbered circle,
-// DM Sans title/body, an optional timer line (clock icon), an optional
-// bronze "why" callout, and - when the step names a product category
-// the user has a curated pick for - a direct link to that pick so they
-// don't have to scroll down to SECTION 4 to find it.
-function StepDetailRow({
-  step,
-  index,
-  products,
-}: {
-  step: RoutineStepDetail;
-  index: number;
-  products: ProductPick[];
-}) {
-  const pick = step.productCategory
-    ? products.find((p) => p.category === step.productCategory) ?? null
-    : null;
-  const primary = pick?.primary ?? null;
-  const viewLink = primary ? getAffiliateLink(primary.productName, primary.brandName) : null;
-
-  return (
-    <div className="flex gap-4">
-      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-bronze font-sans text-xs font-semibold text-cream">
-        {index + 1}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-sans text-sm font-semibold text-dark">{step.title}</p>
-        <p className="mt-1 text-[13px] leading-relaxed text-[#9C8070]">{step.body}</p>
-
-        {step.timerMinutes && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-bronze2">
-            <ClockIcon />
-            Set a timer for {step.timerMinutes}
-          </p>
-        )}
-
-        {step.why && (
-          <p className="mt-2 border-l-2 border-bronze bg-[#f5f5f5] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#9C8070]">
-            {step.why}
-          </p>
-        )}
-
-        {pick && primary && (
-          <p className="mt-2 text-xs text-dark/60">
-            Your {pick.categoryLabel.toLowerCase()}: {primary.productName} - {primary.score}/100 for your profile
-            {viewLink && (
-              <>
-                {" "}
-                <a
-                  href={viewLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="print-hide font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
-                >
-                  View product →
-                </a>
-              </>
-            )}
-          </p>
-        )}
-
-        {/* Detangler is new enough to the catalog that "no real pick
-            yet" is a live case worth its own message, rather than
-            silently showing nothing - other product-linked steps keep
-            the silent fallback above. */}
-        {step.productCategory === "detangler" && pick && !primary && (
-          <p className="mt-2 text-xs text-dark/60">
-            No detangler in your list yet -{" "}
-            <Link
-              href={`/search?category=${encodeURIComponent(pick.searchCategorySlug)}${
-                pick.searchQuery ? `&q=${encodeURIComponent(pick.searchQuery)}` : ""
-              }`}
-              className="print-hide font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
-            >
-              search our catalog
-            </Link>{" "}
-            or{" "}
-            <Link
-              href={`/request?product=${encodeURIComponent(pick.categoryLabel)}`}
-              className="print-hide font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
-            >
-              request an evaluation →
-            </Link>
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function WashDayAccordion({
-  washDay,
-  products,
-  calendarDays,
-  defaultOpen,
-}: {
-  washDay: WashDaySteps;
-  products: ProductPick[];
-  calendarDays: WashDay[];
-  defaultOpen: boolean;
-}) {
-  const [open, setOpen] = useState(defaultOpen);
-  const style = WASH_DAY_ACCORDION_STYLE[washDay.key];
-  const Icon = style.icon;
-  const cadence =
-    washDay.key === "regular"
-      ? "Most common"
-      : style.cadenceUnit
-      ? computeCadenceLabel(calendarDays, style.cadenceTypes, style.cadenceUnit)
-      : null;
-
-  return (
-    <div className={`rounded-xl border-l-4 p-5 transition-colors ${style.border} ${open ? "bg-white" : "bg-[#f5f5f5]/40"}`}>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-3 text-left"
-      >
-        <span className="flex items-center gap-2">
-          <Icon />
-          <span className={`font-serif text-xl font-semibold ${style.label}`}>{washDay.label}</span>
-        </span>
-        <span className="flex shrink-0 items-center gap-3">
-          {cadence && (
-            <span className="whitespace-nowrap rounded-full border border-bronze/30 px-2.5 py-1 text-[10px] font-medium text-dark/70">
-              {cadence}
-            </span>
-          )}
-          <span className={`text-sm transition-transform ${open ? "rotate-180" : ""} text-dark/50`}>▼</span>
-        </span>
-      </button>
-      <Collapse show={open}>
-        {washDay.steps.map((step, i) => (
-          <StepDetailRow key={`${washDay.key}-${step.title}`} step={step} index={i} products={products} />
-        ))}
-      </Collapse>
-    </div>
-  );
-}
-
-// ---- Visual redesign additions (nav/hero/calendar/steps/products) -----
+// ---- Horizontal-swipe redesign (hero/upcoming/steps/products/calendar) --
 // Purely presentational - no change to how routine data is computed or
-// what functionality exists, per the request.
+// what functionality exists, per the request. sectionsForWashType/
+// todayLabelForWashType (above) and WashCalendarGrid (below) are reused
+// as-is; only the surrounding layout/markup is new.
 
-function DropIcon() {
-  return (
-    <svg className="h-4 w-4 shrink-0 text-dark" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3s6.5 7.09 6.5 11.5a6.5 6.5 0 11-13 0C5.5 10.09 12 3 12 3z" />
-    </svg>
-  );
-}
-function LeafIcon() {
-  return (
-    <svg className="h-4 w-4 shrink-0 text-green" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M20 4S6 5 6 15a6 6 0 006 6C22 21 20 4 20 4z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M11 20c0-6 2-11 9-15" />
-    </svg>
-  );
-}
-function MoonIcon() {
-  return (
-    <svg className="h-4 w-4 shrink-0 text-[#9C8070]" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M20.4 14.7A8.5 8.5 0 019.3 3.6a.75.75 0 00-.9-1 10 10 0 1013 13 .75.75 0 00-1-.9z" />
-    </svg>
-  );
-}
-function SmallCalendarIcon() {
-  return (
-    <svg className="h-4 w-4 shrink-0 text-bronze" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <rect x="3.75" y="5.25" width="16.5" height="15" rx="1.5" />
-      <path strokeLinecap="round" d="M3.75 9.75h16.5M8.25 3v3.75M15.75 3v3.75" />
-    </svg>
-  );
-}
-function ChevronDownIcon() {
-  return (
-    <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-    </svg>
-  );
+function washDayKeyForType(type: WashDayType): WashDayKey {
+  if (type === "chelate" || type === "clarify") return "clarifying";
+  if (type === "protein") return "protein";
+  if (type === "refresh") return "between";
+  return "regular";
 }
 
-function capitalize(word: string): string {
-  return word.charAt(0).toUpperCase() + word.slice(1);
-}
-
-// SECTION - Hero: the profile's most personal, at-a-glance summary,
-// large curl type acting as the page's visual anchor.
-function RoutineHero({
-  curlType,
-  porosity,
-  cityLabel,
-}: {
-  curlType: string | null;
-  porosity: string | null;
-  cityLabel: string | null;
-}) {
-  const showCurl = Boolean(curlType && curlType !== "not_sure");
-  const porosityLabel =
-    porosity && porosity !== "not sure" ? `${capitalize(porosity)} Porosity` : null;
-  const subline = [porosityLabel, cityLabel].filter(Boolean).join(" · ");
-
-  return (
-    <div
-      id="routine-hero"
-      className="flex h-[220px] w-full flex-col items-center justify-center bg-[#ffffff] px-4 text-center sm:h-[260px]"
-    >
-      <p className="font-serif text-[64px] italic leading-none text-bronze sm:text-[80px]">
-        {showCurl ? curlType : "Your Hair"}
-      </p>
-      {subline && <p className="mt-3 font-sans text-[11px] text-muted">{subline}</p>}
-      <p className="mt-2 font-serif text-lg text-dark">Your personalized 30-day routine</p>
-    </div>
-  );
-}
-
-function FlameIcon() {
-  return (
-    <svg className="h-8 w-8 text-bronze" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 2.5c1.2 3-1.8 4.2-2.6 7.3-.6 2.3.3 4.5 2.6 5.5-1-1.3-1.2-2.7-.3-4 .4 1.5 1.4 2.1 2.4 1.6-.6-.9-.5-1.9.3-2.6.4 1.1 1.4 1.4 2.1.8.9-.8 1.2-2.3.6-3.6-.4 1-1.1 1.3-1.7.9.7-2.3-.5-4.3-3.4-5.9z" />
-      <path d="M9.8 15.3c-.5 2 .6 3.9 2.6 4.2 2.3.3 4.1-1.2 4.1-3.3 0-1.1-.5-2-1.3-2.6.1 1-.3 1.8-1.1 2-.1-1-.7-1.6-1.6-1.5.3 1.2-.3 2.1-1.3 2.1-.6 0-1.1-.4-1.4-.9z" />
-    </svg>
-  );
-}
-
-// Streak, per the request's three treatments (>=3, 1-2, 0). Rendered
-// between the hero and the "What to use today" card. Nothing shown at
-// all for streak === 0 - the encouragement note lives on the check-off
-// button itself (see TodayCheckOffButton's "Start your streak today").
-function StreakDisplay({ streak }: { streak: number }) {
-  if (streak <= 0) return null;
-
-  if (streak >= 3) {
-    return (
-      <div className="px-4 pt-6 text-center sm:px-6">
-        <div className="mx-auto flex max-w-3xl flex-col items-center">
-          <FlameIcon />
-          <p className="mt-1 font-serif text-[36px] leading-none text-bronze">{streak}</p>
-          <p className="mt-1 font-sans text-[10px] uppercase tracking-wide text-muted">day streak</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="px-4 pt-6 text-center sm:px-6">
-      <p className="font-sans text-sm text-bronze2">
-        {streak} day{streak === 1 ? "" : "s"} in — keep going →
-      </p>
-    </div>
-  );
-}
+const WASH_PILL_LABEL: Record<WashDayType, string> = {
+  chelate: "chelating wash",
+  clarify: "chelating wash",
+  wash: "regular wash",
+  protein: "protein treatment",
+  refresh: "refresh day",
+};
+const WASH_PILL_CLASSES: Record<WashDayType, string> = {
+  chelate: "bg-dark text-white",
+  clarify: "bg-dark text-white",
+  wash: "bg-white text-dark border border-dark",
+  protein: "bg-green text-white",
+  refresh: "bg-[#d9d9d9] text-dark",
+};
 
 function formatCheckOffTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
@@ -1232,14 +922,12 @@ function TodayCheckOffButton({
   todayIso,
   washType,
   todayCompletion,
-  streak,
   onChanged,
 }: {
   userId: string;
   todayIso: string;
   washType: string | null;
   todayCompletion: { washType: string; completedAt: string; notes: string | null } | null;
-  streak: number;
   onChanged: () => void;
 }) {
   const [saving, setSaving] = useState(false);
@@ -1301,19 +989,19 @@ function TodayCheckOffButton({
   if (localCompletedAt) {
     return (
       <div className="relative mt-4">
-        <div className="flex h-10 w-full items-center justify-between rounded-lg border border-bronze bg-bronze/15 px-4">
-          <span className="text-sm font-semibold text-bronze">Completed today ✓</span>
+        <div className="flex h-11 w-full items-center justify-between bg-dark px-4">
+          <span className="font-sans text-[13px] font-medium lowercase text-white">completed today ✓</span>
           <button
             type="button"
             onClick={handleUndo}
             disabled={undoing}
-            className="text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70 disabled:opacity-50"
+            className="font-mono text-[9px] text-white/60 underline underline-offset-2 hover:text-white disabled:opacity-50"
           >
-            {undoing ? "..." : "Undo"}
+            {undoing ? "…" : "undo"}
           </button>
         </div>
-        <p className="mt-1.5 text-[11px] text-muted">
-          Marked complete at {formatCheckOffTime(localCompletedAt)}
+        <p className="mt-1.5 font-mono text-[9px] text-muted">
+          completed at {formatCheckOffTime(localCompletedAt)}
         </p>
         {showConfetti && <ConfettiBurst />}
       </div>
@@ -1326,205 +1014,544 @@ function TodayCheckOffButton({
         type="button"
         onClick={handleCheckOff}
         disabled={saving}
-        className="flex h-10 w-full items-center justify-center rounded-lg border border-bronze text-sm font-semibold text-bronze transition-colors hover:bg-bronze/10 disabled:opacity-60"
+        className="flex h-11 w-full items-center justify-center border border-dark bg-white font-sans text-[13px] font-medium lowercase text-dark transition-colors hover:bg-[#f5f5f5] disabled:opacity-60"
       >
-        {saving ? "Saving..." : "Mark today as complete ✓"}
+        {saving ? "saving…" : "mark today as complete →"}
       </button>
       {error && <p className="mt-1.5 text-xs text-red">{error}</p>}
-      {streak === 0 && !error && (
-        <p className="mt-1.5 text-center text-[11px] text-muted">Start your streak today</p>
+    </div>
+  );
+}
+
+// SECTION 1 - Hero: curl type, porosity/city, today's wash-type pill,
+// streak, and the check-off button. Full-width, not scrollable.
+function HeroSection({
+  data,
+  cityLabel,
+  userId,
+  onChanged,
+}: {
+  data: RoutineData;
+  cityLabel: string | null;
+  userId: string;
+  onChanged: () => void;
+}) {
+  const showCurl = Boolean(data.curlType && data.curlType !== "not_sure");
+  const porosityLabel = data.porosity && data.porosity !== "not sure" ? `${data.porosity} porosity` : null;
+  const subline = [porosityLabel, cityLabel].filter(Boolean).join(" · ");
+  const todayWash = data.calendarDays.find((d) => d.date === data.todayIso);
+
+  return (
+    <div id="section-today" className="w-full border-b border-dark bg-white px-5 pb-5 pt-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="font-mono text-[72px] font-bold leading-none text-dark">
+            {showCurl ? data.curlType : "—"}
+          </p>
+          <p className="mt-2 font-mono text-[10px] text-muted">{subline || "your hair"}</p>
+        </div>
+        <div className="flex shrink-0 flex-col items-end pt-1 text-right">
+          <span
+            className={`whitespace-nowrap px-3 py-1.5 font-mono text-[11px] font-bold lowercase ${
+              todayWash ? WASH_PILL_CLASSES[todayWash.washType] : "bg-[#d9d9d9] text-dark"
+            }`}
+          >
+            {todayWash ? WASH_PILL_LABEL[todayWash.washType] : "rest day"}
+          </span>
+          <p className="mt-2 whitespace-nowrap font-mono text-[10px]">
+            {data.streak >= 3 ? (
+              <span className="text-dark">🔥 {data.streak}-day streak</span>
+            ) : (
+              <span className="text-muted">start your streak today</span>
+            )}
+          </p>
+        </div>
+      </div>
+
+      <TodayCheckOffButton
+        userId={userId}
+        todayIso={data.todayIso}
+        washType={todayWash?.washType ?? null}
+        todayCompletion={data.todayCompletion}
+        onChanged={onChanged}
+      />
+    </div>
+  );
+}
+
+// SECTION 2 - Upcoming: a horizontal row of every date in the 30-day
+// wash calendar from 7 days ago through the end of the window, each
+// carrying today/completed/missed state derived entirely from existing
+// calendarDays/todayIso/missedDates - no new data needed.
+function dayCompletionState(
+  day: WashDay,
+  todayIso: string,
+  missedDates: string[]
+): "today" | "completed" | "missed" | "future" {
+  if (day.date === todayIso) return "today";
+  if (day.date < todayIso) return missedDates.includes(day.date) ? "missed" : "completed";
+  return "future";
+}
+
+function UpcomingDayCard({
+  day,
+  state,
+}: {
+  day: WashDay;
+  state: "today" | "completed" | "missed" | "future";
+}) {
+  const d = new Date(`${day.date}T00:00:00`);
+  const dayName = d.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
+  const dateNum = d.getDate();
+
+  if (state === "today") {
+    return (
+      <div className="flex h-[88px] w-[72px] shrink-0 flex-col justify-between border-2 border-dark bg-dark p-2">
+        <span className="font-sans text-[9px] lowercase text-white/70">{dayName}</span>
+        <span className="font-mono text-[22px] font-bold leading-none text-white">{dateNum}</span>
+        <span className="self-start bg-white px-1.5 py-0.5 font-mono text-[8px] font-bold lowercase text-dark">
+          {WASH_PILL_LABEL[day.washType]}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex h-[88px] w-[72px] shrink-0 flex-col justify-between border border-[#e0e0e0] bg-white p-2">
+      <span className="font-sans text-[9px] lowercase text-muted">{dayName}</span>
+      <span className={`font-mono text-[22px] font-bold leading-none ${state === "completed" ? "text-muted" : "text-dark"}`}>
+        {dateNum}
+      </span>
+      <span className={`self-start px-1.5 py-0.5 font-mono text-[8px] font-bold lowercase ${WASH_PILL_CLASSES[day.washType]}`}>
+        {WASH_PILL_LABEL[day.washType]}
+      </span>
+      {state === "completed" && <span className="absolute right-1 top-1 text-[10px] leading-none text-dark">✓</span>}
+      {state === "missed" && <span className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-amber" />}
+    </div>
+  );
+}
+
+function UpcomingSection({ data, onViewCalendar }: { data: RoutineData; onViewCalendar: () => void }) {
+  const todayDate = new Date(`${data.todayIso}T00:00:00`);
+  const cutoffIso = toIsoLocal(addDays(todayDate, -7));
+  const visibleDays = data.calendarDays.filter((d) => d.date >= cutoffIso);
+
+  return (
+    <div id="section-upcoming" className="w-full border-b border-dark bg-white">
+      <div className="flex items-center justify-between px-5 pt-4">
+        <span className="font-mono text-[10px] lowercase text-muted">upcoming</span>
+        <button type="button" onClick={onViewCalendar} className="font-mono text-[10px] lowercase text-muted">
+          view full calendar ↓
+        </button>
+      </div>
+      {visibleDays.length > 0 ? (
+        <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto px-5 pb-4">
+          {visibleDays.map((day) => (
+            <UpcomingDayCard key={day.date} day={day} state={dayCompletionState(day, data.todayIso, data.missedDates)} />
+          ))}
+        </div>
+      ) : (
+        <p className="px-5 pb-4 pt-3 font-sans text-[13px] text-dark/60">No wash days in this window.</p>
       )}
     </div>
   );
 }
 
-// SECTION - "What to use today" teaser: the single most actionable
-// thing on the page, so it sits immediately below the hero with no
-// scrolling required. Distinct from TodayProducts further down (which
-// shows the actual product cards) - this is a compact pointer to it.
-function TodayTeaserCard({
-  data,
-  userId,
-  onChanged,
+// SECTION 3 - Steps: one horizontally scrollable, scroll-snapping card
+// per step of today's wash-day sequence (reusing stepsByWashType exactly
+// as computed server-side), plus any additionalNotes appended as trailing
+// cards so that content isn't lost by the restructure.
+function StepCard({
+  step,
+  index,
+  products,
+  onViewProduct,
 }: {
-  data: RoutineData;
-  userId: string;
-  onChanged: () => void;
+  step: { title: string; body: string; why: string | null; timerMinutes: string | null; productCategory: string | null };
+  index: number;
+  products: ProductPick[];
+  onViewProduct: () => void;
 }) {
-  // Looked up by date, not calendarDays[0] - that array no longer
-  // always contains today (a genuine rest day has no entry at all, see
-  // generateWashCalendar), so "today" has to be matched explicitly.
+  const [showWhy, setShowWhy] = useState(false);
+  const pick = step.productCategory ? products.find((p) => p.category === step.productCategory) ?? null : null;
+  const primary = pick?.primary ?? null;
+
+  return (
+    <div
+      className="flex min-h-[160px] w-[calc(100vw-56px)] max-w-[340px] shrink-0 flex-col border border-dark bg-white p-5"
+      style={{ scrollSnapAlign: "start" }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <span className="font-mono text-[11px] font-bold text-muted">step {String(index + 1).padStart(2, "0")}</span>
+        <span className="font-sans text-[15px] font-bold lowercase text-dark">{step.title}</span>
+      </div>
+      <p className="mt-2 flex-1 font-sans text-[13px] font-light leading-[1.7] text-[#444]">{step.body}</p>
+
+      <div className="mt-3 flex items-center justify-between gap-2">
+        {step.why ? (
+          <button type="button" onClick={() => setShowWhy((v) => !v)} className="font-mono text-[9px] text-[#bbb]">
+            why
+          </button>
+        ) : (
+          <span />
+        )}
+        {step.timerMinutes && (
+          <span className="font-mono text-[9px] text-muted">set timer · {step.timerMinutes}</span>
+        )}
+      </div>
+      {showWhy && step.why && (
+        <p className="mt-2 border-l-2 border-dark bg-[#f5f5f5] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#444]">
+          {step.why}
+        </p>
+      )}
+
+      {primary && (
+        <button
+          type="button"
+          onClick={onViewProduct}
+          className="mt-3 self-start border border-dark bg-white px-2.5 py-1 font-mono text-[10px] lowercase text-dark"
+        >
+          {primary.productName.length > 26 ? `${primary.productName.slice(0, 26)}…` : primary.productName} →
+        </button>
+      )}
+    </div>
+  );
+}
+
+function StepsSection({ data }: { data: RoutineData }) {
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [current, setCurrent] = useState(0);
   const todayWash = data.calendarDays.find((d) => d.date === data.todayIso);
-  const todayLabel = todayWash ? todayLabelForWashType(todayWash.washType) : "Rest day";
-  const todayDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "short",
-    day: "numeric",
-  });
+  const key = todayWash ? washDayKeyForType(todayWash.washType) : null;
+  const washDaySteps = key ? data.stepsByWashType.find((w) => w.key === key) ?? null : null;
+  const steps = washDaySteps?.steps ?? [];
+  const total = steps.length + data.additionalNotes.length;
+
+  function handleScroll() {
+    const el = scrollerRef.current;
+    if (!el) return;
+    const containerLeft = el.getBoundingClientRect().left;
+    let closest = 0;
+    let closestDist = Infinity;
+    Array.from(el.children).forEach((child, i) => {
+      const dist = Math.abs(child.getBoundingClientRect().left - containerLeft);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = i;
+      }
+    });
+    setCurrent(closest);
+  }
 
   function scrollToProducts() {
     document.getElementById("section-products")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
-  function scrollToCalendar() {
-    document.getElementById("section-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  if (!todayWash) {
+    return (
+      <div id="section-steps" className="w-full border-b border-dark bg-white px-5 py-6">
+        <span className="font-mono text-[10px] lowercase text-muted">today&apos;s routine</span>
+        <p className="mt-2 font-sans text-[13px] text-[#444]">Rest day — no routine steps today.</p>
+      </div>
+    );
   }
 
   return (
-    <div id="section-today" className="px-4 sm:px-6">
-      <div className="mx-auto -mt-6 max-w-3xl">
-        <div className="rounded-lg border-l-4 border-bronze bg-[#f5f5f5] px-5 py-4 shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-bronze">Today</p>
-              <p className="mt-0.5 font-sans text-[11px] text-muted">{todayDate}</p>
-              <p className="mt-1.5 font-serif text-[22px] leading-tight text-dark">{todayLabel}</p>
-              {todayWash ? (
-                <button
-                  type="button"
-                  onClick={scrollToProducts}
-                  className="mt-2 text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
-                >
-                  Your products for today →
-                </button>
-              ) : (
-                <p className="mt-2 text-sm text-dark/60">No wash products needed today.</p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={scrollToCalendar}
-              aria-label="View full calendar"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-bronze/40"
-            >
-              <SmallCalendarIcon />
-            </button>
+    <div id="section-steps" className="w-full border-b border-dark bg-white pt-4">
+      <div className="px-5">
+        <span className="font-mono text-[10px] lowercase text-muted">today&apos;s routine</span>
+        <p className="mt-0.5 font-mono text-[9px] text-[#bbb]">
+          {todayLabelForWashType(todayWash.washType).toLowerCase()} · {total} step{total === 1 ? "" : "s"}
+        </p>
+      </div>
+      <div
+        ref={scrollerRef}
+        onScroll={handleScroll}
+        className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-5 pb-4"
+        style={{ scrollSnapType: "x mandatory" }}
+      >
+        {steps.map((step, i) => (
+          <StepCard key={step.title} step={step} index={i} products={data.products} onViewProduct={scrollToProducts} />
+        ))}
+        {data.additionalNotes.map((note, i) => (
+          <StepCard
+            key={note.title}
+            step={{ title: note.title, body: note.body, why: note.why, timerMinutes: null, productCategory: null }}
+            index={steps.length + i}
+            products={data.products}
+            onViewProduct={scrollToProducts}
+          />
+        ))}
+      </div>
+      {total > 0 && (
+        <div className="flex flex-col items-center gap-2 pb-4">
+          <p className="font-mono text-[9px] text-muted">
+            step {current + 1} of {total}
+          </p>
+          <div className="flex gap-1.5">
+            {Array.from({ length: total }).map((_, i) => (
+              <span
+                key={i}
+                className={`h-1.5 w-1.5 rounded-full ${i === current ? "bg-dark" : "border border-dark"}`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// SECTION 4 - Products: today's wash-type-relevant picks (reusing
+// sectionsForWashType exactly as TodayProducts used to), as compact
+// horizontal cards, plus a collapsed "see all products" list that
+// reuses the existing full-detail ProductCard/SectionDivider and folds
+// in the brand-products/avoid-ingredients blocks that used to live in
+// the always-visible product section.
+function CompactProductCard({ pick }: { pick: ProductPick }) {
+  const [showWhy, setShowWhy] = useState(false);
+  const { primary } = pick;
+
+  if (pick.noProductsYet || !primary) {
+    return (
+      <div
+        className="flex min-h-[140px] w-[calc(100vw-56px)] max-w-[340px] shrink-0 flex-col justify-between border border-dark bg-white p-5"
+        style={{ scrollSnapAlign: "start" }}
+      >
+        <span className="font-mono text-[9px] uppercase tracking-wide text-muted">{pick.categoryLabel}</span>
+        <p className="mt-3 font-sans text-sm text-dark/60">No pick yet for this category.</p>
+        <Link
+          href={`/search?category=${encodeURIComponent(pick.searchCategorySlug)}`}
+          className="mt-2 font-mono text-[9px] text-dark"
+        >
+          search catalog →
+        </Link>
+      </div>
+    );
+  }
+
+  const dotClass = pick.section === "protein" ? "bg-green" : pick.section === "clarify" ? "bg-[#B08D57]" : "bg-dark";
+
+  return (
+    <div
+      className="flex min-h-[140px] w-[calc(100vw-56px)] max-w-[340px] shrink-0 flex-col border border-dark bg-white p-5"
+      style={{ scrollSnapAlign: "start" }}
+    >
+      <div className="flex items-center gap-1.5">
+        <span className="font-mono text-[9px] uppercase tracking-wide text-muted">{pick.categoryLabel}</span>
+        <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
+      </div>
+      <p className="mt-2 font-sans text-base font-bold lowercase tracking-[-0.3px] text-dark">{primary.productName}</p>
+      <p className="font-sans text-xs font-light text-muted">{primary.brandName}</p>
+
+      <div className="mt-2 flex items-baseline gap-1">
+        <span className="font-mono text-[32px] font-bold text-dark">{primary.score}</span>
+        <span className="font-mono text-[10px] text-muted">/ 100</span>
+      </div>
+      <span className={`mt-1 inline-block self-start px-1.5 py-0.5 font-mono text-[8px] ${WEIGHT_PILL_CLASSES[primary.weight]}`}>
+        {WEIGHT_PILL_LABEL[primary.weight]}
+      </span>
+
+      <div className="mt-auto flex items-center justify-between pt-3">
+        <button type="button" onClick={() => setShowWhy((v) => !v)} className="font-mono text-[9px] text-muted">
+          why this was picked →
+        </button>
+        <ShopButton productName={primary.productName} brandName={primary.brandName} className="font-mono text-[9px] text-dark" />
+      </div>
+      {showWhy && <p className="mt-2 text-xs leading-relaxed text-[#444]">{primary.why}</p>}
+    </div>
+  );
+}
+
+function ProductsSection({ data }: { data: RoutineData }) {
+  const [showAll, setShowAll] = useState(false);
+  const todayWash = data.calendarDays.find((d) => d.date === data.todayIso);
+  const todaysPicks = todayWash
+    ? data.products.filter((pick) => sectionsForWashType(todayWash.washType).includes(pick.section))
+    : [];
+
+  return (
+    <div id="section-products" className="w-full border-b border-dark bg-white pt-4">
+      <div className="px-5">
+        <span className="font-mono text-[10px] lowercase text-muted">your products</span>
+        <p className="mt-0.5 font-mono text-[9px] text-[#bbb]">
+          {todayWash ? `for today's ${todayLabelForWashType(todayWash.washType).toLowerCase()}` : "for your routine"}
+        </p>
+      </div>
+
+      {todaysPicks.length > 0 ? (
+        <div
+          className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-5 pb-4"
+          style={{ scrollSnapType: "x mandatory" }}
+        >
+          {todaysPicks.map((pick) => (
+            <CompactProductCard key={pick.category} pick={pick} />
+          ))}
+        </div>
+      ) : (
+        <p className="px-5 pb-4 pt-3 font-sans text-[13px] text-dark/60">No wash products needed today.</p>
+      )}
+
+      <div className="px-5 pb-4">
+        <button type="button" onClick={() => setShowAll((v) => !v)} className="font-mono text-[10px] lowercase text-muted">
+          {showAll ? "hide all products ↑" : "see all products ↓"}
+        </button>
+      </div>
+
+      <Collapse show={showAll}>
+        <div className="px-5 pb-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {SECTION_ORDER.map((section) => {
+              const picks = data.products.filter((pick) => pick.section === section);
+              if (picks.length === 0) return null;
+              return (
+                <div key={section} className="col-span-full grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <SectionDivider section={section} />
+                  {picks.map((pick) => (
+                    <ProductCard
+                      key={pick.category}
+                      pick={pick}
+                      curlType={data.curlType}
+                      porosity={data.porosity}
+                      budgetRange={data.budgetRange}
+                      colorTreated={data.colorTreated === "yes"}
+                    />
+                  ))}
+                </div>
+              );
+            })}
           </div>
 
-          <TodayCheckOffButton
-            userId={userId}
+          {data.brandProducts.length > 0 && (
+            <div className="mt-8">
+              <h3 className="font-serif text-xl font-semibold text-dark">From Qoyl partner brands</h3>
+              <p className="mt-1 text-sm text-dark/70">
+                Recommended by Qoyl partner brands for your{" "}
+                {data.curlType && data.curlType !== "not_sure" ? data.curlType : ""} hair:
+              </p>
+              <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {data.brandProducts.map((item) => (
+                  <li key={item.id} className="rounded-lg border border-[#B08D57]/50 bg-cream/5 px-4 py-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="font-serif text-lg text-dark">{item.name}</p>
+                      {item.priceUsd != null && (
+                        <span className="shrink-0 text-sm font-semibold text-bronze">${item.priceUsd}</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted">{item.brandName}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                      {item.isFeatured && (
+                        <span className="rounded-full border border-[#B08D57] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#B08D57]">
+                          Qoyl Partner Brand
+                        </span>
+                      )}
+                      {item.score != null && (
+                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${TIER_CLASSES[scoreTier(item.score)]}`}>
+                          {item.score}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      <a
+                        href={`/api/brand-products/click/${item.id}?via=brand`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
+                      >
+                        Shop at {item.brandName} →
+                      </a>
+                      {item.shopperUrl && (
+                        <a
+                          href={`/api/brand-products/click/${item.id}?via=shopper`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
+                        >
+                          Shop at Shopper →
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {data.avoidIngredients.length > 0 && (
+            <div className="mt-8">
+              <h3 className="font-serif text-xl font-semibold text-dark">Ingredients to avoid for your profile</h3>
+              {data.profileFor === "baby" && (
+                <p className="mt-1 text-sm text-dark/70">
+                  Extra caution for an infant profile - these are flagged more broadly than for an adult profile.
+                </p>
+              )}
+              <ul className="mt-3 space-y-2">
+                {data.avoidIngredients.map((ing) => (
+                  <li
+                    key={ing.ingredientName}
+                    className={`rounded-lg border bg-red/5 px-4 py-3 ${
+                      data.profileFor === "baby" ? "border-red/60" : "border-red/30"
+                    }`}
+                  >
+                    <p className="text-sm font-medium text-red">🚩 {ing.ingredientName}</p>
+                    {ing.reason && <p className="mt-1 text-xs text-dark/60">{ing.reason}</p>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <Link
+            href="/how-we-score"
+            className="print-hide mt-6 inline-block text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70"
+          >
+            How is this score calculated? →
+          </Link>
+        </div>
+      </Collapse>
+    </div>
+  );
+}
+
+// SECTION 5 - Calendar: collapsed by default, wraps the existing
+// WashCalendarGrid (month cells, legend, wash-day styling) exactly as
+// already built - only the surrounding accordion shell is new.
+function CalendarAccordionSection({
+  data,
+  family,
+  expanded,
+  onToggle,
+}: {
+  data: RoutineData;
+  family: CurlFamily | null;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const months = getMonthsInWindow(new Date(`${data.todayIso}T00:00:00`));
+  const monthLabel = months.map((m) => m.label).join(" + ");
+
+  return (
+    <div id="section-calendar" className="w-full bg-[#f5f0ea] px-5 py-5">
+      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3 text-left">
+        <div>
+          <p className="font-mono text-[10px] lowercase text-muted">full 30-day calendar</p>
+          <p className="mt-0.5 font-mono text-[9px] text-[#bbb]">{monthLabel}</p>
+        </div>
+        <span className="shrink-0 font-mono text-[10px] lowercase text-muted">{expanded ? "collapse ↑" : "expand ↓"}</span>
+      </button>
+      <Collapse show={expanded}>
+        <div className="mt-4">
+          <WashCalendarGrid
+            calendarDays={data.calendarDays}
             todayIso={data.todayIso}
-            washType={todayWash?.washType ?? null}
-            todayCompletion={data.todayCompletion}
-            streak={data.streak}
-            onChanged={onChanged}
+            completedIso={data.todayCompletion ? data.todayIso : null}
+            missedDates={data.missedDates}
+            family={family}
           />
         </div>
-
-        <ScrollTeaser />
-      </div>
+      </Collapse>
     </div>
   );
-}
-
-// Gentle bounce, tells the user exactly what's below the fold - stops
-// once they've actually started scrolling (100px) so it doesn't nag
-// forever.
-function ScrollTeaser() {
-  const [dismissed, setDismissed] = useState(false);
-
-  useEffect(() => {
-    function onScroll() {
-      if (window.scrollY > 100) setDismissed(true);
-    }
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  if (dismissed) return null;
-
-  return (
-    <div className="print-hide flex flex-col items-center gap-1 py-6 text-center">
-      <p className="font-sans text-[10px] text-muted">Your calendar · Your routine · Your products</p>
-      <span className="routine-bounce text-bronze2">
-        <ChevronDownIcon />
-      </span>
-    </div>
-  );
-}
-
-// SECTION - full-bleed photo strip, a visual breath between the
-// data-heavy calendar and the step-by-step routine. No "hero carousel"
-// component exists elsewhere in this app to reuse (checked), so this
-// pulls from the same Cloudinary stock set already used by the curl
-// type selector on /profile, picked by the user's curl family for
-// visual continuity with their profile.
-const PHOTO_STRIP_IMAGES: Record<CurlFamily | "default", string[]> = {
-  straight: [
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-photo-35267456",
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-fall-maple-1195057-2325807",
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-photo-3356211",
-  ],
-  wavy: [
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-ulrick-t-16207701",
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-aibek-skakov-418917601-27679976",
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-olga-somek-147015162-17889750",
-  ],
-  curly: [
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-vlada-karpovich-4668513",
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-soufianlafnesh-34579409",
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-eddson-lens-748406628-28172264",
-  ],
-  coily: [
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-polina-tankilevitch-7382918",
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-jordy-toscano-712212447-27596675",
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-praise-nnadozie-1081270006-38284790",
-  ],
-  default: [
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-vlada-karpovich-4668513",
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-polina-tankilevitch-7382918",
-    "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-aibek-skakov-418917601-27679976",
-  ],
-};
-
-function PhotoStripDivider({ family }: { family: CurlFamily | null }) {
-  const images = PHOTO_STRIP_IMAGES[family ?? "default"];
-  return (
-    <div className="-mx-4 grid h-[120px] grid-cols-3 sm:-mx-6">
-      {images.map((src) => (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img key={src} src={src} alt="" className="h-full w-full object-cover" />
-      ))}
-    </div>
-  );
-}
-
-// SECTION - warm-background title divider, used between routine steps
-// and the product list. Serves as both the visual break and the section
-// heading at once.
-function WarmSectionTitle({ children, id }: { children: React.ReactNode; id?: string }) {
-  return (
-    <div id={id} className="-mx-4 bg-warm px-4 py-8 text-center sm:-mx-6 sm:px-6">
-      <p className="font-serif text-2xl italic text-dark">{children}</p>
-    </div>
-  );
-}
-
-// Cadence chips ("Every N weeks" / "Every N washes") derived from the
-// already-computed 30-day calendar - no new data/API needed. Returns
-// null when there isn't enough data in-window to infer a cadence
-// (e.g. a type that only occurs once, or not at all, in 30 days).
-function computeCadenceLabel(
-  calendarDays: WashDay[],
-  types: WashDayType[],
-  unit: "weeks" | "washes"
-): string | null {
-  const matches = calendarDays
-    .map((d, i) => ({ d, i }))
-    .filter(({ d }) => types.includes(d.washType));
-  if (matches.length < 2) return null;
-
-  if (unit === "weeks") {
-    const days = Math.round(
-      (new Date(`${matches[1].d.date}T00:00:00`).getTime() -
-        new Date(`${matches[0].d.date}T00:00:00`).getTime()) /
-        (1000 * 60 * 60 * 24)
-    );
-    const weeks = Math.max(1, Math.round(days / 7));
-    return `Every ${weeks} week${weeks === 1 ? "" : "s"}`;
-  }
-
-  const washes = matches[1].i - matches[0].i;
-  return `Every ${washes} wash${washes === 1 ? "" : "es"}`;
 }
 
 // Product card left-accent color, connecting the product list visually
@@ -1554,21 +1581,22 @@ function productAccentClass(pick: ProductPick): string {
 }
 
 const MINI_NAV_SECTIONS: { id: string; label: string }[] = [
-  { id: "section-today", label: "Today" },
-  { id: "section-calendar", label: "Calendar" },
-  { id: "section-routine", label: "Routine" },
-  { id: "section-products", label: "Products" },
+  { id: "section-today", label: "today" },
+  { id: "section-upcoming", label: "upcoming" },
+  { id: "section-steps", label: "steps" },
+  { id: "section-products", label: "products" },
+  { id: "section-calendar", label: "calendar" },
 ];
 
 // Sticky mini-nav: hidden until the hero scrolls out of view, then
-// tracks which of the four sections is currently in view (scroll-spy)
+// tracks which of the five sections is currently in view (scroll-spy)
 // and lets a tap jump straight to any of them.
 function RoutineMiniNav() {
   const [visible, setVisible] = useState(false);
   const [active, setActive] = useState(MINI_NAV_SECTIONS[0].id);
 
   useEffect(() => {
-    const hero = document.getElementById("routine-hero");
+    const hero = document.getElementById("section-today");
     if (!hero) return;
     const observer = new IntersectionObserver(
       ([entry]) => setVisible(!entry.isIntersecting),
@@ -1590,7 +1618,7 @@ function RoutineMiniNav() {
         const top = visibleEntries.sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
         setActive(top.target.id);
       },
-      { rootMargin: "-100px 0px -60% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
+      { rootMargin: "-80px 0px -60% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
     );
     targets.forEach((t) => observer.observe(t));
     return () => observer.disconnect();
@@ -1603,15 +1631,15 @@ function RoutineMiniNav() {
   if (!visible) return null;
 
   return (
-    <div className="print-hide sticky top-0 z-40 border-b border-bronze/20 bg-[#ffffff]/95 backdrop-blur-md">
-      <div className="no-scrollbar mx-auto flex max-w-3xl gap-1 overflow-x-auto px-4 sm:px-6">
+    <div className="print-hide sticky top-0 z-40 w-full border-b border-dark bg-white">
+      <div className="flex w-full">
         {MINI_NAV_SECTIONS.map((s) => (
           <button
             key={s.id}
             type="button"
             onClick={() => goTo(s.id)}
-            className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-3 text-xs font-medium transition-colors ${
-              active === s.id ? "border-bronze text-dark" : "border-transparent text-dark/50 hover:text-dark/80"
+            className={`flex-1 border-b-2 py-3 font-mono text-[9px] lowercase transition-colors ${
+              active === s.id ? "border-dark text-dark" : "border-transparent text-muted"
             }`}
           >
             {s.label}
@@ -1635,9 +1663,12 @@ function RoutineContent() {
   // protective-style routines are then shown as two tabs instead of both
   // stacked on one page.
   const [activeTab, setActiveTab] = useState<"natural" | "protective">("natural");
-  // Hero subline ("Medium Porosity · Chicago") - resolved client-side
+  // Hero subline ("medium porosity · Chicago") - resolved client-side
   // since /api/routine only returns the raw zip code.
   const [cityLabel, setCityLabel] = useState<string | null>(null);
+  // Section 5's accordion - collapsed by default, force-expanded (and
+  // scrolled to) by Section 2's "view full calendar" link.
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
 
   const showWelcome = searchParams.get("welcome") === "true" && !welcomeDismissed;
 
@@ -1695,21 +1726,15 @@ function RoutineContent() {
     );
   }
 
-  const firstName = data.firstName || "there";
   const family = curlFamily(data.curlType);
-  const isChildOrBaby = data.profileFor === "child" || data.profileFor === "baby";
-  const headerText = isChildOrBaby
-    ? `Here's ${firstName}'s routine.`
-    : `Your next 30 days, ${firstName}.`;
-  const chips = [
-    data.curlType && data.curlType !== "not_sure" ? `Curl type ${data.curlType}` : null,
-    data.porosity && data.porosity !== "not sure" ? `${data.porosity} porosity` : null,
-    data.scalpCondition
-      ? SCALP_LABELS[data.scalpCondition] ?? data.scalpCondition
-      : null,
-    data.zipCode || null,
-  ].filter((chip): chip is string => Boolean(chip));
   const hasPlaceholderCards = data.products.some((pick) => pick.noProductsYet);
+
+  function expandAndScrollToCalendar() {
+    setCalendarExpanded(true);
+    requestAnimationFrame(() => {
+      document.getElementById("section-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   // Visibility rules for the natural-hair vs. protective-style routine
   // content, per routine_focus:
@@ -1729,374 +1754,139 @@ function RoutineContent() {
 
   return (
     <main className="min-h-screen bg-white font-sans text-dark">
-      <RoutineHero curlType={data.curlType} porosity={data.porosity} cityLabel={cityLabel} />
-      <StreakDisplay streak={data.streak} />
-      <TodayTeaserCard data={data} userId={user!.id} onChanged={() => loadRoutine(user!.id)} />
-      <RoutineMiniNav />
+      <div className="hidden print:block print:px-6 print:pt-6">
+        <p className="font-serif text-2xl text-dark">
+          Q<span className="italic">oyl</span>
+        </p>
+      </div>
 
-      <div className="px-4 py-10 sm:px-6">
-      <div className="mx-auto max-w-3xl">
-        <div className="hidden print:mb-8 print:block">
-          <p className="font-serif text-2xl text-dark">
-            Q<span className="italic">oyl</span>
-          </p>
-        </div>
+      <HeroSection data={data} cityLabel={cityLabel} userId={user!.id} onChanged={() => loadRoutine(user!.id)} />
 
-        {showWelcome && (
-          <div className="print-hide mb-6 flex items-start justify-between gap-4 bg-bronze px-4 py-3">
-            <p className="text-sm text-dark">
-              Your routine is ready. We will send your personalized monthly
-              routine to your email within 24 hours. Bookmark this page - it
-              updates every month.
-            </p>
-            <button
-              type="button"
-              onClick={() => setWelcomeDismissed(true)}
-              className="shrink-0 text-sm text-dark/70 hover:text-dark"
-              aria-label="Dismiss"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
-        {/* SECTION 1 - Personal header */}
-        <section>
-          <div className="flex items-start justify-between gap-4">
-            <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
-              {headerText}
-            </h1>
-            <Link
-              href="/profile"
-              className="print-hide mt-2 shrink-0 text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70"
-            >
-              Edit my profile
-            </Link>
-          </div>
-
-          {chips.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {chips.map((chip) => (
-                <span
-                  key={chip}
-                  className="inline-block rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium capitalize text-bronze2"
-                >
-                  {chip}
-                </span>
-              ))}
+      {(showWelcome || hasPlaceholderCards || data.childSafetyNote || data.focusNote) && (
+        <div className="print-hide w-full border-b border-dark bg-white px-5 py-4">
+          {showWelcome && (
+            <div className="mb-3 flex items-start justify-between gap-4">
+              <p className="font-sans text-[13px] leading-relaxed text-dark">
+                Your routine is ready. We will send your personalized monthly routine to your email within 24
+                hours. Bookmark this page - it updates every month.
+              </p>
+              <button
+                type="button"
+                onClick={() => setWelcomeDismissed(true)}
+                className="shrink-0 text-sm text-dark/50 hover:text-dark"
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
             </div>
           )}
-
-          <p className="mt-4 text-sm text-dark/50">
-            Updated monthly based on your hair profile and seasonal climate
-            changes.
-          </p>
-
           {hasPlaceholderCards && (
-            <p className="mt-4 rounded-lg border border-amber/40 bg-amber/10 px-4 py-3 text-sm text-dark/90">
-              We are actively expanding our product catalog. Some categories show
-              ingredient guidance while we add more products. Check back soon - or{" "}
-              <Link
-                href="/request"
-                className="print-hide underline underline-offset-2 hover:text-dark"
-              >
+            <p className="mb-2 font-sans text-[12px] leading-relaxed text-dark/70">
+              We are actively expanding our product catalog. Some categories show ingredient guidance while we
+              add more products. Check back soon - or{" "}
+              <Link href="/request" className="underline underline-offset-2 hover:text-dark">
                 request a specific product evaluation
               </Link>
               .
             </p>
           )}
-
           {data.childSafetyNote && (
-            <p className="mt-4 border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-dark/90">
-              {data.childSafetyNote}
-            </p>
+            <p className="mb-2 font-sans text-[12px] leading-relaxed text-dark/90">{data.childSafetyNote}</p>
           )}
+          {data.focusNote && <p className="font-sans text-[12px] leading-relaxed text-dark/90">{data.focusNote}</p>}
+        </div>
+      )}
 
-          {data.focusNote && (
-            <p className="mt-4 border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-dark/90">
-              {data.focusNote}
-            </p>
-          )}
-        </section>
+      <RoutineMiniNav />
 
-        {isBothFocus && data.protectiveStyle && (
-          <div className="print-hide mt-8 flex gap-2 border-b border-bronze/20">
-            <button
-              type="button"
-              onClick={() => setActiveTab("natural")}
-              className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === "natural"
-                  ? "border-bronze text-dark"
-                  : "border-transparent text-dark/50 hover:text-dark/80"
-              }`}
-            >
-              My Natural Hair
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("protective")}
-              className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-                activeTab === "protective"
-                  ? "border-bronze text-dark"
-                  : "border-transparent text-dark/50 hover:text-dark/80"
-              }`}
-            >
-              My {data.protectiveStyle.styleLabel} Care
-            </button>
-          </div>
-        )}
+      {isBothFocus && data.protectiveStyle && (
+        <div className="print-hide flex w-full gap-2 border-b border-dark bg-white px-5">
+          <button
+            type="button"
+            onClick={() => setActiveTab("natural")}
+            className={`border-b-2 py-3 font-mono text-[10px] lowercase transition-colors ${
+              activeTab === "natural" ? "border-dark text-dark" : "border-transparent text-muted"
+            }`}
+          >
+            my natural hair
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("protective")}
+            className={`border-b-2 py-3 font-mono text-[10px] lowercase transition-colors ${
+              activeTab === "protective" ? "border-dark text-dark" : "border-transparent text-muted"
+            }`}
+          >
+            my {data.protectiveStyle.styleLabel.toLowerCase()} care
+          </button>
+        </div>
+      )}
 
-        {showNaturalRoutine && (
+      {showNaturalRoutine && (
         <>
-        {/* SECTION 2 - 30-day wash calendar. Full-bleed warm-cream
-            section (edge to edge on mobile via negative margins that
-            cancel the parent's px-4/sm:px-6 padding) - the dark wash-day
-            cells inside pop against it instead of blending into the
-            rest of the page. */}
-        <section id="section-calendar" className="print-page-break -mx-4 mt-12 bg-warm px-4 py-6 sm:-mx-6 sm:px-6">
-          <p className="text-center font-sans text-[9px] font-semibold uppercase tracking-[0.2em] text-bronze">
-            Your 30-Day Calendar
-          </p>
-          <h2 className="mt-2 font-serif text-2xl font-semibold text-dark">
-            Your next 30 days - starting {data.startDateLabel}
-          </h2>
-
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <span className="inline-block rounded-full bg-white px-3 py-1 text-xs font-medium text-dark">
-              Your hair: wash every {data.washFrequency.min}-{data.washFrequency.max} days
-            </span>
-          </div>
-          {family && (
-            <p className="mt-2 text-sm text-dark/70">{FREQUENCY_EXPLANATION[family]}</p>
-          )}
-
-          <WashCalendarGrid
-            calendarDays={data.calendarDays}
-            todayIso={data.todayIso}
-            completedIso={data.todayCompletion ? data.todayIso : null}
-            missedDates={data.missedDates}
+          <UpcomingSection data={data} onViewCalendar={expandAndScrollToCalendar} />
+          <StepsSection data={data} />
+          <ProductsSection data={data} />
+          <CalendarAccordionSection
+            data={data}
             family={family}
+            expanded={calendarExpanded}
+            onToggle={() => setCalendarExpanded((v) => !v)}
           />
-        </section>
-
-        <PhotoStripDivider family={family} />
-
-        {/* SECTION 3 - Your wash day routine: four collapsible sequences,
-            one per wash-day type. Regular is open by default since it's
-            the day the user will hit most often. */}
-        <section id="section-routine" className="print-page-break mt-12">
-          <h2 className="font-serif text-2xl font-semibold text-dark">
-            Your wash day routine
-          </h2>
-          <div className="mt-4 space-y-4">
-            {data.stepsByWashType.map((washDay) => (
-              <WashDayAccordion
-                key={washDay.key}
-                washDay={washDay}
-                products={data.products}
-                calendarDays={data.calendarDays}
-                defaultOpen={washDay.key === "regular"}
-              />
-            ))}
-          </div>
-
-          {data.additionalNotes.length > 0 && (
-            <div className="mt-6 space-y-4">
-              {data.additionalNotes.map((note) => (
-                <div key={note.title} className="rounded-xl border border-bronze/30 p-5">
-                  <p className="font-serif text-lg text-dark">{note.title}</p>
-                  <p className="mt-1 text-sm text-dark/70">{note.body}</p>
-                  <p className="mt-2 text-xs text-dark/50">{note.why}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* SECTION 4 - Curated product list. The warm divider above acts
-            as both the visual break from the routine steps and this
-            section's title. */}
-        <WarmSectionTitle id="section-products">Your curated product list</WarmSectionTitle>
-        <section className="print-page-break mt-8">
-          <div className="mt-4">
-            <TodayProducts data={data} />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {SECTION_ORDER.map((section) => {
-              const picks = data.products.filter((pick) => pick.section === section);
-              if (picks.length === 0) return null;
-              return (
-                <div key={section} className="col-span-full grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <SectionDivider section={section} />
-                  {picks.map((pick) => (
-                    <ProductCard
-                      key={pick.category}
-                      pick={pick}
-                      curlType={data.curlType}
-                      porosity={data.porosity}
-                      budgetRange={data.budgetRange}
-                      colorTreated={data.colorTreated === "yes"}
-                    />
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-
-          {data.brandProducts.length > 0 && (
-            <div className="mt-8">
-              <h3 className="font-serif text-xl font-semibold text-dark">
-                From Qoyl partner brands
-              </h3>
-              <p className="mt-1 text-sm text-dark/70">
-                Recommended by Qoyl partner brands for your{" "}
-                {data.curlType && data.curlType !== "not_sure" ? data.curlType : ""} hair:
-              </p>
-              <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {data.brandProducts.map((item) => (
-                  <li key={item.id} className="rounded-lg border border-[#B08D57]/50 bg-cream/5 px-4 py-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-serif text-lg text-dark">{item.name}</p>
-                      {item.priceUsd != null && (
-                        <span className="shrink-0 text-sm font-semibold text-bronze">${item.priceUsd}</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted">{item.brandName}</p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                      {item.isFeatured && (
-                        <span className="rounded-full border border-[#B08D57] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[#B08D57]">
-                          Qoyl Partner Brand
-                        </span>
-                      )}
-                      {item.score != null && (
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${TIER_CLASSES[scoreTier(item.score)]}`}>
-                          {item.score}
-                        </span>
-                      )}
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-3">
-                      <a
-                        href={`/api/brand-products/click/${item.id}?via=brand`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
-                      >
-                        Shop at {item.brandName} →
-                      </a>
-                      {item.shopperUrl && (
-                        <a
-                          href={`/api/brand-products/click/${item.id}?via=shopper`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
-                        >
-                          Shop at Shopper →
-                        </a>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {data.avoidIngredients.length > 0 && (
-            <div className="mt-8">
-              <h3 className="font-serif text-xl font-semibold text-dark">
-                Ingredients to avoid for your profile
-              </h3>
-              {data.profileFor === "baby" && (
-                <p className="mt-1 text-sm text-dark/70">
-                  Extra caution for an infant profile - these are flagged
-                  more broadly than for an adult profile.
-                </p>
-              )}
-              <ul className="mt-3 space-y-2">
-                {data.avoidIngredients.map((ing) => (
-                  <li
-                    key={ing.ingredientName}
-                    className={`rounded-lg border bg-red/5 px-4 py-3 ${
-                      data.profileFor === "baby"
-                        ? "border-red/60"
-                        : "border-red/30"
-                    }`}
-                  >
-                    <p className="text-sm font-medium text-red">
-                      🚩 {ing.ingredientName}
-                    </p>
-                    {ing.reason && (
-                      <p className="mt-1 text-xs text-dark/60">{ing.reason}</p>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <Link
-            href="/how-we-score"
-            className="print-hide mt-6 inline-block text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70"
-          >
-            How is this score calculated? →
-          </Link>
-        </section>
         </>
-        )}
+      )}
 
-        {showProtectiveRoutine && <ProtectiveStyleSection data={data} />}
+      <div className="px-5 py-10">
+        <div className="mx-auto max-w-3xl">
+          {showProtectiveRoutine && <ProtectiveStyleSection data={data} />}
 
-        {/* SECTION 5 - Download */}
-        <section className="print-hide mt-12">
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 sm:w-auto sm:px-8"
-          >
-            Download my routine →
-          </button>
-        </section>
-
-        <div className="mt-12 hidden print:block">
-          <p className="text-xs text-muted">
-            Generated by Qoyl · qoyl.live ·{" "}
-            {new Date().toLocaleDateString(undefined, {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
-        </div>
-
-        <div className="print-hide mt-12 border-t border-bronze/20 pt-6">
-          <button
-            type="button"
-            onClick={() => setShowDisclaimer((v) => !v)}
-            className="flex items-center gap-1.5 text-xs text-dark/50 transition-colors hover:text-dark/70"
-          >
-            About these recommendations
-            <span
-              className={`text-[10px] transition-transform ${
-                showDisclaimer ? "rotate-180" : ""
-              }`}
+          <section className="print-hide mt-4 flex flex-wrap items-center gap-4">
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="border border-dark bg-white px-6 py-3 font-mono text-[11px] lowercase text-dark transition-colors hover:bg-[#f5f5f5]"
             >
-              ▼
-            </span>
-          </button>
-          <Collapse show={showDisclaimer}>
-            <p className="text-xs leading-relaxed text-dark/50">
-              Qoyl provides cosmetic hair care recommendations only. We do
-              not address medical conditions, serious scalp disorders, or
-              hair loss related to health conditions (such as alopecia,
-              trichotillomania, or scalp infections). If you are
-              experiencing significant hair loss, scalp pain, lesions, or
-              other medical symptoms, please consult a licensed
-              dermatologist or healthcare provider. Our recommendations are
-              for general cosmetic hair care only.
+              download my routine →
+            </button>
+            <Link href="/profile" className="font-mono text-[11px] lowercase text-muted underline underline-offset-2 hover:text-dark">
+              edit my profile
+            </Link>
+          </section>
+
+          <div className="mt-12 hidden print:block">
+            <p className="text-xs text-muted">
+              Generated by Qoyl · qoyl.live ·{" "}
+              {new Date().toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
             </p>
-          </Collapse>
+          </div>
+
+          <div className="print-hide mt-8 border-t border-dark/20 pt-6">
+            <button
+              type="button"
+              onClick={() => setShowDisclaimer((v) => !v)}
+              className="flex items-center gap-1.5 font-mono text-[10px] lowercase text-muted transition-colors hover:text-dark"
+            >
+              about these recommendations
+              <span className={`text-[10px] transition-transform ${showDisclaimer ? "rotate-180" : ""}`}>▼</span>
+            </button>
+            <Collapse show={showDisclaimer}>
+              <p className="mt-2 text-xs leading-relaxed text-dark/50">
+                Qoyl provides cosmetic hair care recommendations only. We do
+                not address medical conditions, serious scalp disorders, or
+                hair loss related to health conditions (such as alopecia,
+                trichotillomania, or scalp infections). If you are
+                experiencing significant hair loss, scalp pain, lesions, or
+                other medical symptoms, please consult a licensed
+                dermatologist or healthcare provider. Our recommendations are
+                for general cosmetic hair care only.
+              </p>
+            </Collapse>
+          </div>
         </div>
-      </div>
       </div>
     </main>
   );
