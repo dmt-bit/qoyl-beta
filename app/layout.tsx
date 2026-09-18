@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Space_Mono } from "next/font/google";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
@@ -20,6 +20,18 @@ const spaceMono = Space_Mono({
 export const metadata: Metadata = {
   title: "Qoyl",
   description: "Personalized hair care for every texture.",
+};
+
+// maximumScale/userScalable: false stops pinch-zoom from getting stuck
+// mid-gesture on mobile (the reported symptom); viewportFit: "cover"
+// extends the layout under the iPhone notch/home-indicator safe areas
+// that env(safe-area-inset-*) below then insets content back out of.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

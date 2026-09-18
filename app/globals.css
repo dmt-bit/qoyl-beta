@@ -58,6 +58,58 @@ button {
   }
 }
 
+/* ---- Mobile modal/sheet sizing safety net -----------------------------
+   Every dialog/sheet in the app is already sized deliberately by its own
+   component, but this is a blanket backstop so nothing can ever exceed
+   the viewport and force a user to pinch-zoom out - the failure mode
+   this whole block exists to prevent. [role="dialog"]/[role="alertdialog"]
+   covers ad-hoc modals (profile's confirm dialog, admin's save dialog,
+   FeedbackSurveyModal); .qoyl-sheet is the shared class every bottom
+   sheet built with lib/useSwipeToDismiss.ts's pattern carries (see
+   ActionSheet/AuthGateSheet/CommunityPhotoModal in MasonryCards.tsx). */
+[role="dialog"],
+[role="alertdialog"],
+.qoyl-sheet {
+  max-height: 85vh !important;
+  max-width: min(420px, 100vw - 32px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* iOS Safari zooms the whole page in when a focused input's computed
+   font-size is under 16px - overriding every text input/textarea to at
+   least 16px prevents that jump without changing how large an input
+   *looks* (control that with padding/height instead). !important because
+   Tailwind's text-size utilities (e.g. text-xs on an input) would
+   otherwise win on specificity. */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+}
+
+/* Toggled by lib/useBodyScrollLock.ts while a bottom sheet/modal is open -
+   stops the page behind it from scrolling on iOS. */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
+}
+
+/* Shared bottom-sheet shell - drag handle + slide-up sheet body. Sheet-
+   specific max-height (75vh default per the design spec; individual call
+   sites override with an inline style for their own value, e.g. the
+   community photo modal's 80vh) still comes from each component so this
+   stays a pure visual primitive. */
+.qoyl-sheet-handle {
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin: 12px auto 0;
+  border-radius: 2px;
+  background: #e0e0e0;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

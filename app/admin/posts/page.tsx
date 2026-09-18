@@ -78,8 +78,13 @@ function SaveToVisualLibraryModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div className="w-full max-w-sm border border-dark bg-white p-6" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="w-full max-w-sm border border-dark bg-white p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h2 className="font-sans font-bold lowercase text-dark" style={{ fontSize: "16px" }}>
           save to visual library
         </h2>
@@ -317,7 +322,7 @@ export default function AdminPostsPage() {
       )}
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 bg-dark px-4 py-2 text-sm text-white">
+        <div className="fixed bottom-6 left-1/2 z-[210] -translate-x-1/2 bg-dark px-4 py-2 text-sm text-white">
           {toast}
         </div>
       )}

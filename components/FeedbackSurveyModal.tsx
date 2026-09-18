@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
 
 const Q1_OPTIONS = [
   "Search for it on Amazon or Google",
@@ -56,6 +57,8 @@ export default function FeedbackSurveyModal({
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useBodyScrollLock(true);
+
   useEffect(() => {
     if (!submitted) return;
     const timeoutId = setTimeout(onClose, 2000);
@@ -90,13 +93,15 @@ export default function FeedbackSurveyModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-white/70 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-white/70 sm:items-center sm:p-4">
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Qoyl feedback survey"
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-bronze/30 bg-white p-6 sm:rounded-2xl"
+        className="qoyl-sheet w-full max-w-md rounded-t-2xl border border-bronze/30 bg-white p-6 sm:rounded-2xl"
+        style={{ paddingBottom: "calc(24px + env(safe-area-inset-bottom))" }}
       >
+        <span className="qoyl-sheet-handle -mt-6 mb-2 sm:hidden" />
         <div className="flex items-start justify-between gap-4">
           <h2 className="font-serif text-xl font-semibold text-dark sm:text-2xl">
             {submitted ? "Thank you" : "Help us build what's next for Qoyl"}

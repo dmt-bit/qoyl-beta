@@ -4,14 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-
-type CommunityPhoto = {
-  id: string;
-  url: string;
-  caption: string | null;
-  curlType: string | null;
-  porosity: string | null;
-};
+import { CommunityPhotoModal, type CommunityPhoto } from "@/components/MasonryCards";
 
 // Bridges a tapped community photo into Style Match's photo-input flow
 // across a full page navigation (sessionStorage, read on mount by
@@ -108,48 +101,12 @@ export default function CommunityGrid() {
         ))}
       </div>
 
-      {selected && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-          onClick={() => setSelected(null)}
-        >
-          <div className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="relative h-[360px] w-full overflow-hidden rounded-xl bg-[#ffffff]">
-              <Image src={selected.url} alt="Community hair photo" fill className="object-cover" />
-            </div>
-            {selected.caption && (
-              <p className="mt-3 text-sm text-dark/80">{selected.caption}</p>
-            )}
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {selected.curlType && (
-                <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-bronze2">
-                  {selected.curlType}
-                </span>
-              )}
-              {selected.porosity && (
-                <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] capitalize text-bronze2">
-                  {selected.porosity} porosity
-                </span>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => handleStyleMatchThis(selected)}
-              disabled={sending}
-              className="mt-4 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
-            >
-              {sending ? "Loading..." : "Style Match this →"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelected(null)}
-              className="mt-2 w-full text-center text-xs text-dark/50 underline"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      <CommunityPhotoModal
+        photo={selected}
+        onClose={() => setSelected(null)}
+        onStyleMatchThis={handleStyleMatchThis}
+        sending={sending}
+      />
     </>
   );
 }

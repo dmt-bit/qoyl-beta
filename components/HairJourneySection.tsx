@@ -354,7 +354,7 @@ export default function HairJourneySection({ userId }: { userId: string }) {
 
       {expandedPhoto && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4"
           onClick={() => setExpandedPhoto(null)}
         >
           <div className="relative h-full max-h-[80vh] w-full max-w-lg">

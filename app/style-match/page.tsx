@@ -366,7 +366,7 @@ function DemoSection() {
 
 function AnalyzingOverlay() {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/95 font-sans">
+    <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-white/95 font-sans">
       <div className="flex gap-2">
         {[0, 1, 2].map((i) => (
           <span key={i} className="h-3 w-3 animate-bounce rounded-full bg-bronze" style={{ animationDelay: `${i * 150}ms` }} />
@@ -380,7 +380,7 @@ function AnalyzingOverlay() {
 
 function Toast({ message }: { message: string }) {
   return (
-    <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-bronze px-4 py-2 text-sm font-semibold text-cream shadow-lg">
+    <div className="fixed bottom-6 left-1/2 z-[210] -translate-x-1/2 rounded-full bg-bronze px-4 py-2 text-sm font-semibold text-cream shadow-lg">
       {message}
     </div>
   );

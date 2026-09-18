@@ -87,7 +87,7 @@ function ConfirmUpdateModal({
 }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-white/70 sm:items-center sm:p-4"
+      className="fixed inset-0 z-[200] flex items-end justify-center bg-white/70 sm:items-center sm:p-4"
       onClick={onCancel}
     >
       <div

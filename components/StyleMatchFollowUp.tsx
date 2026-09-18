@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import FeedbackBanner from "@/components/FeedbackBanner";
 
 export type FollowUpCandidate = {
   id: string;
@@ -131,7 +132,7 @@ function FollowUpCard({
 
   if (state === "success") {
     return (
-      <div className="border border-bronze/40 bg-bronze/10 px-4 py-3">
+      <div className="mt-4 border border-bronze/40 bg-bronze/10 px-4 py-3">
         <p className="text-sm text-dark">
           Added to your hair journey! Share your look with the community →
         </p>
@@ -150,30 +151,24 @@ function FollowUpCard({
     );
   }
 
+  if (state === "prompt") {
+    return (
+      <FeedbackBanner
+        question={`did you try ${styleName.toLowerCase()}? let us know how it turned out`}
+        yesLabel="yes, I did it"
+        noLabel="not yet"
+        onYes={() => setState("uploading")}
+        onNo={handleNotYet}
+        onDismiss={handleNotYet}
+      />
+    );
+  }
+
   return (
-    <div className="border border-bronze/40 bg-bronze/10 px-4 py-3">
+    <div className="mt-4 border border-bronze/40 bg-bronze/10 px-4 py-3">
       <p className="text-sm text-dark">
         Did you try {styleName}? Let us know how it turned out →
       </p>
-
-      {state === "prompt" && (
-        <div className="mt-3 flex gap-2">
-          <button
-            type="button"
-            onClick={() => setState("uploading")}
-            className="flex-1 bg-bronze py-2 text-xs font-semibold text-cream transition-colors hover:bg-bronze2"
-          >
-            Yes, I did it!
-          </button>
-          <button
-            type="button"
-            onClick={handleNotYet}
-            className="flex-1 border border-bronze/40 py-2 text-xs font-medium text-dark/80 transition-colors hover:border-bronze"
-          >
-            Not yet
-          </button>
-        </div>
-      )}
 
       {state === "uploading" && (
         <div className="mt-3">
@@ -250,19 +245,19 @@ export default function StyleMatchFollowUp({
 }) {
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
-  const visible = candidates.filter((c) => !dismissedIds.has(c.id) && !isSnoozed(c.id));
-  if (visible.length === 0) return null;
+  // Only the single oldest still-eligible candidate renders at a time -
+  // the banner (FeedbackBanner, used by FollowUpCard's "prompt" state)
+  // must never stack per the redesign spec. Once it's dismissed/snoozed/
+  // answered, the next candidate takes its place on the next render.
+  const current = candidates.find((c) => !dismissedIds.has(c.id) && !isSnoozed(c.id));
+  if (!current) return null;
 
   return (
-    <div className="mt-4 space-y-3">
-      {visible.map((match) => (
-        <FollowUpCard
-          key={match.id}
-          match={match}
-          userId={userId}
-          onDismiss={() => setDismissedIds((prev) => new Set(prev).add(match.id))}
-        />
-      ))}
-    </div>
+    <FollowUpCard
+      key={current.id}
+      match={current}
+      userId={userId}
+      onDismiss={() => setDismissedIds((prev) => new Set(prev).add(current.id))}
+    />
   );
 }

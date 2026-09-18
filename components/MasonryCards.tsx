@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import Image from "next/image";
 import type { Post } from "@/components/PostCard";
+import { useBodyScrollLock } from "@/lib/useBodyScrollLock";
+import { useSwipeToDismiss } from "@/lib/useSwipeToDismiss";
 
 export type ScoredProduct = {
   id: string;
@@ -579,6 +582,9 @@ export function ActionSheet({
     if (target) openedAtRef.current = Date.now();
   }, [target]);
 
+  const { dragY, dragHandlers } = useSwipeToDismiss(Boolean(target), onClose);
+  useBodyScrollLock(Boolean(target));
+
   if (!target) return null;
 
   function handleBackdropClick() {
@@ -619,12 +625,22 @@ export function ActionSheet({
   // that (large, scrolled) ancestor box instead of the real viewport -
   // visually broken/mispositioned rather than covering the screen.
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60" onClick={handleBackdropClick}>
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/60" onClick={handleBackdropClick}>
       <div
-        className="slide-up-sheet w-full max-w-md rounded-t-2xl bg-[#ffffff] pb-6"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Post actions"
+        className="qoyl-sheet slide-up-sheet z-[201] flex w-full max-w-md flex-col rounded-t-2xl bg-[#ffffff]"
+        style={{
+          maxHeight: "75vh",
+          paddingBottom: "calc(24px + env(safe-area-inset-bottom))",
+          transform: `translateY(${dragY}px)`,
+          transition: dragY === 0 ? "transform 0.2s ease-out" : "none",
+        }}
         onClick={(e) => e.stopPropagation()}
+        {...dragHandlers}
       >
-        <div className="mx-auto mt-3 h-1 w-10 rounded-full bg-cream/20" />
+        <span className="qoyl-sheet-handle" />
         <div className="mt-2 divide-y divide-cream/10">
           <button
             type="button"
@@ -680,7 +696,6 @@ export function ActionSheet({
 // here (this sheet only ever opens from a single ordinary tap, never a
 // held one), so no opened-at debounce is needed on the backdrop.
 
-const SWIPE_DISMISS_THRESHOLD = 80;
 const FEED_SCROLL_POS_KEY = "qoyl_feed_scroll_y";
 
 // Both gates' CTAs navigate away to /profile or /auth - MasonryFeed
@@ -700,47 +715,31 @@ export function consumeSavedFeedScrollPosition(): number | null {
 }
 
 export function AuthGateSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const dragStartY = useRef<number | null>(null);
-  const [dragY, setDragY] = useState(0);
-
-  useEffect(() => {
-    if (open) setDragY(0);
-  }, [open]);
+  const { dragY, dragHandlers } = useSwipeToDismiss(open, onClose);
+  useBodyScrollLock(open);
 
   if (!open) return null;
-
-  function handlePointerDown(e: React.PointerEvent) {
-    dragStartY.current = e.clientY;
-  }
-  function handlePointerMove(e: React.PointerEvent) {
-    if (dragStartY.current === null) return;
-    const delta = e.clientY - dragStartY.current;
-    if (delta > 0) setDragY(delta);
-  }
-  function endDrag() {
-    if (dragY > SWIPE_DISMISS_THRESHOLD) {
-      onClose();
-    } else {
-      setDragY(0);
-    }
-    dragStartY.current = null;
-  }
 
   // Portaled to document.body for the same reason as ActionSheet above -
   // otherwise this "fixed" backdrop is positioned relative to the feed's
   // animated .fade-up-block ancestor instead of the real viewport.
   return createPortal(
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/60" onClick={onClose}>
       <div
-        className={dragY === 0 ? "slide-up-sheet w-full max-w-md rounded-t-[20px] bg-[#ffffff] px-6 pb-8 pt-3" : "w-full max-w-md rounded-t-[20px] bg-[#ffffff] px-6 pb-8 pt-3"}
-        style={{ transform: `translateY(${dragY}px)`, transition: dragY === 0 ? "transform 0.2s ease-out" : "none" }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Join Qoyl"
+        className={`qoyl-sheet z-[201] w-full max-w-md rounded-t-[20px] bg-[#ffffff] px-6 pt-3 ${dragY === 0 ? "slide-up-sheet" : ""}`}
+        style={{
+          maxHeight: "75vh",
+          paddingBottom: "calc(32px + env(safe-area-inset-bottom))",
+          transform: `translateY(${dragY}px)`,
+          transition: dragY === 0 ? "transform 0.2s ease-out" : "none",
+        }}
         onClick={(e) => e.stopPropagation()}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
+        {...dragHandlers}
       >
-        <div className="mx-auto h-1 w-10 rounded-full bg-bronze" />
+        <span className="qoyl-sheet-handle" />
         <p className="mt-4 text-center font-serif text-lg text-dark">
           Q<span className="italic text-bronze2">oyl</span>
         </p>
@@ -766,6 +765,87 @@ export function AuthGateSheet({ open, onClose }: { open: boolean; onClose: () =>
         <p className="mt-4 text-center text-xs text-dark/40">
           No credit card. No commitment. Just your hair.
         </p>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// ---- community photo modal: bottom sheet shown when a community feed --
+// card is tapped. Shared here (rather than duplicated in CommunityGrid.tsx
+// and MasonryFeed.tsx, which both used to inline an identical centered-
+// modal version of this with no max-height) so the mobile sizing fix only
+// has to exist in one place.
+export function CommunityPhotoModal({
+  photo,
+  onClose,
+  onStyleMatchThis,
+  sending,
+}: {
+  photo: CommunityPhoto | null;
+  onClose: () => void;
+  onStyleMatchThis: (photo: CommunityPhoto) => void;
+  sending: boolean;
+}) {
+  const { dragY, dragHandlers } = useSwipeToDismiss(Boolean(photo), onClose);
+  useBodyScrollLock(Boolean(photo));
+
+  if (!photo) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/60" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Community hair photo"
+        className="qoyl-sheet slide-up-sheet z-[201] flex w-full max-w-md flex-col overflow-hidden rounded-t-2xl bg-[#ffffff]"
+        style={{
+          maxHeight: "80vh",
+          transform: `translateY(${dragY}px)`,
+          transition: dragY === 0 ? "transform 0.2s ease-out" : "none",
+        }}
+        onClick={(e) => e.stopPropagation()}
+        {...dragHandlers}
+      >
+        <span className="qoyl-sheet-handle" />
+
+        {/* Photo fills roughly the top half of the sheet - shrunk to fit
+            80vh total rather than the fixed 360px the old centered modal
+            used, which is what let a long caption push the whole thing
+            past the viewport on a short phone. */}
+        <div className="relative h-[42vh] max-h-[380px] w-full shrink-0 bg-[#f5f5f5]">
+          <Image src={photo.url} alt="Community hair photo" fill className="object-cover" />
+        </div>
+
+        <div
+          className="min-h-0 flex-1 overflow-y-auto px-5 pt-4"
+          style={{ paddingBottom: "calc(20px + env(safe-area-inset-bottom))" }}
+        >
+          {photo.caption && <p className="text-sm text-dark/80">{photo.caption}</p>}
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {photo.curlType && (
+              <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-bronze2">
+                {photo.curlType}
+              </span>
+            )}
+            {photo.porosity && (
+              <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] capitalize text-bronze2">
+                {photo.porosity} porosity
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => onStyleMatchThis(photo)}
+            disabled={sending}
+            className="mt-4 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
+          >
+            {sending ? "Loading..." : "Style Match this →"}
+          </button>
+          <button type="button" onClick={onClose} className="mt-2 w-full text-center text-xs text-dark/50 underline">
+            Close
+          </button>
+        </div>
       </div>
     </div>,
     document.body

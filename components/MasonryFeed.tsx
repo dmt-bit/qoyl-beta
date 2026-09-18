@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { COMMUNITY_PREFILL_KEY } from "@/components/CommunityGrid";
 import type { Post } from "@/components/PostCard";
 import {
   ActionSheet,
   AuthGateSheet,
+  CommunityPhotoModal,
   ScrollGateCard,
   consumeSavedFeedScrollPosition,
   hideCardType,
@@ -673,62 +673,24 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
 
       <AuthGateSheet open={showAuthGateSheet} onClose={() => setShowAuthGateSheet(false)} />
 
-      {/* Community photo full-screen modal + toast - portaled to
-          document.body for the same reason as the sheets in
-          MasonryCards.tsx: the feed's .fade-up-block ancestor runs a
-          transform-based CSS animation, which makes it the containing
-          block for any un-portaled `position: fixed` descendant instead
-          of the real viewport. */}
-      {typeof document !== "undefined" &&
-        createPortal(
-          <>
-            {openPhoto && (
-              <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
-                onClick={() => setOpenPhoto(null)}
-              >
-                <div className="w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-                  <div className="relative h-[360px] w-full overflow-hidden rounded-xl bg-[#ffffff]">
-                    <Image src={openPhoto.url} alt="Community hair photo" fill className="object-cover" />
-                  </div>
-                  {openPhoto.caption && <p className="mt-3 text-sm text-dark/80">{openPhoto.caption}</p>}
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {openPhoto.curlType && (
-                      <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] uppercase tracking-wide text-bronze2">
-                        {openPhoto.curlType}
-                      </span>
-                    )}
-                    {openPhoto.porosity && (
-                      <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] capitalize text-bronze2">
-                        {openPhoto.porosity} porosity
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleStyleMatchThis(openPhoto)}
-                    disabled={sendingCommunityMatch}
-                    className="mt-4 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
-                  >
-                    {sendingCommunityMatch ? "Loading..." : "Style Match this →"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setOpenPhoto(null)}
-                    className="mt-2 w-full text-center text-xs text-dark/50 underline"
-                  >
-                    Close
-                  </button>
-                </div>
-              </div>
-            )}
+      <CommunityPhotoModal
+        photo={openPhoto}
+        onClose={() => setOpenPhoto(null)}
+        onStyleMatchThis={handleStyleMatchThis}
+        sending={sendingCommunityMatch}
+      />
 
-            {toast && (
-              <div className="fixed bottom-6 left-1/2 z-[70] -translate-x-1/2 rounded-full bg-[#ffffff] px-4 py-2 text-xs text-dark shadow-lg">
-                {toast}
-              </div>
-            )}
-          </>,
+      {/* Toast - portaled to document.body for the same reason as the
+          sheets in MasonryCards.tsx: the feed's .fade-up-block ancestor
+          runs a transform-based CSS animation, which makes it the
+          containing block for any un-portaled `position: fixed`
+          descendant instead of the real viewport. */}
+      {typeof document !== "undefined" &&
+        toast &&
+        createPortal(
+          <div className="fixed bottom-6 left-1/2 z-[210] -translate-x-1/2 rounded-full bg-[#ffffff] px-4 py-2 text-xs text-dark shadow-lg">
+            {toast}
+          </div>,
           document.body
         )}
     </div>

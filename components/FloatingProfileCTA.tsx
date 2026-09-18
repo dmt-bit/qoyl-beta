@@ -38,7 +38,12 @@ export default function FloatingProfileCTA() {
       type="button"
       onClick={() => router.push("/profile")}
       aria-label="Build my free profile"
-      className="print-hide fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-bronze font-sans font-medium text-cream shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all duration-200 min-[360px]:left-[calc(40px+50%)] sm:left-1/2"
+      // Mobile's persistent bottom nav (components/Nav.tsx) is fixed,
+      // h-[60px] + safe-area, at z-[100] - bottom-6 alone would sit
+      // underneath it (and behind its higher z-index) on phones, making
+      // this button unreachable. sm:bottom-6 restores the original offset
+      // once BottomNav is sm:hidden.
+      className="print-hide fixed left-1/2 z-[90] -translate-x-1/2 rounded-full bg-bronze font-sans font-medium text-cream shadow-[0_4px_20px_rgba(0,0,0,0.3)] transition-all duration-200 min-[360px]:left-[calc(40px+50%)] sm:left-1/2 bottom-[calc(76px+env(safe-area-inset-bottom))] sm:bottom-6"
       style={
         showShrunk
           ? { width: 44, height: 44, padding: 0, fontSize: 0 }
