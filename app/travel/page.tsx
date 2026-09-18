@@ -13,6 +13,39 @@ import type { TravelKitProduct } from "@/lib/travelKitGenerator";
 
 type DateMode = "exact" | "month";
 
+const TRAVEL_TOOLS: { name: string; why: string; price: string; search: string }[] = [
+  {
+    name: "Mini Travel Diffuser",
+    why: "A universal-fit collapsible diffuser so you can dry curls and waves without frizz in any hotel room.",
+    price: "$8–18",
+    search: "travel diffuser universal fit collapsible blow dryer",
+  },
+  {
+    name: "TSA-Safe Spray Bottle (3.4 oz)",
+    why: "Refresh and reactivate products on travel days. The small size passes through airport security.",
+    price: "$5–10",
+    search: "TSA spray bottle 3.4oz fine mist travel",
+  },
+  {
+    name: "Wide Tooth Comb",
+    why: "Detangle without breakage — works on wet or dry hair anywhere. Never leave home without one.",
+    price: "$3–8",
+    search: "wide tooth comb travel pocket seamless",
+  },
+  {
+    name: "Microfiber Hair Towel",
+    why: "Packs flat. Dries hair faster than a hotel bath towel and prevents the frizz terrycloth causes.",
+    price: "$8–15",
+    search: "microfiber hair towel turban travel lightweight",
+  },
+  {
+    name: "Satin Bonnet or Travel Pillowcase",
+    why: "Hotel pillowcases are always cotton — one night is enough to dry out and frizz your hair. Pack both.",
+    price: "$8–20",
+    search: "satin bonnet travel silk pillowcase case",
+  },
+];
+
 const CLIMATE_LABELS: Record<string, string> = {
   humid: "Humid",
   tropical: "Tropical",
@@ -682,6 +715,33 @@ function KitView({
             </Link>{" "}
             to add more →
           </p>
+        )}
+
+        {ready && (
+          <div className="mt-8">
+            <p className="text-xs font-semibold uppercase tracking-widest text-bronze">
+              Essential Travel Tools
+            </p>
+            <ul className="mt-3 space-y-2">
+              {TRAVEL_TOOLS.map((tool) => (
+                <li key={tool.name} className="border border-bronze/30 px-4 py-3 space-y-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="text-sm font-medium text-dark">{tool.name}</span>
+                    <a
+                      href={`https://www.amazon.com/s?k=${encodeURIComponent(tool.search)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-bronze2 underline shrink-0"
+                    >
+                      Amazon →
+                    </a>
+                  </div>
+                  <p className="text-xs text-dark/60 leading-relaxed">{tool.why}</p>
+                  <p className="text-xs text-dark/40">{tool.price}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         <p className="mt-6 text-xs text-dark/50">

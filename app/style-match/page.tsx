@@ -1083,6 +1083,8 @@ function StyleMatchContent() {
           hairAdditionPreference: resolvedHairPreference,
           translationProductsNeeded: translation?.products_needed ?? undefined,
           translationToolsNeeded: translation?.tools_needed ?? undefined,
+          curlType: curlType || null,
+          heatRequired: translation?.heat_required ?? undefined,
         });
         if (!cancelled) setShoppingList(list);
       } finally {
@@ -2171,11 +2173,19 @@ function StyleMatchContent() {
                       <p className="text-xs font-semibold uppercase tracking-widest text-bronze">Tools</p>
                       <ul className="mt-3 space-y-2">
                         {shoppingList.tools.map((item) => (
-                          <li key={item.name} className="flex items-center justify-between border border-bronze/30 px-4 py-3">
-                            <span className="text-sm text-dark">{item.name}</span>
-                            <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-bronze2 underline">
-                              {item.retailer} →
-                            </a>
+                          <li key={item.name} className="border border-bronze/30 px-4 py-3 space-y-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-dark">{item.name}</span>
+                              <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-bronze2 underline shrink-0 ml-3">
+                                {item.retailer} →
+                              </a>
+                            </div>
+                            {item.whyItMatters && (
+                              <p className="text-xs text-dark/60 leading-relaxed">{item.whyItMatters}</p>
+                            )}
+                            {item.priceRange && (
+                              <p className="text-xs text-dark/40">{item.priceRange}</p>
+                            )}
                           </li>
                         ))}
                       </ul>

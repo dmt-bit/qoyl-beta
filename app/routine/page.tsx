@@ -26,6 +26,8 @@ import { PROTECTIVE_STYLE_DAY_LABEL } from "@/lib/protectiveStyleRoutine";
 import { markRoutineVisited } from "@/lib/routineVisit";
 import type { WashDayKey, WashDaySteps } from "@/lib/routineSteps";
 import { lookupCityState } from "@/lib/zipLookup";
+import { getToolsForProfile } from "@/lib/getToolsForProfile";
+import { findTool, type HairTool } from "@/lib/toolsData";
 
 type RoutineStep = {
   title: string;
@@ -1166,15 +1168,25 @@ function StepCard({
   index,
   products,
   onViewProduct,
+  onViewTool,
 }: {
-  step: { title: string; body: string; why: string | null; timerMinutes: string | null; productCategory: string | null };
+  step: {
+    title: string;
+    body: string;
+    why: string | null;
+    timerMinutes: string | null;
+    productCategory: string | null;
+    toolIds?: string[] | null;
+  };
   index: number;
   products: ProductPick[];
   onViewProduct: () => void;
+  onViewTool: (toolId: string) => void;
 }) {
   const [showWhy, setShowWhy] = useState(false);
   const pick = step.productCategory ? products.find((p) => p.category === step.productCategory) ?? null : null;
   const primary = pick?.primary ?? null;
+  const tools = (step.toolIds ?? []).map(findTool).filter((t): t is HairTool => Boolean(t));
 
   return (
     <div
@@ -1205,6 +1217,21 @@ function StepCard({
         </p>
       )}
 
+      {tools.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {tools.map((tool) => (
+            <button
+              key={tool.id}
+              type="button"
+              onClick={() => onViewTool(tool.id)}
+              className="border border-dark bg-white px-2 py-1 font-mono text-[9px] lowercase text-dark"
+            >
+              {tool.name.toLowerCase()} →
+            </button>
+          ))}
+        </div>
+      )}
+
       {primary && (
         <button
           type="button"
@@ -1218,7 +1245,7 @@ function StepCard({
   );
 }
 
-function StepsSection({ data }: { data: RoutineData }) {
+function StepsSection({ data, onViewTool }: { data: RoutineData; onViewTool: (toolId: string) => void }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [current, setCurrent] = useState(0);
   const todayWash = data.calendarDays.find((d) => d.date === data.todayIso);
@@ -1271,15 +1298,23 @@ function StepsSection({ data }: { data: RoutineData }) {
         style={{ scrollSnapType: "x mandatory" }}
       >
         {steps.map((step, i) => (
-          <StepCard key={step.title} step={step} index={i} products={data.products} onViewProduct={scrollToProducts} />
+          <StepCard
+            key={step.title}
+            step={step}
+            index={i}
+            products={data.products}
+            onViewProduct={scrollToProducts}
+            onViewTool={onViewTool}
+          />
         ))}
         {data.additionalNotes.map((note, i) => (
           <StepCard
             key={note.title}
-            step={{ title: note.title, body: note.body, why: note.why, timerMinutes: null, productCategory: null }}
+            step={{ title: note.title, body: note.body, why: note.why, timerMinutes: null, productCategory: null, toolIds: null }}
             index={steps.length + i}
             products={data.products}
             onViewProduct={scrollToProducts}
+            onViewTool={onViewTool}
           />
         ))}
       </div>
@@ -1513,6 +1548,141 @@ function ProductsSection({ data }: { data: RoutineData }) {
   );
 }
 
+// SECTION - Tools: hair-type-specific styling tools (lib/toolsData.ts),
+// filtered by curl family via getToolsForProfile(). Essential tools show
+// first as a horizontal scroll; recommended tools are collapsed behind a
+// toggle in the same card format. Card anatomy mirrors CompactProductCard
+// above (same dimensions/scroll-snap) so the two sections read as one
+// family of cards. id={`tool-${tool.id}`} is the scroll/highlight target
+// tapped tool chips in StepCard (above) jump to.
+function RoutineToolCard({ tool, highlighted }: { tool: HairTool; highlighted: boolean }) {
+  const [expanded, setExpanded] = useState<"why" | "lookFor" | null>(null);
+
+  return (
+    <div
+      id={`tool-${tool.id}`}
+      className={`flex min-h-[160px] w-[calc(100vw-56px)] max-w-[340px] shrink-0 flex-col bg-white p-5 transition-colors ${
+        highlighted ? "border-2 border-dark bg-[#f5f5f5]" : "border border-dark"
+      }`}
+      style={{ scrollSnapAlign: "start" }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span
+          className={`px-2 py-0.5 font-mono text-[9px] lowercase ${
+            tool.priority === "essential" ? "bg-dark text-white" : "border border-dark text-dark"
+          }`}
+        >
+          {tool.priority}
+        </span>
+        <span className="font-mono text-[9px] uppercase tracking-wide text-muted">{tool.category}</span>
+      </div>
+      <p className="mt-2 font-sans text-base font-bold lowercase text-dark">{tool.name}</p>
+      <p className="mt-2 flex-1 font-sans text-[13px] font-light leading-[1.7] text-[#444]">{tool.description}</p>
+
+      <div className="mt-2 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => (v === "why" ? null : "why"))}
+          className="font-mono text-[9px] text-[#bbb]"
+        >
+          why it matters →
+        </button>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => (v === "lookFor" ? null : "lookFor"))}
+          className="font-mono text-[9px] text-[#bbb]"
+        >
+          what to look for →
+        </button>
+      </div>
+      {expanded && (
+        <p className="mt-2 border-l-2 border-dark bg-[#f5f5f5] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#444]">
+          {expanded === "why" ? tool.why_it_matters : tool.what_to_look_for}
+        </p>
+      )}
+
+      <div className="mt-auto flex items-center justify-between pt-3">
+        <span className="font-mono text-[13px] font-bold text-dark">{tool.price_range}</span>
+        <a
+          href={`https://www.amazon.com/s?k=${encodeURIComponent(tool.amazon_search)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-mono text-[9px] text-muted"
+        >
+          shop on amazon →
+        </a>
+      </div>
+
+      {tool.avoid_if && (
+        <p className="mt-2 text-[11px] leading-relaxed text-amber">
+          <span className="font-mono text-[8px] text-muted">note: </span>
+          {tool.avoid_if}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ToolsSection({
+  data,
+  highlightedToolId,
+  showRecommended,
+  onToggleRecommended,
+}: {
+  data: RoutineData;
+  highlightedToolId: string | null;
+  showRecommended: boolean;
+  onToggleRecommended: () => void;
+}) {
+  const hasExtensions = data.routineFocus === "extensions" || Boolean(data.protectiveStyle);
+  const { essential, recommended } = getToolsForProfile({
+    curlType: data.curlType,
+    routineFocus: data.routineFocus,
+    hasExtensions,
+  });
+
+  if (essential.length === 0 && recommended.length === 0) return null;
+
+  return (
+    <div id="section-tools" className="w-full border-b border-dark bg-white pt-4">
+      <div className="px-5">
+        <span className="font-mono text-[10px] lowercase text-muted">your tools</span>
+      </div>
+
+      {essential.length > 0 && (
+        <div
+          className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-5 pb-4"
+          style={{ scrollSnapType: "x mandatory" }}
+        >
+          {essential.map((tool) => (
+            <RoutineToolCard key={tool.id} tool={tool} highlighted={tool.id === highlightedToolId} />
+          ))}
+        </div>
+      )}
+
+      {recommended.length > 0 && (
+        <>
+          <div className="px-5 pb-4">
+            <button type="button" onClick={onToggleRecommended} className="font-mono text-[10px] lowercase text-muted">
+              {showRecommended ? "hide recommended tools ↑" : "+ show recommended tools"}
+            </button>
+          </div>
+          <Collapse show={showRecommended}>
+            <div
+              className="no-scrollbar flex gap-3 overflow-x-auto px-5 pb-6"
+              style={{ scrollSnapType: "x mandatory" }}
+            >
+              {recommended.map((tool) => (
+                <RoutineToolCard key={tool.id} tool={tool} highlighted={tool.id === highlightedToolId} />
+              ))}
+            </div>
+          </Collapse>
+        </>
+      )}
+    </div>
+  );
+}
+
 // SECTION 5 - Calendar: collapsed by default, wraps the existing
 // WashCalendarGrid (month cells, legend, wash-day styling) exactly as
 // already built - only the surrounding accordion shell is new.
@@ -1585,11 +1755,12 @@ const MINI_NAV_SECTIONS: { id: string; label: string }[] = [
   { id: "section-upcoming", label: "upcoming" },
   { id: "section-steps", label: "steps" },
   { id: "section-products", label: "products" },
+  { id: "section-tools", label: "tools" },
   { id: "section-calendar", label: "calendar" },
 ];
 
 // Sticky mini-nav: hidden until the hero scrolls out of view, then
-// tracks which of the five sections is currently in view (scroll-spy)
+// tracks which of the six sections is currently in view (scroll-spy)
 // and lets a tap jump straight to any of them.
 function RoutineMiniNav() {
   const [visible, setVisible] = useState(false);
@@ -1669,6 +1840,12 @@ function RoutineContent() {
   // Section 5's accordion - collapsed by default, force-expanded (and
   // scrolled to) by Section 2's "view full calendar" link.
   const [calendarExpanded, setCalendarExpanded] = useState(false);
+  // Tools section - recommended tools collapsed by default; tapping a
+  // tool-name chip on a step card (StepCard) both scrolls to and
+  // highlights the matching tool card, auto-expanding this if the
+  // target tool lives in the recommended (not essential) group.
+  const [showRecommendedTools, setShowRecommendedTools] = useState(false);
+  const [highlightedToolId, setHighlightedToolId] = useState<string | null>(null);
 
   const showWelcome = searchParams.get("welcome") === "true" && !welcomeDismissed;
 
@@ -1734,6 +1911,16 @@ function RoutineContent() {
     requestAnimationFrame(() => {
       document.getElementById("section-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+  }
+
+  function scrollToTool(toolId: string) {
+    const tool = findTool(toolId);
+    if (tool && tool.priority !== "essential") setShowRecommendedTools(true);
+    setHighlightedToolId(toolId);
+    requestAnimationFrame(() => {
+      document.getElementById(`tool-${toolId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    setTimeout(() => setHighlightedToolId((id) => (id === toolId ? null : id)), 2500);
   }
 
   // Visibility rules for the natural-hair vs. protective-style routine
@@ -1825,8 +2012,14 @@ function RoutineContent() {
       {showNaturalRoutine && (
         <>
           <UpcomingSection data={data} onViewCalendar={expandAndScrollToCalendar} />
-          <StepsSection data={data} />
+          <StepsSection data={data} onViewTool={scrollToTool} />
           <ProductsSection data={data} />
+          <ToolsSection
+            data={data}
+            highlightedToolId={highlightedToolId}
+            showRecommended={showRecommendedTools}
+            onToggleRecommended={() => setShowRecommendedTools((v) => !v)}
+          />
           <CalendarAccordionSection
             data={data}
             family={family}

@@ -21,12 +21,16 @@ export type RoutineStep = {
 // RoutineProductPick.category (see lib/routineProducts.ts) so the
 // /routine page can link a step directly to the user's actual curated
 // pick for that category ("Your deep conditioner: [product] - X/100").
+// `toolIds` matches HairTool.id (see lib/toolsData.ts) the same way, for
+// steps that call for a specific tool (a hooded dryer, a wide tooth
+// comb) - only populated for coily steps so far (see COILY_* below).
 export type RoutineStepDetail = {
   title: string;
   body: string;
   why: string | null;
   timerMinutes: string | null;
   productCategory: string | null;
+  toolIds: string[] | null;
 };
 
 export type WashDayKey = "clarifying" | "regular" | "protein" | "between";
@@ -42,9 +46,10 @@ function step(
   body: string,
   why: string | null = null,
   timerMinutes: string | null = null,
-  productCategory: string | null = null
+  productCategory: string | null = null,
+  toolIds: string[] | null = null
 ): RoutineStepDetail {
-  return { title, body, why, timerMinutes, productCategory };
+  return { title, body, why, timerMinutes, productCategory, toolIds };
 }
 
 // ---- Straight (1a/1b/1c) --------------------------------------------------
@@ -408,10 +413,11 @@ const COILY_CHELATING: RoutineStepDetail[] = [
   ),
   step(
     "Chelating shampoo in sections",
-    "Divide hair into 4-6 sections. Apply chelating shampoo to scalp and lengths of one section at a time. Massage thoroughly. Rinse before moving to the next section.",
+    "Section hair into 4-6 sections with large clips before getting in the shower. Apply chelating shampoo to scalp and lengths of one section at a time. Massage thoroughly. Rinse before moving to the next section.",
     "Working in sections on 4c hair prevents severe knot formation during washing.",
     null,
-    "clarifying-shampoo"
+    "clarifying-shampoo",
+    ["sectioning-clips"]
   ),
   step(
     "Sulfate-free shampoo second pass (optional)",
@@ -422,17 +428,19 @@ const COILY_CHELATING: RoutineStepDetail[] = [
   ),
   step(
     "Detangle in sections - critical",
-    "Apply conditioner or detangler generously to one wet section. Start with fingers to separate large knots, then use a wide tooth comb from ends to roots. Work through knots patiently - never force a comb through a knot. Repeat for all sections.",
+    "Apply conditioner or detangler generously to one wet section. Start with fingers to separate large knots, then a wide tooth comb, then a detangling brush if needed. Always ends to roots. Never dry. Work through knots patiently - never force a comb through a knot. Repeat for all sections.",
     "4b and 4c hair has the tightest curl pattern and shrinks significantly when wet, causing severe tangling. This step prevents the breakage that causes slow hair growth.",
     null,
-    "detangler"
+    "detangler",
+    ["wide-tooth-comb", "detangling-brush"]
   ),
   step(
     "Deep conditioner with heat",
-    "Apply deep conditioner generously to all sections. Cover with a plastic cap and sit under a hooded dryer or heated cap for 30-45 minutes.",
+    "Apply deep conditioner generously to all sections. Cover with a plastic cap and use a hooded dryer or heated cap for 30-45 minutes for maximum penetration. No hooded dryer? A heated cap works just as well.",
     "4c hair has the most tightly closed cuticle of any hair type. Heat is essential to force moisture into the shaft - without heat, conditioner sits on top without penetrating.",
     "30-45 minutes",
-    "deep-conditioner"
+    "deep-conditioner",
+    ["hooded-dryer", "heated-cap"]
   ),
   step(
     "Cool rinse",
@@ -467,10 +475,11 @@ const COILY_REGULAR: RoutineStepDetail[] = [
   },
   step(
     "Sulfate-free shampoo in sections",
-    "Divide hair into 4-6 sections. Apply sulfate-free shampoo to scalp and lengths of one section at a time. Massage thoroughly. Rinse before moving to the next section.",
+    "Section hair into 4-6 sections with large clips before getting in the shower. Apply sulfate-free shampoo to scalp and lengths of one section at a time. Massage thoroughly. Rinse before moving to the next section.",
     "Regular wash days use a gentle sulfate-free cleanser instead of a chelating one, since there's no heavy buildup to strip yet.",
     null,
-    "shampoo"
+    "shampoo",
+    ["sectioning-clips"]
   ),
   COILY_CHELATING[3],
   COILY_CHELATING[4],
@@ -484,32 +493,36 @@ const COILY_PROTEIN: RoutineStepDetail[] = [
   COILY_CHELATING[0],
   step(
     "Clarifying shampoo",
-    "Divide hair into 4-6 sections and apply clarifying shampoo to scalp and lengths of each section, rinsing before moving to the next.",
+    "Section hair into 4-6 sections with large clips before getting in the shower. Apply clarifying shampoo to scalp and lengths of each section, rinsing before moving to the next.",
     null,
     null,
-    "clarifying-shampoo"
+    "clarifying-shampoo",
+    ["sectioning-clips"]
   ),
   step(
     "Detangle in sections",
-    "Apply conditioner or detangler generously to one wet section. Start with fingers to separate large knots, then use a wide tooth comb from ends to roots. Repeat for all sections.",
+    "Apply conditioner or detangler generously to one wet section. Start with fingers to separate large knots, then a wide tooth comb, then a detangling brush if needed. Always ends to roots. Never dry. Repeat for all sections.",
     null,
     null,
-    "conditioner"
+    "conditioner",
+    ["wide-tooth-comb", "detangling-brush"]
   ),
   step(
     "Protein treatment - 30-45 min with heat",
     "Apply protein treatment to all sections. Cover with plastic cap under hooded dryer for 30-45 min. For 4c hair experiencing breakage use a stronger protein treatment (Aphogee Two Step) quarterly.",
     null,
     "30-45 minutes",
-    "protein-treatment"
+    "protein-treatment",
+    ["hooded-dryer"]
   ),
   step("Rinse", "Rinse protein treatment completely with warm water."),
   step(
     "Deep conditioner immediately - non-negotiable",
-    "This step cannot be skipped on 4b and 4c hair. Apply deep conditioner immediately after rinsing protein. Process 30-45 minutes with heat.",
+    "This step cannot be skipped on 4b and 4c hair. Apply deep conditioner immediately after rinsing protein and use a hooded dryer or heated cap for 30-45 minutes for maximum penetration. No hooded dryer? A heated cap works just as well.",
     "4c hair is the most protein-sensitive of all curl types. Protein without immediate and thorough moisture causes severe brittleness and snapping. This is the most common cause of 4c hair damage.",
     "30-45 minutes",
-    "deep-conditioner"
+    "deep-conditioner",
+    ["hooded-dryer", "heated-cap"]
   ),
   step("Cool rinse", "Rinse with cool water to seal the cuticle and lock in moisture."),
   COILY_CHELATING[6],

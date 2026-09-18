@@ -1,10 +1,12 @@
 import { supabase } from "@/lib/supabase";
-import { scoreCatalogProducts, scoreTier } from "@/lib/compatibility";
+import { curlFamily, scoreCatalogProducts, scoreTier } from "@/lib/compatibility";
 import { CATEGORY_LABEL_BY_SLUG } from "@/lib/productCategories";
 // Type-only import - erased at compile time, so the service-role code
 // in lib/brandCatalogProducts.ts never ends up in this client bundle.
 import type { BrandCatalogItem } from "@/lib/brandCatalogProducts";
 import type { HairAdditionPreference } from "@/lib/hairAdditionPreference";
+import { getToolsForProfile } from "@/lib/getToolsForProfile";
+import { TOOLS_CATALOG, type HairTool } from "@/lib/toolsData";
 
 export type ScoredHairCareItem = {
   catalogProductId: string;
@@ -18,6 +20,19 @@ export type StaticShoppingItem = {
   name: string;
   url: string;
   retailer: string;
+};
+
+// Richer than StaticShoppingItem - carries the catalog's own "why this
+// matters" and price range when the tool was resolved from
+// lib/toolsData.ts (see buildTools below). Both are null for a
+// translationToolsNeeded-sourced tool with no matching catalog entry -
+// still a real Amazon-search link, just without the extra context.
+export type StyleShoppingTool = {
+  name: string;
+  url: string;
+  retailer: string;
+  whyItMatters: string | null;
+  priceRange: string | null;
 };
 
 export type FakeHairItem = {
@@ -55,7 +70,7 @@ export type StyleShoppingList = {
   naturalHairAlternativeNote: string | null;
   naturalHairAlternativeStyles: string[];
   lengthExtensionOptions: StaticShoppingItem[];
-  tools: StaticShoppingItem[];
+  tools: StyleShoppingTool[];
   accessories: StaticShoppingItem[];
 };
 
@@ -768,42 +783,101 @@ function buildLengthExtensionOptions(
   ];
 }
 
-// When a style_translations row has tools_needed for the viewer's hair
-// family, those replace the generic style-detection tool list below -
-// they're already specific to this exact style + family combination,
-// which is strictly more precise than the heat/braid keyword guesses.
+function catalogToolToShoppingTool(tool: HairTool): StyleShoppingTool {
+  return {
+    name: tool.name,
+    url: amazonSearch(tool.amazon_search),
+    retailer: "Amazon",
+    whyItMatters: tool.why_it_matters,
+    priceRange: tool.price_range,
+  };
+}
+function plainTool(name: string, url: string, retailer: string): StyleShoppingTool {
+  return { name, url, retailer, whyItMatters: null, priceRange: null };
+}
+
+// A style_translations row's tools_needed is free text authored per
+// style+family - matched case-insensitively against lib/toolsData.ts's
+// names so it can still carry the catalog's why-it-matters/price when
+// there's a real match, falling back to a plain Amazon-search link
+// otherwise (still specific to this exact style, just without the
+// extra context).
+function buildTranslationTools(names: string[]): StyleShoppingTool[] {
+  return names.map((name) => {
+    const lower = name.toLowerCase();
+    const match = TOOLS_CATALOG.find(
+      (t) => t.name.toLowerCase() === lower || lower.includes(t.name.toLowerCase())
+    );
+    return match ? { ...catalogToolToShoppingTool(match), name } : plainTool(name, amazonSearch(name), "Amazon");
+  });
+}
+
+// Selects from the same shared catalog /routine and the travel kit use
+// (lib/toolsData.ts via getToolsForProfile) rather than a hardcoded
+// list, so "why this matters" and price come from one place. Layered on
+// top of the hair-family filter: a fixed set of style-condition rules
+// (heat/braided/wash-and-go/extensions) picks which of the family-
+// relevant tools are actually worth packing for this specific style.
+// heatRequired, when the viewer has a style_translations row for this
+// style+family, overrides the generic keyword guess - it's already
+// known precisely for that combination.
 function buildTools(
+  curlType: string | null,
   styleName: string,
   styleDescription: string,
+  heatRequired: boolean | undefined,
+  hasExtensions: boolean,
   translationToolsNeeded?: string[]
-): StaticShoppingItem[] {
+): StyleShoppingTool[] {
   if (translationToolsNeeded?.length) {
-    return translationToolsNeeded.map((tool) => ({
-      name: tool,
-      url: amazonSearch(tool),
-      retailer: "Amazon",
-    }));
+    return buildTranslationTools(translationToolsNeeded);
   }
 
   const text = styleText(styleName, styleDescription);
-  const tools: StaticShoppingItem[] = [
-    { name: "Rat tail comb", url: amazonSearch("rat tail comb"), retailer: "Amazon" },
-    { name: "Wide tooth comb", url: amazonSearch("wide tooth comb"), retailer: "Amazon" },
-    { name: "Spray bottle", url: amazonSearch("hair spray bottle"), retailer: "Amazon" },
-    { name: "Sectioning clips", url: amazonSearch("hair sectioning clips"), retailer: "Amazon" },
-  ];
+  const family = curlFamily(curlType);
+  const { essential, recommended } = getToolsForProfile({ curlType, hasExtensions });
+  const byId = new Map([...essential, ...recommended].map((t) => [t.id, t]));
 
-  if (isHeatStyle(text)) {
-    tools.push(
-      { name: "Hooded dryer", url: sallyBeautySearch("hooded dryer"), retailer: "Sally Beauty" },
-      { name: "Heated cap", url: amazonSearch("heated conditioning cap"), retailer: "Amazon" }
-    );
+  const ids = new Set<string>();
+  if (heatRequired ?? isHeatStyle(text)) {
+    ids.add("blow-dryer");
+    ids.add(family === "curly" || family === "coily" ? "diffuser" : "flat-iron");
+  }
+  if (isBraidedStyle(text)) {
+    ids.add("rat-tail-comb");
+    ids.add("applicator-bottle");
+    ids.add("satin-bonnet");
+  }
+  if (isWashAndGoStyle(text)) {
+    ids.add("diffuser");
+    ids.add("microfiber-towel");
+    ids.add("spray-bottle");
+  }
+  if (hasExtensions) {
+    ids.add("wig-stand");
+    ids.add("wide-tooth-comb");
+    ids.add("satin-bonnet");
+  }
+
+  const tools = Array.from(ids)
+    .map((id) => byId.get(id))
+    .filter((t): t is HairTool => Boolean(t))
+    .map(catalogToolToShoppingTool);
+
+  // No style-condition matched (no heat/braid/wash-and-go signal and no
+  // extensions) - fall back to the always-useful basics the previous
+  // hardcoded list opened with, still sourced from the catalog.
+  if (tools.length === 0) {
+    ["rat-tail-comb", "wide-tooth-comb", "spray-bottle", "sectioning-clips"].forEach((id) => {
+      const tool = byId.get(id);
+      if (tool) tools.push(catalogToolToShoppingTool(tool));
+    });
   }
 
   if (isBraidedStyle(text)) {
     tools.push(
-      { name: "Rubber bands", url: amazonSearch("hair rubber bands"), retailer: "Amazon" },
-      { name: "Bead tool", url: amazonSearch("hair bead tool"), retailer: "Amazon" }
+      plainTool("Rubber bands", amazonSearch("hair rubber bands"), "Amazon"),
+      plainTool("Bead tool", amazonSearch("hair bead tool"), "Amazon")
     );
   }
 
@@ -875,6 +949,17 @@ export async function buildStyleShoppingList(input: {
   // generic Tools section with the family-specific tool list.
   translationProductsNeeded?: string[];
   translationToolsNeeded?: string[];
+  // The viewer's own curl type - used only by buildTools (below) to
+  // pick the family-appropriate variant of a style-condition tool (a
+  // diffuser for curly/coily vs. a flat iron for straight/wavy on a
+  // heat style) via the same lib/toolsData.ts catalog /routine and the
+  // travel kit use.
+  curlType?: string | null;
+  // Whether this style calls for added hair - style_translations.
+  // heat_required and .fake_hair_required respectively when a
+  // translation row exists (strictly more precise than the keyword
+  // guesses buildTools falls back to otherwise).
+  heatRequired?: boolean;
 }): Promise<StyleShoppingList> {
   const categorySlugs = pickCategoriesForStyle(
     input.styleName,
@@ -945,7 +1030,14 @@ export async function buildStyleShoppingList(input: {
       ? suggestNaturalHairAlternatives(input.styleName, input.styleDescription)
       : [],
     lengthExtensionOptions,
-    tools: buildTools(input.styleName, input.styleDescription, input.translationToolsNeeded),
+    tools: buildTools(
+      input.curlType ?? null,
+      input.styleName,
+      input.styleDescription,
+      input.heatRequired,
+      input.requiresFakeHair,
+      input.translationToolsNeeded
+    ),
     accessories: buildAccessories(input.accessoriesVisible),
   };
 }
