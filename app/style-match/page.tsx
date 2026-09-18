@@ -20,6 +20,7 @@ import {
   type DeepMatchHairAdditionPreference,
   type HairAdditionPreference,
 } from "@/lib/hairAdditionPreference";
+import type { StyleTranslation } from "@/lib/styleTranslations";
 
 type DetectedStyle = {
   style_name: string;
@@ -763,6 +764,11 @@ function StyleMatchContent() {
   const [colorMapsUrl, setColorMapsUrl] = useState<string | null>(null);
   const [shoppingList, setShoppingList] = useState<StyleShoppingList | null>(null);
   const [shoppingLoading, setShoppingLoading] = useState(false);
+  // Hair-type-aware style translation (see lib/styleTranslations.ts) -
+  // null whenever no style_translations row exists for this detected
+  // style + the viewer's hair family, which is most styles/most users
+  // at launch (only beach-waves/wash-and-go/silk-press are seeded).
+  const [styleTranslation, setStyleTranslation] = useState<StyleTranslation | null>(null);
   const [stylists, setStylists] = useState<Stylist[]>([]);
   // Item 8 - filters to stylists whose matched service lists
   // "human_hair_only" in hair_addition_types. That field isn't
@@ -976,21 +982,44 @@ function StyleMatchContent() {
     let cancelled = false;
     const curlType = hairProfile.curl_type ?? "";
 
-    async function loadTutorials() {
+    // Resolves once, ahead of loadTutorials/loadShoppingList below,
+    // since both use it (youtube_search_override and products_needed/
+    // tools_needed respectively) - fetched here rather than read back
+    // from state in the same tick, since a setStyleTranslation() call
+    // wouldn't be visible to sibling closures until the next render.
+    async function loadStyleTranslation(): Promise<StyleTranslation | null> {
+      try {
+        const params = new URLSearchParams({ style_name: detected!.style_name });
+        if (curlType) params.set("curl_type", curlType);
+        if (user?.id) params.set("user_id", user.id);
+        const res = await fetch(`/api/style-match/translation?${params.toString()}`);
+        const data = await res.json();
+        const translation: StyleTranslation | null = data.translation ?? null;
+        if (!cancelled) setStyleTranslation(translation);
+        return translation;
+      } catch {
+        return null;
+      }
+    }
+
+    async function loadTutorials(translation: StyleTranslation | null) {
       setTutorialsLoading(true);
       try {
         const family = curlFamily(curlType);
         const postsParams = new URLSearchParams({ style_name: detected!.style_name });
         if (family) postsParams.set("hair_type_family", family);
 
+        const ytParams = new URLSearchParams({
+          style_name: detected!.style_name,
+          curl_type: curlType,
+        });
+        if (translation?.youtube_search_override) {
+          ytParams.set("query_override", translation.youtube_search_override);
+        }
+
         const [postsRes, ytRes] = await Promise.all([
           fetch(`/api/style-match/tutorials?${postsParams.toString()}`),
-          fetch(
-            `/api/style-match/youtube?${new URLSearchParams({
-              style_name: detected!.style_name,
-              curl_type: curlType,
-            }).toString()}`
-          ),
+          fetch(`/api/style-match/youtube?${ytParams.toString()}`),
         ]);
         const postsData = await postsRes.json();
         const ytData = await ytRes.json();
@@ -1031,7 +1060,7 @@ function StyleMatchContent() {
       }
     }
 
-    async function loadShoppingList() {
+    async function loadShoppingList(translation: StyleTranslation | null) {
       setShoppingLoading(true);
       try {
         // The survey's own answer (specific to this style) wins over the
@@ -1052,6 +1081,8 @@ function StyleMatchContent() {
           userId: user?.id ?? null,
           matchId,
           hairAdditionPreference: resolvedHairPreference,
+          translationProductsNeeded: translation?.products_needed ?? undefined,
+          translationToolsNeeded: translation?.tools_needed ?? undefined,
         });
         if (!cancelled) setShoppingList(list);
       } finally {
@@ -1094,9 +1125,11 @@ function StyleMatchContent() {
       }
     }
 
-    loadTutorials();
+    loadStyleTranslation().then((translation) => {
+      loadTutorials(translation);
+      loadShoppingList(translation);
+    });
     loadColorTab();
-    loadShoppingList();
     loadStylists();
 
     return () => {
@@ -1751,6 +1784,48 @@ function StyleMatchContent() {
               </div>
             )}
 
+            {/* Time/difficulty chips - translation values (specific to
+                this style + the viewer's hair family) override the
+                generic detected ones when a style_translations row
+                exists (item 4's "time and difficulty" section). */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium capitalize text-bronze2">
+                {styleTranslation?.difficulty_for_family ?? detected.difficulty}
+              </span>
+              <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium capitalize text-bronze2">
+                {styleTranslation?.time_estimate ?? detected.estimated_time}
+              </span>
+              {styleTranslation?.heat_required && (
+                <span className="rounded-full bg-dark px-3 py-1 text-xs font-semibold lowercase text-white">
+                  heat required
+                </span>
+              )}
+              {styleTranslation?.fake_hair_required && (
+                <span className="rounded-full bg-dark px-3 py-1 text-xs font-semibold lowercase text-white">
+                  fake hair needed
+                </span>
+              )}
+            </div>
+
+            {/* "How to get there" - a style_translations row's
+                technique guidance for this exact hair family, shown
+                before the tabs so it sets expectations up front. */}
+            {styleTranslation && (
+              <div className="mt-4 border border-dark bg-white p-4">
+                <p className="font-mono uppercase tracking-widest text-muted" style={{ fontSize: "9px" }}>
+                  how to get there
+                </p>
+                <p className="mt-2 font-sans font-normal leading-[1.7] text-[#444444]" style={{ fontSize: "13px" }}>
+                  {styleTranslation.how_to_achieve}
+                </p>
+                <div className="mt-3 border-l-2 border-dark pl-3">
+                  <p className="font-sans font-light text-muted" style={{ fontSize: "12px" }}>
+                    {styleTranslation.key_difference}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="mt-6">
               <ShareWithStylistCard matchId={matchId} onShowToast={showToast} />
             </div>
@@ -1780,6 +1855,15 @@ function StyleMatchContent() {
 
             {activeTab === "tutorials" && (
               <div className="mt-6 space-y-8">
+                {styleTranslation && (
+                  <div className="border-b-2 border-dark bg-white pb-4">
+                    <p className="font-sans font-bold lowercase text-dark" style={{ fontSize: "14px" }}>
+                      {detected.style_name.toLowerCase()} on {styleTranslation.hair_family} hair means{" "}
+                      {styleTranslation.translation_headline.toLowerCase()}
+                    </p>
+                  </div>
+                )}
+
                 {tutorialsLoading && <p className="text-sm text-dark/50">Loading tutorials...</p>}
 
                 {!tutorialsLoading && internalTutorials.length > 0 && (

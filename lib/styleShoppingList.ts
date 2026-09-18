@@ -107,6 +107,22 @@ const BRAND_CATEGORY_LABELS: Record<string, string> = {
   "braiding-hair": "Braiding Hair",
   "loc-spray": "Loc Spray",
   "wig-care": "Wig Care",
+  // style_translations.products_needed slugs (lib/styleTranslations.ts)
+  // that don't correspond to a real catalog_products category either -
+  // only used to make an Amazon-fallback line read nicely.
+  "heat-protectant": "Heat Protectant",
+  "texturizing-spray": "Texturizing Spray",
+  "light-hold-spray": "Light Hold Spray",
+  "finishing-serum": "Finishing Serum",
+  "salt-spray": "Salt Spray",
+  "blow-dry-cream": "Blow Dry Cream",
+  "light-hold-gel": "Light Hold Gel",
+  "holding-spray": "Holding Spray",
+  "anti-humidity-spray": "Anti-Humidity Spray",
+  "light-curl-cream": "Light Curl Cream",
+  "sealing-oil": "Sealing Oil",
+  "clarifying-shampoo": "Clarifying Shampoo",
+  "wig-shine-spray": "Wig Shine Spray",
 };
 
 function categoryLabel(slug: string): string {
@@ -115,10 +131,21 @@ function categoryLabel(slug: string): string {
 
 export function pickCategoriesForStyle(
   styleName: string,
-  styleDescription: string
+  styleDescription: string,
+  translationProductsNeeded?: string[]
 ): string[] {
   const text = styleText(styleName, styleDescription);
-  const categories = new Set<string>(["shampoo", "conditioner"]);
+  // A style_translations row's products_needed (already specific to
+  // this style + the viewer's hair family) goes first, ahead of even
+  // the shampoo/conditioner baseline - a Set preserves insertion order,
+  // and both fetchBrandProducts and fetchScoredHairCareProducts process
+  // categorySlugs in array order, so "first" here really does mean
+  // "shown/matched first."
+  const categories = new Set<string>([
+    ...(translationProductsNeeded ?? []),
+    "shampoo",
+    "conditioner",
+  ]);
 
   if (isBraidedStyle(text)) {
     categories.add("styler"); // edge control
@@ -137,7 +164,10 @@ export function pickCategoriesForStyle(
     if (/silk press|wig/.test(text)) categories.add("wig-care");
   }
 
-  return Array.from(categories).slice(0, 8);
+  // Raised from 8 to accommodate up to 4 prioritized translation
+  // categories on top of the existing style-detected ones without
+  // truncating either.
+  return Array.from(categories).slice(0, 12);
 }
 
 async function fetchScoredHairCareProducts(
@@ -738,7 +768,23 @@ function buildLengthExtensionOptions(
   ];
 }
 
-function buildTools(styleName: string, styleDescription: string): StaticShoppingItem[] {
+// When a style_translations row has tools_needed for the viewer's hair
+// family, those replace the generic style-detection tool list below -
+// they're already specific to this exact style + family combination,
+// which is strictly more precise than the heat/braid keyword guesses.
+function buildTools(
+  styleName: string,
+  styleDescription: string,
+  translationToolsNeeded?: string[]
+): StaticShoppingItem[] {
+  if (translationToolsNeeded?.length) {
+    return translationToolsNeeded.map((tool) => ({
+      name: tool,
+      url: amazonSearch(tool),
+      retailer: "Amazon",
+    }));
+  }
+
   const text = styleText(styleName, styleDescription);
   const tools: StaticShoppingItem[] = [
     { name: "Rat tail comb", url: amazonSearch("rat tail comb"), retailer: "Amazon" },
@@ -823,8 +869,18 @@ export async function buildStyleShoppingList(input: {
   userId?: string | null;
   matchId?: string | null;
   hairAdditionPreference?: HairAdditionPreference | null;
+  // From a style_translations row for this style + the viewer's hair
+  // family (see lib/styleTranslations.ts) - prioritizes which product
+  // categories are queried first and, when present, replaces the
+  // generic Tools section with the family-specific tool list.
+  translationProductsNeeded?: string[];
+  translationToolsNeeded?: string[];
 }): Promise<StyleShoppingList> {
-  const categorySlugs = pickCategoriesForStyle(input.styleName, input.styleDescription);
+  const categorySlugs = pickCategoriesForStyle(
+    input.styleName,
+    input.styleDescription,
+    input.translationProductsNeeded
+  );
   const preference = input.hairAdditionPreference ?? null;
 
   const brandByCategory = await fetchBrandProducts(
@@ -889,7 +945,7 @@ export async function buildStyleShoppingList(input: {
       ? suggestNaturalHairAlternatives(input.styleName, input.styleDescription)
       : [],
     lengthExtensionOptions,
-    tools: buildTools(input.styleName, input.styleDescription),
+    tools: buildTools(input.styleName, input.styleDescription, input.translationToolsNeeded),
     accessories: buildAccessories(input.accessoriesVisible),
   };
 }

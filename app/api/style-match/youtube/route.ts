@@ -23,6 +23,12 @@ export async function GET(request: Request) {
   const curlType = searchParams.get("curl_type");
   const mode = searchParams.get("mode");
   const color = searchParams.get("color");
+  // Set when a style_translations row exists for this style + the
+  // viewer's hair family (see lib/styleTranslations.ts) - a query
+  // tuned for that specific combination (e.g. "beach waves tutorial
+  // straight fine hair curling iron") rather than the generic
+  // style+curlType template below.
+  const queryOverride = searchParams.get("query_override");
 
   let query: string;
   if (mode === "color") {
@@ -33,6 +39,8 @@ export async function GET(request: Request) {
     query = [color, "hair color tutorial", curlType, "natural hair"]
       .filter(Boolean)
       .join(" ");
+  } else if (queryOverride) {
+    query = queryOverride;
   } else {
     if (!styleName) {
       return NextResponse.json(

@@ -230,6 +230,15 @@ function StyleMatchSummaryContent({ id }: { id: string }) {
             )}
           </dl>
 
+          {data.howToAchieve && (
+            <div className="mt-5 border-l-2 border-dark pl-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-dark/60">
+                About achieving this style
+              </p>
+              <p className="mt-1.5 text-sm leading-relaxed text-dark/80">{data.howToAchieve}</p>
+            </div>
+          )}
+
           <p className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-dark/60">
             From their style survey
           </p>

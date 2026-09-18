@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { lookupCityState } from "@/lib/zipLookup";
 import type { StyleShoppingList } from "@/lib/styleShoppingList";
 import { HAIR_ADDITION_PREFERENCE_LABELS, type HairAdditionPreference } from "@/lib/hairAdditionPreference";
+import { getStyleTranslation, resolveHairFamilyForTranslation } from "@/lib/styleTranslations";
 
 // Same CHECK-constraint values as components/HairJourneySection.tsx -
 // used only to label the client's most recent hair photo as a
@@ -97,6 +98,12 @@ export type StyleMatchSummaryData = {
     factors: string[];
   } | null;
   notes: string | null;
+  // From a style_translations row for this style + the client's hair
+  // family (see lib/styleTranslations.ts) - null for most styles/most
+  // clients today, since only beach-waves/wash-and-go/silk-press are
+  // seeded. Gives the stylist the hair-type-specific context: what
+  // achieving this style actually means starting from this texture.
+  howToAchieve: string | null;
 };
 
 // Matches a detected style name against a stylist's services_structured
@@ -227,6 +234,14 @@ export async function buildStyleMatchSummary(
   const detectedDetails = (match.detected_details ?? {}) as DetectedStyleDetails;
   const tutorialsJson = (match.tutorials ?? {}) as { youtube?: YouTubeVideoSummary[] };
 
+  const detectedStyleName = match.detected_style ?? detectedDetails.style_name ?? null;
+  let howToAchieve: string | null = null;
+  if (detectedStyleName) {
+    const hairFamily = await resolveHairFamilyForTranslation(match.user_id, profile?.curl_type ?? null);
+    const translation = await getStyleTranslation(detectedStyleName, hairFamily);
+    howToAchieve = translation?.how_to_achieve ?? null;
+  }
+
   return {
     id: match.id,
     createdAt: match.created_at,
@@ -259,5 +274,6 @@ export async function buildStyleMatchSummary(
     matchedStylist,
     marketEstimate,
     notes: match.notes ?? null,
+    howToAchieve,
   };
 }
