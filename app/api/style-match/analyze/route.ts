@@ -59,6 +59,48 @@ const SUPPORTED_IMAGE_TYPES = new Set([
   "image/webp",
 ]);
 
+// Disambiguation guidance for the style subtypes that get mixed up most
+// often (checked against real confusion cases, not hypothetical) - kept
+// as INPUT context, not output fields, so it doesn't add to generation
+// time the way more output fields would (input tokens process in
+// parallel; output tokens are generated serially, so this is the
+// low-cost side of the prompt to spend on). Feeds into confidence/
+// confidence_reason/alternative_style below, which is what actually
+// drives the frontend's disambiguation step for a medium/low-confidence
+// call - see app/style-match/page.tsx's "disambiguate" pageState.
+const STYLE_DISAMBIGUATION_GUIDANCE = `You are a professional hair stylist with expertise in identifying specific hairstyles from photos. Identify the hairstyle with precision.
+
+CRITICAL: Be specific about style subtypes. Do not use a general category name when a more specific style is visible - "Knotless Braids" not "Braids", "Baby Bangs" not "Bangs".
+
+BANG STYLES - distinguish carefully:
+- baby bangs: very short, sitting AT or ABOVE the eyebrow, typically 1-2 inches long
+- micro bangs: extremely short, sitting WELL ABOVE the eyebrow, forehead mostly visible
+- curtain bangs: LONGER bangs, parted in the MIDDLE, swept to the SIDES of the face, eyebrows fully visible
+- blunt bangs: straight ACROSS at eyebrow level, uniform length, not swept to sides
+- side swept bangs: swept to ONE side only
+- wispy bangs: soft, feathery, not blunt
+Before identifying any bang style, check: where does the bang end relative to the eyebrow? Is it parted in the middle (curtain)? Swept to one side (side swept)? Very short and blunt (baby)? Soft and feathery (wispy)?
+
+CURL/WAVE STYLES - distinguish carefully:
+- wash and go: natural curl pattern with defining products, no manipulation
+- twist out: unraveled twists creating a defined stretched curl pattern
+- braid out: unraveled braids creating a wave/curl pattern
+- roller set: uniform curl from rollers
+- flexi rod set: defined spiral curls from flexible rods
+
+BRAID STYLES - distinguish carefully:
+- box braids: individual braids with a square section at the root
+- knotless braids: feed-in braids with no knot at the root, starts with natural hair
+- cornrows: braids flat against the scalp
+- goddess braids: large chunky braids, often with loose curls at ends
+- micro braids: very thin individual braids
+
+PROTECTIVE STYLES - distinguish:
+- faux locs: wrapped or crocheted locs using extension hair
+- starter locs: real locs just beginning
+- passion twists: twists using water wave extension hair
+- senegalese twists: rope twists using straight extension hair`;
+
 // Shortened deliberately - fewer/shorter fields means less output for
 // the model to generate, which is a direct, significant chunk of total
 // response time. current_to_desired_translation/length_gap/prep_needed
@@ -66,15 +108,22 @@ const SUPPORTED_IMAGE_TYPES = new Set([
 // hair photo attached the photo AND asked for more output in the same
 // call. That's now a separate, tiny, image-free follow-up call fired
 // after this one returns - see app/api/style-match/translate/route.ts.
+// confidence/confidence_reason/alternative_style/bang_length are new
+// (disambiguation feature) - kept short (one sentence max, single
+// words/null) to limit how much this adds to generation time.
 function buildAnalysisInstructions(opts: {
   colorMatch: boolean;
   translateForHairType: boolean;
   curlType: string | null;
 }): string {
   const fields = [
-    `"style_name": "name only"`,
+    `"style_name": "specific style name - use the precise subtype, not the general category"`,
     `"style_description": "one sentence only"`,
+    `"confidence": "high/medium/low"`,
+    `"confidence_reason": "one sentence on what visual features confirmed this identification"`,
+    `"alternative_style": "if confidence is medium or low, the other specific style this could be instead - else null"`,
     `"hair_length": "short/medium/long"`,
+    `"bang_length": "above-eyebrow/at-eyebrow/below-eyebrow/cheekbone-length - only if bangs are visible, else null"`,
     `"requires_fake_hair": true/false`,
     `"fake_hair_type": "type or null"`,
     `"accessories_visible": []`,
@@ -92,13 +141,17 @@ function buildAnalysisInstructions(opts: {
     );
   }
 
-  return `Analyze this hairstyle and return ONLY this JSON, no other text:\n{\n  ${fields.join(",\n  ")}\n}`;
+  return `${STYLE_DISAMBIGUATION_GUIDANCE}\n\nReturn ONLY this JSON object, no other text:\n{\n  ${fields.join(",\n  ")}\n}`;
 }
 
 type DetectedStyle = {
   style_name: string;
   style_description: string;
+  confidence: "high" | "medium" | "low";
+  confidence_reason: string | null;
+  alternative_style: string | null;
   hair_length: string;
+  bang_length: "above-eyebrow" | "at-eyebrow" | "below-eyebrow" | "cheekbone-length" | null;
   requires_fake_hair: boolean;
   fake_hair_type: string | null;
   accessories_visible: string[];
@@ -244,8 +297,10 @@ export async function POST(request: Request) {
         // Lower than the original 1024 on purpose - this schema is
         // short enough that 1024 was never being used, just giving the
         // model room to ramble. Capping it tighter nudges faster
-        // generation too.
-        max_tokens: 512,
+        // generation too. Bumped from 512 for the disambiguation fields
+        // (confidence_reason is a full sentence on top of
+        // style_description) - still well under 1024.
+        max_tokens: 700,
         messages: [{ role: "user", content: messageContent }],
       }),
     });

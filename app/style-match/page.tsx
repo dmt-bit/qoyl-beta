@@ -22,10 +22,20 @@ import {
 } from "@/lib/hairAdditionPreference";
 import type { StyleTranslation } from "@/lib/styleTranslations";
 
+type BangLength = "above-eyebrow" | "at-eyebrow" | "below-eyebrow" | "cheekbone-length";
+
 type DetectedStyle = {
   style_name: string;
   style_description: string;
+  // Absent on an older cached style_matches.detected_details row (from
+  // before this field existed) - treated as "high" wherever read below,
+  // same as a fresh high-confidence result, so old matches don't
+  // suddenly show a disambiguation prompt they never went through.
+  confidence?: "high" | "medium" | "low";
+  confidence_reason?: string | null;
+  alternative_style?: string | null;
   hair_length: string;
+  bang_length?: BangLength | null;
   requires_fake_hair: boolean;
   fake_hair_type: string | null;
   accessories_visible: string[];
@@ -104,6 +114,7 @@ type PageState =
   | "inspo"
   | "deepSurvey"
   | "analyzing"
+  | "disambiguate"
   | "confirm"
   | "results";
 type ResultTab = "tutorials" | "color" | "shopping" | "stylist";
@@ -230,6 +241,34 @@ function HeartIcon({ filled }: { filled: boolean }) {
         strokeLinejoin="round"
         d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
       />
+    </svg>
+  );
+}
+
+// Bang-length visual check on the confirm screen (item 3) - a face
+// outline with a horizontal line at the detected position, so the user
+// can confirm at a glance rather than parsing the "above-eyebrow"/
+// "at-eyebrow" label alone. Positions are illustrative, not to scale.
+const BANG_LENGTH_Y: Record<BangLength, number> = {
+  "above-eyebrow": 50,
+  "at-eyebrow": 68,
+  "below-eyebrow": 86,
+  "cheekbone-length": 108,
+};
+const BANG_LENGTH_LABEL: Record<BangLength, string> = {
+  "above-eyebrow": "above",
+  "at-eyebrow": "at",
+  "below-eyebrow": "below",
+  "cheekbone-length": "well below",
+};
+const EYEBROW_Y = 68;
+
+function BangLengthDiagram({ bangLength }: { bangLength: BangLength }) {
+  return (
+    <svg width="72" height="150" viewBox="0 0 72 150" fill="none" aria-hidden>
+      <ellipse cx="36" cy="80" rx="26" ry="40" stroke="#0a0a0a" strokeWidth="1.5" />
+      <line x1="12" y1={EYEBROW_Y} x2="60" y2={EYEBROW_Y} stroke="#bbb" strokeWidth="1" strokeDasharray="2 2" />
+      <line x1="10" y1={BANG_LENGTH_Y[bangLength]} x2="62" y2={BANG_LENGTH_Y[bangLength]} stroke="#0a0a0a" strokeWidth="2.5" />
     </svg>
   );
 }
@@ -818,6 +857,7 @@ function StyleMatchContent() {
     completedRef.current = false;
     setSavedChoice(null);
     setJustUsedFreeMatch(false);
+    setPendingMatchInput(null);
   }
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -825,6 +865,116 @@ function StyleMatchContent() {
     if (!file) return;
     setImageFile(file);
     setImagePreviewUrl(URL.createObjectURL(file));
+  }
+
+  // Holds the inputType/text from the analyze() call that's currently
+  // pending a disambiguation choice - the create-match-row/translate/
+  // free-match-counter work in finalizeMatch below needs them, but by
+  // the time the user taps a disambiguation option that work is
+  // happening well outside analyze()'s own closure.
+  const [pendingMatchInput, setPendingMatchInput] = useState<{
+    inputType: "photo" | "text";
+    text?: string;
+  } | null>(null);
+
+  // Everything that used to run unconditionally right after a successful
+  // analyze() call - now shared between the direct (confidence: high)
+  // path and the disambiguation screen's "yes, this one" handler, since
+  // both need to fire the translation call, the free-match counter, and
+  // create the style_matches row for whichever style the user actually
+  // confirmed.
+  async function finalizeMatch(finalStyle: DetectedStyle, inputType: "photo" | "text", bodyText?: string) {
+    setDetected(finalStyle);
+
+    // Fired after the fast, image-only analyze call above resolves -
+    // not awaited, so it never delays showing results. Only when a
+    // hair photo is on file, since that's the only thing this
+    // translation is for. Updates `detected` in place when it lands,
+    // which re-renders the translation banner with no page reload.
+    if (hasHairPhoto && finalStyle.style_name) {
+      setTranslationLoading(true);
+      fetch("/api/style-match/translate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          style_name: finalStyle.style_name,
+          curl_type: hairProfile?.curl_type ?? null,
+          porosity: hairProfile?.porosity ?? null,
+        }),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((translation) => {
+          if (translation) {
+            setDetected((prev) => (prev ? { ...prev, ...translation } : prev));
+          }
+        })
+        .catch((err) => console.error("[style-match] background translation failed:", err))
+        .finally(() => setTranslationLoading(false));
+    }
+
+    // Free-match gate: only the first match for a non-subscriber
+    // consumes/increments the counter. Mirrors app/search/page.tsx's
+    // daily_search_count update - a direct client-side update against
+    // the signed-in user's own hair_profiles row.
+    if (!subscribed && styleMatchCount < 1 && user) {
+      setJustUsedFreeMatch(true);
+      const { error: incrementError } = await supabase
+        .from("hair_profiles")
+        .update({ style_match_count: styleMatchCount + 1 })
+        .eq("user_id", user.id);
+      if (incrementError) console.error("Failed to increment style_match_count:", incrementError);
+      else await refreshHairProfile();
+    }
+
+    // Create the style_matches row now (not only once the user saves/
+    // books) so the heart/save button on the confirm screen has a real
+    // id to attach to - see app/api/style-match/create/route.ts.
+    if (user) {
+      try {
+        const createRes = await fetch("/api/style-match/create", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            user_id: user.id,
+            input_type: inputType,
+            input_text: inputType === "text" ? bodyText ?? null : null,
+            image_url: finalStyle.image_url ?? null,
+            detected_style: finalStyle.style_name,
+            detected_details: finalStyle,
+            match_mode: "deep",
+            color_match: Boolean(colorMatch),
+            length_difference: lengthDifference,
+            involves_extensions: involvesExtensions,
+            hair_addition_preference:
+              involvesExtensions && involvesExtensions !== "none" ? deepMatchHairPreference : null,
+            translated_for_hair_type: Boolean(translateForHairType),
+          }),
+        });
+        const createData = await createRes.json();
+        if (createRes.ok) setMatchId(createData.id);
+      } catch (err) {
+        console.error("Failed to create style_matches row:", err);
+      }
+    }
+
+    setPageState("confirm");
+  }
+
+  // Swaps in the alternative style the disambiguation screen offered -
+  // only style_name is known to differ; every other field (hair_length,
+  // difficulty, etc.) was computed by the model around its top guess and
+  // may not perfectly fit the alternative, but re-analyzing to get a
+  // second full breakdown would reintroduce the exact per-call latency
+  // this route's fields were deliberately kept short to avoid.
+  function chooseAlternativeStyle() {
+    if (!detected?.alternative_style || !pendingMatchInput) return;
+    const swapped: DetectedStyle = { ...detected, style_name: detected.alternative_style };
+    finalizeMatch(swapped, pendingMatchInput.inputType, pendingMatchInput.text);
+  }
+
+  function confirmDetectedStyle() {
+    if (!detected || !pendingMatchInput) return;
+    finalizeMatch(detected, pendingMatchInput.inputType, pendingMatchInput.text);
   }
 
   async function analyze(body: Record<string, unknown>, inputType: "photo" | "text") {
@@ -835,6 +985,7 @@ function StyleMatchContent() {
 
     setError(null);
     setPageState("analyzing");
+    setPendingMatchInput({ inputType, text: inputType === "text" ? (body.text as string) : undefined });
 
     try {
       const res = await fetch("/api/style-match/analyze", {
@@ -854,80 +1005,22 @@ function StyleMatchContent() {
         return;
       }
 
-      setDetected(data as DetectedStyle);
+      const detectedStyle = data as DetectedStyle;
 
-      // Fired after the fast, image-only analyze call above resolves -
-      // not awaited, so it never delays showing results. Only when a
-      // hair photo is on file, since that's the only thing this
-      // translation is for. Updates `detected` in place when it lands,
-      // which re-renders the translation banner with no page reload.
-      if (hasHairPhoto && data.style_name) {
-        setTranslationLoading(true);
-        fetch("/api/style-match/translate", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            style_name: data.style_name,
-            curl_type: hairProfile?.curl_type ?? null,
-            porosity: hairProfile?.porosity ?? null,
-          }),
-        })
-          .then((r) => (r.ok ? r.json() : null))
-          .then((translation) => {
-            if (translation) {
-              setDetected((prev) => (prev ? { ...prev, ...translation } : prev));
-            }
-          })
-          .catch((err) => console.error("[style-match] background translation failed:", err))
-          .finally(() => setTranslationLoading(false));
+      // A style with no alternative_style has nothing to disambiguate
+      // against regardless of what confidence says - straight to
+      // confirm either way. Absent confidence (older behavior/anything
+      // unexpected) also defaults to the direct path.
+      if (
+        (detectedStyle.confidence === "medium" || detectedStyle.confidence === "low") &&
+        detectedStyle.alternative_style
+      ) {
+        setDetected(detectedStyle);
+        setPageState("disambiguate");
+        return;
       }
 
-      // Free-match gate: only the first match for a non-subscriber
-      // consumes/increments the counter. Mirrors app/search/page.tsx's
-      // daily_search_count update - a direct client-side update against
-      // the signed-in user's own hair_profiles row.
-      if (!subscribed && styleMatchCount < 1 && user) {
-        setJustUsedFreeMatch(true);
-        const { error: incrementError } = await supabase
-          .from("hair_profiles")
-          .update({ style_match_count: styleMatchCount + 1 })
-          .eq("user_id", user.id);
-        if (incrementError) console.error("Failed to increment style_match_count:", incrementError);
-        else await refreshHairProfile();
-      }
-
-      // Create the style_matches row now (not only once the user saves/
-      // books) so the heart/save button on the confirm screen has a real
-      // id to attach to - see app/api/style-match/create/route.ts.
-      if (user) {
-        try {
-          const createRes = await fetch("/api/style-match/create", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-              user_id: user.id,
-              input_type: inputType,
-              input_text: inputType === "text" ? (body.text as string) : null,
-              image_url: (data as DetectedStyle).image_url ?? null,
-              detected_style: (data as DetectedStyle).style_name,
-              detected_details: data,
-              match_mode: "deep",
-              color_match: Boolean(colorMatch),
-              length_difference: lengthDifference,
-              involves_extensions: involvesExtensions,
-              hair_addition_preference:
-                involvesExtensions && involvesExtensions !== "none" ? deepMatchHairPreference : null,
-              translated_for_hair_type: Boolean(translateForHairType),
-            }),
-          });
-          const createData = await createRes.json();
-          if (createRes.ok) setMatchId(createData.id);
-        } catch (err) {
-          console.error("Failed to create style_matches row:", err);
-        }
-      }
-
-      setPageState("confirm");
+      await finalizeMatch(detectedStyle, inputType, inputType === "text" ? (body.text as string) : undefined);
     } catch (err) {
       // A bare network failure and a Vercel platform-level timeout
       // (function killed mid-request, no response body) look identical
@@ -1649,6 +1742,66 @@ function StyleMatchContent() {
           </div>
         )}
 
+        {pageState === "disambiguate" && detected && (
+          <div>
+            <h2 className="font-serif text-2xl font-semibold text-dark">
+              We think this is {detected.style_name} — does one of these match better?
+            </h2>
+            {detected.confidence === "low" && (
+              <p className="mt-2 text-sm text-dark/60">
+                We&apos;re not fully sure on this one - pick whichever looks right, or browse styles yourself.
+              </p>
+            )}
+
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                onClick={confirmDetectedStyle}
+                className="w-full border border-bronze/40 p-4 text-left transition-colors hover:border-bronze"
+              >
+                <p className="font-serif text-lg text-dark">{detected.style_name}</p>
+                <p className="mt-1 text-sm text-dark/70">{detected.style_description}</p>
+                {detected.confidence_reason && (
+                  <p className="mt-2 font-mono text-[9px] uppercase tracking-wide text-bronze2">
+                    {detected.confidence_reason}
+                  </p>
+                )}
+              </button>
+
+              {detected.alternative_style && (
+                <button
+                  type="button"
+                  onClick={chooseAlternativeStyle}
+                  className="w-full border border-bronze/40 p-4 text-left transition-colors hover:border-bronze"
+                >
+                  <p className="font-serif text-lg text-dark">{detected.alternative_style}</p>
+                  <p className="mt-2 font-mono text-[9px] uppercase tracking-wide text-bronze2">
+                    tap if this looks more accurate →
+                  </p>
+                </button>
+              )}
+            </div>
+
+            {detected.confidence === "low" && (
+              <button
+                type="button"
+                onClick={() => setPageState("inspo")}
+                className="mt-4 w-full border border-bronze/40 p-4 text-center text-sm font-medium text-dark/70 transition-colors hover:border-bronze"
+              >
+                None of these - let me browse styles →
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={resetToLanding}
+              className="mt-6 text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70"
+            >
+              Start over
+            </button>
+          </div>
+        )}
+
         {pageState === "confirm" && detected && (
           <div>
             <div className="flex items-start justify-between gap-4">
@@ -1704,6 +1857,25 @@ function StyleMatchContent() {
               <span className="mt-4 inline-block rounded-full bg-amber/20 px-3 py-1 text-xs font-semibold text-amber">
                 May need modifications
               </span>
+            )}
+
+            {detected.bang_length && (
+              <div className="mt-6 flex items-center gap-4 rounded-xl border border-bronze/30 p-4">
+                <BangLengthDiagram bangLength={detected.bang_length} />
+                <div className="min-w-0">
+                  <p className="text-sm text-dark/80">
+                    We detected bangs ending <strong>{BANG_LENGTH_LABEL[detected.bang_length]}</strong> the eyebrow —
+                    this is key to finding the right tutorials and stylist.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => (detected.alternative_style ? setPageState("disambiguate") : resetToLanding())}
+                    className="mt-2 text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
+                  >
+                    Not quite →
+                  </button>
+                </div>
+              </div>
             )}
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
