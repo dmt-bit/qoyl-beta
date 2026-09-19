@@ -23,6 +23,19 @@ import {
 import type { StyleTranslation } from "@/lib/styleTranslations";
 
 type BangLength = "above-eyebrow" | "at-eyebrow" | "below-eyebrow" | "cheekbone-length";
+type ApproximateLength = "twa" | "short" | "medium" | "long" | "waist" | "hip";
+type LocType = "starter" | "traditional" | "sisterlocks" | "faux" | "butterfly" | "boho";
+type BraidType =
+  | "box"
+  | "knotless"
+  | "cornrow"
+  | "goddess"
+  | "tribal"
+  | "micro"
+  | "senegalese-twist"
+  | "passion-twist"
+  | "marley-twist"
+  | "spring-twist";
 
 type DetectedStyle = {
   style_name: string;
@@ -35,7 +48,14 @@ type DetectedStyle = {
   confidence_reason?: string | null;
   alternative_style?: string | null;
   hair_length: string;
+  approximate_length?: ApproximateLength | null;
   bang_length?: BangLength | null;
+  style_is_cut?: boolean;
+  has_color_treatment?: boolean;
+  color_type?: string | null;
+  loc_type?: LocType | null;
+  braid_type?: BraidType | null;
+  is_protective_style?: boolean;
   requires_fake_hair: boolean;
   fake_hair_type: string | null;
   accessories_visible: string[];
@@ -115,6 +135,9 @@ type PageState =
   | "deepSurvey"
   | "analyzing"
   | "disambiguate"
+  | "braidDisambiguate"
+  | "cutRouting"
+  | "locWarning"
   | "confirm"
   | "results";
 type ResultTab = "tutorials" | "color" | "shopping" | "stylist";
@@ -858,6 +881,10 @@ function StyleMatchContent() {
     setSavedChoice(null);
     setJustUsedFreeMatch(false);
     setPendingMatchInput(null);
+    setBraidRoutingResolved(false);
+    setCutRoutingResolved(false);
+    setLocRoutingResolved(false);
+    setSelectedBraidType(null);
   }
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -960,6 +987,61 @@ function StyleMatchContent() {
     setPageState("confirm");
   }
 
+  // Tracks which of the box/knotless-braid, haircut, and starter-loc
+  // routing decisions have already been made for the current match, so
+  // proceedPastRouting doesn't re-show a screen the user already
+  // resolved (e.g. after picking "faux locs instead" and looping back
+  // through the queue). Reset in resetToLanding.
+  const [braidRoutingResolved, setBraidRoutingResolved] = useState(false);
+  const [selectedBraidType, setSelectedBraidType] = useState<"box" | "knotless" | null>(null);
+  const [cutRoutingResolved, setCutRoutingResolved] = useState(false);
+  const [locRoutingResolved, setLocRoutingResolved] = useState(false);
+
+  // Runs after the style itself is settled (confidence disambiguation,
+  // if any, already resolved) - checks the remaining routing decisions
+  // in priority order and shows the first unresolved one, or finalizes
+  // the match once none apply. Each routing screen's own handler below
+  // marks its flag resolved and calls this again to continue down the
+  // chain, so multiple conditions (e.g. a colored haircut) each still
+  // get their turn rather than only the first one ever being asked.
+  //
+  // justResolved is passed explicitly rather than relying on
+  // braidRoutingResolved/etc. state - setBraidRoutingResolved(true)
+  // called by the same handler just before this doesn't take effect
+  // until the next render, so reading the state var here would still
+  // see the stale pre-update value and re-show the same screen forever.
+  function proceedPastRouting(
+    style: DetectedStyle,
+    inputType: "photo" | "text",
+    bodyText?: string,
+    justResolved?: "braid" | "cut" | "loc"
+  ) {
+    setDetected(style);
+
+    if (
+      justResolved !== "braid" &&
+      !braidRoutingResolved &&
+      (style.braid_type === "box" || style.braid_type === "knotless")
+    ) {
+      setPageState("braidDisambiguate");
+      return;
+    }
+    if (justResolved !== "cut" && !cutRoutingResolved && style.style_is_cut) {
+      setPageState("cutRouting");
+      return;
+    }
+    if (
+      justResolved !== "loc" &&
+      !locRoutingResolved &&
+      (style.loc_type === "starter" || style.loc_type === "traditional")
+    ) {
+      setPageState("locWarning");
+      return;
+    }
+
+    finalizeMatch(style, inputType, bodyText);
+  }
+
   // Swaps in the alternative style the disambiguation screen offered -
   // only style_name is known to differ; every other field (hair_length,
   // difficulty, etc.) was computed by the model around its top guess and
@@ -969,12 +1051,48 @@ function StyleMatchContent() {
   function chooseAlternativeStyle() {
     if (!detected?.alternative_style || !pendingMatchInput) return;
     const swapped: DetectedStyle = { ...detected, style_name: detected.alternative_style };
-    finalizeMatch(swapped, pendingMatchInput.inputType, pendingMatchInput.text);
+    proceedPastRouting(swapped, pendingMatchInput.inputType, pendingMatchInput.text);
   }
 
   function confirmDetectedStyle() {
     if (!detected || !pendingMatchInput) return;
-    finalizeMatch(detected, pendingMatchInput.inputType, pendingMatchInput.text);
+    proceedPastRouting(detected, pendingMatchInput.inputType, pendingMatchInput.text);
+  }
+
+  // ---- box vs. knotless braids (item 5) - shown regardless of
+  // confidence whenever either is detected, since the two are
+  // financially/physically distinct enough that a wrong guess matters
+  // even when the model is otherwise sure.
+  function chooseBraidType(type: "box" | "knotless") {
+    if (!detected || !pendingMatchInput) return;
+    const label = type === "box" ? "Box Braids" : "Knotless Braids";
+    const resolved: DetectedStyle = { ...detected, style_name: label, braid_type: type };
+    setBraidRoutingResolved(true);
+    proceedPastRouting(resolved, pendingMatchInput.inputType, pendingMatchInput.text, "braid");
+  }
+
+  // ---- cut vs. style-on-existing-hair (item 2) ----
+  function confirmWantsCut() {
+    if (!detected || !pendingMatchInput) return;
+    setCutRoutingResolved(true);
+    proceedPastRouting(detected, pendingMatchInput.inputType, pendingMatchInput.text, "cut");
+  }
+  function declineCut() {
+    resetToLanding();
+    setError("Try uploading a photo of a style on hair closer to your own length.");
+  }
+
+  // ---- starter/traditional locs commitment warning (item 4) ----
+  function confirmLocJourney() {
+    if (!detected || !pendingMatchInput) return;
+    setLocRoutingResolved(true);
+    proceedPastRouting(detected, pendingMatchInput.inputType, pendingMatchInput.text, "loc");
+  }
+  function chooseFauxLocsInstead() {
+    if (!detected || !pendingMatchInput) return;
+    setLocRoutingResolved(true);
+    const swapped: DetectedStyle = { ...detected, style_name: "Faux Locs", loc_type: "faux" };
+    proceedPastRouting(swapped, pendingMatchInput.inputType, pendingMatchInput.text, "loc");
   }
 
   async function analyze(body: Record<string, unknown>, inputType: "photo" | "text") {
@@ -1020,7 +1138,7 @@ function StyleMatchContent() {
         return;
       }
 
-      await finalizeMatch(detectedStyle, inputType, inputType === "text" ? (body.text as string) : undefined);
+      proceedPastRouting(detectedStyle, inputType, inputType === "text" ? (body.text as string) : undefined);
     } catch (err) {
       // A bare network failure and a Vercel platform-level timeout
       // (function killed mid-request, no response body) look identical
@@ -1802,6 +1920,131 @@ function StyleMatchContent() {
           </div>
         )}
 
+        {pageState === "braidDisambiguate" && detected && (
+          <div>
+            <h2 className="font-serif text-2xl font-semibold text-dark lowercase">
+              box braids or knotless braids?
+            </h2>
+            <p className="mt-2 text-sm text-dark/60">
+              These are the two most commonly confused braid styles — the difference matters for price and comfort.
+            </p>
+
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                onClick={() => setSelectedBraidType("box")}
+                className={`w-full border p-4 text-left transition-colors ${
+                  selectedBraidType === "box" ? "border-dark bg-dark text-cream" : "border-bronze/40 text-dark"
+                }`}
+              >
+                <p className="font-serif text-lg">Box Braids</p>
+                <p className={`mt-1 text-sm ${selectedBraidType === "box" ? "text-cream/80" : "text-dark/70"}`}>
+                  Knot at the root. More tension on scalp. Typically $50-100 less than knotless. Slightly faster
+                  install.
+                </p>
+                <p
+                  className={`mt-2 font-mono text-[9px] uppercase tracking-wide ${
+                    selectedBraidType === "box" ? "text-cream/60" : "text-bronze2"
+                  }`}
+                >
+                  root: visible bump/knot
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedBraidType("knotless")}
+                className={`w-full border p-4 text-left transition-colors ${
+                  selectedBraidType === "knotless" ? "border-dark bg-dark text-cream" : "border-bronze/40 text-dark"
+                }`}
+              >
+                <p className="font-serif text-lg">Knotless Braids</p>
+                <p className={`mt-1 text-sm ${selectedBraidType === "knotless" ? "text-cream/80" : "text-dark/70"}`}>
+                  Feed-in technique. No knot at root. Less tension and pain. More natural look at root. Higher price
+                  point.
+                </p>
+                <p
+                  className={`mt-2 font-mono text-[9px] uppercase tracking-wide ${
+                    selectedBraidType === "knotless" ? "text-cream/60" : "text-bronze2"
+                  }`}
+                >
+                  root: flat and clean
+                </p>
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => selectedBraidType && chooseBraidType(selectedBraidType)}
+              disabled={!selectedBraidType}
+              className="mt-6 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-40"
+            >
+              This is right →
+            </button>
+
+            <Link
+              href="/posts?q=box+braids+vs+knotless+braids"
+              className="mt-4 block text-center text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70"
+            >
+              Not sure? →
+            </Link>
+          </div>
+        )}
+
+        {pageState === "cutRouting" && detected && (
+          <div>
+            <h2 className="font-serif text-2xl font-semibold text-dark">This looks like a haircut, not a style</h2>
+            <p className="mt-2 text-sm text-dark/70">
+              {detected.style_name} is a haircut that requires a professional trim — it changes your actual hair
+              length rather than just how existing length is styled.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={confirmWantsCut}
+                className="flex-1 bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
+              >
+                Yes - I want this cut →
+              </button>
+              <button
+                type="button"
+                onClick={declineCut}
+                className="flex-1 border border-bronze/40 py-3 text-sm font-semibold text-dark/80 transition-colors hover:border-bronze"
+              >
+                No - I want to style my existing hair like this →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {pageState === "locWarning" && detected && (
+          <div>
+            <h2 className="font-serif text-2xl font-semibold text-dark">Locs are a permanent style</h2>
+            <p className="mt-2 text-sm text-dark/70">
+              Starter locs are a multi-year commitment — your hair will permanently loc over time and cannot be
+              easily reversed.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={confirmLocJourney}
+                className="flex-1 bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
+              >
+                Yes - I want to start my loc journey →
+              </button>
+              <button
+                type="button"
+                onClick={chooseFauxLocsInstead}
+                className="flex-1 border border-bronze/40 py-3 text-sm font-semibold text-dark/80 transition-colors hover:border-bronze"
+              >
+                I want temporary locs (faux locs) →
+              </button>
+            </div>
+          </div>
+        )}
+
         {pageState === "confirm" && detected && (
           <div>
             <div className="flex items-start justify-between gap-4">
@@ -1828,6 +2071,11 @@ function StyleMatchContent() {
               <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium capitalize text-bronze2">
                 {detected.hair_length} length
               </span>
+              {detected.approximate_length && (
+                <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium capitalize text-bronze2">
+                  detected length: {detected.approximate_length}
+                </span>
+              )}
               <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium capitalize text-bronze2">
                 {detected.difficulty}
               </span>
@@ -1840,6 +2088,39 @@ function StyleMatchContent() {
                 </span>
               )}
             </div>
+
+            {/* Length gap (item 6) - lengthDifference is already collected
+                in the deep survey (step 2, "how does this length compare
+                to your current hair?"), same question the spec's length-
+                gap alert would otherwise re-ask, so this surfaces what
+                was already decided rather than asking it twice. */}
+            {lengthDifference === "longer" && (
+              <p className="mt-2 text-xs text-dark/50">
+                {wantsLengthExtensions
+                  ? "This style is longer than your current hair - extension options are included in your shopping list."
+                  : "This style is longer than your current hair - tutorials will focus on achieving this length naturally."}
+              </p>
+            )}
+
+            {detected.has_color_treatment && (
+              <div className="mt-4 rounded-xl border border-bronze/30 p-4">
+                <p className="text-sm text-dark/80">
+                  This style includes{" "}
+                  <strong className="capitalize">{(detected.color_type ?? "color").replace(/_/g, " ")}</strong> -
+                  color services are separate from the hairstyle itself.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("color");
+                    setPageState("results");
+                  }}
+                  className="mt-2 text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
+                >
+                  I only want the color →
+                </button>
+              </div>
+            )}
 
             <div className="mt-4 flex flex-wrap gap-2">
               {(detected.compatible_hair_types ?? []).map((t) => (

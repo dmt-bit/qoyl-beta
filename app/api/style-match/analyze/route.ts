@@ -81,25 +81,46 @@ BANG STYLES - distinguish carefully:
 - wispy bangs: soft, feathery, not blunt
 Before identifying any bang style, check: where does the bang end relative to the eyebrow? Is it parted in the middle (curtain)? Swept to one side (side swept)? Very short and blunt (baby)? Soft and feathery (wispy)?
 
-CURL/WAVE STYLES - distinguish carefully:
-- wash and go: natural curl pattern with defining products, no manipulation
-- twist out: unraveled twists creating a defined stretched curl pattern
-- braid out: unraveled braids creating a wave/curl pattern
+TWIST AND CURL STYLES - distinguish carefully:
+- twist out: unraveled two-strand twists, defined stretched curl pattern with visible twist lines
+- braid out: unraveled braids, similar to twist out but a different wave pattern
+- wash and go: natural curl pattern with defining products, no manipulation, no twist/braid definition lines
+- finger coils: individually coiled sections using fingers, tighter definition than wash and go
+- flexi rod set: uniform spiral curls from flexible rods, very defined
 - roller set: uniform curl from rollers
-- flexi rod set: defined spiral curls from flexible rods
 
-BRAID STYLES - distinguish carefully:
-- box braids: individual braids with a square section at the root
-- knotless braids: feed-in braids with no knot at the root, starts with natural hair
-- cornrows: braids flat against the scalp
-- goddess braids: large chunky braids, often with loose curls at ends
+BRAID STYLES - distinguish carefully (root section is the tell for box vs. knotless - see below):
+- box braids: individual braids with a visible knot/square section at the root, more tension on the scalp
+- knotless braids: feed-in technique, no knot at the root - the root looks flat and clean, starts with natural hair, less scalp tension
+- cornrows / feed-in cornrows: braids flat against the scalp in rows
+- goddess braids: large chunky braids, often with loose flowing ends
+- tribal braids: cornrow patterns that form shapes or designs
 - micro braids: very thin individual braids
+- senegalese twists: rope twists using straight, smooth extension hair
+- passion twists: twists using wavy/water-wave extension hair, bohemian texture
+- marley twists: twists using thick, kinky marley hair, very full texture
+- spring twists: pre-twisted extension hair with a springy coiled texture
+Box braids and knotless braids are the two most commonly confused styles in this list - look specifically at the root: a visible knot/bump means box braids, a flat clean root means knotless.
 
-PROTECTIVE STYLES - distinguish:
-- faux locs: wrapped or crocheted locs using extension hair
-- starter locs: real locs just beginning
-- passion twists: twists using water wave extension hair
-- senegalese twists: rope twists using straight extension hair`;
+LOC STYLES - distinguish carefully:
+- starter locs / baby locs: real locs just beginning, natural hair coiling into locs (not extension hair)
+- traditional locs: mature, established real locs
+- sisterlocks: very thin, uniform real locs created with a specific tool
+- faux locs: temporary locs using extension hair, wrapped or crocheted, can be removed
+- butterfly locs: soft, wavy faux locs with a looped/distressed texture at the ends
+- boho faux locs: faux locs with loose curly extension hair woven in throughout
+Starter/traditional/sisterlocks are REAL locs on the person's own hair (permanent, grows over time). Faux/butterfly/boho are extension-hair locs (temporary, can be taken out).
+
+CUTS - identify when the photo shows a haircut rather than a styling technique on existing hair:
+- pixie cut: short all over, typically under 3 inches
+- bob: chin length or above, blunt or layered
+- lob (long bob): chin to collarbone length
+- shag: layered cut with curtain bangs and heavy texturizing throughout
+- wolf cut: shag-inspired with heavy layers and volume concentrated at the crown
+A cut changes the hair's actual length via scissors, not just how existing length is styled - if what's shown could only be achieved by cutting hair (not detangling/curling/braiding it), this is a cut.
+
+COLOR - note when a color service (not just the cut/style) is part of what's shown:
+color_type options: balayage, highlights, ombre, sombre, single_process, color_melt, money_piece, vivid_color, natural (no color treatment visible)`;
 
 // Shortened deliberately - fewer/shorter fields means less output for
 // the model to generate, which is a direct, significant chunk of total
@@ -108,9 +129,13 @@ PROTECTIVE STYLES - distinguish:
 // hair photo attached the photo AND asked for more output in the same
 // call. That's now a separate, tiny, image-free follow-up call fired
 // after this one returns - see app/api/style-match/translate/route.ts.
-// confidence/confidence_reason/alternative_style/bang_length are new
-// (disambiguation feature) - kept short (one sentence max, single
-// words/null) to limit how much this adds to generation time.
+// confidence/confidence_reason/alternative_style/bang_length/
+// style_is_cut/has_color_treatment/color_type/loc_type/braid_type/
+// is_protective_style/approximate_length are the disambiguation feature
+// - every one of them is a boolean, single enum word, or null (never a
+// full sentence except confidence_reason) specifically so 11 extra
+// fields doesn't blow up generation time the way 11 extra sentences
+// would.
 function buildAnalysisInstructions(opts: {
   colorMatch: boolean;
   translateForHairType: boolean;
@@ -123,7 +148,14 @@ function buildAnalysisInstructions(opts: {
     `"confidence_reason": "one sentence on what visual features confirmed this identification"`,
     `"alternative_style": "if confidence is medium or low, the other specific style this could be instead - else null"`,
     `"hair_length": "short/medium/long"`,
+    `"approximate_length": "twa/short/medium/long/waist/hip"`,
     `"bang_length": "above-eyebrow/at-eyebrow/below-eyebrow/cheekbone-length - only if bangs are visible, else null"`,
+    `"style_is_cut": true/false - true only if this is a haircut (pixie/bob/lob/shag/wolf cut), not a styling technique on existing length`,
+    `"has_color_treatment": true/false`,
+    `"color_type": "balayage/highlights/ombre/sombre/single_process/color_melt/money_piece/vivid_color/natural - natural if has_color_treatment is false"`,
+    `"loc_type": "starter/traditional/sisterlocks/faux/butterfly/boho - only if locs are visible, else null"`,
+    `"braid_type": "box/knotless/cornrow/goddess/tribal/micro/senegalese-twist/passion-twist/marley-twist/spring-twist - only if braids/twists using this technique are visible, else null"`,
+    `"is_protective_style": true/false - true for any braid/twist/loc/wig/weave style`,
     `"requires_fake_hair": true/false`,
     `"fake_hair_type": "type or null"`,
     `"accessories_visible": []`,
@@ -144,6 +176,20 @@ function buildAnalysisInstructions(opts: {
   return `${STYLE_DISAMBIGUATION_GUIDANCE}\n\nReturn ONLY this JSON object, no other text:\n{\n  ${fields.join(",\n  ")}\n}`;
 }
 
+type LocType = "starter" | "traditional" | "sisterlocks" | "faux" | "butterfly" | "boho";
+type BraidType =
+  | "box"
+  | "knotless"
+  | "cornrow"
+  | "goddess"
+  | "tribal"
+  | "micro"
+  | "senegalese-twist"
+  | "passion-twist"
+  | "marley-twist"
+  | "spring-twist";
+type ApproximateLength = "twa" | "short" | "medium" | "long" | "waist" | "hip";
+
 type DetectedStyle = {
   style_name: string;
   style_description: string;
@@ -151,7 +197,14 @@ type DetectedStyle = {
   confidence_reason: string | null;
   alternative_style: string | null;
   hair_length: string;
+  approximate_length: ApproximateLength;
   bang_length: "above-eyebrow" | "at-eyebrow" | "below-eyebrow" | "cheekbone-length" | null;
+  style_is_cut: boolean;
+  has_color_treatment: boolean;
+  color_type: string;
+  loc_type: LocType | null;
+  braid_type: BraidType | null;
+  is_protective_style: boolean;
   requires_fake_hair: boolean;
   fake_hair_type: string | null;
   accessories_visible: string[];
@@ -297,10 +350,12 @@ export async function POST(request: Request) {
         // Lower than the original 1024 on purpose - this schema is
         // short enough that 1024 was never being used, just giving the
         // model room to ramble. Capping it tighter nudges faster
-        // generation too. Bumped from 512 for the disambiguation fields
-        // (confidence_reason is a full sentence on top of
-        // style_description) - still well under 1024.
-        max_tokens: 700,
+        // generation too. Bumped 512 -> 700 for the first disambiguation
+        // round (confidence_reason is a full sentence), then -> 900 for
+        // the cut/color/loc/braid/length fields - those are all
+        // booleans/short enums, not sentences, so the per-field cost is
+        // much smaller than confidence_reason's was; still under 1024.
+        max_tokens: 900,
         messages: [{ role: "user", content: messageContent }],
       }),
     });
