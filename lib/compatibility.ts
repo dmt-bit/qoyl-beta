@@ -3,6 +3,11 @@ import { classifyProductWeight, ProductWeight } from "@/lib/productWeight";
 
 export type Match = {
   ingredient_name: string;
+  // INCI name specifically (ingredient_name above prefers common_name) -
+  // needed by detectIngredientInteractions below for name-based checks
+  // (e.g. isSulfate) that must match on the chemical name, not whatever
+  // display name a caller happens to see.
+  inciName: string;
   score: number;
   rating: "good" | "neutral" | "caution" | "avoid" | string;
   position: number;
@@ -11,6 +16,15 @@ export type Match = {
   // null for ingredients not yet tagged. Drives both the function-aware
   // scoring modifiers below and the ingredient-breakdown badge on /search.
   primaryFunction: string | null;
+  // Added alongside primaryFunction for interaction detection and name-
+  // keyword evidence scoring below, both of which need to recognize e.g.
+  // a secondary-protein ingredient the same way applyIngredientFunctionAdjustment
+  // already does.
+  secondaryFunction: string | null;
+  // false when this ingredient had no compatibility_scores row at the
+  // resolved porosity and was scored as a neutral 5/10 fallback instead
+  // of excluded from the weighted mean - see resolveScoreResult.
+  scoredFromDb: boolean;
 };
 
 // Human-readable labels for ingredients.primary_function, shared by the
@@ -51,6 +65,24 @@ export type ScoreResult = {
   // score.
   nameKeywordModifier: number;
   nameKeywordMatch: (NameKeywordMatch & { direction: "positive" | "negative" }) | null;
+  // Ingredients with no compatibility_scores row at the resolved porosity -
+  // scored as a neutral 5/10 fallback (see resolveScoreResult) rather than
+  // silently excluded, surfaced here so the UI can disclose it.
+  unscoredIngredientCount: number;
+  unscoredIngredientNames: string[];
+  // Whole-formula patterns detected across multiple ingredients at once -
+  // see detectIngredientInteractions. Each modifier is already folded
+  // into normalizedScore.
+  interactionsDetected: IngredientInteraction[];
+  // INCI names of any formaldehyde-releasing preservative present -
+  // see applyFormaldehydeReleaserOverride. Empty array (not null) when none.
+  formaldehydeReleasersPresent: string[];
+};
+
+export type IngredientInteraction = {
+  interactionId: string;
+  modifier: number;
+  explanation: string;
 };
 
 export function parseIngredients(text: string): string[] {
@@ -676,6 +708,41 @@ function applyColorTreatedAdjustment(
   return { score: adjusted, rating: ratingForScore(adjusted) };
 }
 
+// ---- Formaldehyde-releasing preservative override -----------------------
+//
+// These release small amounts of formaldehyde over time as they break
+// down, which is the actual irritant/sensitizer/carcinogen-classified
+// exposure - the preservative itself isn't the concern, what it releases
+// is. That's categorically different from every other adjustment in this
+// file (which nudge a score up or down) - this overrides the score
+// outright, the same pattern applyBabySafetyAdjustment below uses for its
+// own hard-avoid list, and runs last (after every other per-ingredient
+// adjustment) so nothing upstream can soften it.
+//
+// Dropped Butylated Hydroxytoluene (BHT) from an earlier draft of this
+// list - it's a synthetic antioxidant, not a formaldehyde releaser, and
+// including it here would have been a real inaccuracy in a safety-
+// education feature. Bronopol (2-Bromo-2-Nitropropane-1,3-Diol) is
+// arguably a 6th member of this family but wasn't in the original list
+// this was scoped from, so it's left out rather than silently expanded.
+const FORMALDEHYDE_RELEASERS = new Set([
+  "dmdm hydantoin",
+  "quaternium-15",
+  "imidazolidinyl urea",
+  "diazolidinyl urea",
+  "sodium hydroxymethylglycinate",
+]);
+
+function applyFormaldehydeReleaserOverride(
+  inciName: string,
+  score: number,
+  rating: string
+): { score: number; rating: string } {
+  const name = inciName.trim().toLowerCase();
+  if (!FORMALDEHYDE_RELEASERS.has(name)) return { score, rating };
+  return { score: 3, rating: "avoid" };
+}
+
 // ---- Baby-safety and child-safety scoring adjustments ---------------------
 //
 // Baby scoring (item 6 of the family-profiles spec) is safety-first, not
@@ -1038,19 +1105,97 @@ const NAME_KEYWORD_CATEGORIES: {
   },
 ];
 
-// Sums every matching category's delta, capped to +/-15 - the total is
-// what stacks onto the ingredient score. topPositive/topNegative (the
-// single largest contributor in each direction) drive the why-copy
-// addendum and search/routine badge, so a product with several small
-// matching categories still gets one clear, specific reason surfaced
-// rather than a vague blend of all of them.
+
+// ---- Name-keyword validation against real ingredients --------------------
+//
+// A product name is a claim ("Scalp Strengthening"); the ingredient list
+// is the evidence for that claim. Without this, the name-keyword modifier
+// could swing a score as much as an entire category of real ingredient
+// chemistry (audit finding: +15 on Test C from name alone). This scales
+// each matching category's delta by how well the SCORED ingredients back
+// up that specific category's claim before it's summed into the total.
+//
+// Each category maps to the ingredient function(s) that would genuinely
+// support its claim - e.g. "Scalp Strengthening" is only as credible as
+// the scalp_active/bond_builder ingredients actually in the formula.
+// "volume" is position-based rather than function-based per its own
+// definition (lightweight = early-position ingredients, not a function
+// tag). "natural" has no ingredient-function analog at all (nothing in
+// ingredients.primary_function means "natural") - exempted rather than
+// forced through a made-up mapping, so it always applies at full
+// strength like every category did before this existed.
+const NAME_KEYWORD_EVIDENCE_FUNCTIONS: Partial<Record<string, string[]>> = {
+  moisture: ["humectant"],
+  curl_definition: ["film_former", "conditioning_agent", "humectant"],
+  scalp: ["scalp_active", "bond_builder"],
+  strengthening: ["scalp_active", "bond_builder", "protein"],
+  frizz_control: ["film_former", "conditioning_agent"],
+  protein: ["protein"],
+  clarifying: ["chelating_agent", "surfactant"],
+  color_treated: ["bond_builder"],
+  sensitive_scalp: ["scalp_active"],
+  heat_protection: ["film_former"],
+  protective_styling: ["occlusive", "emollient"],
+  anti_dandruff: ["scalp_active"],
+  wavy: ["humectant", "conditioning_agent"],
+};
+const NAME_KEYWORD_EVIDENCE_EXEMPT = new Set(["natural"]);
+
+// 0-1: what proportion of this product's scored ingredients back up the
+// given category's claim. "volume" checks position instead of function
+// (its own definition); categories in NAME_KEYWORD_EVIDENCE_EXEMPT or with
+// no mapping return 1 (full strength) rather than silently zeroing out a
+// category nobody has defined evidence for yet.
+function computeIngredientEvidence(category: string, matches: Match[]): number {
+  if (NAME_KEYWORD_EVIDENCE_EXEMPT.has(category)) return 1;
+  if (matches.length === 0) return 0;
+
+  if (category === "volume") {
+    const supporting = matches.filter((m) => m.position <= 5 && m.score >= 7).length;
+    return supporting / matches.length;
+  }
+
+  const qualifyingFunctions = NAME_KEYWORD_EVIDENCE_FUNCTIONS[category];
+  if (!qualifyingFunctions) return 1;
+
+  const supporting = matches.filter(
+    (m) =>
+      m.score >= 7 &&
+      ((m.primaryFunction && qualifyingFunctions.includes(m.primaryFunction)) ||
+        (m.secondaryFunction && qualifyingFunctions.includes(m.secondaryFunction)))
+  ).length;
+  return supporting / matches.length;
+}
+
+// Scales a category's raw delta down when the ingredients don't back up
+// what the name claims - applies to negative deltas too (a "curl
+// defining" claim mismatched with straight hair's ingredients is just as
+// unvalidated as a positive claim would be), per the same evidence check.
+function getValidatedNameKeywordModifier(rawNameModifier: number, ingredientEvidence: number): number {
+  if (ingredientEvidence > 0.7) return rawNameModifier;
+  if (ingredientEvidence > 0.4) return Math.round(rawNameModifier * 0.6);
+  return Math.round(rawNameModifier * 0.3);
+}
+
+// Sums every matching category's VALIDATED delta (see above), capped to
+// +/-15 - the total is what stacks onto the ingredient score.
+// topPositive/topNegative (the single largest contributor in each
+// direction, post-validation) drive the why-copy addendum and search/
+// routine badge, so a product with several small matching categories
+// still gets one clear, specific reason surfaced rather than a vague
+// blend of all of them. ingredientMatches defaults to [] for any caller
+// that hasn't been updated to pass the scored ingredient list - every
+// category then falls back to 0 evidence (30% strength) rather than
+// throwing, since "unknown ingredient support" is a safer default than
+// "assume full support."
 export function getNameKeywordModifiers(
   productName: string,
   hairConcerns: string[] | null,
   family: CurlFamily | null,
   porosity: string,
   scalpCondition: string | null,
-  colorTreated: boolean = false
+  colorTreated: boolean = false,
+  ingredientMatches: Match[] = []
 ): { modifier: number; topPositive: NameKeywordMatch | null; topNegative: NameKeywordMatch | null } {
   const name = productName.toLowerCase();
   const ctx: KeywordContext = { hairConcerns: hairConcerns ?? [], family, porosity, scalpCondition, colorTreated };
@@ -1061,7 +1206,11 @@ export function getNameKeywordModifiers(
 
   for (const entry of NAME_KEYWORD_CATEGORIES) {
     if (!hasAny(name, entry.keywords)) continue;
-    const delta = entry.score(ctx);
+    const rawDelta = entry.score(ctx);
+    if (rawDelta === 0) continue;
+
+    const evidence = computeIngredientEvidence(entry.category, ingredientMatches);
+    const delta = getValidatedNameKeywordModifier(rawDelta, evidence);
     if (delta === 0) continue;
     total += delta;
 
@@ -1254,6 +1403,110 @@ export type ScoringProfile = {
   babySafety?: boolean;
   childSafety?: { ageRange: string | null; sensorySensitive: boolean };
 };
+
+// ---- Whole-formula ingredient interactions --------------------------------
+//
+// Everything above judges one ingredient at a time. Some real problems
+// (and some real synergies) only show up from how several ingredients sit
+// together in the same formula - a single humectant in a dry climate is
+// fine, three of them near the top of the label is a different formula
+// entirely. These run once per product, after the per-ingredient matches
+// are final, and stack as flat whole-product modifiers alongside the
+// weight/name-keyword modifiers.
+function isHumectantMatch(m: Match): boolean {
+  return m.primaryFunction === "humectant" || m.secondaryFunction === "humectant";
+}
+function isProteinMatch(m: Match): boolean {
+  return m.primaryFunction === "protein" || m.secondaryFunction === "protein";
+}
+function isOcclusiveMatch(m: Match): boolean {
+  return m.primaryFunction === "occlusive" || m.secondaryFunction === "occlusive";
+}
+function isBondBuilderMatch(m: Match): boolean {
+  return m.primaryFunction === "bond_builder" || m.secondaryFunction === "bond_builder";
+}
+
+function detectIngredientInteractions(matches: Match[], profile: ScoringProfile): IngredientInteraction[] {
+  const { climate, porosity, family, scalpCondition, hairConcerns, colorTreated } = profile;
+  const interactions: IngredientInteraction[] = [];
+
+  // 1 - multiple humectants in a dry climate compound the moisture-
+  // drawing problem each one already has individually.
+  if (isDryClimate(climate)) {
+    const humectantsInTop8 = matches.filter((m) => m.position <= 8 && isHumectantMatch(m)).length;
+    if (humectantsInTop8 >= 2) {
+      interactions.push({
+        interactionId: "multiple_humectants_dry_climate",
+        modifier: -3,
+        explanation: "Multiple humectants compound the moisture-drawing problem in dry climates.",
+      });
+    }
+  }
+
+  // 2 - protein-heavy + humectant-heavy formulas cause buildup on low
+  // porosity hair, which already struggles to absorb either on its own.
+  if (porosity === "low") {
+    const proteinsInTop10 = matches.filter((m) => m.position <= 10 && isProteinMatch(m)).length;
+    const humectantsInTop5 = matches.filter((m) => m.position <= 5 && isHumectantMatch(m)).length;
+    if (proteinsInTop10 >= 2 && humectantsInTop5 >= 2) {
+      interactions.push({
+        interactionId: "protein_humectant_overload_low_porosity",
+        modifier: -4,
+        explanation: "Protein-heavy + humectant-heavy formulas cause significant buildup on low porosity hair.",
+      });
+    }
+  }
+
+  // 3 - the most common real-world cause of scalp irritation is these two
+  // together, not either alone.
+  if (scalpCondition === "sensitive") {
+    const hasSulfateInTop10 = matches.some((m) => m.position <= 10 && isSulfate(m.inciName));
+    const hasFragranceInTop10 = matches.some((m) => m.position <= 10 && FRAGRANCE.has(m.inciName.trim().toLowerCase()));
+    if (hasSulfateInTop10 && hasFragranceInTop10) {
+      interactions.push({
+        interactionId: "sulfate_fragrance_sensitive_scalp",
+        modifier: -3,
+        explanation: "Sulfates and fragrance together are the most common cause of scalp irritation.",
+      });
+    }
+  }
+
+  // 4 - "damage"/"color_treated" per the originating spec map onto this
+  // app's real fields: hair_concerns has no "damage" value (breakage is
+  // the closest real analog, same substitution used throughout this file -
+  // see applyThinningHairAdjustment's comment), and color-treated is
+  // profile.colorTreated, a real boolean field, not a concern string.
+  const hasBreakageOrColorTreated = Boolean(hairConcerns?.includes("breakage")) || colorTreated;
+  if (hasBreakageOrColorTreated) {
+    const hasBondBuilderInTop15 = matches.some((m) => m.position <= 15 && isBondBuilderMatch(m));
+    const hasProteinInTop15 = matches.some((m) => m.position <= 15 && isProteinMatch(m));
+    if (hasBondBuilderInTop15 && hasProteinInTop15) {
+      interactions.push({
+        interactionId: "bond_builder_protein_synergy",
+        modifier: 3,
+        explanation: "Bond builder + protein together provide more complete repair than either alone.",
+      });
+    }
+  }
+
+  // 5 - a humectant earlier in the ingredient list than an occlusive is
+  // the LCO (Leave-in, Cream, Oil) method's moisture-then-seal order
+  // baked into the formulation itself, not just a styling technique.
+  if (family === "coily") {
+    const humectantPositions = matches.filter(isHumectantMatch).map((m) => m.position);
+    const occlusivePositions = matches.filter(isOcclusiveMatch).map((m) => m.position);
+    const hasLcoOrder = humectantPositions.some((hp) => occlusivePositions.some((op) => op > hp));
+    if (hasLcoOrder) {
+      interactions.push({
+        interactionId: "lco_layering_order_coily",
+        modifier: 2,
+        explanation: "Humectant then occlusive is the correct LCO order - the formula itself supports good layering technique.",
+      });
+    }
+  }
+
+  return interactions;
+}
 
 type ProfileRow = {
   curl_type: string | null;
@@ -1487,6 +1740,10 @@ function resolveScoreResult(
       productWeight: classifyProductWeight([], category ?? "", productName ?? ""),
       nameKeywordModifier: 0,
       nameKeywordMatch: null,
+      unscoredIngredientCount: 0,
+      unscoredIngredientNames: [],
+      interactionsDetected: [],
+      formaldehydeReleasersPresent: [],
     };
   }
 
@@ -1533,17 +1790,28 @@ function resolveScoreResult(
   }
 
   const matchList: Match[] = [];
+  const unscoredIngredientNames: string[] = [];
+  const formaldehydeReleasersPresent: string[] = [];
+
   for (const ingredient of ingredients) {
     const scored = bestRowPerIngredient.get(ingredient.id);
-    if (!scored) continue;
+    // No compatibility_scores row for this ingredient at the resolved
+    // porosity - scored as a neutral 5/10 with its normal position
+    // weight rather than excluded from the weighted mean entirely. A
+    // product with several unscored ingredients used to score as if it
+    // only had the scored ones, which is artificially high whenever the
+    // missing ones would have scored poorly.
+    const scoredFromDb = Boolean(scored);
+    if (!scored) unscoredIngredientNames.push(ingredient.common_name || ingredient.inci_name);
+    const base = scored ?? { score: 5, rating: "neutral" };
 
     let { score, rating } = hairTypeOverridden.has(ingredient.id)
-      ? scored
+      ? base
       : applyCurlTypeAdjustment(
           ingredient.inci_name,
           family,
-          scored.score,
-          scored.rating
+          base.score,
+          base.rating
         );
 
     // Climate and water hardness are independent of curl-type/hair-type
@@ -1599,13 +1867,24 @@ function resolveScoreResult(
     ));
     ({ score, rating } = applyIngredientFunctionAdjustment(ingredient, profile, score, rating));
 
+    // Runs last, deliberately - an override, not an adjustment, so
+    // nothing above can soften it. See applyFormaldehydeReleaserOverride.
+    const beforeFormaldehydeCheck = score;
+    ({ score, rating } = applyFormaldehydeReleaserOverride(ingredient.inci_name, score, rating));
+    if (score !== beforeFormaldehydeCheck) {
+      formaldehydeReleasersPresent.push(ingredient.common_name || ingredient.inci_name);
+    }
+
     matchList.push({
       ingredient_name: ingredient.common_name || ingredient.inci_name,
+      inciName: ingredient.inci_name,
       score,
       rating,
       position: ingredient.position,
       weight: positionWeight(ingredient.position),
       primaryFunction: ingredient.primary_function,
+      secondaryFunction: ingredient.secondary_function,
+      scoredFromDb,
     });
   }
 
@@ -1637,11 +1916,19 @@ function resolveScoreResult(
   // on top of the ingredient score (see getNameKeywordModifiers above).
   // Only meaningful with a real product name; scoreIngredientsText (raw
   // pasted label text, no catalog row) passes null and gets a no-op 0
-  // here, same as before this existed.
+  // here, same as before this existed. matchList is passed through so
+  // each matching category's delta is validated against the ingredients
+  // that actually back up its claim (see computeIngredientEvidence).
   const { modifier: nameKeywordModifier, topPositive, topNegative } = productName
-    ? getNameKeywordModifiers(productName, hairConcerns, family, porosity, scalpCondition, colorTreated)
+    ? getNameKeywordModifiers(productName, hairConcerns, family, porosity, scalpCondition, colorTreated, matchList)
     : { modifier: 0, topPositive: null, topNegative: null };
-  const normalizedScore = Math.min(100, Math.max(0, scoreBeforeNameKeywords + nameKeywordModifier));
+  const scoreBeforeInteractions = Math.min(100, Math.max(0, scoreBeforeNameKeywords + nameKeywordModifier));
+
+  // Whole-formula interaction patterns (see detectIngredientInteractions) -
+  // the last whole-product step before clamping to the final score.
+  const interactionsDetected = detectIngredientInteractions(matchList, profile);
+  const interactionModifierTotal = interactionsDetected.reduce((acc, i) => acc + i.modifier, 0);
+  const normalizedScore = Math.min(100, Math.max(0, scoreBeforeInteractions + interactionModifierTotal));
 
   // Thresholds match the request: >4 surfaces a positive reason, <-4 a
   // caution - a modifier that landed in between (or exactly at a
@@ -1653,7 +1940,17 @@ function resolveScoreResult(
       ? { ...topNegative, direction: "negative" }
       : null;
 
-  return { normalizedScore, matches: matchList, productWeight, nameKeywordModifier, nameKeywordMatch };
+  return {
+    normalizedScore,
+    matches: matchList,
+    productWeight,
+    nameKeywordModifier,
+    nameKeywordMatch,
+    unscoredIngredientCount: unscoredIngredientNames.length,
+    unscoredIngredientNames,
+    interactionsDetected,
+    formaldehydeReleasersPresent,
+  };
 }
 
 // Shared by the single-product scoring entry points below - fetches
@@ -1672,6 +1969,10 @@ async function scorePositionedIngredients(
         productWeight: classifyProductWeight([], category ?? "", productName ?? ""),
         nameKeywordModifier: 0,
         nameKeywordMatch: null,
+        unscoredIngredientCount: 0,
+        unscoredIngredientNames: [],
+        interactionsDetected: [],
+        formaldehydeReleasersPresent: [],
       },
     };
   }

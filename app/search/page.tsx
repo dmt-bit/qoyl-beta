@@ -296,6 +296,16 @@ function ResultCard({
             )}
             {cardExpanded && tier && scoreState?.status === "done" && productWeight && (
               <>
+                {scoreState.result.formaldehydeReleasersPresent.length > 0 && (
+                  <div className="mt-1">
+                    <p className="font-sans text-[12px] font-medium text-red">
+                      ⚠ contains formaldehyde-releasing preservative
+                    </p>
+                    <p className="font-mono text-[10px] text-red">
+                      {scoreState.result.formaldehydeReleasersPresent.join(", ")}
+                    </p>
+                  </div>
+                )}
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <span
                     className={`inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${TIER_CLASSES[tier]}`}
@@ -331,6 +341,30 @@ function ResultCard({
                   <p className="mt-1.5 rounded-md bg-amber/10 px-2 py-1.5 font-sans text-[11px] leading-snug text-amber">
                     Contains sulfates - may fade color faster. Consider a sulfate-free alternative.
                   </p>
+                )}
+                {scoreState.result.unscoredIngredientCount > 0 && (
+                  <p className="mt-1.5 font-mono text-[9px] text-muted">
+                    {scoreState.result.unscoredIngredientCount} ingredient
+                    {scoreState.result.unscoredIngredientCount === 1 ? "" : "s"} in this formula
+                    {" "}are not yet in our database - scored as neutral (5/10)
+                  </p>
+                )}
+                {scoreState.result.interactionsDetected.length > 0 && (
+                  <div className="mt-1.5">
+                    <p className="font-mono text-[9px] font-medium text-bronze">
+                      Formula interactions detected
+                    </p>
+                    <div className="mt-0.5 space-y-0.5">
+                      {scoreState.result.interactionsDetected.map((interaction) => (
+                        <p
+                          key={interaction.interactionId}
+                          className="font-sans text-[12px] font-light text-bronze2"
+                        >
+                          {interaction.explanation}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
                 )}
                 <div>
                   <Link
@@ -1145,6 +1179,16 @@ function SearchPageContent() {
 
               {manualScoreResult && (
                 <div className="mt-4 space-y-1.5">
+                  {manualScoreResult.formaldehydeReleasersPresent.length > 0 && (
+                    <div>
+                      <p className="font-sans text-[12px] font-medium text-red">
+                        ⚠ contains formaldehyde-releasing preservative
+                      </p>
+                      <p className="font-mono text-[10px] text-red">
+                        {manualScoreResult.formaldehydeReleasersPresent.join(", ")}
+                      </p>
+                    </div>
+                  )}
                   <span
                     className={`inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${
                       TIER_CLASSES[scoreTier(manualScoreResult.normalizedScore)]
@@ -1158,6 +1202,30 @@ function SearchPageContent() {
                       <IngredientRow key={`${m.ingredient_name}-${i}`} match={m} />
                     ))}
                   </div>
+                  {manualScoreResult.unscoredIngredientCount > 0 && (
+                    <p className="font-mono text-[9px] text-muted">
+                      {manualScoreResult.unscoredIngredientCount} ingredient
+                      {manualScoreResult.unscoredIngredientCount === 1 ? "" : "s"} in this formula
+                      {" "}are not yet in our database - scored as neutral (5/10)
+                    </p>
+                  )}
+                  {manualScoreResult.interactionsDetected.length > 0 && (
+                    <div>
+                      <p className="font-mono text-[9px] font-medium text-bronze">
+                        Formula interactions detected
+                      </p>
+                      <div className="mt-0.5 space-y-0.5">
+                        {manualScoreResult.interactionsDetected.map((interaction) => (
+                          <p
+                            key={interaction.interactionId}
+                            className="font-sans text-[12px] font-light text-bronze2"
+                          >
+                            {interaction.explanation}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <p className="pt-1 text-[10px] text-bronze">
                     Scores reflect cosmetic ingredient compatibility only - not medical advice.
                   </p>
