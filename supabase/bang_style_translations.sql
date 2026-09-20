@@ -65,4 +65,15 @@ INSERT INTO style_translations
  ARRAY['texturizing-spray','light-hold-spray','shine-serum'],
  ARRAY['small round brush','blow dryer','texturizing shears (for the cut itself)'],
  'wispy bangs tutorial soft texture styling',
- 'beginner', '15-20 min at salon · 5 min daily styling', true, false);
+ 'beginner', '15-20 min at salon · 5 min daily styling', true, false)
+ON CONFLICT (style_slug, hair_family) DO UPDATE SET
+  translation_headline = EXCLUDED.translation_headline,
+  how_to_achieve = EXCLUDED.how_to_achieve,
+  key_difference = EXCLUDED.key_difference,
+  products_needed = EXCLUDED.products_needed,
+  tools_needed = EXCLUDED.tools_needed,
+  youtube_search_override = EXCLUDED.youtube_search_override,
+  difficulty_for_family = EXCLUDED.difficulty_for_family,
+  time_estimate = EXCLUDED.time_estimate,
+  heat_required = EXCLUDED.heat_required,
+  fake_hair_required = EXCLUDED.fake_hair_required;
