@@ -58,6 +58,9 @@ export const INGREDIENT_FUNCTION_LABELS: Record<string, string> = {
   antioxidant: "Antioxidant",
   scalp_active: "Scalp Active",
   bond_builder: "Bond Builder",
+  amino_acid: "Amino Acid",
+  propellant: "Propellant",
+  uv_filter: "UV Filter",
 };
 
 export type ScoreResult = {
@@ -390,6 +393,11 @@ export const FUNCTION_DEFAULT_SCORES: Record<string, Record<"low" | "medium" | "
   scalp_active: { low: 7, medium: 7, high: 7 },
   bond_builder: { low: 8, medium: 8, high: 8 },
   solvent: { low: 6, medium: 6, high: 6 },
+  colorant: { low: 5, medium: 5, high: 5 },
+  amino_acid: { low: 7, medium: 7, high: 7 },
+  propellant: { low: 5, medium: 5, high: 5 },
+  uv_filter: { low: 6, medium: 6, high: 6 },
+  emulsifier: { low: 6, medium: 6, high: 6 },
 };
 
 const SILICONES = new Set([

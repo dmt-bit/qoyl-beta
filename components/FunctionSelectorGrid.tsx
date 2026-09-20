@@ -2,13 +2,14 @@
 
 // Visual card grid for picking an ingredient's primary_function, used by
 // the ingredient-tagging tool on the Coverage tab (app/admin/products/page.tsx).
-// Deliberately covers only the 16 functions FUNCTION_DEFAULT_SCORES knows
-// how to auto-score (lib/compatibility.ts) - 4 more values exist in
-// INGREDIENT_FUNCTION_LABELS (emulsifier, colorant, penetration_enhancer,
-// antifungal) that aren't represented here because there's no default-score
-// table for them yet. Ingredients already tagged with one of those 4 keep
-// their tag (nothing here overwrites it), they just can't be *newly*
-// assigned one of those 4 through this grid.
+// Covers the 21 functions FUNCTION_DEFAULT_SCORES knows how to auto-score
+// (lib/compatibility.ts) - colorant/amino_acid/propellant/uv_filter/
+// emulsifier were added alongside the original 16. 2 more values still
+// exist in INGREDIENT_FUNCTION_LABELS (penetration_enhancer, antifungal)
+// that aren't represented here because there's no default-score table for
+// them yet. Ingredients already tagged with one of those 2 keep their tag
+// (nothing here overwrites it), they just can't be *newly* assigned one of
+// those 2 through this grid.
 
 export type IngredientFunction =
   | "humectant"
@@ -26,7 +27,12 @@ export type IngredientFunction =
   | "antioxidant"
   | "scalp_active"
   | "bond_builder"
-  | "solvent";
+  | "solvent"
+  | "colorant"
+  | "amino_acid"
+  | "propellant"
+  | "uv_filter"
+  | "emulsifier";
 
 export const FUNCTION_CARDS: {
   value: IngredientFunction;
@@ -49,6 +55,11 @@ export const FUNCTION_CARDS: {
   { value: "scalp_active", description: "Active ingredient targeting scalp health, growth, or dandruff.", scores: { low: 7, medium: 7, high: 7 } },
   { value: "bond_builder", description: "Repairs broken disulfide bonds in chemically processed or damaged hair.", scores: { low: 8, medium: 8, high: 8 } },
   { value: "solvent", description: "Dissolves other ingredients. Volatile solvents evaporate after application.", scores: { low: 6, medium: 6, high: 6 } },
+  { value: "colorant", description: "Color additive - CI numbers and dyes. No hair benefit or harm, purely aesthetic.", scores: { low: 5, medium: 5, high: 5 } },
+  { value: "amino_acid", description: "Free amino acid, not a protein polymer. Genuinely beneficial, not a buildup risk.", scores: { low: 7, medium: 7, high: 7 } },
+  { value: "propellant", description: "Aerosol propellant gas. Neutral - just delivers the product from the can.", scores: { low: 5, medium: 5, high: 5 } },
+  { value: "uv_filter", description: "UV-absorbing sunscreen filter. Minor protective benefit, not harmful.", scores: { low: 6, medium: 6, high: 6 } },
+  { value: "emulsifier", description: "Blends oil and water phases. Necessary for formula stability, neutral for hair.", scores: { low: 6, medium: 6, high: 6 } },
 ];
 
 export function FunctionSelectorGrid({
