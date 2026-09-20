@@ -22,9 +22,16 @@ export type Match = {
   // already does.
   secondaryFunction: string | null;
   // false when this ingredient had no compatibility_scores row at the
-  // resolved porosity and was scored as a neutral 5/10 fallback instead
-  // of excluded from the weighted mean - see resolveScoreResult.
+  // resolved porosity - see resolveScoreResult. Exactly one of
+  // scoredFromDb/scoredFromFunction/scoredNeutral is true for any Match.
   scoredFromDb: boolean;
+  // true when there was no DB row but ingredients.primary_function had an
+  // entry in FUNCTION_DEFAULT_SCORES, so the porosity-specific function
+  // default was used instead of a flat neutral 5.
+  scoredFromFunction: boolean;
+  // true when there was no DB row AND no usable function default (null or
+  // unrecognized primary_function) - the flat neutral 5/10 fallback.
+  scoredNeutral: boolean;
 };
 
 // Human-readable labels for ingredients.primary_function, shared by the
@@ -342,7 +349,12 @@ export function getWeightModifier(
   return WEIGHT_MODIFIERS[family][weight];
 }
 
-function ratingForScore(score: number): "good" | "neutral" | "caution" | "avoid" {
+// Exported for reuse by admin tooling (the function-tag score-generation
+// feature in /admin/products and the ingredient-enrichment accept route)
+// so an auto-generated compatibility_scores row's rating always matches
+// this same score->rating convention rather than a second, drifting copy
+// of the same thresholds.
+export function ratingForScore(score: number): "good" | "neutral" | "caution" | "avoid" {
   if (score >= 8) return "good";
   if (score >= 5) return "neutral";
   if (score >= 2) return "caution";
@@ -352,6 +364,33 @@ function ratingForScore(score: number): "good" | "neutral" | "caution" | "avoid"
 function clampScore(score: number): number {
   return Math.max(0, Math.min(10, score));
 }
+
+// Porosity-specific default score for an ingredient with a
+// primary_function tag but no compatibility_scores DB row - used by
+// resolveScoreResult's per-ingredient fallback below, and by the admin
+// "generate scores from function tags" feature (see lib/ingredientScoring.ts)
+// which persists these same numbers as real compatibility_scores rows.
+// Single source of truth for both, so an ingredient scores identically
+// whether it's still relying on the runtime fallback or has since been
+// backfilled into the DB with these exact values.
+export const FUNCTION_DEFAULT_SCORES: Record<string, Record<"low" | "medium" | "high", number>> = {
+  humectant: { low: 6, medium: 7, high: 8 },
+  emollient: { low: 8, medium: 7, high: 6 },
+  occlusive: { low: 7, medium: 6, high: 5 },
+  protein: { low: 4, medium: 7, high: 8 },
+  surfactant: { low: 6, medium: 6, high: 6 },
+  film_former: { low: 7, medium: 7, high: 7 },
+  conditioning_agent: { low: 6, medium: 7, high: 8 },
+  preservative: { low: 6, medium: 6, high: 6 },
+  fragrance: { low: 5, medium: 5, high: 5 },
+  ph_adjuster: { low: 7, medium: 7, high: 7 },
+  chelating_agent: { low: 7, medium: 7, high: 7 },
+  thickener: { low: 6, medium: 6, high: 6 },
+  antioxidant: { low: 7, medium: 7, high: 7 },
+  scalp_active: { low: 7, medium: 7, high: 7 },
+  bond_builder: { low: 8, medium: 8, high: 8 },
+  solvent: { low: 6, medium: 6, high: 6 },
+};
 
 const SILICONES = new Set([
   "dimethicone",
@@ -1796,14 +1835,35 @@ function resolveScoreResult(
   for (const ingredient of ingredients) {
     const scored = bestRowPerIngredient.get(ingredient.id);
     // No compatibility_scores row for this ingredient at the resolved
-    // porosity - scored as a neutral 5/10 with its normal position
-    // weight rather than excluded from the weighted mean entirely. A
-    // product with several unscored ingredients used to score as if it
-    // only had the scored ones, which is artificially high whenever the
-    // missing ones would have scored poorly.
+    // porosity - scored with its normal position weight rather than
+    // excluded from the weighted mean entirely (a product with several
+    // unscored ingredients used to score as if it only had the scored
+    // ones, artificially high whenever the missing ones would have scored
+    // poorly). Prefer a function-aware default (FUNCTION_DEFAULT_SCORES)
+    // over a flat neutral 5 when the ingredient has a primary_function tag -
+    // a bare-5 fallback treats a probably-fine emollient the same as a
+    // probably-caution sulfate, which a function tag lets us do better on
+    // even before someone gets around to curating a real DB row.
     const scoredFromDb = Boolean(scored);
-    if (!scored) unscoredIngredientNames.push(ingredient.common_name || ingredient.inci_name);
-    const base = scored ?? { score: 5, rating: "neutral" };
+    let scoredFromFunction = false;
+    let scoredNeutral = false;
+    let base: { score: number; rating: string };
+    if (scored) {
+      base = scored;
+    } else {
+      unscoredIngredientNames.push(ingredient.common_name || ingredient.inci_name);
+      const functionDefaults = ingredient.primary_function
+        ? FUNCTION_DEFAULT_SCORES[ingredient.primary_function]
+        : undefined;
+      if (functionDefaults) {
+        const functionScore = functionDefaults[porosity as "low" | "medium" | "high"] ?? 5;
+        base = { score: functionScore, rating: ratingForScore(functionScore) };
+        scoredFromFunction = true;
+      } else {
+        base = { score: 5, rating: "neutral" };
+        scoredNeutral = true;
+      }
+    }
 
     let { score, rating } = hairTypeOverridden.has(ingredient.id)
       ? base
@@ -1885,6 +1945,8 @@ function resolveScoreResult(
       primaryFunction: ingredient.primary_function,
       secondaryFunction: ingredient.secondary_function,
       scoredFromDb,
+      scoredFromFunction,
+      scoredNeutral,
     });
   }
 

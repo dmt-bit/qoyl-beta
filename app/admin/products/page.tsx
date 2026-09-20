@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FunctionSelectorGrid, FUNCTION_CARDS, type IngredientFunction } from "@/components/FunctionSelectorGrid";
 
 type Brand = { id: string; name: string };
 type Category = { id: string; name: string };
@@ -35,6 +36,35 @@ function formatDate(iso: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function IngredientCountBadge({ count }: { count: number }) {
+  if (count === 0) {
+    return (
+      <span className="inline-block rounded-full bg-red/10 px-2 py-0.5 font-mono text-[9px] font-medium text-red">
+        none
+      </span>
+    );
+  }
+  if (count <= 4) {
+    return (
+      <span className="inline-block rounded-full bg-amber/10 px-2 py-0.5 font-mono text-[9px] font-medium text-amber">
+        partial {count}
+      </span>
+    );
+  }
+  if (count <= 14) {
+    return (
+      <span className="inline-block rounded-full bg-dark/5 px-2 py-0.5 font-mono text-[9px] font-medium text-dark/60">
+        {count}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-block rounded-full bg-green/10 px-2 py-0.5 font-mono text-[9px] font-medium text-green">
+      {count}
+    </span>
+  );
 }
 
 type ProductFormValues = {
@@ -101,12 +131,106 @@ function MatchSummaryBox({
   );
 }
 
+type OBFLookupState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "not_found" }
+  | { status: "found"; productName: string; brand: string; ingredients: string[] }
+  | { status: "error"; message: string };
+
+function BarcodeLookup({
+  barcode,
+  password,
+  onImport,
+}: {
+  barcode: string;
+  password: string;
+  onImport: (ingredientsText: string) => void;
+}) {
+  const [state, setState] = useState<OBFLookupState>({ status: "idle" });
+
+  async function handleLookup() {
+    const trimmed = barcode.trim();
+    if (!trimmed) return;
+    setState({ status: "loading" });
+
+    const res = await fetch(`/api/admin/enrichment/lookup?barcode=${encodeURIComponent(trimmed)}`, {
+      headers: { "x-admin-password": password },
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      setState({ status: "error", message: data.error ?? "Lookup failed." });
+      return;
+    }
+    if (!data.found) {
+      setState({ status: "not_found" });
+      return;
+    }
+    setState({
+      status: "found",
+      productName: data.productName ?? "",
+      brand: data.brand ?? "",
+      ingredients: data.ingredients ?? [],
+    });
+  }
+
+  return (
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={handleLookup}
+        disabled={!barcode.trim() || state.status === "loading"}
+        className="font-sans text-[11px] text-bronze2 underline underline-offset-2 hover:text-dark disabled:opacity-40"
+      >
+        {state.status === "loading" ? "Looking up..." : "Lookup ingredients →"}
+      </button>
+      <p className="mt-0.5 font-mono text-[9px] text-dark/40">
+        Adding a barcode enables automatic ingredient lookup
+      </p>
+
+      {state.status === "not_found" && (
+        <p className="mt-1 font-sans text-[11px] text-dark/50">Nothing found on Open Beauty Facts for this barcode.</p>
+      )}
+      {state.status === "error" && <p className="mt-1 font-sans text-[11px] text-red">{state.message}</p>}
+      {state.status === "found" && (
+        <div className="mt-2 rounded-lg border border-bronze/30 bg-bronze/5 p-3">
+          <p className="font-sans text-[12px] text-dark">
+            Found {state.ingredients.length} ingredients on Open Beauty Facts
+            {state.productName ? ` (matched: "${state.productName}"${state.brand ? ` - ${state.brand}` : ""})` : ""}. Import them?
+          </p>
+          <div className="mt-2 flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                onImport(state.ingredients.join(", "));
+                setState({ status: "idle" });
+              }}
+              className="bg-bronze px-3 py-1.5 font-sans text-[11px] font-semibold text-cream transition-colors hover:bg-bronze2"
+            >
+              Import ingredients
+            </button>
+            <button
+              type="button"
+              onClick={() => setState({ status: "idle" })}
+              className="border border-bronze/40 px-3 py-1.5 font-sans text-[11px] text-dark transition-colors hover:border-bronze"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProductForm({
   values,
   brands,
   categories,
   submitting,
   submitLabel,
+  password,
   onChange,
   onSubmit,
   onCancel,
@@ -116,6 +240,7 @@ function ProductForm({
   categories: Category[];
   submitting: boolean;
   submitLabel: string;
+  password: string;
   onChange: (values: ProductFormValues) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel?: () => void;
@@ -189,13 +314,21 @@ function ProductForm({
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <input
-          type="text"
-          value={values.barcode}
-          onChange={(e) => onChange({ ...values, barcode: e.target.value })}
-          placeholder="Barcode"
-          className={INPUT_CLASS}
-        />
+        <div>
+          <label className="font-sans text-[13px] text-dark/70">Barcode (UPC/EAN)</label>
+          <input
+            type="text"
+            value={values.barcode}
+            onChange={(e) => onChange({ ...values, barcode: e.target.value })}
+            placeholder="e.g. 012345678901"
+            className={`mt-1 ${INPUT_CLASS}`}
+          />
+          <BarcodeLookup
+            barcode={values.barcode}
+            password={password}
+            onImport={(ingredientsText) => onChange({ ...values, ingredient_list_raw: ingredientsText })}
+          />
+        </div>
         <input
           type="text"
           value={values.size}
@@ -245,7 +378,339 @@ function ProductForm({
   );
 }
 
+type CoverageStats = {
+  totalIngredients: number;
+  haveDbScores: number;
+  haveFunctionTags: number;
+  completelyUnscored: number;
+  breakdown: { function: string; ingredients: number; haveDbScores: number; autoScoreable: number }[];
+};
+
+type GeneratePreview = {
+  ingredientCount: number;
+  rowCount: number;
+  sample: {
+    inciName: string;
+    primaryFunction: string;
+    scores: { low: number; medium: number; high: number };
+    ratings: { low: string; medium: string; high: string };
+  }[];
+};
+
+type AdminIngredient = { id: string; inci_name: string; common_name: string | null; primary_function: string | null };
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="border border-dark bg-white p-4">
+      <p className="font-mono text-[28px] font-bold text-dark">{value}</p>
+      <p className="mt-1 font-sans text-[11px] font-light text-dark/50">{label}</p>
+    </div>
+  );
+}
+
+function IngredientTaggingTool({ password, onTagged }: { password: string; onTagged: () => void }) {
+  const [ingredients, setIngredients] = useState<AdminIngredient[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<AdminIngredient | null>(null);
+  const [selectedFn, setSelectedFn] = useState<IngredientFunction | null>(null);
+  const [scores, setScores] = useState({ low: 6, medium: 6, high: 6 });
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+
+  async function loadIngredients() {
+    const res = await fetch("/api/admin/ingredients", { headers: { "x-admin-password": password } });
+    if (res.ok) {
+      const data = await res.json();
+      setIngredients(data.ingredients ?? []);
+    }
+    setLoaded(true);
+  }
+
+  useEffect(() => {
+    if (!loaded) loadIngredients();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const matches =
+    query.trim().length > 1
+      ? ingredients.filter((i) => i.inci_name.toLowerCase().includes(query.trim().toLowerCase())).slice(0, 15)
+      : [];
+
+  function selectIngredient(ing: AdminIngredient) {
+    setSelected(ing);
+    setSaveMessage(null);
+    const fn = (ing.primary_function as IngredientFunction | null) ?? null;
+    setSelectedFn(fn);
+    const card = FUNCTION_CARDS.find((c) => c.value === fn);
+    setScores(card ? { ...card.scores } : { low: 6, medium: 6, high: 6 });
+  }
+
+  function selectFunction(fn: IngredientFunction) {
+    setSelectedFn(fn);
+    const card = FUNCTION_CARDS.find((c) => c.value === fn);
+    if (card) setScores({ ...card.scores });
+  }
+
+  async function handleSave() {
+    if (!selected || !selectedFn) return;
+    setSaving(true);
+    setSaveMessage(null);
+
+    const res = await fetch(`/api/admin/ingredients/${selected.id}/tag`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      body: JSON.stringify({ primary_function: selectedFn, scores }),
+    });
+    const data = await res.json();
+    setSaving(false);
+
+    if (!res.ok) {
+      setSaveMessage(data.error ?? "Failed to save.");
+      return;
+    }
+    setSaveMessage(`Saved. ${data.rowsInserted} score row(s) added.`);
+    setIngredients((prev) =>
+      prev.map((i) => (i.id === selected.id ? { ...i, primary_function: selectedFn } : i))
+    );
+    loadIngredients();
+    onTagged();
+  }
+
+  return (
+    <div className="mt-6 rounded-xl border border-bronze/30 p-6">
+      <h3 className="font-serif text-lg font-semibold text-dark">Tag an ingredient</h3>
+      <p className="mt-1 font-sans text-[12px] text-dark/50">
+        Search for an ingredient, assign its function, review the default scores, then save.
+      </p>
+
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search ingredients by name..."
+        className={`mt-3 ${INPUT_CLASS}`}
+      />
+
+      {matches.length > 0 && !selected && (
+        <ul className="mt-2 max-h-52 overflow-y-auto rounded-lg border border-bronze/20">
+          {matches.map((ing) => (
+            <li key={ing.id}>
+              <button
+                type="button"
+                onClick={() => selectIngredient(ing)}
+                className="flex w-full items-center justify-between px-3 py-2 text-left font-sans text-[12px] hover:bg-bronze/5"
+              >
+                <span>{ing.common_name || ing.inci_name}</span>
+                <span className="font-mono text-[9px] text-dark/40">
+                  {ing.primary_function ?? "untagged"}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {selected && (
+        <div className="mt-4">
+          <div className="flex items-center justify-between">
+            <p className="font-sans text-[13px] font-medium text-dark">{selected.inci_name}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setSelected(null);
+                setQuery("");
+              }}
+              className="font-sans text-[11px] text-bronze2 underline underline-offset-2 hover:text-dark"
+            >
+              Change
+            </button>
+          </div>
+
+          <div className="mt-3">
+            <FunctionSelectorGrid value={selectedFn} onSelect={selectFunction} />
+          </div>
+
+          {selectedFn && (
+            <div className="mt-3 rounded-lg border border-bronze/20 bg-bronze/5 p-3">
+              <p className="font-sans text-[12px] font-medium text-dark">Scores that will be auto-generated:</p>
+              <div className="mt-2 flex gap-3">
+                {(["low", "medium", "high"] as const).map((porosity) => (
+                  <label key={porosity} className="flex-1">
+                    <span className="block font-sans text-[10px] capitalize text-dark/50">
+                      {porosity} porosity
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={10}
+                      value={scores[porosity]}
+                      onChange={(e) =>
+                        setScores((prev) => ({ ...prev, [porosity]: Number(e.target.value) }))
+                      }
+                      className="mt-1 w-full rounded border border-bronze/40 px-2 py-1 text-sm"
+                    />
+                  </label>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="mt-3 bg-bronze px-4 py-2 font-sans text-[12px] font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save ingredient"}
+              </button>
+              {saveMessage && <p className="mt-2 font-sans text-[11px] text-dark/60">{saveMessage}</p>}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CoverageTab({ password }: { password: string }) {
+  const [stats, setStats] = useState<CoverageStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [preview, setPreview] = useState<GeneratePreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generateMessage, setGenerateMessage] = useState<string | null>(null);
+
+  async function loadStats() {
+    setStatsLoading(true);
+    const res = await fetch("/api/admin/ingredients/coverage", { headers: { "x-admin-password": password } });
+    if (res.ok) setStats(await res.json());
+    setStatsLoading(false);
+  }
+
+  useEffect(() => {
+    loadStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function handlePreview() {
+    setPreviewLoading(true);
+    setGenerateMessage(null);
+    const res = await fetch("/api/admin/ingredients/generate-scores", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      body: JSON.stringify({ mode: "preview" }),
+    });
+    setPreviewLoading(false);
+    if (res.ok) setPreview(await res.json());
+  }
+
+  async function handleRunGeneration() {
+    setGenerating(true);
+    const res = await fetch("/api/admin/ingredients/generate-scores", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      body: JSON.stringify({ mode: "execute" }),
+    });
+    const data = await res.json();
+    setGenerating(false);
+
+    if (!res.ok) {
+      setGenerateMessage(data.error ?? "Generation failed.");
+      return;
+    }
+    setGenerateMessage(
+      `Added ${data.rowsInserted} score rows for ${data.ingredientsScored} ingredients. Coverage: ${data.before.haveDbScores}/${data.before.totalIngredients} -> ${data.after.haveDbScores}/${data.after.totalIngredients}.`
+    );
+    setPreview(null);
+    loadStats();
+  }
+
+  if (statsLoading || !stats) {
+    return <p className="mt-8 font-sans text-sm text-dark/50">Loading coverage stats...</p>;
+  }
+
+  return (
+    <div className="mt-8">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="total ingredients" value={stats.totalIngredients} />
+        <StatCard label="have DB scores" value={stats.haveDbScores} />
+        <StatCard label="have function tags" value={stats.haveFunctionTags} />
+        <StatCard label="completely unscored" value={stats.completelyUnscored} />
+      </div>
+
+      <div className="mt-6 overflow-x-auto">
+        <table className="w-full border-collapse text-left font-sans text-[12px]">
+          <thead>
+            <tr className="border-b border-dark/20 text-dark/50">
+              <th className="py-2 pr-3 font-medium">Function</th>
+              <th className="py-2 pr-3 font-medium">Ingredients</th>
+              <th className="py-2 pr-3 font-medium">Have DB scores</th>
+              <th className="py-2 pr-3 font-medium">Auto-scoreable</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stats.breakdown.map((row) => (
+              <tr key={row.function} className="border-b border-dark/10">
+                <td className="py-2 pr-3">{row.function}</td>
+                <td className="py-2 pr-3">{row.ingredients}</td>
+                <td className="py-2 pr-3">{row.haveDbScores}</td>
+                <td className="py-2 pr-3">{row.autoScoreable}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-6 rounded-xl border border-bronze/30 p-6">
+        <h3 className="font-serif text-lg font-semibold text-dark">Generate scores from function tags</h3>
+        <p className="mt-2 font-sans text-[12px] text-dark/60">
+          This will add approximately {stats.breakdown.reduce((acc, r) => acc + r.autoScoreable, 0)} rows to
+          compatibility_scores for ingredients that have function tags but no DB scores. These are estimates -
+          flagged for review.
+        </p>
+        <div className="mt-3 flex gap-3">
+          <button
+            type="button"
+            onClick={handlePreview}
+            disabled={previewLoading}
+            className="border border-bronze/40 px-4 py-2 font-sans text-[12px] font-medium text-dark transition-colors hover:border-bronze disabled:opacity-50"
+          >
+            {previewLoading ? "Loading..." : "Preview"}
+          </button>
+          <button
+            type="button"
+            onClick={handleRunGeneration}
+            disabled={generating}
+            className="bg-bronze px-4 py-2 font-sans text-[12px] font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
+          >
+            {generating ? "Running..." : "Run generation"}
+          </button>
+        </div>
+
+        {preview && (
+          <div className="mt-4 rounded-lg border border-bronze/20 bg-bronze/5 p-3">
+            <p className="font-sans text-[12px] text-dark">
+              {preview.ingredientCount} ingredients / {preview.rowCount} rows would be added. Sample:
+            </p>
+            <ul className="mt-2 space-y-1">
+              {preview.sample.map((s) => (
+                <li key={s.inciName} className="font-mono text-[10px] text-dark/60">
+                  {s.inciName} ({s.primaryFunction}) - low: {s.scores.low}/{s.ratings.low}, medium:{" "}
+                  {s.scores.medium}/{s.ratings.medium}, high: {s.scores.high}/{s.ratings.high}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {generateMessage && <p className="mt-3 font-sans text-[12px] text-dark/70">{generateMessage}</p>}
+      </div>
+
+      <IngredientTaggingTool password={password} onTagged={loadStats} />
+    </div>
+  );
+}
+
 export default function AdminProductsPage() {
+  const [activeTab, setActiveTab] = useState<"products" | "coverage">("products");
   const [password, setPassword] = useState("");
   const [authorized, setAuthorized] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -500,6 +965,27 @@ export default function AdminProductsPage() {
           Manage products
         </h1>
 
+        <div className="mt-6 flex gap-6 border-b border-bronze/20">
+          {(["products", "coverage"] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setActiveTab(tab)}
+              className={`pb-3 font-sans text-sm font-medium capitalize transition-colors ${
+                activeTab === tab
+                  ? "border-b-2 border-bronze text-dark"
+                  : "text-dark/50 hover:text-dark/80"
+              }`}
+            >
+              {tab === "products" ? "Products" : "Coverage"}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === "coverage" && <CoverageTab password={password} />}
+
+        {activeTab === "products" && (
+        <>
         <section className="mt-8 rounded-xl border border-bronze/30 p-6">
           <h2 className="font-serif text-xl font-semibold text-dark">
             Add a product
@@ -511,6 +997,7 @@ export default function AdminProductsPage() {
               categories={categories}
               submitting={addSubmitting}
               submitLabel="Add product"
+              password={password}
               onChange={setAddForm}
               onSubmit={handleAddSubmit}
             />
@@ -548,6 +1035,7 @@ export default function AdminProductsPage() {
                         categories={categories}
                         submitting={editSubmitting}
                         submitLabel="Save changes"
+                        password={password}
                         onChange={setEditForm}
                         onSubmit={handleEditSubmit}
                         onCancel={() => setEditingId(null)}
@@ -592,13 +1080,13 @@ export default function AdminProductsPage() {
                             ? ` · ${product.category_name}`
                             : ""}
                         </p>
-                        <p className="mt-1 text-xs text-dark/50">
-                          {ingredientCount} ingredient
-                          {ingredientCount === 1 ? "" : "s"} · Match rate:{" "}
-                          {product.match_rate === null
-                            ? "-"
-                            : `${product.match_rate}%`}{" "}
-                          · Added {formatDate(product.created_at)}
+                        <p className="mt-1 flex items-center gap-1.5 text-xs text-dark/50">
+                          <IngredientCountBadge count={ingredientCount} />
+                          <span>
+                            · Match rate:{" "}
+                            {product.match_rate === null ? "-" : `${product.match_rate}%`} · Added{" "}
+                            {formatDate(product.created_at)}
+                          </span>
                         </p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-2">
@@ -619,6 +1107,8 @@ export default function AdminProductsPage() {
             })}
           </ul>
         </section>
+        </>
+        )}
       </div>
     </main>
   );

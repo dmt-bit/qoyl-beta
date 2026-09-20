@@ -179,6 +179,12 @@ function IngredientRow({ match }: { match: Match }) {
       <span className="font-sans text-[12px] text-dark">
         {match.ingredient_name}
       </span>
+      {match.scoredFromFunction && (
+        <span className="ml-1 font-mono text-[8px] text-[#bbb]">est.</span>
+      )}
+      {match.scoredNeutral && (
+        <span className="ml-1 font-mono text-[8px] text-[#e0e0e0]">unscored</span>
+      )}
       <span className="ml-1.5 font-sans text-[10px] text-muted">{label}</span>
       {functionLabel && (
         <span className="ml-1.5 inline-block rounded-full border border-bronze/40 px-1.5 py-0.5 font-sans text-[8px] font-medium text-bronze2">
@@ -346,7 +352,7 @@ function ResultCard({
                   <p className="mt-1.5 font-mono text-[9px] text-muted">
                     {scoreState.result.unscoredIngredientCount} ingredient
                     {scoreState.result.unscoredIngredientCount === 1 ? "" : "s"} in this formula
-                    {" "}are not yet in our database - scored as neutral (5/10)
+                    {" "}are not yet in our database - scored as estimates (marked &quot;est.&quot; or &quot;unscored&quot; below)
                   </p>
                 )}
                 {scoreState.result.interactionsDetected.length > 0 && (
@@ -1206,7 +1212,7 @@ function SearchPageContent() {
                     <p className="font-mono text-[9px] text-muted">
                       {manualScoreResult.unscoredIngredientCount} ingredient
                       {manualScoreResult.unscoredIngredientCount === 1 ? "" : "s"} in this formula
-                      {" "}are not yet in our database - scored as neutral (5/10)
+                      {" "}are not yet in our database - scored as estimates (marked &quot;est.&quot; or &quot;unscored&quot; below)
                     </p>
                   )}
                   {manualScoreResult.interactionsDetected.length > 0 && (

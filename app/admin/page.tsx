@@ -157,6 +157,9 @@ export default function AdminPage() {
             <Link href="/admin/products" className="text-sm text-bronze2 underline underline-offset-2 hover:text-dark">
               Manage products →
             </Link>
+            <Link href="/admin/enrichment" className="text-sm text-bronze2 underline underline-offset-2 hover:text-dark">
+              Enrichment →
+            </Link>
             <Link href="/admin/visuals" className="text-sm text-bronze2 underline underline-offset-2 hover:text-dark">
               Visual library →
             </Link>
