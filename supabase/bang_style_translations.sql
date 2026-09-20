@@ -3,15 +3,15 @@
 -- All 6 slugs (baby-bangs, curtain-bangs, micro-bangs, blunt-bangs,
 -- side-swept-bangs, wispy-bangs) already exist in the live `styles`
 -- table (confirmed before writing this), so the style_slug FK resolves
--- cleanly - no styles table changes needed. 'straight' only for now,
--- matching the two example rows given; add 'wavy'/'curly'/'coily'
--- variants the same way if bangs guidance needs to differ by texture.
+-- cleanly - no styles table changes needed. Covers all 4 hair families.
 INSERT INTO style_translations
 (style_slug, hair_family, translation_headline,
  how_to_achieve, key_difference, products_needed,
  tools_needed, youtube_search_override,
  difficulty_for_family, time_estimate,
  heat_required, fake_hair_required) VALUES
+
+-- ── STRAIGHT ──────────────────────────────────────────────────────────
 
 ('baby-bangs', 'straight',
  'Baby bangs require a professional cut — this is not a DIY style',
@@ -65,7 +65,176 @@ INSERT INTO style_translations
  ARRAY['texturizing-spray','light-hold-spray','shine-serum'],
  ARRAY['small round brush','blow dryer','texturizing shears (for the cut itself)'],
  'wispy bangs tutorial soft texture styling',
- 'beginner', '15-20 min at salon · 5 min daily styling', true, false)
+ 'beginner', '15-20 min at salon · 5 min daily styling', true, false),
+
+-- ── WAVY ──────────────────────────────────────────────────────────────
+
+('baby-bangs', 'wavy',
+ 'Baby bangs on wavy hair require heat styling to keep the short length looking intentional',
+ 'Baby bangs on wavy hair are cut at or just above the eyebrow, same as straight hair. The challenge: wave texture at that short length shows as general puffiness and piece-y texture rather than a clean sharp line. Styling: use a small round brush and blow dryer to smooth them forward, or embrace the wave texture for a softer look. Heat protect first. Trim every 3-4 weeks.',
+ 'The wave texture in very short bangs shows as volume and texture, not defined waves — baby bangs on wavy hair look soft and piece-y rather than the crisp blunt line you see on straight hair. This can be beautiful if you embrace it rather than fight it.',
+ ARRAY['heat-protectant','anti-frizz-serum','light-hold-spray'],
+ ARRAY['small round brush','blow dryer','flat iron (optional for smoothing)'],
+ 'baby bangs wavy hair tutorial how to style',
+ 'advanced', '30-60 min at salon · 5-10 min daily styling', true, false),
+
+('curtain-bangs', 'wavy',
+ 'Curtain bangs are one of the best bang choices for wavy hair — the wave enhances the face-framing effect',
+ 'Curtain bangs suit wavy hair especially well because the natural movement and volume enhance the face-framing effect. Ask for face-framing layers starting at cheekbone or upper cheek length. Styling options: scrunch a small amount of curl cream or texturizing spray into the bangs while wet and air dry or diffuse for an effortless wave look; or use a round brush and blow dryer to sweep them outward for a more polished finish. Refresh with a spray bottle and scrunch on non-wash days.',
+ 'Wavy curtain bangs can be worn with natural wave texture for an effortless look, or blown out for a more polished finish — the wave gives you more flexibility than straight hair, not less.',
+ ARRAY['heat-protectant','curl-cream','light-hold-spray'],
+ ARRAY['diffuser','round brush (optional)','blow dryer'],
+ 'curtain bangs wavy hair tutorial air dry diffuse',
+ 'beginner', '15-30 min at salon · 5-10 min daily styling', false, false),
+
+('micro-bangs', 'wavy',
+ 'Micro bangs on wavy hair are an extreme commitment — the wave at that length is very difficult to manage',
+ 'Micro bangs sit well above the eyebrow and require very precise professional cutting. On wavy hair the ultra-short length shows as general puffiness or unevenness rather than defined waves. Daily blow drying with a small round brush is needed to keep the line clean, or style them slightly messy for an intentional textured look. Trim every 2-3 weeks.',
+ 'On wavy hair, micro bangs are even harder to maintain than on straight hair — the wave texture at that length is nearly impossible to control without daily heat. Decide whether you want a clean line (needs daily heat) or an intentionally messy texture (low effort but a very different look).',
+ ARRAY['heat-protectant','volumizing-spray','edge-control'],
+ ARRAY['small round brush','blow dryer','fine comb'],
+ 'micro bangs wavy hair tutorial how to style',
+ 'advanced', '30-60 min at salon · 5-10 min daily styling', true, false),
+
+('blunt-bangs', 'wavy',
+ 'Blunt bangs on wavy hair — wear them straight for a crisp line or let the wave soften them',
+ 'Blunt bangs cut across the forehead on wavy hair give you two looks in one. For the sharp blunt line: blow dry with a paddle brush straight down, then flat iron for a clean edge. For a wave-softened look: diffuse or air dry and the wave creates natural movement through the blunt line. The blunt cut works as the base for both approaches.',
+ 'Unlike straight hair where blunt bangs always look blunt, wavy hair gives you a daily choice — the same cut can look sharp or soft depending on how you style it. This is actually more versatile than the straight-hair version.',
+ ARRAY['heat-protectant','anti-frizz-serum','light-hold-spray'],
+ ARRAY['paddle brush','blow dryer','flat iron (for straight look)'],
+ 'blunt bangs wavy hair tutorial straight or wavy styling',
+ 'intermediate', '30-45 min at salon · 5-10 min daily styling', false, false),
+
+('side-swept-bangs', 'wavy',
+ 'Side swept bangs are one of the most flattering bang styles for wavy hair',
+ 'Side swept bangs on wavy hair are cut at an angle at a deep side part, longest length reaching cheekbone or below. The natural wave movement adds to the sweep direction and creates a face-framing effect. Styling: diffuse or air dry and finger-comb to your preferred side; or blow dry with a round brush pulling hair in one direction. A light hold spray keeps the sweep in place on humid days.',
+ 'The natural wave movement of wavy hair enhances the sweep direction — in many cases you can air dry side swept bangs on wavy hair and they will fall naturally into place with minimal effort.',
+ ARRAY['heat-protectant','light-hold-spray','anti-frizz-serum'],
+ ARRAY['round brush','blow dryer','diffuser (optional)'],
+ 'side swept bangs wavy hair tutorial how to style',
+ 'beginner', '15-30 min at salon · 5 min daily styling', false, false),
+
+('wispy-bangs', 'wavy',
+ 'Wispy bangs are a near-perfect match for wavy hair — the wave IS the texture',
+ 'Wispy bangs on wavy hair almost style themselves — the natural wave creates the soft, separated pieces that make wispy bangs look intentional without effort. Ask your stylist to point-cut rather than blunt-cut the ends. Styling: scrunch with a texturizing or curl product while wet, then air dry or diffuse. Do not flat iron or the wispiness disappears entirely. Refresh with a spray bottle and scrunch.',
+ 'This is the bang style where wavy hair has the biggest advantage — the wave creates exactly the soft separated texture that wispy bangs require, with little to no effort. The only styling mistake to avoid is heat-straightening them.',
+ ARRAY['texturizing-spray','curl-cream','light-hold-spray'],
+ ARRAY['diffuser','spray bottle'],
+ 'wispy bangs wavy hair air dry tutorial',
+ 'beginner', '15-20 min at salon · 3-5 min daily styling', false, false),
+
+-- ── CURLY ─────────────────────────────────────────────────────────────
+
+('baby-bangs', 'curly',
+ 'Baby bangs on curly hair require shrinkage adjustment — cut much longer than you think you need',
+ 'Baby bangs on 3a-3c curly hair are cut while the hair is stretched to account for shrinkage: 3a has 15-20% shrinkage, 3b has 25-35%, 3c up to 40%. Bangs cut at eyebrow length when stretched will sit above the eyebrow when the curl springs back. Your stylist must cut longer than baby bang length when wet, then check the final length after drying. Styling: wear curly for a natural fringe look, or diffuse with curl cream. To replicate the photo''s straight look precisely, flat iron the bang section daily.',
+ 'Shrinkage is the defining factor. On curly hair baby bangs require a stylist experienced with curly cuts — and a clear conversation about your curl type and shrinkage percentage before any scissors touch your hair. The curly-worn version can look beautiful but is a different aesthetic from the photo.',
+ ARRAY['curl-cream','heat-protectant','light-hold-gel'],
+ ARRAY['diffuser','blow dryer','flat iron (for straight styling)'],
+ 'baby bangs curly hair tutorial shrinkage 3b 3c',
+ 'advanced', '45-60 min at curl-specialist salon · 5-15 min daily', false, false),
+
+('curtain-bangs', 'curly',
+ 'Curly curtain bangs frame the face beautifully — but shrinkage changes the required cut length significantly',
+ 'Curly curtain bangs are one of the most popular bang styles on textured hair right now. The cut must be significantly longer to account for shrinkage: 3a cut 20% longer, 3b cut 30-40% longer, 3c up to 50% longer than the desired final length. The bangs part in the middle and spring outward, framing the face with volume rather than lying flat. Styling: apply curl cream section by section, separate curl pieces with fingers, diffuse low and slow. Pineapple or pin them at night.',
+ 'Curly curtain bangs frame the face with volume and spring rather than lying flat the way they do on straight hair. Many curly-haired people prefer this — it gives a larger, softer frame. Know your shrinkage percentage and communicate it clearly to your stylist.',
+ ARRAY['curl-cream','defining-gel','leave-in'],
+ ARRAY['diffuser','wide tooth comb','sectioning clips'],
+ 'curtain bangs curly hair tutorial shrinkage 3b 3c how to style',
+ 'intermediate', '30-45 min at curl-specialist salon · 10-15 min daily', false, false),
+
+('micro-bangs', 'curly',
+ 'Micro bangs on curly hair are extremely difficult — shrinkage makes the result highly unpredictable',
+ 'Micro bangs on 3a-3c curly hair are one of the most technically demanding bang styles. The ultra-short length means shrinkage can pull the bangs so far above the forehead that they disappear into the hairline. Requires a stylist who specializes in curly cuts and has experience with very short bangs. Options: wear them as natural curly micro bangs (editorial look) or plan to flat iron the bang section daily to achieve the photo style. Not recommended as a first bang style.',
+ 'On curly hair, micro bangs shrink so significantly that the result will look dramatically different from the photo unless heat-styled daily. Daily flat ironing of the shortest, most fragile section of your hair accelerates breakage. Consider whether the natural curly version is actually what you want — it can be striking, but it is a completely different look.',
+ ARRAY['curl-cream','heat-protectant','edge-control'],
+ ARRAY['diffuser','flat iron (for straight styling)','fine comb'],
+ 'micro bangs curly hair natural styling tutorial',
+ 'advanced', '45-90 min at curl-specialist salon · 5-20 min daily', false, false),
+
+('blunt-bangs', 'curly',
+ 'Blunt bangs on curly hair — the curl softens the blunt line into a textured fringe',
+ 'Blunt bangs on curly hair must be cut longer when wet to account for shrinkage. Because curls create volume and spring, the blunt line becomes a soft textured fringe rather than a perfectly straight edge. For the crisp blunt look from the photo, a flat iron on the bang section is required. For a natural curly fringe: define with curl cream while wet and diffuse — the bangs become a soft, voluminous fringe that has its own character.',
+ 'Decide before cutting whether you want the blunt look (requires heat styling) or a curly fringe look (different from the photo but often equally beautiful). The curly blunt fringe, especially on 3a-3b hair, can look very intentional and editorial.',
+ ARRAY['curl-cream','heat-protectant','light-hold-gel'],
+ ARRAY['diffuser','flat iron (for straight look)','wide tooth comb'],
+ 'blunt bangs curly hair natural vs straight tutorial',
+ 'intermediate', '30-45 min at curl-specialist salon · 10-15 min daily', false, false),
+
+('side-swept-bangs', 'curly',
+ 'Side swept bangs on curly hair require styling to hold the sweep — curls naturally resist staying to one side',
+ 'Side swept bangs are cut at an angle at a deep side part, longer than desired to account for shrinkage. On curly hair, the bangs will naturally want to spring into their curl pattern rather than lying swept to one side. Styling options: diffuse with fingers directing hair to one side — works best for looser 3a curl; pin damp bangs to one side and let dry to set the direction; blow dry with a round brush with light heat to smooth and sweep. Bobby pins help hold the direction in humidity.',
+ 'On curly hair the side swept look requires daily styling to maintain — curls do not naturally stay swept to one side the way straight hair does. The upside: when the styling holds, the curl movement in the sweep direction creates a very dynamic, beautiful effect.',
+ ARRAY['curl-cream','light-hold-gel','heat-protectant'],
+ ARRAY['diffuser','round brush','bobby pins'],
+ 'side swept bangs curly hair tutorial how to style hold',
+ 'intermediate', '30-45 min at curl-specialist salon · 10-15 min daily', false, false),
+
+('wispy-bangs', 'curly',
+ 'Curly wispy bangs look beautiful — the curl creates the separated, textured fringe naturally',
+ 'Wispy bangs on curly hair are one of the most achievable bang styles for 3a-3c hair. The natural curl creates the soft, separated pieces without any effort. Ask your stylist to cut them longer than the desired final length to account for shrinkage, with point-cutting rather than blunt cutting. Styling: apply curl cream section by section, separate individual curl pieces with fingers, and diffuse. The individual curl clusters create a wispy, textured fringe naturally.',
+ 'Just like wavy hair, curly hair excels at wispy bangs — the natural curl pattern does the work for you. The only adjustment needed is shrinkage: communicate your curl type to your stylist and they will cut the correct length to land where you want after drying.',
+ ARRAY['curl-cream','defining-gel','leave-in'],
+ ARRAY['diffuser','wide tooth comb','spray bottle'],
+ 'wispy curly bangs tutorial natural hair fringe 3a 3b 3c',
+ 'beginner', '20-30 min at curl-specialist salon · 5-10 min daily', false, false),
+
+-- ── COILY ─────────────────────────────────────────────────────────────
+
+('baby-bangs', 'coily',
+ 'Baby bangs on 4a-4c coily hair require a silk press — these are a heat-styling style, not a natural style',
+ 'Baby bangs on 4a-4c coily hair require straightening the bang section first. With up to 70% shrinkage, bangs cut to eyebrow length when straightened would sit above the hairline when worn natural. This is a heat-styling maintenance style: the bang section needs flat ironing every session to look like the photo. Natural alternative: the coily "halo fringe" — very short coils at the front of the hairline worn as a textured, voluminous fringe above the forehead. This is a completely different look but requires no heat.',
+ 'This style as shown is not achievable on natural coily hair without heat straightening. On natural 4a-4c hair the very short lengths create a textured puff above the forehead — which can look striking as its own style, but is not the same as the photo.',
+ ARRAY['heat-protectant','flat-iron-serum','edge-control'],
+ ARRAY['flat iron','blow dryer comb attachment','fine comb'],
+ 'baby bangs 4c natural hair silk press bangs tutorial',
+ 'advanced', '60-90 min at silk press specialist · 20-30 min per heat styling session', true, false),
+
+('curtain-bangs', 'coily',
+ 'Curtain bangs as shown require a silk press on 4a-4c hair — a natural alternative is the peeky-bang',
+ 'To achieve curtain bangs as shown: the bang section requires silk pressing and flat ironing to achieve the hanging, face-framing shape. With 40-70% shrinkage, bangs that reach the cheekbone when straightened will sit near the crown when natural. Natural alternative: the "peeky bang" — take the front hairline section, apply edge control and smooth it forward slightly, or wear the front section of a twist-out or wash-and-go forward and to the sides to frame the face. Achieves similar face-framing without heat.',
+ 'The face-framing goal of curtain bangs is achievable on coily hair, but the execution looks different depending on heat use. Many naturalistas achieve a similar framing effect with their wash-and-go or twist-out front sections.',
+ ARRAY['heat-protectant','edge-control','curl-cream'],
+ ARRAY['flat iron','rat tail comb','spray bottle'],
+ 'curtain bangs 4c natural hair peeky bangs silk press tutorial',
+ 'advanced', '60-90 min at specialist for silk press · 15-30 min per styling session', true, false),
+
+('micro-bangs', 'coily',
+ 'Micro bangs on 4a-4c coily hair as shown are not achievable naturally — daily heat on the shortest section causes rapid damage',
+ 'Micro bangs on coily hair require daily flat ironing of the bang section, which repeatedly damages the shortest and most fragile section of hair. Most natural hair stylists advise strongly against this. The shrinkage means the cut must be extremely long in the natural state to land even at the forehead when straightened. If you love the aesthetic, the practical alternative is a clip-in bang or front-piece wig laid over your natural hair.',
+ 'This style as shown is not compatible with wearing natural coily hair. The coily texture at that length shrinks into a small tuft above the hairline rather than micro bangs as shown. If the commitment to daily heat on that section is not realistic, a high-quality clip-in bang is the recommended path.',
+ ARRAY['heat-protectant','flat-iron-serum','edge-control'],
+ ARRAY['flat iron','fine comb'],
+ 'micro bangs natural 4c hair alternative clip in bangs tutorial',
+ 'advanced', 'Not recommended for daily wear as natural style · Clip-in bang alternative: 5 min', true, false),
+
+('blunt-bangs', 'coily',
+ 'Blunt bangs on 4a-4c coily hair require heat for the crisp line — or embrace the coily fringe version',
+ 'Blunt bangs require heat styling on coily hair to achieve the flat uniform line shown. The bang section needs silk pressing and flat ironing for the clean edge. Natural alternative: the "coily blunt fringe" — let the front coil section hang forward as individual coil clusters. On well-defined 4a-4b hair the coil clusters create a textured, voluminous fringe that frames the forehead in its own striking way. Use a curl cream for definition and separate coils with fingers while wet.',
+ 'The perfectly blunt line only exists with heat. The natural coily fringe on 4a-4b hair is a different aesthetic from the photo but can be intentional and beautiful — it is the look that inspired many straight-hair wispy and curtain bang trends.',
+ ARRAY['heat-protectant','edge-control','curl-cream'],
+ ARRAY['flat iron','blow dryer comb attachment','wide tooth comb'],
+ 'blunt bangs 4c natural hair heat styling coily fringe tutorial',
+ 'advanced', '45-75 min at specialist · 15-20 min per heat styling session', true, false),
+
+('side-swept-bangs', 'coily',
+ 'Side swept bangs are the most natural-friendly bang style for coily hair — the peeky-bang technique works without heat',
+ 'Natural technique for side swept bangs on 4a-4c hair: take the front hairline section (about 1-1.5 inches behind the hairline), apply curl cream or edge control, two-strand twist or finger-coil it, then direct it to one side and secure with a bobby pin or clip. Wear this over an updo, puff, or the rest of your style. Achieves a similar diagonal face-framing effect without heat. Heat option: silk press the front section only and flat iron to the side.',
+ 'The most achievable bang effect for natural coily hair — the directional sweep can be replicated with front section manipulation on wash-and-go, twist-out, or protective styles. No heat required for a natural version that achieves a similar framing result.',
+ ARRAY['curl-cream','edge-control','light-hold-gel'],
+ ARRAY['rat tail comb','bobby pins','spray bottle'],
+ 'side swept bangs natural 4c hair fringe peeky bang puff technique',
+ 'intermediate', '10-15 min with natural fringe technique · 30-45 min at specialist for heat version', false, false),
+
+('wispy-bangs', 'coily',
+ 'The coily fringe is the natural equivalent of wispy bangs — and the coil clusters create it without any effort',
+ 'Wispy bangs as shown require heat to see the separated straight pieces. But coily hair has a natural version: the coily fringe. Let the front section of your hair fall forward over the forehead as individual coil or curl clusters. On well-defined 4a-4b hair, the individual coil clusters naturally create a separated, textured fringe quality very similar to the wispy effect. Use curl cream for definition and separate individual coils with fingers while wet, then diffuse or air dry without disturbing.',
+ 'This is the most achievable bang style for natural coily hair. The individual coil clusters on 4a-4b hair can produce the soft, separated quality of wispy bangs without heat — it is essentially what wispy bangs were trying to achieve artificially on straight hair. The key is individual coil definition, not bulk.',
+ ARRAY['curl-cream','defining-gel','leave-in'],
+ ARRAY['wide tooth comb','spray bottle','diffuser (optional)'],
+ 'wispy bangs 4a 4b natural hair coil fringe tutorial no heat',
+ 'beginner', '5-10 min on wash day · 2-3 min to refresh', false, false)
+
 ON CONFLICT (style_slug, hair_family) DO UPDATE SET
   translation_headline = EXCLUDED.translation_headline,
   how_to_achieve = EXCLUDED.how_to_achieve,
