@@ -4,6 +4,7 @@ import { CATEGORY_LABEL_BY_SLUG } from "@/lib/productCategories";
 // Type-only import - erased at compile time, so the service-role code
 // in lib/brandCatalogProducts.ts never ends up in this client bundle.
 import type { BrandCatalogItem } from "@/lib/brandCatalogProducts";
+import type { FakeHairMatch } from "@/lib/fakeHairMatcher";
 import type { HairAdditionPreference } from "@/lib/hairAdditionPreference";
 import { getToolsForProfile } from "@/lib/getToolsForProfile";
 import { TOOLS_CATALOG, type HairTool } from "@/lib/toolsData";
@@ -44,7 +45,17 @@ export type FakeHairItem = {
   priceRange: string;
 };
 
+// A hair seller catalog match plus the pre-built click-tracking path the
+// bridge route attaches (see app/api/style-match/fake-hair-products).
+export type FakeHairCatalogMatch = FakeHairMatch & { click_path: string };
+
 export type StyleShoppingList = {
+  // Listed hair seller products that matched this style/hair. When
+  // non-empty they replace the generic Amazon fake hair list in the UI.
+  fakeHairCatalogMatches: FakeHairCatalogMatch[];
+  // "generic_amazon" placement: a plain Amazon search for the style, shown
+  // (with a note) only when no catalog match exists.
+  fakeHairGenericSearchUrl: string;
   // Qoyl Partner Brand products, shown above everything else in the
   // Hair Care Products section - see fetchBrandProducts below.
   brandProducts: BrandCatalogItem[];
@@ -275,6 +286,34 @@ async function fetchBrandProducts(
   } catch (err) {
     console.error("[styleShoppingList] brand product fetch failed:", err);
     return {};
+  }
+}
+
+async function fetchFakeHairCatalogMatches(input: {
+  styleName: string;
+  userId: string | null;
+  matchId: string | null;
+  preference: HairAdditionPreference | null;
+  curlType: string | null;
+  hairColor: string | null;
+  hairLength: string | null;
+}): Promise<FakeHairCatalogMatch[]> {
+  const params = new URLSearchParams({ style_name: input.styleName });
+  if (input.userId) params.set("user_id", input.userId);
+  if (input.matchId) params.set("match_id", input.matchId);
+  if (input.preference) params.set("hair_addition_preference", input.preference);
+  if (input.curlType) params.set("curl_type", input.curlType);
+  if (input.hairColor) params.set("hair_color", input.hairColor);
+  if (input.hairLength) params.set("hair_length", input.hairLength);
+
+  try {
+    const res = await fetch(`/api/style-match/fake-hair-products?${params.toString()}`);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.matches ?? [];
+  } catch (err) {
+    console.error("[styleShoppingList] fake hair catalog fetch failed:", err);
+    return [];
   }
 }
 
@@ -960,6 +999,9 @@ export async function buildStyleShoppingList(input: {
   // translation row exists (strictly more precise than the keyword
   // guesses buildTools falls back to otherwise).
   heatRequired?: boolean;
+  // Used only for hair seller catalog matching (color blend + pack count).
+  detectedColor?: string | null;
+  hairLength?: string | null;
 }): Promise<StyleShoppingList> {
   const categorySlugs = pickCategoriesForStyle(
     input.styleName,
@@ -1005,11 +1047,27 @@ export async function buildStyleShoppingList(input: {
     ? generateFakeHairList(input.fakeHairType, input.styleName, preference)
     : [];
 
+  // Listed hair seller products take over the fake hair section when any
+  // match; otherwise the existing generic list stays, flagged as generic.
+  const fakeHairCatalogMatches = showFakeHairSection
+    ? await fetchFakeHairCatalogMatches({
+        styleName: input.styleName,
+        userId: input.userId ?? null,
+        matchId: input.matchId ?? null,
+        preference,
+        curlType: input.curlType ?? null,
+        hairColor: input.detectedColor ?? null,
+        hairLength: input.hairLength ?? null,
+      })
+    : [];
+
   const lengthExtensionOptions = input.wantsLengthExtensions
     ? buildLengthExtensionOptions(input.styleName, input.styleDescription)
     : [];
 
   return {
+    fakeHairCatalogMatches,
+    fakeHairGenericSearchUrl: amazonSearch(`${input.styleName} hair extensions`),
     brandProducts,
     hairCare,
     amazonFallback,

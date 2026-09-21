@@ -1296,6 +1296,8 @@ function StyleMatchContent() {
           translationToolsNeeded: translation?.tools_needed ?? undefined,
           curlType: curlType || null,
           heatRequired: translation?.heat_required ?? undefined,
+          detectedColor: detected!.detected_color ?? null,
+          hairLength: detected!.hair_length ?? null,
         });
         if (!cancelled) setShoppingList(list);
       } finally {
@@ -2424,7 +2426,52 @@ function StyleMatchContent() {
 
                 {!shoppingLoading && shoppingList && (
                   <>
-                    {shoppingList.showFakeHairSection && shoppingList.fakeHair.length > 0 && (
+                    {shoppingList.showFakeHairSection && shoppingList.fakeHairCatalogMatches.length > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-bronze">What you will need</p>
+                        <ul className="mt-3 space-y-3">
+                          {shoppingList.fakeHairCatalogMatches.map((item) => (
+                            <li key={item.id} className="border border-bronze/30 px-4 py-3">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="font-serif text-base text-dark">{item.brand_name}</p>
+                                {item.is_featured && (
+                                  <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-bronze2">
+                                    Featured
+                                  </span>
+                                )}
+                              </div>
+                              <p className="mt-1 text-sm text-dark">{item.product_name}</p>
+                              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-dark/60">
+                                {item.color_matched && (
+                                  <span className="text-green">
+                                    Color matched to your hair{item.matched_color ? ` (${item.matched_color})` : ""}
+                                  </span>
+                                )}
+                                {item.packs_recommended !== null && (
+                                  <span>
+                                    {item.packs_recommended} pack{item.packs_recommended === 1 ? "" : "s"} for{" "}
+                                    {item.packs_length_label}
+                                  </span>
+                                )}
+                                {item.price_per_pack_usd !== null && <span>${item.price_per_pack_usd} per pack</span>}
+                              </div>
+                              <a
+                                href={item.click_path}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 inline-block text-xs text-bronze2 underline"
+                              >
+                                Shop →
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {shoppingList.showFakeHairSection &&
+                      shoppingList.fakeHairCatalogMatches.length === 0 &&
+                      shoppingList.fakeHair.length > 0 && (
                       <div>
                         <div className="flex items-center justify-between gap-2">
                           <p className="text-xs font-semibold uppercase tracking-widest text-bronze">What you will need</p>
@@ -2463,6 +2510,17 @@ function StyleMatchContent() {
                         {shoppingList.fakeHairPreferenceTip && (
                           <p className="mt-2 text-xs text-bronze2">Tip: {shoppingList.fakeHairPreferenceTip}</p>
                         )}
+                        <a
+                          href={shoppingList.fakeHairGenericSearchUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-3 inline-block text-xs text-bronze2 underline"
+                        >
+                          search amazon →
+                        </a>
+                        <p className="mt-1 text-xs text-dark/50">
+                          no matched brands yet for this style — generic search shown
+                        </p>
                         {shoppingList.fakeHairNote && <p className="mt-3 text-xs text-dark/50">{shoppingList.fakeHairNote}</p>}
                         {shoppingList.fakeHairTip && (
                           <p className="mt-2 text-xs text-bronze2">Tip: {shoppingList.fakeHairTip}</p>
