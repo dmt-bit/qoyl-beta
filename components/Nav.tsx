@@ -15,12 +15,12 @@ const DESKTOP_CENTER_LINKS_BASE = [
   { href: "/how-we-score", label: "How We Score" },
 ];
 
-// "My Routine" only appears here for subscribers - non-subscribers keep
-// it in the hamburger menu only (as an upgrade prompt) to avoid
-// cluttering the top nav with a locked feature. Inserted between Style
-// Match and Travel specifically, matching the request.
-function buildDesktopCenterLinks(hasRoutineSubscription: boolean) {
-  if (!hasRoutineSubscription) return DESKTOP_CENTER_LINKS_BASE;
+// Routine is free for everyone now - "My Routine" only needs a saved
+// hair profile to be worth showing here (no profile yet keeps it out of
+// the top nav, still reachable via the hamburger menu). Inserted between
+// Style Match and Travel specifically, matching the request.
+function buildDesktopCenterLinks(hasProfile: boolean) {
+  if (!hasProfile) return DESKTOP_CENTER_LINKS_BASE;
   const [styleMatch, ...rest] = DESKTOP_CENTER_LINKS_BASE;
   return [styleMatch, { href: "/routine", label: "My Routine" }, ...rest];
 }
@@ -161,15 +161,6 @@ function CalendarIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: 
   );
 }
 
-function LockIcon({ size = 16, className = "shrink-0 text-dark/50" }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
-      <rect x="4.5" y="10.5" width="15" height="9.75" rx="1.5" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 10.5V7.5a4.5 4.5 0 119 0v3" />
-    </svg>
-  );
-}
-
 function GridIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
@@ -185,12 +176,12 @@ function GridIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: numb
 // home page, replacing the top nav entirely there - every other page
 function HomeSideNavDesktop({
   user,
-  hasRoutineSubscription,
+  hasProfile,
   showRoutineNudge,
   pathname,
 }: {
   user: unknown;
-  hasRoutineSubscription: boolean;
+  hasProfile: boolean;
   showRoutineNudge: boolean;
   pathname: string;
 }) {
@@ -210,7 +201,7 @@ function HomeSideNavDesktop({
           pathname={pathname}
         />
         <SideNavLink href="/travel" label="Travel Kit" icon={<CompassIcon size={16} />} pathname={pathname} />
-        {hasRoutineSubscription && (
+        {hasProfile && (
           <SideNavLink href="/routine" label="My Routine" icon={<CalendarIcon size={16} />} pathname={pathname} />
         )}
       </div>
@@ -307,19 +298,14 @@ function BottomNavTab({
   );
 }
 
-// Calendar icon with a small overlay signaling subscription state - a
-// bronze dot above it when active, a tiny lock badge on it when not.
-function RoutineTabIcon({
-  active,
-  hasRoutineSubscription,
-}: {
-  active: boolean;
-  hasRoutineSubscription: boolean;
-}) {
+// Calendar icon with a small bronze dot when this user has a routine to
+// show (a saved profile - routine is free for everyone, so there's no
+// lock state to signal anymore).
+function RoutineTabIcon({ active, hasProfile }: { active: boolean; hasProfile: boolean }) {
   const colorClass = `shrink-0 ${active ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`;
   return (
     <span className="relative inline-flex">
-      {hasRoutineSubscription && (
+      {hasProfile && (
         <span
           aria-hidden
           className={`absolute -top-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full ${
@@ -328,15 +314,6 @@ function RoutineTabIcon({
         />
       )}
       <CalendarIcon size={20} className={colorClass} />
-      {!hasRoutineSubscription && (
-        <span className="absolute -bottom-0.5 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-white">
-          {/* This badge's own background is always white regardless of
-              tab state, so the lock icon stays a fixed dark color rather
-              than following colorClass (which would go white-on-white
-              when the tab is active). */}
-          <LockIcon size={9} className="shrink-0 text-dark" />
-        </span>
-      )}
     </span>
   );
 }
@@ -351,12 +328,10 @@ function BottomNav({
   pathname,
   user,
   hairProfile,
-  hasRoutineSubscription,
 }: {
   pathname: string;
   user: unknown;
   hairProfile: unknown;
-  hasRoutineSubscription: boolean;
 }) {
   const profileHref = !user ? "/auth" : hairProfile ? "/dashboard" : "/profile";
   const profileActive = pathname.startsWith("/dashboard") || pathname.startsWith("/profile");
@@ -394,7 +369,7 @@ function BottomNav({
         href="/routine"
         label="Routine"
         active={routineActive}
-        icon={<RoutineTabIcon active={routineActive} hasRoutineSubscription={hasRoutineSubscription} />}
+        icon={<RoutineTabIcon active={routineActive} hasProfile={Boolean(hairProfile)} />}
       />
       <BottomNavTab
         href={profileHref}
@@ -450,18 +425,9 @@ function MenuLink({
 }
 
 // "My Routine" gets a visually heavier treatment than the plain rows
-// around it - it's the core paid product, so it should read as either
-// an owned feature (subscriber) or an aspirational upgrade (everyone
-// else), never just another list item. Always rendered (unlike an
-// earlier subscriber-only conditional) so non-subscribers see and can
-// tap into the upgrade path from the menu itself.
-function RoutineMenuLink({
-  hasRoutineSubscription,
-  onNavigate,
-}: {
-  hasRoutineSubscription: boolean;
-  onNavigate: () => void;
-}) {
+// around it - it's the app's core feature, still worth a heavier row
+// even though it's free for everyone (no more subscriber-only badge).
+function RoutineMenuLink({ onNavigate }: { onNavigate: () => void }) {
   return (
     <Link
       href="/routine"
@@ -472,16 +438,9 @@ function RoutineMenuLink({
         <CalendarIcon size={20} className="shrink-0 text-bronze" />
       </span>
       <span className="flex-1 font-sans text-sm font-semibold text-dark">My Routine</span>
-      {hasRoutineSubscription ? (
-        <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-green/15 px-2.5 py-1 text-[10px] font-semibold text-green">
-          <span className="h-1.5 w-1.5 rounded-full bg-green" />
-          Active
-        </span>
-      ) : (
-        <span className="shrink-0 rounded-full bg-bronze px-2.5 py-1 text-[10px] font-semibold text-cream">
-          $7.99/mo
-        </span>
-      )}
+      <span className="shrink-0 rounded-full bg-green/15 px-2.5 py-1 text-[10px] font-semibold text-green">
+        Free
+      </span>
     </Link>
   );
 }
@@ -490,38 +449,17 @@ export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading, hairProfile } = useAuth();
-  const [hasRoutineSubscription, setHasRoutineSubscription] = useState(false);
+  const hasProfile = Boolean(hairProfile);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showRoutineNudge, setShowRoutineNudge] = useState(false);
 
+  // Re-checked whenever the profile resolves or the user navigates
+  // (pathname changes) - the latter so the dot clears right after a
+  // visit to /routine (which calls markRoutineVisited) without needing a
+  // full page reload.
   useEffect(() => {
-    if (!user) {
-      setHasRoutineSubscription(false);
-      return;
-    }
-    let cancelled = false;
-
-    fetch(`/api/purchases?user_id=${user.id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) setHasRoutineSubscription(Boolean(data.hasRoutineSubscription));
-      })
-      .catch(() => {
-        if (!cancelled) setHasRoutineSubscription(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
-
-  // Re-checked whenever subscription status resolves or the user
-  // navigates (pathname changes) - the latter so the dot clears right
-  // after a visit to /routine (which calls markRoutineVisited) without
-  // needing a full page reload.
-  useEffect(() => {
-    setShowRoutineNudge(shouldShowRoutineNudge(user?.id ?? null, hasRoutineSubscription));
-  }, [user, hasRoutineSubscription, pathname]);
+    setShowRoutineNudge(shouldShowRoutineNudge(user?.id ?? null, hasProfile));
+  }, [user, hasProfile, pathname]);
 
   // Full-screen menu shouldn't let the page behind it scroll.
   useEffect(() => {
@@ -577,7 +515,7 @@ export default function Nav() {
       {isHome && (
         <HomeSideNavDesktop
           user={user}
-          hasRoutineSubscription={hasRoutineSubscription}
+          hasProfile={hasProfile}
           showRoutineNudge={showRoutineNudge}
           pathname={pathname}
         />
@@ -601,7 +539,7 @@ export default function Nav() {
                 Search a Product
               </Link>
             </li>
-            {buildDesktopCenterLinks(hasRoutineSubscription).map((link) => (
+            {buildDesktopCenterLinks(hasProfile).map((link) => (
               <li key={link.href} className="shrink-0">
                 <Link
                   href={link.href}
@@ -700,7 +638,7 @@ export default function Nav() {
             onNavigate={closeMenu}
           />
           <MenuLink href="/dashboard" label="My Dashboard" icon={<GridIcon size={20} />} onNavigate={closeMenu} />
-          <RoutineMenuLink hasRoutineSubscription={hasRoutineSubscription} onNavigate={closeMenu} />
+          <RoutineMenuLink onNavigate={closeMenu} />
 
           <MenuSectionLabel>Tools</MenuSectionLabel>
           <MenuLink href="/search" label="Search a Product" icon={<SearchIcon size={20} />} onNavigate={closeMenu} />
@@ -762,12 +700,7 @@ export default function Nav() {
         </div>
       </div>
 
-      <BottomNav
-        pathname={pathname}
-        user={user}
-        hairProfile={hairProfile}
-        hasRoutineSubscription={hasRoutineSubscription}
-      />
+      <BottomNav pathname={pathname} user={user} hairProfile={hairProfile} />
     </nav>
   );
 }

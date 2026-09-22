@@ -91,7 +91,7 @@ export async function activateTravelKit({
   }
 
   const subjectPrefix = source === "admin_bypass" ? "[Admin bypass] " : "";
-  const amountLine = source === "admin_bypass" ? "Amount: $0 (admin bypass, no payment)" : "Amount: $4.99";
+  const amountLine = source === "admin_bypass" ? "Amount: $0 (admin bypass, no payment)" : "Amount: $2.99";
 
   await sendNotificationEmail(
     `${subjectPrefix}Travel kit purchased - ${travelKitRow.destination}`,

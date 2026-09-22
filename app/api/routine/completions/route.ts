@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { curlFamily } from "@/lib/compatibility";
-import { hasRoutineSubscription } from "@/lib/purchases";
 import { getWashFrequencyDays, toIsoDate } from "@/lib/routineCalendar";
 import { buildDayStrip, fetchCompletedDays } from "@/lib/routineCompletions";
 
@@ -17,11 +16,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "user_id is required." }, { status: 400 });
   }
 
-  const subscribed = await hasRoutineSubscription(userId);
-  if (!subscribed) {
-    return NextResponse.json({ error: "No active routine subscription." }, { status: 403 });
-  }
-
+  // Free for every signed-in user now -- no subscription check.
   const { data: profile } = await getSupabaseAdmin()
     .from("hair_profiles")
     .select("curl_type, porosity, scalp_condition, routine_start_date")

@@ -32,6 +32,7 @@ import {
 } from "@/lib/protectiveStyleRoutine";
 import { waterHardnessFromZip } from "@/lib/waterHardnessData";
 import { supabase } from "@/lib/supabase";
+import { logMlEvent } from "@/lib/mlEvents";
 import {
   HAIR_ADDITION_PREFERENCE_OPTIONS,
   type HairAdditionPreference,
@@ -1052,7 +1053,12 @@ function ProfileForm() {
       }
 
       if (user) await refreshHairProfile();
-      router.push("/dashboard");
+      if (searchParams.get("from") === "style-match") {
+        logMlEvent("style_match_profile_created", { userId: user?.id ?? null });
+        router.push("/style-match");
+      } else {
+        router.push("/dashboard");
+      }
     }
   }
 

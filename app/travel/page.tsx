@@ -263,7 +263,7 @@ function LandingView({
           onClick={onBuildClick}
           className="mx-auto mt-8 flex h-[52px] w-full max-w-sm items-center justify-center rounded-full bg-bronze px-6 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 sm:w-auto sm:px-10"
         >
-          Build my travel kit - $4.99 →
+          Build my travel kit - $2.99 →
         </button>
 
         <p className="mt-4 text-xs text-dark/50">
@@ -516,7 +516,7 @@ function SurveyView({
                 disabled={submitting}
                 className="mt-6 w-full rounded-lg bg-bronze py-4 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
               >
-                {submitting ? "Please wait..." : "Get my travel kit - $4.99 →"}
+                {submitting ? "Please wait..." : "Get my travel kit - $2.99 →"}
               </button>
             </div>
           )}

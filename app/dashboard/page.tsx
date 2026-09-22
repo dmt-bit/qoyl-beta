@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PostCard, { Post } from "@/components/PostCard";
-import UpgradePrompt from "@/components/UpgradePrompt";
 import { useAuth } from "@/lib/auth-context";
 import { formatAdultAgeRange } from "@/lib/ageRange";
 import { getChildSafetyNote } from "@/lib/childSafety";
@@ -325,7 +324,6 @@ function DashboardContent() {
     hairProfile?.profile_for === "child" || hairProfile?.profile_for === "baby";
 
   const [checkedAccess, setCheckedAccess] = useState(false);
-  const [hasRoutineSubscription, setHasRoutineSubscription] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [entitlementLoading, setEntitlementLoading] = useState(true);
 
@@ -383,7 +381,6 @@ function DashboardContent() {
         const res = await fetch(`/api/purchases?user_id=${user!.id}`);
         const data = await res.json();
         if (!cancelled) {
-          setHasRoutineSubscription(Boolean(data.hasRoutineSubscription));
           setIsAdminUser(Boolean(data.isAdmin));
         }
       } catch {
@@ -603,9 +600,9 @@ function DashboardContent() {
           </Link>
         </div>
 
-        {!entitlementLoading && hasRoutineSubscription && (
+        {hairProfile && (
           <span className="mt-3 inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-cream">
-            Monthly Routine
+            Your Qoyl profile · free forever
           </span>
         )}
 
@@ -630,9 +627,7 @@ function DashboardContent() {
 
         {paymentStatus === "success" && (
           <p className="mt-4 rounded-lg border border-green/40 bg-green/10 px-4 py-3 text-sm text-green">
-            You&apos;re all set - your{" "}
-            {hasRoutineSubscription ? "monthly routine" : "purchase"} is
-            ready.
+            You&apos;re all set - your travel kit is ready.
           </p>
         )}
         {paymentStatus === "cancelled" && (
@@ -725,34 +720,23 @@ function DashboardContent() {
                 ))}
               </div>
 
-              {hasRoutineSubscription ? (
-                <>
-                  <div className="mt-6 border-t border-bronze/20 pt-6">
-                    <Link
-                      href="/routine"
-                      className="print-hide flex items-center justify-between rounded-xl border border-bronze/40 bg-bronze/10 px-5 py-4 transition-colors hover:border-bronze"
-                    >
-                      <div>
-                        <p className="font-serif text-lg text-dark">
-                          Your routine is ready →
-                        </p>
-                        <p className="mt-1 text-sm text-dark/60">
-                          Full wash calendar, personalized steps, and curated
-                          products for this month.
-                        </p>
-                      </div>
-                    </Link>
+              <div className="mt-6 border-t border-bronze/20 pt-6">
+                <Link
+                  href="/routine"
+                  className="print-hide flex items-center justify-between rounded-xl border border-bronze/40 bg-bronze/10 px-5 py-4 transition-colors hover:border-bronze"
+                >
+                  <div>
+                    <p className="font-serif text-lg text-dark">
+                      Your routine is ready →
+                    </p>
+                    <p className="mt-1 text-sm text-dark/60">
+                      Full wash calendar, personalized steps, and curated
+                      products for this month.
+                    </p>
                   </div>
-                  {user && <RecentCompletionsStrip userId={user.id} />}
-                </>
-              ) : (
-                !entitlementLoading &&
-                user && (
-                  <div className="print-hide mt-6 border-t border-bronze/20 pt-6">
-                    <UpgradePrompt userId={user.id} userEmail={user.email} />
-                  </div>
-                )
-              )}
+                </Link>
+              </div>
+              {user && <RecentCompletionsStrip userId={user.id} />}
             </div>
           </section>
         )}

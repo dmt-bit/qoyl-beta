@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { hasRoutineSubscription } from "@/lib/purchases";
 import {
   formatStartDateLabel,
   generateWashCalendar,
@@ -29,7 +28,7 @@ import {
 } from "@/lib/protectiveStyleRoutine";
 
 // Server-only bridge (mirrors /api/purchases): the /routine page is a
-// client component, so it can't call hasRoutineSubscription() or read
+// client component, so it can't read
 // hair_profiles.water_hardness (needed by generateRoutineSteps, but not
 // part of the client-facing HairProfile type) directly. This route does
 // the entitlement check and all the routine computation with the
@@ -42,14 +41,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "user_id is required." }, { status: 400 });
   }
 
-  const subscribed = await hasRoutineSubscription(userId);
-  if (!subscribed) {
-    return NextResponse.json(
-      { error: "No active routine subscription." },
-      { status: 403 }
-    );
-  }
-
+  // Routine is free for every signed-in user with a hair profile -- no
+  // subscription check. (Previously gated behind hasRoutineSubscription.)
   const { data: profile } = await getSupabaseAdmin()
     .from("hair_profiles")
     .select(

@@ -106,6 +106,20 @@ export async function POST(request: Request) {
               stripeCustomerId: stripeCustomerId === "none" ? null : stripeCustomerId,
               source: "stripe",
             });
+
+            // Item 9 - travel kit price is now $2.99 (was $4.99); this
+            // event name pins that so ML training data doesn't need to
+            // join back through Stripe to know which price was in effect.
+            const { error: mlEventError } = await getSupabaseAdmin()
+              .from("ml_events")
+              .insert({
+                event_type: "travel_kit_purchased_299",
+                user_id: userId,
+                metadata: { travel_kit_id: travelKitId, stripe_session_id: session.id },
+              });
+            if (mlEventError) {
+              console.error("Failed to log travel_kit_purchased_299 ml_event:", mlEventError);
+            }
           }
         }
 

@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { COMMUNITY_PREFILL_KEY } from "@/components/CommunityGrid";
 import PostCard, { Post } from "@/components/PostCard";
 import ShopButton from "@/components/ShopButton";
@@ -14,6 +14,7 @@ import {
   buildStyleShoppingList,
 } from "@/lib/styleShoppingList";
 import { supabase } from "@/lib/supabase";
+import { logMlEvent } from "@/lib/mlEvents";
 import { lookupCityState } from "@/lib/zipLookup";
 import {
   DEEP_MATCH_HAIR_ADDITION_OPTIONS,
@@ -613,121 +614,43 @@ function resizeImageToBase64(
   });
 }
 
-function UpgradeWallContent({ userId, userEmail }: { userId: string; userEmail: string | null | undefined }) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleUnlock() {
-    setError(null);
-    setLoading(true);
-    try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_type: "routine_subscription", user_id: userId, email: userEmail }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.url) {
-        setError(data.error ?? "Something went wrong. Please try again.");
-        setLoading(false);
-        return;
-      }
-      window.location.href = data.url;
-    } catch {
-      setError("Couldn't reach the server. Please try again.");
-      setLoading(false);
-    }
-  }
-
+function ProfileRequiredPrompt({ href }: { href: string }) {
   return (
-    <div>
-      <h1 className="font-serif text-[28px] font-semibold text-dark">Unlock unlimited Style Match</h1>
-      <p className="mt-2 text-sm text-dark/70">
-        You have used your 1 free style match. Upgrade for unlimited style matching — plus
-        your personalized monthly routine, 30-day wash day calendar, and unlimited product
-        searches.
-      </p>
-
-      <ul className="mt-6 space-y-2.5">
-        {[
-          "Unlimited Style Match - photo or browse, any style, any time",
-          "Personalized monthly routine",
-          "30-day wash day calendar",
-          "Unlimited product searches",
-        ].map((b) => (
-          <li key={b} className="flex items-start gap-2 text-sm text-dark/80">
-            <span className="mt-0.5 text-bronze2">✓</span>
-            <span>{b}</span>
-          </li>
-        ))}
-      </ul>
-
-      <p className="mt-4 text-sm font-semibold text-dark">$7.99/month — cancel anytime</p>
-
-      {error && <p className="mt-3 text-sm text-red">{error}</p>}
-
-      <button
-        type="button"
-        onClick={handleUnlock}
-        disabled={loading}
-        className="mt-6 w-full rounded-lg bg-bronze py-4 text-base font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
-      >
-        {loading ? "Redirecting..." : "Unlock unlimited →"}
-      </button>
-
-      <Link href="/auth" className="mt-4 block text-center text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70">
-        Already subscribed? Sign in to access Style Match →
-      </Link>
-    </div>
+    <main className="flex min-h-screen items-center justify-center bg-white px-4 font-sans sm:px-6">
+      <div className="mx-auto max-w-sm text-center">
+        <h1 className="font-serif text-2xl font-semibold text-dark">
+          Create your free profile to use Style Match
+        </h1>
+        <p className="mt-2 text-sm text-dark/60">Takes 2 minutes.</p>
+        <Link
+          href={href}
+          className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-bronze py-4 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
+        >
+          Create profile →
+        </Link>
+      </div>
+    </main>
   );
 }
 
 function StyleMatchContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, loading: authLoading, hairProfile, hairProfileLoading, refreshHairProfile } = useAuth();
+  const { user, loading: authLoading, hairProfile, hairProfileLoading } = useAuth();
 
   const resolvingAccess = authLoading || (Boolean(user) && hairProfileLoading);
 
+  // Style Match is free and unlimited for anyone with a hair profile -
+  // no subscription check. It still requires being signed in with
+  // curl_type set (a real hair profile, not just an account) - logged
+  // once, the first time the gate is actually shown to a given session,
+  // so profile-shown/profile-created can be compared as a funnel.
+  const needsProfile = !resolvingAccess && (!user || !hairProfile?.curl_type);
+  const profileGateLoggedRef = useRef(false);
   useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      router.replace("/auth");
-      return;
-    }
-    if (hairProfileLoading) return;
-    if (!hairProfile) {
-      router.replace("/profile");
-    }
-  }, [user, authLoading, hairProfile, hairProfileLoading, router]);
-
-  // Entitlement (Part 1 paywall)
-  const [subscribed, setSubscribed] = useState(false);
-  const [entitlementLoaded, setEntitlementLoaded] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch(`/api/purchases?user_id=${user.id}`);
-        const data = await res.json();
-        if (!cancelled) setSubscribed(Boolean(data.hasRoutineSubscription));
-      } catch {
-        // Fail closed - treat as not subscribed.
-      } finally {
-        if (!cancelled) setEntitlementLoaded(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
-
-  const styleMatchCount = hairProfile?.style_match_count ?? 0;
-  const canRunMatch = subscribed || styleMatchCount < 1;
-  const showUpgradeWall = entitlementLoaded && !resolvingAccess && !canRunMatch;
-  const [justUsedFreeMatch, setJustUsedFreeMatch] = useState(false);
+    if (!needsProfile || profileGateLoggedRef.current) return;
+    profileGateLoggedRef.current = true;
+    logMlEvent("style_match_profile_gate_shown", { userId: user?.id ?? null });
+  }, [needsProfile, user]);
 
   // Whether the user has any hair photo on file - drives the "add a
   // hair photo" nudge on the landing screen, and whether the background
@@ -879,7 +802,6 @@ function StyleMatchContent() {
     setSavedStyleId(null);
     completedRef.current = false;
     setSavedChoice(null);
-    setJustUsedFreeMatch(false);
     setPendingMatchInput(null);
     setBraidRoutingResolved(false);
     setCutRoutingResolved(false);
@@ -937,20 +859,6 @@ function StyleMatchContent() {
         })
         .catch((err) => console.error("[style-match] background translation failed:", err))
         .finally(() => setTranslationLoading(false));
-    }
-
-    // Free-match gate: only the first match for a non-subscriber
-    // consumes/increments the counter. Mirrors app/search/page.tsx's
-    // daily_search_count update - a direct client-side update against
-    // the signed-in user's own hair_profiles row.
-    if (!subscribed && styleMatchCount < 1 && user) {
-      setJustUsedFreeMatch(true);
-      const { error: incrementError } = await supabase
-        .from("hair_profiles")
-        .update({ style_match_count: styleMatchCount + 1 })
-        .eq("user_id", user.id);
-      if (incrementError) console.error("Failed to increment style_match_count:", incrementError);
-      else await refreshHairProfile();
     }
 
     // Create the style_matches row now (not only once the user saves/
@@ -1096,11 +1004,6 @@ function StyleMatchContent() {
   }
 
   async function analyze(body: Record<string, unknown>, inputType: "photo" | "text") {
-    if (!canRunMatch) {
-      setPageState("landing");
-      return;
-    }
-
     setError(null);
     setPageState("analyzing");
     setPendingMatchInput({ inputType, text: inputType === "text" ? (body.text as string) : undefined });
@@ -1486,7 +1389,7 @@ function StyleMatchContent() {
     setPageState("deepSurvey");
   }
 
-  if (resolvingAccess || (user && !hairProfile)) {
+  if (resolvingAccess) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-white font-sans">
         <p className="text-sm text-dark/60">Loading...</p>
@@ -1494,17 +1397,11 @@ function StyleMatchContent() {
     );
   }
 
-  if (pageState === "analyzing") return <AnalyzingOverlay />;
-
-  if (showUpgradeWall && pageState === "landing") {
-    return (
-      <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
-        <div className="mx-auto max-w-md">
-          <UpgradeWallContent userId={user!.id} userEmail={user!.email} />
-        </div>
-      </main>
-    );
+  if (needsProfile) {
+    return <ProfileRequiredPrompt href={user ? "/profile?from=style-match" : "/auth"} />;
   }
+
+  if (pageState === "analyzing") return <AnalyzingOverlay />;
 
   return (
     <main className="min-h-screen bg-white font-sans text-dark">
@@ -2063,12 +1960,6 @@ function StyleMatchContent() {
             </div>
             <p className="mt-2 text-sm text-dark/70">{detected.style_description}</p>
 
-            {justUsedFreeMatch && !subscribed && (
-              <p className="mt-3 text-xs text-bronze2">
-                1 free style match used. Upgrade to routine subscription for unlimited matches.
-              </p>
-            )}
-
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium capitalize text-bronze2">
                 {detected.hair_length} length
@@ -2196,12 +2087,6 @@ function StyleMatchContent() {
             </div>
             {detected.maintenance_tips && (
               <p className="mt-1 text-sm text-dark/60">{detected.maintenance_tips}</p>
-            )}
-
-            {justUsedFreeMatch && !subscribed && (
-              <p className="mt-2 text-xs text-bronze2">
-                1 free style match used. Upgrade to routine subscription for unlimited matches.
-              </p>
             )}
 
             {translateForHairType === true && detected.hair_type_translation && (
