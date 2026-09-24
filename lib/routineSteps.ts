@@ -631,6 +631,192 @@ export function generateRoutineStepsByWashType(curlType: string | null): WashDay
   return GENERIC_FALLBACK_WASH_DAYS;
 }
 
+// ---- Refresh day (every non-wash day) -------------------------------------
+//
+// Every day now gets a routine, wash or not (see lib/routineCalendar.ts's
+// scheduledWashType - curly/coily non-wash days used to have no calendar
+// entry at all, and even straight/wavy's existing "refresh" days only
+// mapped to the generic *_BETWEEN arrays above). This is a richer,
+// deliberately structured 5-step sequence, distinct from *_BETWEEN, used
+// for every refresh day regardless of family. Step 3 (scalp check) is
+// conditional - see shouldShowScalpCheckStep - so it's kept separate from
+// the always-shown steps rather than baked into one static per-family list.
+type RefreshStepFamily = "straight" | "wavy" | "curly" | "coily" | "extensions" | "generic";
+
+function refreshStepFamilyFor(curlType: string | null, routineFocus: string | null): RefreshStepFamily {
+  // routine_focus === "extensions" per app/profile/page.tsx's
+  // ROUTINE_FOCUS_OPTIONS - locs/braids/wigs care, not curl-type-driven.
+  if (routineFocus === "extensions") return "extensions";
+  const family = curlFamily(curlType);
+  return family ?? "generic";
+}
+
+// productCategory values below match lib/routineProducts.ts's
+// getDailyRefreshProducts category keys (daily-leave-in/daily-sealant/
+// daily-scalp-oil/daily-styling), not the plain DB category slugs the
+// wash-day steps above use - refresh-day steps link to the refresh-day
+// product picks (data.refreshDailyProducts), a different lookup, so the
+// keys have to match that list's `category` field instead. Steps with no
+// exact match in that 5-category list (e.g. straight's heat protectant)
+// are left with productCategory: null - the step is still fully
+// informative without a linked product button.
+const REFRESH_MOISTURIZE_STEP: Record<RefreshStepFamily, RoutineStepDetail> = {
+  straight: step(
+    "Refresh and moisturize",
+    "Spritz hair lightly with water or a leave-in spray. Focus on the mid-lengths and ends. Avoid the roots to prevent greasiness. Smooth with hands or a boar bristle brush.",
+    null, null, "daily-leave-in"
+  ),
+  wavy: step(
+    "Refresh and moisturize",
+    "Dampen hair with a spray bottle - wet enough to reactivate product, not soaking. Scrunch your leave-in upward from ends toward roots. Let air dry or diffuse briefly to revive the wave pattern.",
+    null, null, "daily-leave-in"
+  ),
+  curly: step(
+    "Refresh and moisturize",
+    "Wet hair thoroughly with a spray bottle. Apply a small amount of leave-in conditioner or curl refresher, distributing evenly. Scrunch upward to re-clump curls. Diffuse on low or air dry.",
+    null, null, "daily-leave-in"
+  ),
+  coily: step(
+    "Refresh and moisturize",
+    "Section hair into 2-4 sections. Spritz each section with water until damp throughout - coily hair needs real moisture, not a light mist. Apply leave-in conditioner to each section. Seal immediately with your sealant or oil.",
+    null, null, "daily-leave-in"
+  ),
+  extensions: step(
+    "Refresh and moisturize",
+    "Spritz scalp and hair lightly. Apply a light oil to the scalp using your applicator bottle. Massage gently. Do not wet extensions heavily on non-wash days.",
+    null, null, "daily-scalp-oil"
+  ),
+  generic: step(
+    "Refresh and moisturize",
+    "Spritz hair lightly with water or a leave-in spray, focusing on whatever feels driest today. Smooth through with your hands.",
+    null, null, "daily-leave-in"
+  ),
+};
+
+const REFRESH_SEAL_ENDS_STEP: RoutineStepDetail = step(
+  "Seal your ends",
+  "Apply a small amount of your sealant or oil to your fingertips and work it through your ends - the oldest, driest part of your hair. Ends sealed daily retain length. Ends left dry break off.\n\nFor coily hair: focus on any sections that feel dry or look dull.\nFor wavy/curly: a pea-sized amount of oil or butter on the ends only - more than that will weigh down your wave pattern.\nFor straight hair: one drop of serum or oil on the ends to prevent split ends and add shine.",
+  null, null, "daily-sealant"
+);
+
+// Only shown when shouldShowScalpCheckStep() is true - see that function.
+// Exported directly (rather than only reachable through
+// generateRefreshDaySteps) so app/api/routine/route.ts can return the
+// always-present refresh steps once and this one step separately, since
+// whether it applies varies per calendar day (daysSinceLastWash), not
+// just per profile.
+export const REFRESH_SCALP_CHECK_STEP: RoutineStepDetail = step(
+  "Scalp check",
+  "Part your hair and check your scalp. If you notice buildup, flaking, or itching, apply a small amount of scalp oil to the affected areas using your fingertip or applicator bottle. Massage for 1-2 minutes to stimulate circulation. Do not scratch - this irritates the scalp further.",
+  null, null, "daily-scalp-oil"
+);
+
+const REFRESH_STYLE_AND_PROTECT_STEP: Record<RefreshStepFamily, RoutineStepDetail> = {
+  straight: step(
+    "Style and protect",
+    "Style as usual. If using heat, apply heat protectant first - even for quick touch-ups. A boar bristle brush distributes natural oils from root to tip.",
+    null, null, null
+  ),
+  wavy: step(
+    "Style and protect",
+    "Scrunch briefly to define any flattened waves. If needed, apply a tiny amount of mousse or curl refresher to areas that have lost definition. Avoid touching while drying.",
+    null, null, null
+  ),
+  curly: step(
+    "Style and protect",
+    "Separate any curls that have clumped together overnight. Apply a small amount of curl cream to any dry sections. Pineapple or loose braid for tonight to preserve the style.",
+    null, null, null
+  ),
+  coily: step(
+    "Style and protect",
+    "Smooth, puff, or re-twist as desired. Apply edge control if needed. For twisted styles: re-twist any sections that have unraveled.",
+    null, null, "daily-styling"
+  ),
+  extensions: step(
+    "Style and protect",
+    "Smooth flyaways with a light oil or edge control. Check that your protective style is secure. Re-tie or adjust as needed.",
+    null, null, "daily-styling"
+  ),
+  generic: step(
+    "Style and protect",
+    "Restyle as needed and apply a light styling product to any areas that have lost their shape overnight.",
+    null, null, "daily-styling"
+  ),
+};
+
+const REFRESH_PROTECT_TONIGHT_STEP: RoutineStepDetail = step(
+  "Protect tonight",
+  "Before bed: gather hair into your preferred protective style - pineapple, loose bun, or braids for curly/coily hair. Put on your satin bonnet or sleep on your satin pillowcase.",
+  "This single step prevents most overnight breakage and frizz."
+);
+
+// The request's condition for showing the scalp-check step referenced
+// hair_concerns values ('dry_scalp'/'oily_scalp'/'dandruff') that don't
+// exist in this app - those concepts live on scalp_condition instead
+// (normal/dry/oily/sensitive/dandruff-prone, see app/profile/page.tsx's
+// SCALP_OPTIONS). 'thinning' is real and kept as given. Also shows once
+// it's been 3+ days since the last real wash day, independent of any
+// scalp concern - daysSinceLastWash is computed per refresh day by
+// lib/routineCalendar.ts's daysSinceLastWashDay.
+export function shouldShowScalpCheckStep(
+  scalpCondition: string | null,
+  hairConcerns: string[] | null,
+  daysSinceLastWash: number | null
+): boolean {
+  const hasScalpConcern =
+    (scalpCondition !== null && scalpCondition !== "normal") ||
+    Boolean(hairConcerns?.includes("scalp")) ||
+    Boolean(hairConcerns?.includes("thinning"));
+  const longSinceWash = daysSinceLastWash !== null && daysSinceLastWash >= 3;
+  return hasScalpConcern || longSinceWash;
+}
+
+// Main refresh-day entry point, parallel to generateRoutineStepsByWashType
+// above - always 4 steps (moisturize/seal/style/protect-tonight), 5 when
+// showScalpCheck is true.
+export function generateRefreshDaySteps(
+  curlType: string | null,
+  routineFocus: string | null,
+  showScalpCheck: boolean
+): RoutineStepDetail[] {
+  const family = refreshStepFamilyFor(curlType, routineFocus);
+  const steps: RoutineStepDetail[] = [REFRESH_MOISTURIZE_STEP[family], REFRESH_SEAL_ENDS_STEP];
+  if (showScalpCheck) steps.push(REFRESH_SCALP_CHECK_STEP);
+  steps.push(REFRESH_STYLE_AND_PROTECT_STEP[family], REFRESH_PROTECT_TONIGHT_STEP);
+  return steps;
+}
+
+// "daily moisture + seal" / "daily moisture + seal + scalp check" - the
+// hero section's one-line summary of what a refresh day actually
+// involves, without listing all 4-5 steps in full.
+export function refreshDaySummaryLabel(showScalpCheck: boolean): string {
+  return showScalpCheck ? "daily moisture + seal + scalp check" : "daily moisture + seal";
+}
+
+// 2.5 min/step - calibrated so the baseline 4-step day (no scalp check)
+// lands on exactly "10 min", matching the spec's example.
+export function estimateRefreshDayMinutes(stepCount: number): number {
+  return Math.round(stepCount * 2.5);
+}
+
+// Sums each wash-day step's explicit timerMinutes (taking the larger
+// number in a "15-20 minutes" range) plus a flat 3-minute allowance per
+// step with no explicit timer (application/rinse/styling overhead) - an
+// estimate, not a precise formula, since no per-step duration data exists
+// for wash days otherwise.
+export function estimateWashDayMinutes(steps: RoutineStepDetail[]): number {
+  let total = 0;
+  for (const s of steps) {
+    if (s.timerMinutes) {
+      const nums = s.timerMinutes.match(/\d+/g)?.map(Number) ?? [];
+      total += nums.length > 0 ? Math.max(...nums) : 5;
+    } else {
+      total += 3;
+    }
+  }
+  return total;
+}
+
 // ---- Additive profile-level notes -----------------------------------------
 //
 // These apply regardless of which wash day the user is looking at (age/

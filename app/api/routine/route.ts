@@ -7,9 +7,16 @@ import {
   toIsoDate,
 } from "@/lib/routineCalendar";
 import { calculateStreak, computeMissedDates, fetchCompletedDays } from "@/lib/routineCompletions";
-import { generateAdditionalRoutineNotes, generateRoutineStepsByWashType } from "@/lib/routineSteps";
+import {
+  generateAdditionalRoutineNotes,
+  generateRefreshDaySteps,
+  generateRoutineStepsByWashType,
+  REFRESH_SCALP_CHECK_STEP,
+  shouldShowScalpCheckStep,
+} from "@/lib/routineSteps";
 import {
   getRoutineProductPicks,
+  getDailyRefreshProducts,
   getProtectiveStyleProductPicks,
   getIngredientsToAvoid,
   PROTECTIVE_STYLE_ACCESSORIES,
@@ -93,21 +100,59 @@ export async function GET(request: Request) {
   // case rather than guessing).
   const scoringProfile = profile ? buildScoringProfile(profile) : null;
 
-  const [calendarDays, stepsByWashType, products, avoidIngredients, completedDays, brandProducts] =
+  const hairConcerns = profile?.hair_concerns ?? null;
+
+  const [calendarDaysRaw, stepsByWashType, products, avoidIngredients, completedDays, brandProducts, refreshDailyProducts] =
     await Promise.all([
       Promise.resolve(generateWashCalendar(now, curlType, porosity, scalpCondition, routineStartDate)),
       Promise.resolve(generateRoutineStepsByWashType(curlType)),
       getRoutineProductPicks(
         porosity,
         curlType,
-        profile?.hair_concerns ?? null,
+        hairConcerns,
         colorTreated === "yes",
         budgetRange
       ),
       getIngredientsToAvoid(porosity, avoidLimit),
       fetchCompletedDays(userId, toIsoDate(routineStartDate)),
       fetchBrandProductsForCurlType(curlType, family, scoringProfile, 3),
+      // Every day now has a routine, wash or not (see
+      // lib/routineCalendar.ts) - these are the refresh-day products,
+      // computed once here rather than per calendar day since the
+      // category list itself doesn't vary by date, only which day shows
+      // them (client-side, by washType === "refresh").
+      getDailyRefreshProducts(porosity, curlType, hairConcerns, scalpCondition, colorTreated === "yes", budgetRange),
     ]);
+
+  // Attaches whether each refresh day's conditional "scalp check" step
+  // applies (see lib/routineSteps.ts's shouldShowScalpCheckStep) - kept
+  // per-day rather than a single profile-level flag because the
+  // days-since-last-wash half of that condition genuinely varies by date.
+  const calendarDays = calendarDaysRaw.map((day) =>
+    day.washType === "refresh"
+      ? { ...day, showScalpCheck: shouldShowScalpCheckStep(scalpCondition, hairConcerns, day.daysSinceLastWash ?? null) }
+      : day
+  );
+
+  const refreshStepsBase = generateRefreshDaySteps(curlType, routineFocus, false);
+
+  // Informs which product categories to surface more prominently in
+  // search (see the request this responds to) - fires on every load
+  // where the user has no leave-in pick yet, so this will accumulate one
+  // row per load rather than once per user; worth a lightweight dedup
+  // (e.g. once per user per day) if this turns out to be noisy in
+  // practice.
+  const leaveInPick = refreshDailyProducts.find((p) => p.category === "daily-leave-in");
+  if (leaveInPick?.noProductsYet) {
+    const { error: mlEventError } = await getSupabaseAdmin().from("ml_events").insert({
+      event_type: "missing_daily_product",
+      user_id: userId,
+      metadata: { category: "leave_in", shown_prompt: true },
+    });
+    if (mlEventError) {
+      console.error("Failed to log missing_daily_product ml_event:", mlEventError.message);
+    }
+  }
 
   // Daily check-off system (streak, calendar completed/missed
   // indicators) - see lib/routineCompletions.ts. todayIso is computed
@@ -189,8 +234,11 @@ export async function GET(request: Request) {
     missedDates,
     todayCompletion,
     stepsByWashType,
+    refreshStepsBase,
+    refreshScalpCheckStep: REFRESH_SCALP_CHECK_STEP,
     additionalNotes,
     products,
+    refreshDailyProducts,
     brandProducts,
     avoidIngredients,
     colorTreated,

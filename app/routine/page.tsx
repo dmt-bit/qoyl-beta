@@ -24,7 +24,14 @@ import {
 } from "@/lib/priceContext";
 import { PROTECTIVE_STYLE_DAY_LABEL } from "@/lib/protectiveStyleRoutine";
 import { markRoutineVisited } from "@/lib/routineVisit";
-import type { WashDayKey, WashDaySteps } from "@/lib/routineSteps";
+import {
+  estimateRefreshDayMinutes,
+  estimateWashDayMinutes,
+  refreshDaySummaryLabel,
+  type RoutineStepDetail,
+  type WashDayKey,
+  type WashDaySteps,
+} from "@/lib/routineSteps";
 import { lookupCityState } from "@/lib/zipLookup";
 import { getToolsForProfile } from "@/lib/getToolsForProfile";
 import { findTool, type HairTool } from "@/lib/toolsData";
@@ -57,6 +64,14 @@ type ProductPick = {
   alternate: ProductCandidate | null;
   noProductsYet: boolean;
   budgetAlternate: ProductCandidate | null;
+};
+
+// Mirrors lib/routineProducts.ts's DailyRefreshProductPick - defined
+// locally (not imported) since that module pulls in getSupabaseAdmin,
+// which must never reach this client bundle.
+type DailyProductPick = ProductPick & {
+  dailyLabel: string;
+  dailyWhy: string;
 };
 
 type AvoidIngredient = {
@@ -96,8 +111,15 @@ type RoutineData = {
   missedDates: string[];
   todayCompletion: { washType: string; completedAt: string; notes: string | null } | null;
   stepsByWashType: WashDaySteps[];
+  // Refresh day (every non-wash day) content - see lib/routineSteps.ts.
+  // refreshStepsBase is always 4 steps (moisturize/seal/style/protect-
+  // tonight); refreshScalpCheckStep is spliced in after "seal" whenever a
+  // given WashDay's showScalpCheck is true (see getStepsForDay below).
+  refreshStepsBase: RoutineStepDetail[];
+  refreshScalpCheckStep: RoutineStepDetail;
   additionalNotes: RoutineStep[];
   products: ProductPick[];
+  refreshDailyProducts: DailyProductPick[];
   brandProducts: RoutineBrandProduct[];
   avoidIngredients: AvoidIngredient[];
   colorTreated: string | null;
@@ -147,6 +169,45 @@ const SECTION_META: Record<RoutineSection, { label: string; dotClass: string }> 
   ) as Record<RoutineSection, { label: string; dotClass: string }>;
 const SECTION_ORDER = ROUTINE_SECTION_ORDER;
 
+// Every day now has a routine (wash or refresh) - these helpers pick the
+// right step/product list for ANY WashDay, reused by the hero, steps, and
+// products sections rather than each recomputing the wash-vs-refresh
+// branch and the conditional-scalp-check splice separately.
+function getStepsForDay(data: RoutineData, washDay: WashDay): RoutineStepDetail[] {
+  if (washDay.washType === "refresh") {
+    const base = data.refreshStepsBase;
+    if (!washDay.showScalpCheck) return base;
+    return [base[0], base[1], data.refreshScalpCheckStep, base[2], base[3]];
+  }
+  const key = washDayKeyForType(washDay.washType);
+  return data.stepsByWashType.find((w) => w.key === key)?.steps ?? [];
+}
+
+function getMinutesForDay(steps: RoutineStepDetail[], washDay: WashDay): number {
+  if (washDay.washType === "refresh") return estimateRefreshDayMinutes(steps.length);
+  return estimateWashDayMinutes(steps);
+}
+
+function getProductsForDay(data: RoutineData, washDay: WashDay): (ProductPick | DailyProductPick)[] {
+  if (washDay.washType === "refresh") return data.refreshDailyProducts;
+  return data.products.filter((pick) => sectionsForWashType(washDay.washType).includes(pick.section));
+}
+
+// "tuesday · regular wash" / "wednesday · refresh day" - the day-header
+// format the calendar/steps/products sections all share once a specific
+// day (not just "today") can be selected.
+function washTypeShortLabel(type: WashDayType): string {
+  if (type === "chelate" || type === "clarify") return "clarifying wash";
+  if (type === "protein") return "protein wash";
+  if (type === "refresh") return "refresh day";
+  return "regular wash";
+}
+
+function dayHeaderLabel(iso: string, washType: WashDayType): string {
+  const weekday = new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+  return `${weekday} · ${washTypeShortLabel(washType)}`;
+}
+
 // Maps a calendar wash day directly onto the product section(s) relevant
 // to it -- styling products apply after any actual wash, so wash days
 // pull in the styling section too; a between-wash day (dry
@@ -158,12 +219,6 @@ function sectionsForWashType(type: WashDayType): RoutineSection[] {
   return ["regular", "styling"];
 }
 
-function todayLabelForWashType(type: WashDayType): string {
-  if (type === "chelate" || type === "clarify") return "Clarifying wash day";
-  if (type === "protein") return "Protein treatment day";
-  if (type === "refresh") return "Between wash day";
-  return "Regular wash day";
-}
 
 // ---- Calendar grid (Part 2: restores a real month-grid visual instead
 // of the rolling list) -----------------------------------------------
@@ -299,6 +354,8 @@ function DayCell({
   isCompleted,
   isMissed,
   family,
+  isSelected,
+  onSelect,
 }: {
   cell: DayCellData;
   washDay: WashDay | undefined;
@@ -307,10 +364,22 @@ function DayCell({
   isCompleted: boolean;
   isMissed: boolean;
   family: CurlFamily | null;
+  isSelected: boolean;
+  onSelect: (iso: string) => void;
 }) {
   const todayMarker = isToday ? (
     <span className="absolute left-1/2 top-0.5 h-1 w-1 -translate-x-1/2 rounded-full bg-bronze2" />
   ) : null;
+  // Every day within the window now has a real WashDay entry (see
+  // lib/routineCalendar.ts - non-wash days are "refresh" instead of
+  // simply absent), so tapping is always meaningful here; the button
+  // wrapper works identically for a wash cell, a refresh cell, or the
+  // dot-kind cells below.
+  const handleClick = () => onSelect(cell.iso);
+  // "Highlight the tapped day with black background white text" -
+  // overrides whatever the cell's own wash-type styling would otherwise
+  // show, applied identically across all three render branches below.
+  const selectedOverride = isSelected ? "!bg-dark [&_*]:!text-white" : "";
 
   if (washDay) {
     const style = washDayCellStyle(washDay.washType, family, isCompleted);
@@ -322,7 +391,11 @@ function DayCell({
       // completed treatments as the filled cells below, just scaled
       // down to fit the dot presentation.
       return (
-        <div className="relative flex min-h-[40px] flex-col items-center justify-center rounded-md">
+        <button
+          type="button"
+          onClick={handleClick}
+          className={`relative flex min-h-[40px] w-full flex-col items-center justify-center rounded-md ${selectedOverride}`}
+        >
           {todayMarker}
           <span className="font-sans text-xs text-dark/70">{cell.day}</span>
           {isCompleted && !isRefresh ? (
@@ -332,12 +405,14 @@ function DayCell({
               className={`mt-0.5 h-1 w-1 rounded-full ${isCompleted ? "bg-bronze" : style.dotClass}`}
             />
           )}
-        </div>
+        </button>
       );
     }
     return (
-      <div
-        className={`relative flex min-h-[40px] flex-col items-center justify-center rounded-md ${style.cellClass}`}
+      <button
+        type="button"
+        onClick={handleClick}
+        className={`relative flex min-h-[40px] w-full flex-col items-center justify-center rounded-md ${style.cellClass} ${selectedOverride}`}
       >
         {todayMarker}
         {isCompleted && isRefresh && (
@@ -351,7 +426,7 @@ function DayCell({
             {style.label}
           </span>
         )}
-      </div>
+      </button>
     );
   }
 
@@ -369,19 +444,20 @@ function DayCell({
     );
   }
 
-  // Within the window but not a wash day - coily's routine explicitly
-  // calls for nightly ends-sealing on every non-wash day (see
-  // lib/routineSteps.ts's "Seal ends - every single night" step), so
-  // that family gets a bronze "seal ends" dot; no other family's
-  // between-wash days are tied to one mandatory nightly action, so they
-  // read as a plain muted rest-day dot.
+  // Defensive fallback only - every date within the window now has a
+  // washDay entry (every day has a routine, wash or refresh), so this
+  // branch should be unreachable in practice.
   const dotClass = family === "coily" ? "bg-bronze" : "bg-muted";
   return (
-    <div className="relative flex min-h-[40px] flex-col items-center justify-center rounded-md">
+    <button
+      type="button"
+      onClick={handleClick}
+      className={`relative flex min-h-[40px] w-full flex-col items-center justify-center rounded-md ${selectedOverride}`}
+    >
       {todayMarker}
       <span className="font-sans text-xs text-muted">{cell.day}</span>
       <span className={`mt-0.5 h-1 w-1 rounded-full ${dotClass}`} />
-    </div>
+    </button>
   );
 }
 
@@ -394,6 +470,8 @@ function MonthCalendar({
   completedIso,
   missedIsoDates,
   family,
+  selectedIso,
+  onSelect,
 }: {
   meta: MonthMeta;
   washDayByDate: Map<string, WashDay>;
@@ -403,6 +481,8 @@ function MonthCalendar({
   completedIso: string | null;
   missedIsoDates: Set<string>;
   family: CurlFamily | null;
+  selectedIso: string;
+  onSelect: (iso: string) => void;
 }) {
   const cells = buildMonthCells(meta.year, meta.month);
   const leadingEmpty = cells[0]?.weekday ?? 0;
@@ -432,6 +512,8 @@ function MonthCalendar({
             isCompleted={cell.iso === completedIso}
             isMissed={missedIsoDates.has(cell.iso)}
             family={family}
+            isSelected={cell.iso === selectedIso}
+            onSelect={onSelect}
           />
         ))}
       </div>
@@ -447,12 +529,16 @@ function CalendarLegend({ family }: { family: CurlFamily | null }) {
     { swatchClass: SECTION_META.clarify.dotClass, label: SECTION_META.clarify.label },
     { swatchClass: SECTION_META.regular.dotClass, label: SECTION_META.regular.label },
     { swatchClass: SECTION_META.protein.dotClass, label: SECTION_META.protein.label },
-    family === "coily"
-      ? { swatchClass: "bg-bronze", label: "Seal ends tonight", dot: true }
-      : { swatchClass: "bg-muted", label: "Rest day", dot: true },
   ];
-  if (family === "straight" || family === "wavy") {
-    items.push({ swatchClass: SECTION_META.between.dotClass, label: SECTION_META.between.label, dot: true });
+  // Every family gets a refresh day on every non-wash date now (see
+  // lib/routineCalendar.ts) - straight's is shown as a small dot (it
+  // washes near-daily, so a filled cell would paint the whole grid
+  // solid), every other family gets the same filled "Refresh" treatment
+  // as regular wash days.
+  if (family === "straight") {
+    items.push({ swatchClass: "bg-muted", label: "Refresh (daily)", dot: true });
+  } else {
+    items.push({ swatchClass: SECTION_META.between.dotClass, label: "Refresh day", dot: true });
   }
 
   return (
@@ -478,12 +564,16 @@ function WashCalendarGrid({
   completedIso,
   missedDates,
   family,
+  selectedIso,
+  onSelect,
 }: {
   calendarDays: WashDay[];
   todayIso: string;
   completedIso: string | null;
   missedDates: string[];
   family: CurlFamily | null;
+  selectedIso: string;
+  onSelect: (iso: string) => void;
 }) {
   const washDayByDate = new Map(calendarDays.map((d) => [d.date, d]));
   const missedIsoDates = new Set(missedDates);
@@ -509,6 +599,8 @@ function WashCalendarGrid({
               completedIso={completedIso}
               missedIsoDates={missedIsoDates}
               family={family}
+              selectedIso={selectedIso}
+              onSelect={onSelect}
             />
           </div>
         ))}
@@ -1041,7 +1133,20 @@ function HeroSection({
   const showCurl = Boolean(data.curlType && data.curlType !== "not_sure");
   const porosityLabel = data.porosity && data.porosity !== "not sure" ? `${data.porosity} porosity` : null;
   const subline = [porosityLabel, cityLabel].filter(Boolean).join(" · ");
-  const todayWash = data.calendarDays.find((d) => d.date === data.todayIso);
+  // Every day now has a calendarDays entry (wash or refresh - see
+  // lib/routineCalendar.ts), so this is never undefined anymore. Curl
+  // type/porosity/streak (left side + bottom of the right side) stay
+  // exactly as they were; only the pill above the streak changes, from a
+  // small wash-type label to a real heading with step count/duration -
+  // "today" only, never affected by tapping a different day elsewhere on
+  // the page (see selectedIso in StepsSection/ProductsSection below).
+  const todayWash = data.calendarDays.find((d) => d.date === data.todayIso) as WashDay;
+  const isRefresh = todayWash.washType === "refresh";
+  const todaySteps = getStepsForDay(data, todayWash);
+  const todayMinutes = getMinutesForDay(todaySteps, todayWash);
+  const heroSubline = isRefresh
+    ? `${refreshDaySummaryLabel(Boolean(todayWash.showScalpCheck))} · ${todaySteps.length} steps · est. ${todayMinutes} min`
+    : `${washTypeShortLabel(todayWash.washType)} · ${todaySteps.length} steps · est. ${todayMinutes} min`;
 
   return (
     <div id="section-today" className="w-full border-b border-dark bg-white px-5 pb-5 pt-6">
@@ -1053,13 +1158,8 @@ function HeroSection({
           <p className="mt-2 font-mono text-[10px] text-muted">{subline || "your hair"}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end pt-1 text-right">
-          <span
-            className={`whitespace-nowrap px-3 py-1.5 font-mono text-[11px] font-bold lowercase ${
-              todayWash ? WASH_PILL_CLASSES[todayWash.washType] : "bg-[#d9d9d9] text-dark"
-            }`}
-          >
-            {todayWash ? WASH_PILL_LABEL[todayWash.washType] : "rest day"}
-          </span>
+          <p className="font-sans text-xl font-bold lowercase text-dark">{isRefresh ? "refresh day" : "wash day"}</p>
+          <p className="mt-1 whitespace-nowrap font-mono text-[10px] text-muted">{heroSubline}</p>
           <p className="mt-2 whitespace-nowrap font-mono text-[10px]">
             {data.streak >= 3 ? (
               <span className="text-dark">🔥 {data.streak}-day streak</span>
@@ -1073,7 +1173,7 @@ function HeroSection({
       <TodayCheckOffButton
         userId={userId}
         todayIso={data.todayIso}
-        washType={todayWash?.washType ?? null}
+        washType={todayWash.washType}
         todayCompletion={data.todayCompletion}
         onChanged={onChanged}
       />
@@ -1095,12 +1195,27 @@ function dayCompletionState(
   return "future";
 }
 
+// Refresh days get a deliberately quiet pill here - "small, gray outlined
+// ... not the focus" - so the colored wash-type pills (chelating/regular/
+// protein/co-wash) still read as the notable events in the strip.
+function upcomingPillLabel(type: WashDayType): string {
+  return type === "refresh" ? "refresh" : WASH_PILL_LABEL[type];
+}
+function upcomingPillClass(type: WashDayType): string {
+  if (type === "refresh") return "border border-muted text-muted bg-transparent";
+  return WASH_PILL_CLASSES[type];
+}
+
 function UpcomingDayCard({
   day,
   state,
+  isSelected,
+  onSelect,
 }: {
   day: WashDay;
   state: "today" | "completed" | "missed" | "future";
+  isSelected: boolean;
+  onSelect: (iso: string) => void;
 }) {
   const d = new Date(`${day.date}T00:00:00`);
   const dayName = d.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
@@ -1108,32 +1223,64 @@ function UpcomingDayCard({
 
   if (state === "today") {
     return (
-      <div className="flex h-[88px] w-[72px] shrink-0 flex-col justify-between border-2 border-dark bg-dark p-2">
+      <button
+        type="button"
+        onClick={() => onSelect(day.date)}
+        className={`flex h-[88px] w-[72px] shrink-0 flex-col justify-between border-2 p-2 ${
+          isSelected ? "border-dark bg-dark" : "border-dark bg-dark"
+        }`}
+      >
         <span className="font-sans text-[9px] lowercase text-white/70">{dayName}</span>
         <span className="font-mono text-[22px] font-bold leading-none text-white">{dateNum}</span>
         <span className="self-start bg-white px-1.5 py-0.5 font-mono text-[8px] font-bold lowercase text-dark">
-          {WASH_PILL_LABEL[day.washType]}
+          {upcomingPillLabel(day.washType)}
         </span>
-      </div>
+      </button>
     );
   }
 
   return (
-    <div className="relative flex h-[88px] w-[72px] shrink-0 flex-col justify-between border border-[#e0e0e0] bg-white p-2">
-      <span className="font-sans text-[9px] lowercase text-muted">{dayName}</span>
-      <span className={`font-mono text-[22px] font-bold leading-none ${state === "completed" ? "text-muted" : "text-dark"}`}>
+    <button
+      type="button"
+      onClick={() => onSelect(day.date)}
+      className={`relative flex h-[88px] w-[72px] shrink-0 flex-col justify-between border p-2 ${
+        isSelected ? "border-dark bg-dark" : "border-[#e0e0e0] bg-white"
+      }`}
+    >
+      <span className={`font-sans text-[9px] lowercase ${isSelected ? "text-white/70" : "text-muted"}`}>{dayName}</span>
+      <span
+        className={`font-mono text-[22px] font-bold leading-none ${
+          isSelected ? "text-white" : state === "completed" ? "text-muted" : "text-dark"
+        }`}
+      >
         {dateNum}
       </span>
-      <span className={`self-start px-1.5 py-0.5 font-mono text-[8px] font-bold lowercase ${WASH_PILL_CLASSES[day.washType]}`}>
-        {WASH_PILL_LABEL[day.washType]}
+      <span
+        className={`self-start px-1.5 py-0.5 font-mono text-[8px] font-bold lowercase ${
+          isSelected ? "border border-white/50 bg-transparent text-white" : upcomingPillClass(day.washType)
+        }`}
+      >
+        {upcomingPillLabel(day.washType)}
       </span>
-      {state === "completed" && <span className="absolute right-1 top-1 text-[10px] leading-none text-dark">✓</span>}
+      {state === "completed" && (
+        <span className={`absolute right-1 top-1 text-[10px] leading-none ${isSelected ? "text-white" : "text-dark"}`}>✓</span>
+      )}
       {state === "missed" && <span className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-amber" />}
-    </div>
+    </button>
   );
 }
 
-function UpcomingSection({ data, onViewCalendar }: { data: RoutineData; onViewCalendar: () => void }) {
+function UpcomingSection({
+  data,
+  onViewCalendar,
+  selectedIso,
+  onSelect,
+}: {
+  data: RoutineData;
+  onViewCalendar: () => void;
+  selectedIso: string;
+  onSelect: (iso: string) => void;
+}) {
   const todayDate = new Date(`${data.todayIso}T00:00:00`);
   const cutoffIso = toIsoLocal(addDays(todayDate, -7));
   const visibleDays = data.calendarDays.filter((d) => d.date >= cutoffIso);
@@ -1149,7 +1296,13 @@ function UpcomingSection({ data, onViewCalendar }: { data: RoutineData; onViewCa
       {visibleDays.length > 0 ? (
         <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto px-5 pb-4">
           {visibleDays.map((day) => (
-            <UpcomingDayCard key={day.date} day={day} state={dayCompletionState(day, data.todayIso, data.missedDates)} />
+            <UpcomingDayCard
+              key={day.date}
+              day={day}
+              state={dayCompletionState(day, data.todayIso, data.missedDates)}
+              isSelected={day.date === selectedIso}
+              onSelect={onSelect}
+            />
           ))}
         </div>
       ) : (
@@ -1179,7 +1332,7 @@ function StepCard({
     toolIds?: string[] | null;
   };
   index: number;
-  products: ProductPick[];
+  products: (ProductPick | DailyProductPick)[];
   onViewProduct: () => void;
   onViewTool: (toolId: string) => void;
 }) {
@@ -1245,14 +1398,29 @@ function StepCard({
   );
 }
 
-function StepsSection({ data, onViewTool }: { data: RoutineData; onViewTool: (toolId: string) => void }) {
+function StepsSection({
+  data,
+  onViewTool,
+  selectedIso,
+}: {
+  data: RoutineData;
+  onViewTool: (toolId: string) => void;
+  selectedIso: string;
+}) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [current, setCurrent] = useState(0);
-  const todayWash = data.calendarDays.find((d) => d.date === data.todayIso);
-  const key = todayWash ? washDayKeyForType(todayWash.washType) : null;
-  const washDaySteps = key ? data.stepsByWashType.find((w) => w.key === key) ?? null : null;
-  const steps = washDaySteps?.steps ?? [];
+  // Every date in the 30-day window now has a calendarDays entry (see
+  // lib/routineCalendar.ts), so selectedWash is only undefined if
+  // selectedIso somehow falls outside that window - defensive, not
+  // expected in practice since selectedIso only ever comes from tapping
+  // a real calendar/upcoming cell.
+  const selectedWash = data.calendarDays.find((d) => d.date === selectedIso);
+  const steps = selectedWash ? getStepsForDay(data, selectedWash) : [];
+  // Additional profile-level notes (age/thinning/color-treated/extension
+  // care) apply regardless of which day is selected, same as before.
   const total = steps.length + data.additionalNotes.length;
+  const productsForDay = selectedWash ? getProductsForDay(data, selectedWash) : [];
+  const dayState = selectedWash ? dayCompletionState(selectedWash, data.todayIso, data.missedDates) : "today";
 
   function handleScroll() {
     const el = scrollerRef.current;
@@ -1274,11 +1442,11 @@ function StepsSection({ data, onViewTool }: { data: RoutineData; onViewTool: (to
     document.getElementById("section-products")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  if (!todayWash) {
+  if (!selectedWash) {
     return (
       <div id="section-steps" className="w-full border-b border-dark bg-white px-5 py-6">
-        <span className="font-mono text-[10px] lowercase text-muted">today&apos;s routine</span>
-        <p className="mt-2 font-sans text-[13px] text-[#444]">Rest day — no routine steps today.</p>
+        <span className="font-mono text-[10px] lowercase text-muted">routine</span>
+        <p className="mt-2 font-sans text-[13px] text-[#444]">No routine data for this date.</p>
       </div>
     );
   }
@@ -1286,9 +1454,23 @@ function StepsSection({ data, onViewTool }: { data: RoutineData; onViewTool: (to
   return (
     <div id="section-steps" className="w-full border-b border-dark bg-white pt-4">
       <div className="px-5">
-        <span className="font-mono text-[10px] lowercase text-muted">today&apos;s routine</span>
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[10px] lowercase text-muted">
+            {dayHeaderLabel(selectedIso, selectedWash.washType)}
+          </span>
+          {dayState === "completed" && (
+            <span className="rounded-full bg-dark px-1.5 py-0.5 font-mono text-[8px] lowercase text-white">
+              completed ✓
+            </span>
+          )}
+          {dayState === "future" && (
+            <span className="rounded-full border border-muted px-1.5 py-0.5 font-mono text-[8px] lowercase text-muted">
+              upcoming
+            </span>
+          )}
+        </div>
         <p className="mt-0.5 font-mono text-[9px] text-[#bbb]">
-          {todayLabelForWashType(todayWash.washType).toLowerCase()} · {total} step{total === 1 ? "" : "s"}
+          {total} step{total === 1 ? "" : "s"}
         </p>
       </div>
       <div
@@ -1302,7 +1484,7 @@ function StepsSection({ data, onViewTool }: { data: RoutineData; onViewTool: (to
             key={step.title}
             step={step}
             index={i}
-            products={data.products}
+            products={productsForDay}
             onViewProduct={scrollToProducts}
             onViewTool={onViewTool}
           />
@@ -1312,7 +1494,7 @@ function StepsSection({ data, onViewTool }: { data: RoutineData; onViewTool: (to
             key={note.title}
             step={{ title: note.title, body: note.body, why: note.why, timerMinutes: null, productCategory: null, toolIds: null }}
             index={steps.length + i}
-            products={data.products}
+            products={productsForDay}
             onViewProduct={scrollToProducts}
             onViewTool={onViewTool}
           />
@@ -1343,9 +1525,15 @@ function StepsSection({ data, onViewTool }: { data: RoutineData; onViewTool: (to
 // reuses the existing full-detail ProductCard/SectionDivider and folds
 // in the brand-products/avoid-ingredients blocks that used to live in
 // the always-visible product section.
-function CompactProductCard({ pick }: { pick: ProductPick }) {
+function isDailyPick(pick: ProductPick | DailyProductPick): pick is DailyProductPick {
+  return "dailyLabel" in pick;
+}
+
+function CompactProductCard({ pick }: { pick: ProductPick | DailyProductPick }) {
   const [showWhy, setShowWhy] = useState(false);
   const { primary } = pick;
+  const daily = isDailyPick(pick) ? pick : null;
+  const headerLabel = daily?.dailyLabel ?? pick.categoryLabel;
 
   if (pick.noProductsYet || !primary) {
     return (
@@ -1353,8 +1541,14 @@ function CompactProductCard({ pick }: { pick: ProductPick }) {
         className="flex min-h-[140px] w-[calc(100vw-56px)] max-w-[340px] shrink-0 flex-col justify-between border border-dark bg-white p-5"
         style={{ scrollSnapAlign: "start" }}
       >
-        <span className="font-mono text-[9px] uppercase tracking-wide text-muted">{pick.categoryLabel}</span>
-        <p className="mt-3 font-sans text-sm text-dark/60">No pick yet for this category.</p>
+        <span className="font-mono text-[9px] uppercase tracking-wide text-muted">{headerLabel}</span>
+        {daily ? (
+          <p className="mt-3 font-sans text-sm text-dark/60">
+            add a {pick.categoryLabel.toLowerCase()} to your routine to complete your daily refresh
+          </p>
+        ) : (
+          <p className="mt-3 font-sans text-sm text-dark/60">No pick yet for this category.</p>
+        )}
         <Link
           href={`/search?category=${encodeURIComponent(pick.searchCategorySlug)}`}
           className="mt-2 font-mono text-[9px] text-dark"
@@ -1373,7 +1567,7 @@ function CompactProductCard({ pick }: { pick: ProductPick }) {
       style={{ scrollSnapAlign: "start" }}
     >
       <div className="flex items-center gap-1.5">
-        <span className="font-mono text-[9px] uppercase tracking-wide text-muted">{pick.categoryLabel}</span>
+        <span className="font-mono text-[9px] uppercase tracking-wide text-muted">{headerLabel}</span>
         <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
       </div>
       <p className="mt-2 font-sans text-base font-bold lowercase tracking-[-0.3px] text-dark">{primary.productName}</p>
@@ -1387,39 +1581,52 @@ function CompactProductCard({ pick }: { pick: ProductPick }) {
         {WEIGHT_PILL_LABEL[primary.weight]}
       </span>
 
-      <div className="mt-auto flex items-center justify-between pt-3">
-        <button type="button" onClick={() => setShowWhy((v) => !v)} className="font-mono text-[9px] text-muted">
-          why this was picked →
-        </button>
+      {/* Daily refresh picks always show their rationale inline (see the
+          request's "always have something to show" for these 5
+          categories) rather than hiding it behind the "why this was
+          picked" toggle used for wash-day products. */}
+      {daily ? (
+        <p className="mt-2 text-xs leading-relaxed text-[#444]">{daily.dailyWhy}</p>
+      ) : (
+        <div className="mt-auto flex items-center justify-between pt-3">
+          <button type="button" onClick={() => setShowWhy((v) => !v)} className="font-mono text-[9px] text-muted">
+            why this was picked →
+          </button>
+        </div>
+      )}
+      <div className="mt-2 flex items-center justify-end">
         <ShopButton productName={primary.productName} brandName={primary.brandName} className="font-mono text-[9px] text-dark" />
       </div>
-      {showWhy && <p className="mt-2 text-xs leading-relaxed text-[#444]">{primary.why}</p>}
+      {!daily && showWhy && <p className="mt-2 text-xs leading-relaxed text-[#444]">{primary.why}</p>}
     </div>
   );
 }
 
-function ProductsSection({ data }: { data: RoutineData }) {
+function ProductsSection({ data, selectedIso }: { data: RoutineData; selectedIso: string }) {
   const [showAll, setShowAll] = useState(false);
-  const todayWash = data.calendarDays.find((d) => d.date === data.todayIso);
-  const todaysPicks = todayWash
-    ? data.products.filter((pick) => sectionsForWashType(todayWash.washType).includes(pick.section))
-    : [];
+  const selectedWash = data.calendarDays.find((d) => d.date === selectedIso);
+  // Refresh days always have something to show (leave-in/sealant/styling
+  // at minimum - see lib/routineProducts.ts's getDailyRefreshProducts),
+  // so the "nothing needed" fallback below should be unreachable for
+  // them in practice; kept as a defensive fallback for the same reason
+  // as StepsSection's equivalent.
+  const selectedPicks = selectedWash ? getProductsForDay(data, selectedWash) : [];
 
   return (
     <div id="section-products" className="w-full border-b border-dark bg-white pt-4">
       <div className="px-5">
         <span className="font-mono text-[10px] lowercase text-muted">your products</span>
         <p className="mt-0.5 font-mono text-[9px] text-[#bbb]">
-          {todayWash ? `for today's ${todayLabelForWashType(todayWash.washType).toLowerCase()}` : "for your routine"}
+          {selectedWash ? `for ${dayHeaderLabel(selectedIso, selectedWash.washType)}` : "for your routine"}
         </p>
       </div>
 
-      {todaysPicks.length > 0 ? (
+      {selectedPicks.length > 0 ? (
         <div
           className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-5 pb-4"
           style={{ scrollSnapType: "x mandatory" }}
         >
-          {todaysPicks.map((pick) => (
+          {selectedPicks.map((pick) => (
             <CompactProductCard key={pick.category} pick={pick} />
           ))}
         </div>
@@ -1691,11 +1898,15 @@ function CalendarAccordionSection({
   family,
   expanded,
   onToggle,
+  selectedIso,
+  onSelect,
 }: {
   data: RoutineData;
   family: CurlFamily | null;
   expanded: boolean;
   onToggle: () => void;
+  selectedIso: string;
+  onSelect: (iso: string) => void;
 }) {
   const months = getMonthsInWindow(new Date(`${data.todayIso}T00:00:00`));
   const monthLabel = months.map((m) => m.label).join(" + ");
@@ -1717,6 +1928,8 @@ function CalendarAccordionSection({
             completedIso={data.todayCompletion ? data.todayIso : null}
             missedDates={data.missedDates}
             family={family}
+            selectedIso={selectedIso}
+            onSelect={onSelect}
           />
         </div>
       </Collapse>
@@ -1846,6 +2059,14 @@ function RoutineContent() {
   // target tool lives in the recommended (not essential) group.
   const [showRecommendedTools, setShowRecommendedTools] = useState(false);
   const [highlightedToolId, setHighlightedToolId] = useState<string | null>(null);
+  // The calendar/upcoming strip's selected date - drives StepsSection/
+  // ProductsSection (see getStepsForDay/getProductsForDay above), while
+  // HeroSection stays fixed to data.todayIso regardless. Starts null and
+  // is set to data.todayIso exactly once below, the first time data
+  // loads - NOT reset on every subsequent loadRoutine() refresh (e.g.
+  // after a check-off), which would otherwise snap the user's tapped
+  // selection back to today every time they check something off.
+  const [selectedIso, setSelectedIso] = useState<string | null>(null);
 
   const showWelcome = searchParams.get("welcome") === "true" && !welcomeDismissed;
 
@@ -1883,6 +2104,14 @@ function RoutineContent() {
   // so the nav's re-engagement dot clears, and resolves the hero's city
   // subline - both only once the routine has actually loaded.
   useEffect(() => {
+    if (data && selectedIso === null) setSelectedIso(data.todayIso);
+    // Deliberately omits selectedIso from deps - this should only ever
+    // fire once, on first load; including it would make the effect
+    // depend on its own setter's result.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
+  useEffect(() => {
     if (status !== "ready" || !data || !user) return;
     markRoutineVisited(user.id);
     let cancelled = false;
@@ -1910,6 +2139,17 @@ function RoutineContent() {
     setCalendarExpanded(true);
     requestAnimationFrame(() => {
       document.getElementById("section-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  // "Tap any day, see that day's routine" - the calendar/upcoming strip
+  // both call this. Scrolls to the Steps section since that (plus
+  // Products, right below it) is what actually changes on tap - the hero
+  // stays fixed to today, per the request.
+  function handleSelectDay(iso: string) {
+    setSelectedIso(iso);
+    requestAnimationFrame(() => {
+      document.getElementById("section-steps")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -2011,9 +2251,14 @@ function RoutineContent() {
 
       {showNaturalRoutine && (
         <>
-          <UpcomingSection data={data} onViewCalendar={expandAndScrollToCalendar} />
-          <StepsSection data={data} onViewTool={scrollToTool} />
-          <ProductsSection data={data} />
+          <UpcomingSection
+            data={data}
+            onViewCalendar={expandAndScrollToCalendar}
+            selectedIso={selectedIso ?? data.todayIso}
+            onSelect={handleSelectDay}
+          />
+          <StepsSection data={data} onViewTool={scrollToTool} selectedIso={selectedIso ?? data.todayIso} />
+          <ProductsSection data={data} selectedIso={selectedIso ?? data.todayIso} />
           <ToolsSection
             data={data}
             highlightedToolId={highlightedToolId}
@@ -2025,6 +2270,8 @@ function RoutineContent() {
             family={family}
             expanded={calendarExpanded}
             onToggle={() => setCalendarExpanded((v) => !v)}
+            selectedIso={selectedIso ?? data.todayIso}
+            onSelect={handleSelectDay}
           />
         </>
       )}

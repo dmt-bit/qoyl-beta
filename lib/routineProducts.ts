@@ -733,6 +733,148 @@ export async function getRoutineProducts(
   return getRoutineProductPicks(porosity, curlType, hairConcerns, colorTreated, budgetRange);
 }
 
+// ---- Daily refresh-day products -----------------------------------------
+//
+// Every day now has a routine (see lib/routineCalendar.ts's scheduledWashType
+// - non-wash days used to have no calendar entry at all for curly/coily
+// families, and no product recommendations for anyone). These are the
+// categories a refresh day actually needs, always with something to show
+// per category (a real pick or the existing noProductsYet upsell) rather
+// than the day silently having nothing - reuses the exact same
+// rankCategoryProducts/loadCategoryIds machinery as getRoutineProductPicks
+// above against the same real DB categories (leave-in/oil/dry-shampoo/
+// styler), just under refresh-day-specific labels and rationale copy.
+export type DailyRefreshProductPick = RoutineProductPick & {
+  dailyLabel: string;
+  dailyWhy: string;
+};
+
+// scalp_condition values other than "normal"/null, or the real
+// hair_concerns values 'scalp'/'thinning', count as a scalp concern here -
+// there is no 'dry_scalp'/'oily_scalp'/'dandruff' hair_concerns value in
+// this app (those concepts live on scalp_condition instead; see
+// app/profile/page.tsx's SCALP_OPTIONS/CONCERN_OPTIONS).
+function hasDailyScalpConcern(scalpCondition: string | null, hairConcerns: string[] | null): boolean {
+  return (
+    (scalpCondition !== null && scalpCondition !== "normal") ||
+    Boolean(hairConcerns?.includes("scalp")) ||
+    Boolean(hairConcerns?.includes("thinning"))
+  );
+}
+
+function scalpConcernLabel(scalpCondition: string | null, hairConcerns: string[] | null): string {
+  if (scalpCondition === "dandruff-prone") return "flaking";
+  if (scalpCondition === "dry") return "dryness";
+  if (scalpCondition === "oily") return "excess oil";
+  if (scalpCondition === "sensitive") return "sensitivity";
+  if (hairConcerns?.includes("thinning")) return "thinning";
+  return "scalp health";
+}
+
+export async function getDailyRefreshProducts(
+  porosity: string | null,
+  curlType: string | null,
+  hairConcerns: string[] | null,
+  scalpCondition: string | null,
+  colorTreated: boolean = false,
+  budgetRange: string | null = null
+): Promise<DailyRefreshProductPick[]> {
+  const family = curlFamily(curlType);
+  const isStraightOrWavy = family === "straight" || family === "wavy";
+  const hasScalpConcern = hasDailyScalpConcern(scalpCondition, hairConcerns);
+
+  type Slot = { slot: RoutineCategorySlot; dailyLabel: string; dailyWhy: string };
+  const slots: Slot[] = [
+    {
+      slot: { slug: "leave-in", pickCategory: "daily-leave-in", label: "Leave-In Conditioner", section: "between" },
+      dailyLabel: "daily moisture",
+      dailyWhy: "applied every day to maintain the moisture your hair lost overnight and throughout the day",
+    },
+    {
+      slot: { slug: "oil", pickCategory: "daily-sealant", label: "Sealant", section: "between" },
+      dailyLabel: "end sealant",
+      dailyWhy: "seals moisture into the hair shaft and prevents ends from drying out between wash days",
+    },
+  ];
+  if (isStraightOrWavy) {
+    slots.push({
+      slot: { slug: "dry-shampoo", pickCategory: "daily-dry-shampoo", label: "Dry Shampoo", section: "between" },
+      dailyLabel: "root refresh",
+      dailyWhy: "absorbs excess oil at the roots between wash days without stripping moisture from the lengths",
+    });
+  }
+  if (hasScalpConcern) {
+    slots.push({
+      slot: { slug: "oil", pickCategory: "daily-scalp-oil", label: "Scalp Oil", section: "between" },
+      dailyLabel: "scalp treatment",
+      dailyWhy: `daily scalp oil supports circulation and addresses your ${scalpConcernLabel(scalpCondition, hairConcerns)}`,
+    });
+  }
+  slots.push({
+    slot: { slug: "styler", pickCategory: "daily-styling", label: "Edge Control / Styling Cream", section: "between" },
+    dailyLabel: "styling",
+    dailyWhy: "smooths flyaways and keeps your style secure between wash days",
+  });
+
+  const normalizedPorosity = porosity ?? "medium";
+  const budgetActive = isBudgetActive(budgetRange);
+  const maxUsd = budgetMaxUsd(budgetRange);
+  const allSlugs = Array.from(new Set(slots.map((s) => s.slot.slug)));
+  const categoryIds = await loadCategoryIds(allSlugs);
+
+  const results = await Promise.all(
+    slots.map(async ({ slot, dailyLabel, dailyWhy }) => {
+      const pickCategory = slot.pickCategory ?? slot.slug;
+      const categoryId = categoryIds.get(slot.slug);
+      // Passes the real slug (not the "daily-*" pickCategory) into
+      // rankCategoryProducts so its internal generateWhyCopy() call finds
+      // a real copy branch (dry-shampoo/oil/styler/leave-in all already
+      // have one) instead of falling through to its generic-fallback
+      // logging - the returned candidate's `why` field isn't shown
+      // anywhere for these picks (dailyWhy is, see the /routine page),
+      // but there's no reason to let it log a false "unrecognized
+      // category" warning on every load either.
+      const ranked = categoryId
+        ? await rankCategoryProducts(
+            slot.slug,
+            categoryId,
+            slot.slug,
+            normalizedPorosity,
+            curlType,
+            hairConcerns,
+            slot,
+            colorTreated
+          )
+        : [];
+
+      const primary = ranked[0] ?? null;
+      // Same rule as getRoutineProductPicks above: primary always stays
+      // the top pick regardless of price, this only adds an in-budget
+      // alternative alongside it.
+      const budgetAlternate =
+        budgetActive && primary?.priceUsd != null && primary.priceUsd > maxUsd
+          ? ranked.find((c) => c.priceUsd != null && c.priceUsd <= maxUsd) ?? null
+          : null;
+
+      return {
+        category: pickCategory,
+        categoryLabel: slot.label,
+        section: slot.section,
+        searchCategorySlug: slot.slug,
+        searchQuery: slot.searchQuery ?? null,
+        primary,
+        alternate: ranked[1] ?? null,
+        noProductsYet: ranked.length === 0,
+        budgetAlternate,
+        dailyLabel,
+        dailyWhy,
+      };
+    })
+  );
+
+  return results;
+}
+
 // ---- Protective-style product picks (braids/locs/wigs) -----------------
 //
 // Reuses the exact same ranking/scoring/placeholder machinery as the

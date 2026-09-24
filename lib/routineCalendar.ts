@@ -11,6 +11,19 @@ export type WashDay = {
   date: string; // ISO yyyy-mm-dd
   weekday: number; // 0 = Sunday .. 6 = Saturday
   washType: WashDayType;
+  // Only meaningful when washType === "refresh" - how many days have
+  // elapsed since the most recent real wash day (0 would mean the day
+  // itself is a wash day, which never happens here since this field is
+  // only set on refresh days). Drives the refresh-day "scalp check" step
+  // (lib/routineSteps.ts), which should show once it's been a few days
+  // since the last wash regardless of curl family.
+  daysSinceLastWash?: number;
+  // Only meaningful when washType === "refresh" - whether that day's
+  // conditional "scalp check" step should show (see
+  // lib/routineSteps.ts's shouldShowScalpCheckStep). Not computed in this
+  // file (which has no access to hair_concerns) - set by
+  // app/api/routine/route.ts after generating the base calendar.
+  showScalpCheck?: boolean;
 };
 
 const WINDOW_DAYS = 30;
@@ -131,9 +144,11 @@ export const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 // Whether `date` is a real, scheduled routine-action day given the
 // user's routine start date and wash interval - and if so, which type.
-// Returns null for a genuine rest/between day requiring no action
-// (curly/coily families only; straight/wavy always get a "refresh" day
-// on every non-wash date since their routines cover daily maintenance).
+// Returns null only for a date before the routine existed; every other
+// non-wash date is a "refresh" day regardless of curl family - every day
+// gets a routine, wash or not (previously curly/coily families got no
+// entry at all on non-wash days, which is the bug this fixes: refresh-day
+// steps/products now apply to every hair type, not just straight/wavy).
 //
 // This replaced a local "occurrence" counter that reset to 1 every time
 // the calendar was generated (i.e. every page load with startDate=today),
@@ -162,7 +177,27 @@ export function scheduledWashType(
     const occurrence = daysSinceStart / interval + 1; // 1-indexed
     return washTypeForOccurrence(family, occurrence);
   }
-  if (family === "straight" || family === "wavy") return "refresh";
+  return "refresh";
+}
+
+// How many days have elapsed since the most recent real (non-refresh)
+// wash day, looked up by walking backward from `date` - used to decide
+// whether a refresh day's "scalp check" step should show (see
+// lib/routineSteps.ts). Returns null if no wash day is found within one
+// full window (e.g. `date` is within `interval` days of routineStartDate
+// itself, before any wash has occurred yet).
+export function daysSinceLastWashDay(
+  date: Date,
+  family: CurlFamily | null,
+  interval: number,
+  routineStartDate: Date
+): number | null {
+  for (let back = 1; back <= WINDOW_DAYS; back++) {
+    const d = new Date(date);
+    d.setDate(d.getDate() - back);
+    const type = scheduledWashType(d, family, interval, routineStartDate);
+    if (type && type !== "refresh") return back;
+  }
   return null;
 }
 
@@ -197,7 +232,16 @@ export function generateWashCalendar(
     date.setDate(date.getDate() + offset);
     const washType = scheduledWashType(date, family, interval, routineStartDate);
     if (washType) {
-      washDays.push({ date: toIsoDate(date), weekday: date.getDay(), washType });
+      const daysSinceLastWash =
+        washType === "refresh"
+          ? daysSinceLastWashDay(date, family, interval, routineStartDate) ?? undefined
+          : undefined;
+      washDays.push({
+        date: toIsoDate(date),
+        weekday: date.getDay(),
+        washType,
+        ...(daysSinceLastWash !== undefined ? { daysSinceLastWash } : {}),
+      });
     }
   }
 
