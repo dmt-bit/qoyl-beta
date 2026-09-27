@@ -57,6 +57,11 @@ export const CATEGORY_INGREDIENT_TIPS: Record<string, string[]> = {
     "Shea Butter or Ceramides - deep moisture and cuticle repair",
     "Avoid: mineral oil as the primary ingredient - can coat hair without real penetration",
   ],
+  "hair-mask": [
+    "Hydrolyzed proteins, Ceramides, or Shea Butter - concentrated repair and moisture",
+    "Bond-building or peptide complexes - for chemically processed or heat-damaged hair",
+    "Avoid: mineral oil as the primary ingredient - coats hair without real penetration",
+  ],
   "leave-in": [
     "Glycerin or Aloe Vera - lightweight, ongoing hydration",
     "Behentrimonium Methosulfate - eases detangling without buildup",

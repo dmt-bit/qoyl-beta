@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PRODUCT_CATEGORIES } from "@/lib/productCategories";
 import { FunctionSelectorGrid, FUNCTION_CARDS, type IngredientFunction } from "@/components/FunctionSelectorGrid";
 
 type Brand = { id: string; name: string };
@@ -88,6 +89,18 @@ const EMPTY_FORM: ProductFormValues = {
   image_url: "",
   ingredient_list_raw: "",
 };
+
+// Curated display order (lib/productCategories.ts) rather than the API's
+// alphabetical order, so e.g. "hair-mask" sits right after
+// "deep-conditioner" in the category dropdown. Anything not in that
+// curated list (e.g. "butter") falls to the end, alphabetically.
+const CATEGORY_DISPLAY_INDEX = new Map(PRODUCT_CATEGORIES.map((c, i) => [c.slug, i]));
+function compareCategoriesForDisplay(a: { name: string }, b: { name: string }): number {
+  const ai = CATEGORY_DISPLAY_INDEX.get(a.name) ?? Infinity;
+  const bi = CATEGORY_DISPLAY_INDEX.get(b.name) ?? Infinity;
+  if (ai !== bi) return ai - bi;
+  return a.name.localeCompare(b.name);
+}
 
 const OTHER_BRAND_VALUE = "__other__";
 
@@ -305,7 +318,7 @@ function ProductForm({
           <option value="" className="text-dark">
             Select category
           </option>
-          {categories.map((c) => (
+          {[...categories].sort(compareCategoriesForDisplay).map((c) => (
             <option key={c.id} value={c.id} className="text-dark">
               {c.name}
             </option>

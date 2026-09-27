@@ -34,7 +34,7 @@ import {
 import {
   isWeightWarningTier,
   WEIGHT_PILL_CLASSES,
-  WEIGHT_PILL_LABEL,
+  weightPillLabel,
   WEIGHT_WARNING_CLASSES,
   WEIGHT_WARNING_LABEL,
   weightFitNote,
@@ -321,7 +321,7 @@ function ResultCard({
                       showWeightWarning ? WEIGHT_WARNING_CLASSES : WEIGHT_PILL_CLASSES[productWeight]
                     }`}
                   >
-                    {showWeightWarning ? WEIGHT_WARNING_LABEL : WEIGHT_PILL_LABEL[productWeight]}
+                    {showWeightWarning ? WEIGHT_WARNING_LABEL : weightPillLabel(productWeight, product.categorySlug)}
                   </span>
                   {budgetActive && priceTier && (
                     <span

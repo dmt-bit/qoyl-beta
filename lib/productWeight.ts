@@ -210,6 +210,12 @@ function tierFromWeightedCount(count: number, totalIngredientCount: number): Pro
 const CATEGORY_WEIGHT_FLOOR: Partial<Record<string, ProductWeight>> = {
   butter: "very_heavy",
   "deep-conditioner": "medium",
+  // Intensive treatment masks are structurally heavier than a rinse-out
+  // deep conditioner - never light/medium regardless of name keywords.
+  // For straight/fine hair (where heavy formulas are penalized by
+  // getWeightModifier) that's the intended outcome: masks aren't daily
+  // products.
+  "hair-mask": "heavy",
   conditioner: "light",
   oil: "light",
   treatment: "medium",
@@ -255,6 +261,18 @@ export const WEIGHT_PILL_LABEL: Record<ProductWeight, string> = {
   heavy: "Rich formula",
   very_heavy: "Very rich formula - best for coily hair",
 };
+
+// A hair mask keeps its real weight classification (heavy/very_heavy -
+// scoring, filtering, and the warning tier are unchanged) but is shown as
+// "Intensive treatment" rather than "Rich formula", which reads as an
+// odd descriptor for a product that's meant to be an occasional
+// intensive treatment, not a daily product.
+export function weightPillLabel(weight: ProductWeight, categorySlug?: string | null): string {
+  if (categorySlug === "hair-mask" && (weight === "heavy" || weight === "very_heavy")) {
+    return "Intensive treatment";
+  }
+  return WEIGHT_PILL_LABEL[weight];
+}
 
 export const WEIGHT_PILL_CLASSES: Record<ProductWeight, string> = {
   ultralight: "bg-green/15 text-green",

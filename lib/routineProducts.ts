@@ -124,12 +124,28 @@ const PROTEIN_TREATMENT_SLOT: RoutineCategorySlot = {
   priorityBrand: isPriorityProteinBrand,
 };
 
+// Intensive treatment mask - a separate category from deep-conditioner
+// (thicker/more concentrated, weekly or bi-weekly rather than every wash
+// day). Which wash days it's shown on depends on whether the user also
+// has a deep conditioner pick - that rule is day-specific, so it lives
+// client-side with the rest of the per-day product filtering (see
+// getProductsForDay in app/routine/page.tsx). getRoutineProductPicks
+// drops this slot's pick entirely when the category has no products,
+// rather than showing an empty placeholder card for a category most
+// catalogs won't have covered yet.
+const HAIR_MASK_SLOT: RoutineCategorySlot = {
+  slug: "hair-mask",
+  label: "Hair Mask",
+  section: "regular",
+};
+
 // Used only when curl_type is unset/unrecognized (curlFamily() returns
 // null) - every real family below has its own fully custom list.
 const FALLBACK_CATEGORIES: RoutineCategorySlot[] = [
   { slug: "shampoo", label: "Shampoo", section: "regular" },
   { slug: "conditioner", label: "Conditioner", section: "regular" },
   { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
+    HAIR_MASK_SLOT,
   { slug: "leave-in", label: "Leave-In Conditioner", section: "styling" },
   { slug: "styler", label: "Styler", section: "styling" },
   { slug: "oil", label: "Oil", section: "styling" },
@@ -145,6 +161,7 @@ const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
     regularShampooSlot(),
     { slug: "conditioner", label: "Conditioner", section: "regular" },
     { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
+    HAIR_MASK_SLOT,
     PROTEIN_TREATMENT_SLOT,
     { slug: "dry-shampoo", label: "Dry Shampoo", section: "between" },
     { slug: "heat-protectant", label: "Heat Protectant", section: "styling" },
@@ -161,6 +178,7 @@ const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
     // lib/categoryGuidance.ts.
     { slug: "detangler", label: "Detangler", section: "regular" },
     { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
+    HAIR_MASK_SLOT,
     PROTEIN_TREATMENT_SLOT,
     { slug: "co-wash", label: "Co-Wash", section: "between" },
     {
@@ -181,6 +199,7 @@ const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
     // - positioned between conditioner and deep conditioner.
     { slug: "detangler", label: "Detangler", section: "regular" },
     { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
+    HAIR_MASK_SLOT,
     PROTEIN_TREATMENT_SLOT,
     { slug: "leave-in", label: "Leave-In Conditioner", section: "styling" },
     {
@@ -200,6 +219,7 @@ const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
     // else.
     { slug: "detangler", label: "Detangler", section: "regular" },
     { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
+    HAIR_MASK_SLOT,
     PROTEIN_TREATMENT_SLOT,
     { slug: "leave-in", label: "Leave-In Conditioner", section: "styling" },
     {
@@ -353,7 +373,7 @@ function isProductAllowed(
 
   if (family === "wavy") {
     if (weight === "very_heavy") return false;
-    if (weight === "heavy" && categorySlug !== "deep-conditioner") return false;
+    if (weight === "heavy" && categorySlug !== "deep-conditioner" && categorySlug !== "hair-mask") return false;
     return true;
   }
 
@@ -446,6 +466,12 @@ function generateWhyCopy(
         return `Recommended for ${porosity} porosity ${curlTypeLabel} hair - use monthly for 10-15 minutes then rinse thoroughly. The formula weight is appropriate for occasional deep treatment without risking buildup on wavy strands.`;
       }
       return `Strong match for ${porosity} porosity ${curlTypeLabel} hair - apply generously and use heat for maximum penetration.`;
+
+    case "hair-mask":
+      if (family === "straight") {
+        return `An intensive treatment, not an everyday product - use occasionally on ${curlTypeLabel} hair, on mid-lengths and ends only, and rinse thoroughly. Rich formulas can weigh down fine straight strands if used too often.`;
+      }
+      return `Intensive treatment for ${porosity} porosity ${curlTypeLabel} hair - use weekly or bi-weekly for 15-30 minutes, ideally with a heated cap for maximum penetration.`;
 
     case "leave-in":
       if (hasThinning) {
@@ -718,7 +744,9 @@ export async function getRoutineProductPicks(
     })
   );
 
-  return results;
+  // A hair mask with no products yet is dropped rather than shown as an
+  // empty placeholder - see HAIR_MASK_SLOT.
+  return results.filter((pick) => !(pick.category === "hair-mask" && pick.noProductsYet));
 }
 
 // Single-pick version for the routine email - same ranking, just the

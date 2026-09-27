@@ -7,7 +7,7 @@ import Collapse from "@/components/Collapse";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
 import { curlFamily, CurlFamily, scoreTier, TIER_CLASSES } from "@/lib/compatibility";
-import { ProductWeight, WEIGHT_PILL_CLASSES, WEIGHT_PILL_LABEL, weightFitNote } from "@/lib/productWeight";
+import { ProductWeight, WEIGHT_PILL_CLASSES, weightFitNote, weightPillLabel } from "@/lib/productWeight";
 import { WashDay, WashDayType } from "@/lib/routineCalendar";
 import {
   categoryNote,
@@ -190,8 +190,27 @@ function getMinutesForDay(steps: RoutineStepDetail[], washDay: WashDay): number 
 
 function getProductsForDay(data: RoutineData, washDay: WashDay): (ProductPick | DailyProductPick)[] {
   if (washDay.washType === "refresh") return data.refreshDailyProducts;
-  return data.products.filter((pick) => sectionsForWashType(washDay.washType).includes(pick.section));
+  const base = data.products.filter(
+    (pick) => pick.category !== "hair-mask" && sectionsForWashType(washDay.washType).includes(pick.section)
+  );
+  const mask = data.products.find((pick) => pick.category === "hair-mask" && !pick.noProductsYet);
+  if (!mask) return base;
+
+  // Hair masks (weekly/bi-weekly intensive treatments) and deep
+  // conditioners (every wash day) are separate categories:
+  // - mask only: the mask is the conditioning step on every wash day, so
+  //   an empty deep-conditioner placeholder is hidden.
+  // - both: deep conditioner on regular wash days, mask on the more
+  //   intensive protein/chelating days.
+  const deep = data.products.find((pick) => pick.category === "deep-conditioner");
+  const hasDeepConditioner = Boolean(deep && !deep.noProductsYet);
+  if (!hasDeepConditioner) return [...base.filter((pick) => pick.category !== "deep-conditioner"), mask];
+  const isTreatmentDay = washDay.washType !== "wash";
+  return isTreatmentDay ? [...base, mask] : base;
 }
+
+const HAIR_MASK_TREATMENT_NOTE =
+  "use in place of your deep conditioner on treatment days — apply for 15-30 minutes with a heated cap for maximum penetration";
 
 // "tuesday · regular wash" / "wednesday · refresh day" - the day-header
 // format the calendar/steps/products sections all share once a specific
@@ -781,7 +800,7 @@ function ProductCard({
               <span
                 className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${WEIGHT_PILL_CLASSES[primary.weight]}`}
               >
-                {WEIGHT_PILL_LABEL[primary.weight]}
+                {weightPillLabel(primary.weight, pick.category)}
               </span>
               {budgetActive && <PriceTierChip priceUsd={primary.priceUsd} />}
             </div>
@@ -1420,6 +1439,12 @@ function StepsSection({
   // care) apply regardless of which day is selected, same as before.
   const total = steps.length + data.additionalNotes.length;
   const productsForDay = selectedWash ? getProductsForDay(data, selectedWash) : [];
+  // Wash-day steps link to their "deep-conditioner" category; when a
+  // hair mask is standing in as that day's conditioning step (no deep
+  // conditioner shown that day), point that step's product link at it.
+  const productsForSteps = productsForDay.some((p) => p.category === "deep-conditioner")
+    ? productsForDay
+    : productsForDay.map((p) => (p.category === "hair-mask" ? { ...p, category: "deep-conditioner" } : p));
   const dayState = selectedWash ? dayCompletionState(selectedWash, data.todayIso, data.missedDates) : "today";
 
   function handleScroll() {
@@ -1484,7 +1509,7 @@ function StepsSection({
             key={step.title}
             step={step}
             index={i}
-            products={productsForDay}
+            products={productsForSteps}
             onViewProduct={scrollToProducts}
             onViewTool={onViewTool}
           />
@@ -1494,7 +1519,7 @@ function StepsSection({
             key={note.title}
             step={{ title: note.title, body: note.body, why: note.why, timerMinutes: null, productCategory: null, toolIds: null }}
             index={steps.length + i}
-            products={productsForDay}
+            products={productsForSteps}
             onViewProduct={scrollToProducts}
             onViewTool={onViewTool}
           />
@@ -1529,7 +1554,7 @@ function isDailyPick(pick: ProductPick | DailyProductPick): pick is DailyProduct
   return "dailyLabel" in pick;
 }
 
-function CompactProductCard({ pick }: { pick: ProductPick | DailyProductPick }) {
+function CompactProductCard({ pick, note }: { pick: ProductPick | DailyProductPick; note?: string }) {
   const [showWhy, setShowWhy] = useState(false);
   const { primary } = pick;
   const daily = isDailyPick(pick) ? pick : null;
@@ -1578,7 +1603,7 @@ function CompactProductCard({ pick }: { pick: ProductPick | DailyProductPick }) 
         <span className="font-mono text-[10px] text-muted">/ 100</span>
       </div>
       <span className={`mt-1 inline-block self-start px-1.5 py-0.5 font-mono text-[8px] ${WEIGHT_PILL_CLASSES[primary.weight]}`}>
-        {WEIGHT_PILL_LABEL[primary.weight]}
+        {weightPillLabel(primary.weight, pick.category)}
       </span>
 
       {/* Daily refresh picks always show their rationale inline (see the
@@ -1594,6 +1619,7 @@ function CompactProductCard({ pick }: { pick: ProductPick | DailyProductPick }) 
           </button>
         </div>
       )}
+      {note && <p className="mt-2 border-l-2 border-dark bg-[#f5f5f5] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#444]">{note}</p>}
       <div className="mt-2 flex items-center justify-end">
         <ShopButton productName={primary.productName} brandName={primary.brandName} className="font-mono text-[9px] text-dark" />
       </div>
@@ -1627,7 +1653,16 @@ function ProductsSection({ data, selectedIso }: { data: RoutineData; selectedIso
           style={{ scrollSnapType: "x mandatory" }}
         >
           {selectedPicks.map((pick) => (
-            <CompactProductCard key={pick.category} pick={pick} />
+            <CompactProductCard
+              key={pick.category}
+              pick={pick}
+              note={
+                pick.category === "hair-mask" && selectedPicks.every((p) => p.category !== "deep-conditioner") &&
+                data.products.some((p) => p.category === "deep-conditioner" && !p.noProductsYet)
+                  ? HAIR_MASK_TREATMENT_NOTE
+                  : undefined
+              }
+            />
           ))}
         </div>
       ) : (
@@ -1949,6 +1984,7 @@ const CATEGORY_ACCENT_OVERRIDE: Record<string, string> = {
   shampoo: "border-l-4 border-l-cream",
   "protein-treatment": "border-l-4 border-l-green",
   "deep-conditioner": "border-l-4 border-l-cream",
+  "hair-mask": "border-l-4 border-l-cream",
   "leave-in": "border-l-4 border-l-[#9C8070]",
   styler: "",
 };
