@@ -166,6 +166,9 @@ export default function AdminPage() {
             <Link href="/admin/posts" className="text-sm text-bronze2 underline underline-offset-2 hover:text-dark">
               Posts →
             </Link>
+            <Link href="/admin/events" className="text-sm text-bronze2 underline underline-offset-2 hover:text-dark">
+              Events →
+            </Link>
           </div>
         </div>
 

@@ -219,6 +219,12 @@ function HomeSideNavDesktop({
             {FEED_LABEL_OVERRIDES[tab.key] ?? tab.label}
           </Link>
         ))}
+        <Link
+          href="/events"
+          className="rounded-lg px-3 py-2 text-sm text-dark/70 transition-colors hover:bg-[#f5f5f5] hover:text-dark"
+        >
+          Events
+        </Link>
       </div>
 
       {!user && (
@@ -660,6 +666,7 @@ export default function Nav() {
               onNavigate={closeMenu}
             />
           ))}
+          <MenuLink href="/events" label="Events" onNavigate={closeMenu} />
 
           <MenuSectionLabel>Account</MenuSectionLabel>
           {loading ? null : user ? (
