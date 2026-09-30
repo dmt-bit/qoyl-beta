@@ -77,7 +77,7 @@ const PLACEMENTS: Placement[] = [
 ];
 
 const TILE_COUNT = PLACEMENTS.length; // 13
-const DURATION = 5200; // ms per video
+const DURATION = 2500; // ms per video
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -214,7 +214,22 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
   // existed. That's "exactly how it looked on the second cycle."
   useEffect(() => {
     const items = shuffle(VIDEOS);
-    const queue = shuffle(Array.from({ length: TILE_COUNT }, (_, i) => i));
+
+    // Always open on the breakage video (VIDEOS[0] - "my hair is
+    // breaking off at the ends.") regardless of which tile it landed on
+    // after the shuffle above. Only pinned for this initial queue - once
+    // a full 13-tile cycle completes and the queue reshuffles (see
+    // activateTile's advance logic), breakage goes back into random
+    // rotation like every other tile.
+    const breakageTileIdx = items.findIndex((item) => item.src === VIDEOS[0].src);
+    const remainingTiles = Array.from({ length: TILE_COUNT }, (_, i) => i).filter(
+      (i) => i !== breakageTileIdx
+    );
+    const queue =
+      breakageTileIdx === -1
+        ? shuffle(Array.from({ length: TILE_COUNT }, (_, i) => i))
+        : [breakageTileIdx, ...shuffle(remainingTiles)];
+
     playQueueRef.current = queue;
     queuePosRef.current = 0;
     setQueuePos(0);
