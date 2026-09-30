@@ -26,6 +26,12 @@ body {
   color: var(--foreground);
   background: var(--background);
   font-family: var(--font-space-grotesk), Arial, Helvetica, sans-serif;
+  /* Requested as a safety net for the home page's rotated video collage
+     tiles (components/HeroCollage.tsx) - wasn't actually set before this
+     (there was no overflow-x rule on body at all). The collage's own
+     container already clips its tiles with overflow-hidden, but this is
+     a reasonable belt-and-suspenders addition sitewide. */
+  overflow-x: hidden;
 }
 
 /* Redesign item 6 - lowercase as a *visual* treatment, not a content

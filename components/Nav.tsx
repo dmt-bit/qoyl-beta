@@ -154,8 +154,11 @@ function GridIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: numb
 // below.
 function HomeDesktopNav({ user, showRoutineNudge }: { user: unknown; showRoutineNudge: boolean }) {
   return (
-    <div className="hidden border-b border-bronze/20 px-6 py-4 sm:block">
-      <div className="mx-auto flex max-w-5xl items-center justify-between">
+    // h-16 (64px) explicit - the video collage hero (components/HeroCollage.tsx)
+    // needs a real pixel number to calc its own height against on
+    // desktop, same as it does against the mobile top bar's real 52px.
+    <div className="hidden h-16 border-b border-bronze/20 px-6 sm:flex sm:items-center">
+      <div className="mx-auto flex w-full max-w-5xl items-center justify-between">
         <Link href="/" className="shrink-0 font-serif text-xl font-bold lowercase text-dark">
           qoyl
         </Link>

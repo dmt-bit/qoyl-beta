@@ -13,50 +13,46 @@ export default function Footer() {
   if (pathname.startsWith("/style-match/summary/")) return null;
 
   return (
-    <footer className="print-hide border-t border-bronze/20 bg-white px-4 py-10 font-sans sm:px-6">
-      <div className="mx-auto max-w-md text-center">
-        <h2 className="font-serif text-xl font-semibold text-dark">the qoyl feed</h2>
-        <p className="mt-1.5 text-sm text-dark/60">
+    <footer className="print-hide border-t border-dark bg-white px-5 py-10 font-sans">
+      <div className="mx-auto max-w-md">
+        <h2
+          className="lowercase text-dark"
+          style={{ fontWeight: 700, fontSize: "20px", letterSpacing: "-0.5px", marginBottom: "6px" }}
+        >
+          the qoyl feed
+        </h2>
+        <p className="font-light text-[#666]" style={{ fontSize: "13px", lineHeight: 1.65, marginBottom: "20px" }}>
           monthly hair intelligence — ingredient deep dives, product alerts, and event
           announcements.
         </p>
-        <div className="mt-4">
-          <NewsletterSignup source="footer" />
-        </div>
-      </div>
+        <NewsletterSignup source="footer" />
 
-      <div className="mx-auto mt-10 flex max-w-3xl flex-col items-center gap-2 text-xs text-dark/50 sm:flex-row sm:justify-between">
-        <p>© {new Date().getFullYear()} Qoyl</p>
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-          <Link href="/how-we-score" className="text-dark/50 underline underline-offset-2 hover:text-dark/70">
-            How we score
+        <div className="mt-7 flex flex-wrap gap-4 border-t border-[#e8e8e8] pt-5 font-mono text-[10px] text-muted">
+          <Link href="/how-we-score" className="hover:text-dark">
+            how we score
           </Link>
-          <Link href="/events" className="text-dark/50 underline underline-offset-2 hover:text-dark/70">
-            Events
+          <Link href="/events" className="hover:text-dark">
+            events
           </Link>
-          <Link href="/for-brands" className="text-dark/50 underline underline-offset-2 hover:text-dark/70">
-            For Brands
+          <Link href="/for-brands" className="hover:text-dark">
+            for brands
           </Link>
-          <Link href="/for-stylists" className="text-dark/50 underline underline-offset-2 hover:text-dark/70">
-            For Stylists
+          <Link href="/for-stylists" className="hover:text-dark">
+            for stylists
           </Link>
-          <Link href="/privacy" className="text-dark/50 underline underline-offset-2 hover:text-dark/70">
-            Privacy Policy
+          <Link href="/privacy" className="hover:text-dark">
+            privacy
           </Link>
-          <a
-            href="https://instagram.com/clubqoyl"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-dark/50 underline underline-offset-2 hover:text-dark/70"
-          >
+          <a href="https://www.instagram.com/clubqoyl" target="_blank" rel="noopener noreferrer" className="hover:text-dark">
             @clubqoyl
           </a>
         </div>
+
+        <p className="mt-6 text-[10px] text-dark/40">
+          © {new Date().getFullYear()} Qoyl. Cosmetic hair care information only - not a substitute
+          for professional medical advice.
+        </p>
       </div>
-      <p className="mt-3 text-center text-[10px] text-dark/40">
-        Qoyl provides cosmetic hair care information only. Not a substitute
-        for professional medical advice.
-      </p>
     </footer>
   );
 }

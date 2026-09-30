@@ -2,64 +2,54 @@
 
 import { useState } from "react";
 
-// Footer newsletter signup - "the qoyl feed" (see components/Footer.tsx).
-// The request said "Beehiiv embed or form" - no Beehiiv publication
-// ID/API key exists in this project, so this is the plain-form path: a
-// real newsletter_subscribers table + /api/newsletter/subscribe route,
-// not a mailto stub. `source` just tags which form submitted it, in case
-// more than one ever exists.
+// Footer newsletter signup - "the qoyl feed" (see components/Footer.tsx,
+// rendered globally so this appears on every page including the new
+// home page - PART 8 in the latest home redesign describes this exact
+// section, so Footer.tsx was updated in place to match rather than
+// building a separate home-only "NewsletterFooter" component that would
+// have duplicated it). Posts to the Beehiiv-backed
+// /api/newsletter/subscribe route. `source` tags which form submitted
+// it, in case more than one ever exists.
 export default function NewsletterSignup({ source = "footer" }: { source?: string }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
-  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStatus("submitting");
-    setError(null);
     try {
       const res = await fetch("/api/newsletter/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, source }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Couldn't subscribe right now.");
-        setStatus("error");
-        return;
-      }
-      setStatus("done");
+      setStatus(res.ok ? "done" : "error");
     } catch {
-      setError("Couldn't reach the server. Try again.");
       setStatus("error");
     }
   }
 
-  if (status === "done") {
-    return <p className="font-sans text-sm text-dark/70">You&apos;re in. Watch for the first issue.</p>;
-  }
-
   return (
     <div>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row">
+      <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="your email"
-          className="w-full min-w-0 flex-1 border border-bronze/40 bg-transparent px-4 py-2.5 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
+          className="w-full min-w-0 flex-1 appearance-none rounded-none border border-dark bg-white px-[11px] py-[7px] text-dark placeholder:text-[#bbb] focus:outline-none"
+          style={{ fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif", fontSize: "16px" }}
         />
         <button
           type="submit"
           disabled={status === "submitting"}
-          className="shrink-0 bg-dark px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-bronze2 disabled:opacity-50"
+          className="shrink-0 whitespace-nowrap bg-dark px-[14px] py-2 text-[11px] font-medium lowercase text-white disabled:opacity-50"
+          style={{ fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif" }}
         >
-          {status === "submitting" ? "subscribing..." : "subscribe"}
+          {status === "done" ? "subscribed ✓" : status === "error" ? "try again" : "subscribe →"}
         </button>
       </form>
-      {error && <p className="mt-1.5 text-xs text-red">{error}</p>}
     </div>
   );
 }
