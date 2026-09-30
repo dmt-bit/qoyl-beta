@@ -210,6 +210,12 @@ function tierFromWeightedCount(count: number, totalIngredientCount: number): Pro
 const CATEGORY_WEIGHT_FLOOR: Partial<Record<string, ProductWeight>> = {
   butter: "very_heavy",
   "deep-conditioner": "medium",
+  // Intentionally rich - oils/butters/thick conditioners applied to dry
+  // hair, rinsed out completely during shampooing. See
+  // RINSE_OUT_TREATMENT_CATEGORIES in lib/compatibility.ts for why this
+  // heavy classification doesn't get penalized for straight/wavy hair
+  // the way a leave-in/styler's would.
+  "pre-shampoo": "heavy",
   // Intensive treatment masks are structurally heavier than a rinse-out
   // deep conditioner - never light/medium regardless of name keywords.
   // For straight/fine hair (where heavy formulas are penalized by
@@ -222,6 +228,11 @@ const CATEGORY_WEIGHT_FLOOR: Partial<Record<string, ProductWeight>> = {
 };
 const CATEGORY_WEIGHT_CEILING: Partial<Record<string, ProductWeight>> = {
   mousse: "light",
+  // A film-forming, alcohol-based finishing product that evaporates -
+  // never heavy regardless of hold strength. This is a ceiling (never
+  // heavier than), not a floor: "ultralight" is already the lowest tier,
+  // so a floor at it would do nothing.
+  hairspray: "ultralight",
   "scalp-treatment": "medium",
   // Not in the original spec, added to close a real gap found while
   // testing against Camille Rose's Curl Maker: a gel with castor +

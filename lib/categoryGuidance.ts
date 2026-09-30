@@ -137,6 +137,9 @@ export const ROUTINE_SECTION_LABEL: Record<RoutineSection, string> = {
 // copy, not instead of it. Shared by app/routine/page.tsx and
 // emails/routine-template.ts so the web and email framing stay in sync.
 export function categoryNote(category: string, family: CurlFamily | null): string | null {
+  if (category === "pre-shampoo") {
+    return "applied to dry hair before shampooing to protect against moisture loss and reduce manipulation damage during washing.";
+  }
   if (category === "clarifying-shampoo") {
     return "Use this only on your chelating wash day - not every wash. It removes buildup and hard water minerals that block your other products from working.";
   }

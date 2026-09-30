@@ -96,6 +96,20 @@ function isPriorityProteinBrand(productName: string, brandName: string): boolean
   return brand === "sheamoisture" && productName.toLowerCase().includes("manuka");
 }
 
+// Optional dry-hair, pre-wash treatment - most catalogs will have thin
+// coverage here, so like HAIR_MASK_SLOT/HAIRSPRAY_SLOT below,
+// getRoutineProductPicks drops this slot entirely when it has no
+// products rather than showing an empty placeholder prompting the user
+// to add one (see withPreShampooStep in app/routine/page.tsx, which only
+// inserts the Step 0 pre-shampoo instructions when a real pick exists
+// here). Positioned first in every family's list - pre-shampoo comes
+// before shampoo in the actual wash-day order.
+const PRE_SHAMPOO_SLOT: RoutineCategorySlot = {
+  slug: "pre-shampoo",
+  label: "Pre-Shampoo",
+  section: "clarify",
+};
+
 const CLARIFYING_SHAMPOO_SLOT: RoutineCategorySlot = {
   slug: "shampoo",
   pickCategory: "clarifying-shampoo",
@@ -139,9 +153,22 @@ const HAIR_MASK_SLOT: RoutineCategorySlot = {
   section: "regular",
 };
 
+// Finishing hairspray - styling step on any day for straight/wavy; for
+// curly/coily only surfaced when the user actually has products for it
+// (getRoutineProductPicks drops empty hairspray picks for every family
+// rather than showing an empty placeholder). Whether a coily/curly
+// user's style for a given day needs hold (twist-out/braid-out) isn't
+// something the app tracks, so having a pick is the only gate there.
+const HAIRSPRAY_SLOT: RoutineCategorySlot = {
+  slug: "hairspray",
+  label: "Hairspray",
+  section: "styling",
+};
+
 // Used only when curl_type is unset/unrecognized (curlFamily() returns
 // null) - every real family below has its own fully custom list.
 const FALLBACK_CATEGORIES: RoutineCategorySlot[] = [
+  PRE_SHAMPOO_SLOT,
   { slug: "shampoo", label: "Shampoo", section: "regular" },
   { slug: "conditioner", label: "Conditioner", section: "regular" },
   { slug: "deep-conditioner", label: "Deep Conditioner", section: "regular" },
@@ -149,6 +176,7 @@ const FALLBACK_CATEGORIES: RoutineCategorySlot[] = [
   { slug: "leave-in", label: "Leave-In Conditioner", section: "styling" },
   { slug: "styler", label: "Styler", section: "styling" },
   { slug: "oil", label: "Oil", section: "styling" },
+  HAIRSPRAY_SLOT,
 ];
 
 // Curl-family-specific recommendation lists, grouped into the same five
@@ -157,6 +185,7 @@ const FALLBACK_CATEGORIES: RoutineCategorySlot[] = [
 // calendar above it, not an unrelated grid of cards.
 const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
   straight: [
+    PRE_SHAMPOO_SLOT,
     CLARIFYING_SHAMPOO_SLOT,
     regularShampooSlot(),
     { slug: "conditioner", label: "Conditioner", section: "regular" },
@@ -165,11 +194,13 @@ const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
     PROTEIN_TREATMENT_SLOT,
     { slug: "dry-shampoo", label: "Dry Shampoo", section: "between" },
     { slug: "heat-protectant", label: "Heat Protectant", section: "styling" },
+    HAIRSPRAY_SLOT,
     // Replaces "Sealing Oil" entirely - see isProductAllowed below for
     // the lightweight-only (ultralight/light) filter that goes with it.
     { slug: "oil", label: "Finishing Serum", section: "styling" },
   ],
   wavy: [
+    PRE_SHAMPOO_SLOT,
     CLARIFYING_SHAMPOO_SLOT,
     regularShampooSlot(),
     { slug: "conditioner", label: "Conditioner", section: "regular" },
@@ -189,9 +220,11 @@ const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
       section: "styling",
     },
     { slug: "heat-protectant", label: "Heat Protectant", section: "styling" },
+    HAIRSPRAY_SLOT,
     { slug: "oil", label: "Finishing Serum", section: "styling" },
   ],
   curly: [
+    PRE_SHAMPOO_SLOT,
     CLARIFYING_SHAMPOO_SLOT,
     regularShampooSlot(),
     { slug: "conditioner", label: "Conditioner", section: "regular" },
@@ -210,8 +243,10 @@ const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
       section: "styling",
     },
     { slug: "oil", label: "Oil", section: "styling" },
+    HAIRSPRAY_SLOT,
   ],
   coily: [
+    PRE_SHAMPOO_SLOT,
     CLARIFYING_SHAMPOO_SLOT,
     regularShampooSlot(),
     // One of the most critical product types for 4c hair - positioned
@@ -231,6 +266,7 @@ const FAMILY_ROUTINE_CATEGORIES: Record<CurlFamily, RoutineCategorySlot[]> = {
     },
     { slug: "gel", label: "Gel", section: "styling" },
     { slug: "oil", label: "Sealing Oil", section: "styling" },
+    HAIRSPRAY_SLOT,
     {
       slug: "butter",
       label: "Butter",
@@ -466,6 +502,9 @@ function generateWhyCopy(
         return `Recommended for ${porosity} porosity ${curlTypeLabel} hair - use monthly for 10-15 minutes then rinse thoroughly. The formula weight is appropriate for occasional deep treatment without risking buildup on wavy strands.`;
       }
       return `Strong match for ${porosity} porosity ${curlTypeLabel} hair - apply generously and use heat for maximum penetration.`;
+
+    case "hairspray":
+      return `A finishing product for ${curlTypeLabel} hair - apply after styling, not before, from 6-8 inches away. Its alcohol evaporates rather than conditioning, so it never adds weight; use flexible hold for natural movement and strong hold for styles that need to last.`;
 
     case "hair-mask":
       if (family === "straight") {
@@ -744,9 +783,42 @@ export async function getRoutineProductPicks(
     })
   );
 
-  // A hair mask with no products yet is dropped rather than shown as an
-  // empty placeholder - see HAIR_MASK_SLOT.
-  return results.filter((pick) => !(pick.category === "hair-mask" && pick.noProductsYet));
+  // A hair mask/hairspray/pre-shampoo with no products yet is dropped
+  // rather than shown as an empty placeholder - see HAIR_MASK_SLOT,
+  // HAIRSPRAY_SLOT, PRE_SHAMPOO_SLOT.
+  return results.filter(
+    (pick) =>
+      !(
+        (pick.category === "hair-mask" || pick.category === "hairspray" || pick.category === "pre-shampoo") &&
+        pick.noProductsYet
+      )
+  );
+}
+
+// Cheap single-category existence check for /search's "consider adding a
+// pre-shampoo" recommendation card (see app/api/pre-shampoo-check/route.ts)
+// - reuses rankCategoryProducts for just the one slot instead of running
+// the full getRoutineProductPicks pipeline (calendar/all-categories/brand
+// products/etc.) that a real /routine page load needs.
+export async function hasPreShampooPick(
+  porosity: string | null,
+  curlType: string | null
+): Promise<boolean> {
+  const normalizedPorosity = porosity ?? "medium";
+  const categoryIds = await loadCategoryIds(["pre-shampoo"]);
+  const categoryId = categoryIds.get("pre-shampoo");
+  if (!categoryId) return false;
+  const ranked = await rankCategoryProducts(
+    "pre-shampoo",
+    categoryId,
+    "pre-shampoo",
+    normalizedPorosity,
+    curlType,
+    null,
+    PRE_SHAMPOO_SLOT,
+    false
+  );
+  return ranked.length > 0;
 }
 
 // Single-pick version for the routine email - same ranking, just the
@@ -838,6 +910,13 @@ export async function getDailyRefreshProducts(
       dailyWhy: `daily scalp oil supports circulation and addresses your ${scalpConcernLabel(scalpCondition, hairConcerns)}`,
     });
   }
+  if (isStraightOrWavy) {
+    slots.push({
+      slot: { slug: "hairspray", pickCategory: "daily-hairspray", label: "Hairspray", section: "between" },
+      dailyLabel: "finishing hold",
+      dailyWhy: "a light mist after styling keeps your finish in place all day without adding weight",
+    });
+  }
   slots.push({
     slot: { slug: "styler", pickCategory: "daily-styling", label: "Edge Control / Styling Cream", section: "between" },
     dailyLabel: "styling",
@@ -900,7 +979,8 @@ export async function getDailyRefreshProducts(
     })
   );
 
-  return results;
+  // Same as the main routine list: no empty hairspray placeholder.
+  return results.filter((pick) => !(pick.category === "daily-hairspray" && pick.noProductsYet));
 }
 
 // ---- Protective-style product picks (braids/locs/wigs) -----------------

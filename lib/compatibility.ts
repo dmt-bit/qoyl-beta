@@ -344,10 +344,22 @@ const WEIGHT_MODIFIERS: Record<CurlFamily, Record<ProductWeight, number>> = {
   },
 };
 
+// Pre-shampoo, hair mask, and deep conditioner are all intensive
+// treatments applied dry/pre-wash or left on briefly then rinsed out
+// completely during shampooing - they're not worn on hair the way a
+// leave-in or styler is, so the straight/wavy "heavy formulas are
+// penalized" logic below doesn't apply to them. Judged on ingredients
+// only (classifyProductWeight's category floor still applies - a
+// pre-shampoo/mask still can't score as lighter than "heavy", it just
+// isn't penalized further for being heavy).
+const RINSE_OUT_TREATMENT_CATEGORIES = ["pre-shampoo", "hair-mask", "deep-conditioner"];
+
 export function getWeightModifier(
   weight: ProductWeight,
-  family: CurlFamily | null
+  family: CurlFamily | null,
+  category: string | null = null
 ): number {
+  if (category && RINSE_OUT_TREATMENT_CATEGORIES.includes(category)) return 0;
   if (!family) return 0; // "not_sure" or unrecognized curl type - no adjustment
   return WEIGHT_MODIFIERS[family][weight];
 }
@@ -1473,7 +1485,11 @@ function isBondBuilderMatch(m: Match): boolean {
   return m.primaryFunction === "bond_builder" || m.secondaryFunction === "bond_builder";
 }
 
-function detectIngredientInteractions(matches: Match[], profile: ScoringProfile): IngredientInteraction[] {
+function detectIngredientInteractions(
+  matches: Match[],
+  profile: ScoringProfile,
+  category: string | null = null
+): IngredientInteraction[] {
   const { climate, porosity, family, scalpCondition, hairConcerns, colorTreated } = profile;
   const interactions: IngredientInteraction[] = [];
 
@@ -1548,6 +1564,25 @@ function detectIngredientInteractions(matches: Match[], profile: ScoringProfile)
         interactionId: "lco_layering_order_coily",
         modifier: 2,
         explanation: "Humectant then occlusive is the correct LCO order - the formula itself supports good layering technique.",
+      });
+    }
+  }
+
+  // 6 - hairsprays are alcohol-based; on high porosity hair (already
+  // losing moisture fast) drying alcohol high in the formula is a
+  // caution. Low/medium porosity is left neutral - the alcohol
+  // evaporates rather than penetrating the cuticle.
+  if (category === "hairspray" && porosity === "high") {
+    const dryingAlcoholInTop5 = matches.some((m) => {
+      if (m.position > 5) return false;
+      const n = m.inciName.trim().toLowerCase();
+      return n.includes("alcohol denat") || n.includes("denatured alcohol") || n.startsWith("sd alcohol");
+    });
+    if (dryingAlcoholInTop5) {
+      interactions.push({
+        interactionId: "hairspray_alcohol_high_porosity",
+        modifier: -4,
+        explanation: "Drying alcohol high in this hairspray accelerates moisture loss on already porous hair.",
       });
     }
   }
@@ -1979,7 +2014,7 @@ function resolveScoreResult(
     .sort((a, b) => a.position - b.position)
     .map((i) => i.inci_name);
   const productWeight = classifyProductWeight(orderedIngredientNames, category ?? "", productName ?? "");
-  const weightModifier = getWeightModifier(productWeight, family);
+  const weightModifier = getWeightModifier(productWeight, family, category);
   const scoreBeforeNameKeywords = Math.min(100, Math.max(0, baseScore + weightModifier));
 
   // Product-name keyword scoring - a second, independent signal stacked
@@ -1996,7 +2031,7 @@ function resolveScoreResult(
 
   // Whole-formula interaction patterns (see detectIngredientInteractions) -
   // the last whole-product step before clamping to the final score.
-  const interactionsDetected = detectIngredientInteractions(matchList, profile);
+  const interactionsDetected = detectIngredientInteractions(matchList, profile, category);
   const interactionModifierTotal = interactionsDetected.reduce((acc, i) => acc + i.modifier, 0);
   const normalizedScore = Math.min(100, Math.max(0, scoreBeforeInteractions + interactionModifierTotal));
 

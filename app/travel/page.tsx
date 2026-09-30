@@ -609,6 +609,35 @@ function KitView({
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const ready = isKitReady(kit);
 
+  // Pre-shampoo is excluded from every travel kit (see pickCategories in
+  // lib/travelKitGenerator.ts - it's simply never one of the categories a
+  // kit draws from) - not practical to pack and use on a trip. Shown only
+  // as a note when the user's own /routine actually has a pre-shampoo
+  // pick, via the same lightweight check /search uses.
+  const { hairProfile } = useAuth();
+  const [showPreShampooExcludedNote, setShowPreShampooExcludedNote] = useState(false);
+  useEffect(() => {
+    if (!hairProfile) {
+      setShowPreShampooExcludedNote(false);
+      return;
+    }
+    let cancelled = false;
+    const params = new URLSearchParams();
+    if (hairProfile.curl_type) params.set("curl_type", hairProfile.curl_type);
+    if (hairProfile.porosity) params.set("porosity", hairProfile.porosity);
+    fetch(`/api/pre-shampoo-check?${params.toString()}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setShowPreShampooExcludedNote(Boolean(data.hasPick));
+      })
+      .catch(() => {
+        if (!cancelled) setShowPreShampooExcludedNote(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hairProfile]);
+
   return (
     <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-md">
@@ -701,6 +730,13 @@ function KitView({
               <TravelKitProductCard key={item.catalogProductId} item={item} />
             ))}
           </ul>
+        )}
+
+        {products.length > 0 && showPreShampooExcludedNote && (
+          <p className="mt-4 font-sans text-[12px] font-light text-[#666]">
+            pre-shampoo excluded from your travel kit — not practical for travel. continue your
+            regular pre-shampoo routine when you return.
+          </p>
         )}
 
         {ready && products.length < 5 && (

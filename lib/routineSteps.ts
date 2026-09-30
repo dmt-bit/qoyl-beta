@@ -1,4 +1,4 @@
-import { curlFamily } from "@/lib/compatibility";
+import { curlFamily, CurlFamily } from "@/lib/compatibility";
 import { getExtensionCareGuidance } from "@/lib/extensionCare";
 import { getChildSafetyStep } from "@/lib/childSafety";
 import { isAdultAgeAtLeast } from "@/lib/ageRange";
@@ -50,6 +50,59 @@ function step(
   toolIds: string[] | null = null
 ): RoutineStepDetail {
   return { title, body, why, timerMinutes, productCategory, toolIds };
+}
+
+// ---- Pre-shampoo (Step 0) --------------------------------------------------
+// Only shown when the user has a pre-shampoo product in their routine (see
+// withPreShampooStep in app/routine/page.tsx) - not every wash day gets a
+// gap-filling placeholder for a category the user doesn't own. Applied to
+// DRY hair, before shampoo, on every wash day (regular/clarifying/protein) -
+// not on refresh days, since there's no shampooing to protect against.
+const PRE_SHAMPOO_STEP: Record<CurlFamily, RoutineStepDetail> = {
+  straight: step(
+    "Pre-shampoo treatment",
+    "Apply a thin layer of pre-shampoo oil or treatment to dry roots and lengths, focusing lightly on ends. Comb through, then leave on for 30 minutes before shampooing as usual.",
+    "Fine straight hair swells and loses cuticle integrity fastest in water - a light pre-shampoo layer buffers that without weighing hair down once it's rinsed out.",
+    "30 minutes",
+    "pre-shampoo"
+  ),
+  wavy: step(
+    "Pre-shampoo treatment",
+    "Apply pre-shampoo oil or treatment to dry hair from mid-lengths to ends, avoiding the roots so waves don't fall flat. Leave on for 30 minutes before shampooing as usual.",
+    "Wavy hair is prone to frizz when the cuticle is stripped too fast by shampoo - a pre-shampoo layer slows water absorption and keeps the wave pattern intact through washing.",
+    "30 minutes",
+    "pre-shampoo"
+  ),
+  curly: step(
+    "Pre-shampoo treatment",
+    "Section dry hair and apply pre-shampoo oil or treatment generously from roots to ends, detangling gently with fingers or a wide-tooth comb as you go. Leave on for 30 minutes before shampooing as usual.",
+    "Curly hair is most fragile when wet - pre-shampoo cuts down on the manipulation and moisture shock that happen during shampooing.",
+    "30 minutes",
+    "pre-shampoo"
+  ),
+  coily: step(
+    "Pre-shampoo treatment",
+    "Section dry hair into 4-6 parts and apply pre-shampoo oil or treatment generously root to tip, detangling each section fully with a wide-tooth comb before moving on. Leave on for 30 minutes before shampooing as usual.",
+    "Coily hair loses the most moisture during washing (hygral fatigue) and takes the most manipulation damage while wet - a pre-shampoo treatment protects the cuticle and cuts down on tangling before water ever touches it.",
+    "30 minutes",
+    "pre-shampoo"
+  ),
+};
+
+// Generic fallback for "not_sure"/unrecognized curl types - matches the
+// tone of curlFamily's null handling elsewhere in this file.
+const PRE_SHAMPOO_STEP_GENERIC: RoutineStepDetail = step(
+  "Pre-shampoo treatment",
+  "Apply pre-shampoo oil or treatment to dry hair, focusing on the driest areas. Leave on for 30 minutes before shampooing as usual.",
+  "Applied before washing, a pre-shampoo treatment protects against moisture loss and reduces manipulation damage during shampooing.",
+  "30 minutes",
+  "pre-shampoo"
+);
+
+export function getPreShampooStep(curlType: string | null): RoutineStepDetail {
+  const family = curlFamily(curlType);
+  if (!family) return PRE_SHAMPOO_STEP_GENERIC;
+  return PRE_SHAMPOO_STEP[family];
 }
 
 // ---- Straight (1a/1b/1c) --------------------------------------------------

@@ -27,6 +27,7 @@ import { markRoutineVisited } from "@/lib/routineVisit";
 import {
   estimateRefreshDayMinutes,
   estimateWashDayMinutes,
+  getPreShampooStep,
   refreshDaySummaryLabel,
   type RoutineStepDetail,
   type WashDayKey,
@@ -173,15 +174,55 @@ const SECTION_ORDER = ROUTINE_SECTION_ORDER;
 // right step/product list for ANY WashDay, reused by the hero, steps, and
 // products sections rather than each recomputing the wash-vs-refresh
 // branch and the conditional-scalp-check splice separately.
+const HAIRSPRAY_STYLING_COPY =
+  " Finish with a light mist of hairspray 6-8 inches from the hair. Flexible hold for natural movement, strong hold for styles that need to last all day.";
+
+// Straight/wavy users who have a hairspray pick get the finishing line
+// appended to that day's styling step (wash or refresh day alike).
+function withHairsprayCopy(data: RoutineData, steps: RoutineStepDetail[]): RoutineStepDetail[] {
+  const family = curlFamily(data.curlType);
+  if (family !== "straight" && family !== "wavy") return steps;
+  const hasHairspray =
+    data.products.some((p) => p.category === "hairspray") ||
+    data.refreshDailyProducts.some((p) => p.category === "daily-hairspray");
+  if (!hasHairspray) return steps;
+  let idx = -1;
+  steps.forEach((st, i) => {
+    if (/style/i.test(st.title)) idx = i;
+  });
+  if (idx === -1) return steps;
+  return steps.map((st, i) => (i === idx ? { ...st, body: st.body + HAIRSPRAY_STYLING_COPY } : st));
+}
+
+// Users who have a pre-shampoo product get it inserted as Step 0, before
+// shampoo, on every wash day (regular/clarifying/protein). Not shown on
+// refresh days (no shampooing to protect against) and not shown at all if
+// the user has no pre-shampoo pick - unlike hairspray's copy-append above,
+// a missing pre-shampoo product means no step, not a placeholder prompt.
+function hasPreShampooProduct(data: RoutineData): boolean {
+  return data.products.some((p) => p.category === "pre-shampoo" && !p.noProductsYet);
+}
+
+function withPreShampooStep(data: RoutineData, steps: RoutineStepDetail[]): RoutineStepDetail[] {
+  if (!hasPreShampooProduct(data)) return steps;
+  return [getPreShampooStep(data.curlType), ...steps];
+}
+
 function getStepsForDay(data: RoutineData, washDay: WashDay): RoutineStepDetail[] {
   if (washDay.washType === "refresh") {
     const base = data.refreshStepsBase;
-    if (!washDay.showScalpCheck) return base;
-    return [base[0], base[1], data.refreshScalpCheckStep, base[2], base[3]];
+    const steps = washDay.showScalpCheck
+      ? [base[0], base[1], data.refreshScalpCheckStep, base[2], base[3]]
+      : base;
+    return withHairsprayCopy(data, steps);
   }
   const key = washDayKeyForType(washDay.washType);
-  return data.stepsByWashType.find((w) => w.key === key)?.steps ?? [];
+  const washSteps = data.stepsByWashType.find((w) => w.key === key)?.steps ?? [];
+  return withPreShampooStep(data, withHairsprayCopy(data, washSteps));
 }
+
+const HAIRSPRAY_CARD_NOTE =
+  "hairsprays are finishing products — apply after styling, not before. daily use on high porosity hair may cause dryness over time.";
 
 function getMinutesForDay(steps: RoutineStepDetail[], washDay: WashDay): number {
   if (washDay.washType === "refresh") return estimateRefreshDayMinutes(steps.length);
@@ -191,10 +232,19 @@ function getMinutesForDay(steps: RoutineStepDetail[], washDay: WashDay): number 
 function getProductsForDay(data: RoutineData, washDay: WashDay): (ProductPick | DailyProductPick)[] {
   if (washDay.washType === "refresh") return data.refreshDailyProducts;
   const base = data.products.filter(
-    (pick) => pick.category !== "hair-mask" && sectionsForWashType(washDay.washType).includes(pick.section)
+    (pick) =>
+      pick.category !== "hair-mask" &&
+      pick.category !== "pre-shampoo" &&
+      sectionsForWashType(washDay.washType).includes(pick.section)
   );
+  // Pre-shampoo, like Step 0 above, shows on every wash day (regular,
+  // clarifying, protein alike) rather than being gated to a single
+  // RoutineSection - it protects against the same shampoo exposure
+  // regardless of which wash type that exposure is.
+  const preShampoo = data.products.find((pick) => pick.category === "pre-shampoo" && !pick.noProductsYet);
+  const withPreShampoo = preShampoo ? [preShampoo, ...base] : base;
   const mask = data.products.find((pick) => pick.category === "hair-mask" && !pick.noProductsYet);
-  if (!mask) return base;
+  if (!mask) return withPreShampoo;
 
   // Hair masks (weekly/bi-weekly intensive treatments) and deep
   // conditioners (every wash day) are separate categories:
@@ -204,9 +254,11 @@ function getProductsForDay(data: RoutineData, washDay: WashDay): (ProductPick | 
   //   intensive protein/chelating days.
   const deep = data.products.find((pick) => pick.category === "deep-conditioner");
   const hasDeepConditioner = Boolean(deep && !deep.noProductsYet);
-  if (!hasDeepConditioner) return [...base.filter((pick) => pick.category !== "deep-conditioner"), mask];
+  if (!hasDeepConditioner) {
+    return [...withPreShampoo.filter((pick) => pick.category !== "deep-conditioner"), mask];
+  }
   const isTreatmentDay = washDay.washType !== "wash";
-  return isTreatmentDay ? [...base, mask] : base;
+  return isTreatmentDay ? [...withPreShampoo, mask] : withPreShampoo;
 }
 
 const HAIR_MASK_TREATMENT_NOTE =
@@ -769,6 +821,9 @@ function ProductCard({
       <p className="text-xs font-semibold uppercase tracking-wide text-bronze2">
         {pick.categoryLabel}
       </p>
+      {pick.category === "pre-shampoo" && (
+        <p className="mt-0.5 font-mono text-[9px] lowercase text-muted">step 0 · before washing</p>
+      )}
       {note && (
         <p className="mt-1.5 bg-bronze/10 px-2.5 py-1.5 text-xs leading-relaxed text-bronze2">
           {note}
@@ -1559,6 +1614,8 @@ function CompactProductCard({ pick, note }: { pick: ProductPick | DailyProductPi
   const { primary } = pick;
   const daily = isDailyPick(pick) ? pick : null;
   const headerLabel = daily?.dailyLabel ?? pick.categoryLabel;
+  const isHairspray = pick.category === "hairspray" || pick.category === "daily-hairspray";
+  const shownNote = note ?? (isHairspray ? HAIRSPRAY_CARD_NOTE : undefined);
 
   if (pick.noProductsYet || !primary) {
     return (
@@ -1619,7 +1676,7 @@ function CompactProductCard({ pick, note }: { pick: ProductPick | DailyProductPi
           </button>
         </div>
       )}
-      {note && <p className="mt-2 border-l-2 border-dark bg-[#f5f5f5] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#444]">{note}</p>}
+      {shownNote && <p className="mt-2 border-l-2 border-dark bg-[#f5f5f5] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#444]">{shownNote}</p>}
       <div className="mt-2 flex items-center justify-end">
         <ShopButton productName={primary.productName} brandName={primary.brandName} className="font-mono text-[9px] text-dark" />
       </div>
@@ -1980,6 +2037,7 @@ function CalendarAccordionSection({
 // card's existing all-side border-bronze/30) so this only tints the
 // left edge.
 const CATEGORY_ACCENT_OVERRIDE: Record<string, string> = {
+  "pre-shampoo": "border-l-4 border-l-amber",
   "clarifying-shampoo": "border-l-4 border-l-bronze",
   shampoo: "border-l-4 border-l-cream",
   "protein-treatment": "border-l-4 border-l-green",

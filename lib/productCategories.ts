@@ -10,10 +10,12 @@ export type ProductCategory = {
 };
 
 export const PRODUCT_CATEGORIES: ProductCategory[] = [
+  { label: "Pre-Shampoo", slug: "pre-shampoo" },
   { label: "Shampoo", slug: "shampoo" },
   { label: "Dry Shampoo", slug: "dry-shampoo" },
-  { label: "Conditioner", slug: "conditioner" },
+  { label: "Hairspray", slug: "hairspray" },
   { label: "Co-Wash", slug: "co-wash" },
+  { label: "Conditioner", slug: "conditioner" },
   { label: "Deep Conditioner", slug: "deep-conditioner" },
   { label: "Hair Mask", slug: "hair-mask" },
   { label: "Leave-In", slug: "leave-in" },

@@ -331,6 +331,11 @@ function ResultCard({
                     </span>
                   )}
                 </div>
+                {product.categorySlug === "hairspray" && (
+                  <p className="mt-1.5 font-sans text-[11px] leading-snug text-dark/60">
+                    hairsprays are finishing products — apply after styling, not before. daily use on high porosity hair may cause dryness over time.
+                  </p>
+                )}
                 {fitNote && (
                   <p className="mt-1.5 font-sans text-[11px] leading-snug text-dark/60">
                     {fitNote}
@@ -509,6 +514,39 @@ function SearchPageContent() {
   }, [resolvingAccess]);
 
   const canSearch = Boolean((user && hairProfile) || (!user && hasLocalProfile));
+
+  // Subtle "consider adding a pre-shampoo" nudge for 3c-4c users - the
+  // most skipped step and one of the most impactful for coily hair (see
+  // lib/routineSteps.ts's PRE_SHAMPOO_STEP). Checked server-side via
+  // hasPreShampooPick since "in their routine" means the same algorithmic
+  // pick /routine shows, not something tracked client-side.
+  const resolvedCurlType = user ? hairProfile?.curl_type ?? null : localProfileHairInfo?.curl_type ?? null;
+  const resolvedPorosity = user ? hairProfile?.porosity ?? null : localProfileHairInfo?.porosity ?? null;
+  const isCoilyPreShampooCandidate = ["3c", "4a", "4b", "4c"].includes(resolvedCurlType ?? "");
+  const [showPreShampooTip, setShowPreShampooTip] = useState(false);
+
+  useEffect(() => {
+    if (!isCoilyPreShampooCandidate) {
+      setShowPreShampooTip(false);
+      return;
+    }
+    let cancelled = false;
+    const params = new URLSearchParams();
+    if (resolvedCurlType) params.set("curl_type", resolvedCurlType);
+    if (resolvedPorosity) params.set("porosity", resolvedPorosity);
+    fetch(`/api/pre-shampoo-check?${params.toString()}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled) setShowPreShampooTip(!data.hasPick);
+      })
+      .catch(() => {
+        if (!cancelled) setShowPreShampooTip(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCoilyPreShampooCandidate, resolvedCurlType, resolvedPorosity]);
 
   // Every search is unlimited and free -- no daily count, no
   // subscription entitlement, no anonymous localStorage tracking.
@@ -943,6 +981,23 @@ function SearchPageContent() {
           placeholder="Search by product name or brand..."
           className="mt-4 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
         />
+
+        {showPreShampooTip && (
+          <p className="mt-3 font-sans text-[12px] font-light text-[#666]">
+            consider adding a pre-shampoo to your routine — it&apos;s the most skipped step and one
+            of the most impactful for coily hair.{" "}
+            <button
+              type="button"
+              onClick={() => {
+                handleCategoryTap("pre-shampoo");
+                setShowPreShampooTip(false);
+              }}
+              className="underline underline-offset-2 hover:text-dark"
+            >
+              search pre-shampoos →
+            </button>
+          </p>
+        )}
 
         {!categorySlug && query.trim() === "" && (
           <p className="mt-2 font-sans text-[11px] text-dark/40">
