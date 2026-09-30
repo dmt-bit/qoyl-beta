@@ -864,10 +864,50 @@ function SearchPageContent() {
     return <SearchAuthGate variant={user ? "no-profile" : "anonymous"} />;
   }
 
+  // Browsing a category with no search term - sort by compatibility score
+  // highest first, same as a category tap/URL-preselect/category switch
+  // (all of these just change categorySlug, which this reads live on
+  // every render, so no extra effect/state is needed to keep the sort in
+  // sync with taps, browser back/forward, or a future "load more").
+  // Text search (query.trim() !== "") is left alone - it has its own
+  // name/brand relevance order from fetchQoylProducts and should never be
+  // silently re-sorted by score.
+  //
+  // The request's spec also asked for a separate "no profile" anonymous
+  // sort (average_score DESC across all porosity levels, needing a new
+  // catalog_products.average_score column). That branch can't actually
+  // be reached here: canSearch (above) already requires either a signed-
+  // in hairProfile or a local hair_profile_id before this component ever
+  // renders results, and both paths give loadScoringProfile() (in
+  // lib/compatibility.ts, used by scoreCatalogProducts) a real profile to
+  // score against - auth-context.tsx mirrors the signed-in user's
+  // hair_profile_id into localStorage too. So every visitor who can see
+  // results already gets scored against their own real profile; there's
+  // no reachable case that needs a separate average-across-everyone
+  // fallback or its own SQL column. Skipped rather than adding dead code
+  // and an unused migration - see the message to the user for the SQL
+  // that was NOT run and why.
+  const isPureCategoryBrowse = Boolean(categorySlug) && query.trim() === "";
+  const scoreForSort = (p: Product): number => {
+    const state = scoresByCode[p.code];
+    return state?.status === "done" ? state.result.normalizedScore : -1;
+  };
+  const categorySortedResults = isPureCategoryBrowse
+    ? [...results].sort((a, b) => scoreForSort(b) - scoreForSort(a))
+    : results;
+
+  const sortLabelCurlType =
+    resolvedCurlType && resolvedCurlType !== "not_sure" ? resolvedCurlType : null;
+  const sortLabelPorosity =
+    resolvedPorosity && resolvedPorosity !== "not_sure" ? `${resolvedPorosity} porosity ` : "";
+  const sortNoticeText = sortLabelCurlType
+    ? `sorted by match for your ${sortLabelCurlType} ${sortLabelPorosity}hair`
+    : "sorted by compatibility with your hair profile";
+
   let filteredResults =
     weightFilter === "all"
-      ? results
-      : results.filter((product) => {
+      ? categorySortedResults
+      : categorySortedResults.filter((product) => {
           const state = scoresByCode[product.code];
           if (state?.status !== "done") return false;
           const w = state.result.productWeight;
@@ -973,6 +1013,10 @@ function SearchPageContent() {
             )}
           </div>
         </div>
+
+        {isPureCategoryBrowse && (
+          <p className="mt-2 font-mono text-[9px] lowercase text-muted">{sortNoticeText}</p>
+        )}
 
         <input
           type="text"
