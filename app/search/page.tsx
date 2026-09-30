@@ -7,7 +7,6 @@ import Image from "next/image";
 import AnonymousProfileBanner from "@/components/AnonymousProfileBanner";
 import FeedbackSurveyModal from "@/components/FeedbackSurveyModal";
 import HairTypeStrip from "@/components/HairTypeStrip";
-import SearchAuthGate from "@/components/SearchAuthGate";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -64,6 +63,12 @@ type Product = {
   imageUrl: string | null;
   categorySlug: string | null;
   priceUsd: number | null;
+  // General (non-personalized) score, from catalog_products.average_score -
+  // null until supabase/add_brand_directory.sql has been run, or if that
+  // migration genuinely hasn't scored this product yet. Shown to
+  // anonymous/no-profile visitors as "avg match" (see ResultCard) since
+  // scoreCatalogProducts can't produce a real score without a profile.
+  averageScore: number | null;
 };
 
 type QoylProductRow = {
@@ -74,6 +79,7 @@ type QoylProductRow = {
   catalog_brands: { name: string } | null;
   categories: { slug: string } | null;
   price_usd: number | null;
+  average_score?: number | null;
 };
 
 // catalog_products/catalog_brands - not "products"/"brands" - since
@@ -81,8 +87,26 @@ type QoylProductRow = {
 // its own brands/products tables for its B2B dashboard with a completely
 // different schema. Keeping qoyl-beta's consumer catalog on separate
 // tables avoids colliding with that.
-const QOYL_PRODUCT_SELECT =
+const QOYL_PRODUCT_SELECT_BASE =
   "id, name, barcode, image_url, catalog_brands(name), categories(slug), price_usd";
+
+// catalog_products.average_score doesn't exist until
+// supabase/add_brand_directory.sql has been run - naming it explicitly in
+// a select errors the WHOLE query out (Postgrest "column does not
+// exist"), not just that field. Probed once and cached for the rest of
+// the session rather than a try/fallback on every single fetch call
+// (there are several below, all needing average_score now that anonymous
+// visitors can see it as "avg match" - see ResultCard).
+let averageScoreColumnExistsCache: boolean | null = null;
+async function averageScoreColumnExists(): Promise<boolean> {
+  if (averageScoreColumnExistsCache !== null) return averageScoreColumnExistsCache;
+  const { error } = await supabase.from("catalog_products").select("average_score").limit(1);
+  averageScoreColumnExistsCache = !error;
+  return averageScoreColumnExistsCache;
+}
+async function qoylProductSelect(): Promise<string> {
+  return (await averageScoreColumnExists()) ? `${QOYL_PRODUCT_SELECT_BASE}, average_score` : QOYL_PRODUCT_SELECT_BASE;
+}
 
 function toQoylProduct(p: QoylProductRow): Product {
   return {
@@ -93,6 +117,7 @@ function toQoylProduct(p: QoylProductRow): Product {
     imageUrl: p.image_url,
     categorySlug: p.categories?.slug ?? null,
     priceUsd: p.price_usd,
+    averageScore: p.average_score ?? null,
   };
 }
 
@@ -108,10 +133,11 @@ async function fetchQoylProducts(
   categoryId: string | null
 ): Promise<Product[]> {
   const term = `%${query}%`;
+  const select = await qoylProductSelect();
 
   let byNameQuery = supabase
     .from("catalog_products")
-    .select(QOYL_PRODUCT_SELECT)
+    .select(select)
     .ilike("name", term);
   if (categoryId) byNameQuery = byNameQuery.eq("category_id", categoryId);
 
@@ -125,16 +151,17 @@ async function fetchQoylProducts(
   if (brandIds.length) {
     let byBrandQuery = supabase
       .from("catalog_products")
-      .select(QOYL_PRODUCT_SELECT)
+      .select(select)
       .in("brand_id", brandIds);
     if (categoryId) byBrandQuery = byBrandQuery.eq("category_id", categoryId);
     const { data } = await byBrandQuery.limit(20);
     byBrand = (data ?? []) as unknown as QoylProductRow[];
   }
 
+  const byNameRows = (byName ?? []) as unknown as QoylProductRow[];
   const merged = new Map<string, QoylProductRow>();
-  for (const row of [...(byName ?? []), ...byBrand]) {
-    merged.set(row.id, row as unknown as QoylProductRow);
+  for (const row of [...byNameRows, ...byBrand]) {
+    merged.set(row.id, row);
   }
 
   return Array.from(merged.values()).map(toQoylProduct);
@@ -144,9 +171,10 @@ async function fetchQoylProducts(
 // ordered by brand then product name (not relevance, since there's no
 // search term to rank against).
 async function fetchProductsByCategory(categoryId: string): Promise<Product[]> {
+  const select = await qoylProductSelect();
   const { data } = await supabase
     .from("catalog_products")
-    .select(QOYL_PRODUCT_SELECT)
+    .select(select)
     .eq("category_id", categoryId)
     .order("name", { foreignTable: "catalog_brands" })
     .order("name");
@@ -199,6 +227,7 @@ function ResultCard({
   porosity,
   budgetRange,
   colorTreated,
+  isProfiled,
 }: {
   product: Product;
   scoreState: ScoreState | undefined;
@@ -210,6 +239,12 @@ function ResultCard({
   porosity: string | null;
   budgetRange: string | null;
   colorTreated: boolean;
+  // Whether the viewer has a real hair profile (signed-in or local) -
+  // when false, scoreState is never populated (scoreCatalogProducts can't
+  // produce anything without a profile - see SearchPageContent), and the
+  // always-visible score block below falls back to
+  // product.averageScore, labeled "avg match" instead of "your match".
+  isProfiled: boolean;
 }) {
   const matches = scoreState?.status === "done" ? scoreState.result.matches : [];
   const preview = matches.slice(0, 4);
@@ -229,6 +264,19 @@ function ResultCard({
   const priceTier = product.priceUsd != null ? priceTierFor(product.priceUsd) : null;
   const containsSulfates =
     scoreState?.status === "done" ? matches.some((m) => isSulfate(m.ingredient_name)) : false;
+
+  // Always-visible glance score (item 3) - "your match" for a profiled
+  // viewer (real per-user score, once scoring finishes), "avg match" for
+  // an anonymous one (catalog_products.average_score, not personalized -
+  // scoreCatalogProducts can't run without a profile at all). Replaces
+  // the old "tap to see compatibility score" gate entirely; tapping the
+  // card now only reveals the ingredient-level breakdown below.
+  const displayScore = isProfiled
+    ? scoreState?.status === "done"
+      ? scoreState.result.normalizedScore
+      : null
+    : product.averageScore;
+  const displayLabel = isProfiled ? "your match" : "avg match";
 
   return (
     <li className="border-b border-[#e8e8e8]">
@@ -277,22 +325,31 @@ function ResultCard({
               )}
             </div>
 
-            {!cardExpanded && (
-              <p className="mt-1 font-sans text-[11px] text-bronze">
-                Tap to see compatibility score →
-              </p>
-            )}
+            <div className="mt-1.5">
+              {displayScore !== null ? (
+                <>
+                  <span className="font-mono text-[28px] font-bold leading-none text-dark">
+                    {displayScore}
+                  </span>
+                  <div className="my-1 h-px w-8 bg-[#e8e8e8]" />
+                  <p className="font-mono text-[8px] lowercase text-[#aaa]" style={{ letterSpacing: "0.08em" }}>
+                    {displayLabel}
+                  </p>
+                </>
+              ) : isProfiled && scoreState?.status === "loading" ? (
+                <p className="font-sans text-[10px] text-dark/50">Scoring...</p>
+              ) : isProfiled && scoreState?.status === "error" ? (
+                <p className="font-sans text-[10px] text-red">Couldn&apos;t score this product.</p>
+              ) : (
+                <p className="font-sans text-[10px] text-dark/30">Not yet scored</p>
+              )}
+              {!cardExpanded && (
+                <p className="mt-1 font-sans text-[11px] text-bronze">
+                  Tap for full ingredient breakdown →
+                </p>
+              )}
+            </div>
 
-            {cardExpanded && scoreState?.status === "loading" && (
-              <p className="mt-1 font-sans text-[10px] text-dark/50">
-                Scoring...
-              </p>
-            )}
-            {cardExpanded && scoreState?.status === "error" && (
-              <p className="mt-1 font-sans text-[10px] text-red">
-                Couldn&apos;t score this product.
-              </p>
-            )}
             {cardExpanded && tier && scoreState?.status === "done" && productWeight && (
               <>
                 {scoreState.result.formaldehydeReleasersPresent.length > 0 && (
@@ -489,31 +546,195 @@ function bestMatchTierClass(score: number): string {
   return TIER_CLASSES[scoreTier(score)];
 }
 
-// catalog_products.average_score doesn't exist until
-// supabase/add_brand_directory.sql is run - selecting it explicitly by
-// name errors the WHOLE query out (not just that column) on a real
-// Postgrest "column does not exist" error, which would otherwise take
-// id/brand_id down with it. Falls back to the same query without it,
-// treating every average_score as null, so brand counts/ids still work
-// pre-migration.
 async function fetchAllCatalogProductsWithAverageScore(): Promise<
   { id: string; brand_id: string | null; average_score: number | null }[]
 > {
-  const { data, error } = await supabase.from("catalog_products").select("id, brand_id, average_score");
-  if (!error) return data ?? [];
-  const fallback = await supabase.from("catalog_products").select("id, brand_id");
-  return (fallback.data ?? []).map((r) => ({ ...r, average_score: null }));
+  const hasScore = await averageScoreColumnExists();
+  if (hasScore) {
+    const { data } = await supabase.from("catalog_products").select("id, brand_id, average_score");
+    return (data ?? []).map((r) => ({ ...r, average_score: r.average_score ?? null }));
+  }
+  const { data } = await supabase.from("catalog_products").select("id, brand_id");
+  return (data ?? []).map((r) => ({ ...r, average_score: null }));
+}
+
+// Dismissible, shown-once explainer for the "avg match" score anonymous
+// visitors see (item 3) - localStorage-gated, one flag shared by every
+// page that shows product cards (main search + brand catalog), since
+// it's explaining the same score concept everywhere.
+const SCORE_EXPLAINER_DISMISSED_KEY = "qoyl_score_explainer_dismissed";
+
+function ScoreExplainerBanner() {
+  // Defaults to hidden until the localStorage check resolves, rather than
+  // flashing the banner in on every load before the check runs.
+  const [dismissed, setDismissed] = useState(true);
+  useEffect(() => {
+    try {
+      setDismissed(localStorage.getItem(SCORE_EXPLAINER_DISMISSED_KEY) === "true");
+    } catch {
+      setDismissed(false);
+    }
+  }, []);
+
+  if (dismissed) return null;
+
+  return (
+    <div className="mt-3 flex items-start justify-between gap-3 border border-[#e8e8e8] bg-white px-4 py-2.5">
+      <p className="font-sans text-[12px] font-light leading-relaxed text-[#666]">
+        these scores show how well each product works across all hair types. create a profile to see
+        your personal score.
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          try {
+            localStorage.setItem(SCORE_EXPLAINER_DISMISSED_KEY, "true");
+          } catch {
+            // Best-effort - if storage is blocked, the banner just
+            // reappears next load, which is a fine fallback.
+          }
+          setDismissed(true);
+        }}
+        aria-label="Dismiss"
+        className="shrink-0 font-sans text-sm leading-none text-dark/40 hover:text-dark"
+      >
+        ×
+      </button>
+    </div>
+  );
+}
+
+// Anonymous/no-profile teaser gate. CSS blur only, per the request: the
+// data is already fetched (not a server-side gate - nothing sensitive to
+// protect, and it'd add latency for no security benefit); the goal is
+// conversion, not protection, so a determined visitor inspecting the DOM
+// is fine. Shown once per GROUP of blurred cards, not once per card.
+function BlurGateCard({
+  title,
+  description,
+  placement,
+  brandSlug,
+  userId,
+}: {
+  title: string;
+  description: React.ReactNode;
+  placement: "brand_catalog" | "search";
+  brandSlug?: string;
+  // Only ever set for a signed-in user with no hair profile yet (the
+  // "no-profile" half of canSearch) - a genuinely anonymous visitor has
+  // none, and that's the common case this gate exists for.
+  userId?: string | null;
+}) {
+  function fireEvent(eventType: "blur_gate_cta_tapped" | "blur_gate_signin_tapped") {
+    logMlEvent(eventType, {
+      userId: userId ?? null,
+      metadata: brandSlug ? { placement, brand_slug: brandSlug } : { placement },
+    });
+  }
+
+  return (
+    <div
+      className="absolute left-1/2 top-1/2 z-20 w-[calc(100%-32px)] max-w-[320px] -translate-x-1/2 -translate-y-1/2 border border-dark bg-white p-6 text-center"
+    >
+      <p className="mb-2 font-sans text-[16px] font-bold lowercase text-dark" style={{ letterSpacing: "-0.3px" }}>
+        {title}
+      </p>
+      <p className="mb-4 font-sans text-[12px] font-light leading-[1.75] text-[#666]">{description}</p>
+      <Link
+        href="/profile"
+        onClick={() => fireEvent("blur_gate_cta_tapped")}
+        className="block w-full bg-dark py-3 font-sans text-[12px] font-medium lowercase text-white transition-colors hover:bg-bronze2"
+      >
+        create free profile →
+      </Link>
+      <p className="mt-3 font-mono text-[10px] text-muted">
+        already have an account?{" "}
+        <Link
+          href="/auth"
+          onClick={() => fireEvent("blur_gate_signin_tapped")}
+          className="underline underline-offset-2 hover:text-dark"
+        >
+          sign in
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+function BlurredResultsGroup({
+  gateTitle,
+  gateDescription,
+  placement,
+  brandSlug,
+  userId,
+  productsShownBeforeGate,
+  children,
+}: {
+  gateTitle: string;
+  gateDescription: React.ReactNode;
+  placement: "brand_catalog" | "search";
+  brandSlug?: string;
+  userId?: string | null;
+  productsShownBeforeGate: number;
+  children: React.ReactNode;
+}) {
+  // Fires once when this group of blurred cards mounts (i.e. once per
+  // brand/search view an anonymous visitor lands on with 5+ results) -
+  // the primary anonymous -> profiled conversion metric.
+  useEffect(() => {
+    logMlEvent("blur_gate_shown", {
+      userId: userId ?? null,
+      metadata: brandSlug
+        ? { placement, brand_slug: brandSlug, products_shown_before_gate: productsShownBeforeGate }
+        : { placement, products_shown_before_gate: productsShownBeforeGate },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className="relative mt-2 overflow-hidden">
+      <ul aria-hidden="true" className="pointer-events-none select-none" style={{ filter: "blur(4px)" }}>
+        {children}
+      </ul>
+      <div
+        className="absolute inset-0 z-10"
+        style={{
+          backdropFilter: "blur(6px)",
+          WebkitBackdropFilter: "blur(6px)",
+          background: "rgba(255,255,255,0.4)",
+        }}
+      />
+      <BlurGateCard
+        title={gateTitle}
+        description={gateDescription}
+        placement={placement}
+        brandSlug={brandSlug}
+        userId={userId}
+      />
+    </div>
+  );
+}
+
+// Qualitative word next to the anonymous bar viz (item 1) - no raw
+// number shown to anonymous visitors, just the bar plus a tier-derived
+// word. scoreTier's thresholds (70/40) match the bar/word pairing here.
+function overallScoreLabel(score: number): string {
+  if (score >= 70) return "good overall";
+  if (score >= 40) return "fair overall";
+  return "below average overall";
 }
 
 // Brand directory - "brands" tab on /search. Fetches every catalog_brands
-// row with at least one catalog_products row, groups by first letter, and
-// (since /search's canSearch gate already guarantees a real profile -
-// signed-in or local - before this ever renders) scores the whole catalog
-// once in the background to show each brand's best-matching score.
+// row with at least one catalog_products row, groups by first letter.
+// Anonymous/no-profile visitors are shown the bar viz (average_score) and
+// never trigger the whole-catalog scoring batch below; a real profile
+// (signed-in or local) gets each brand's best-matching score instead.
 function BrandDirectoryView({
+  isProfiled,
   onSelectBrand,
   onBack,
 }: {
+  isProfiled: boolean;
   onSelectBrand: (slug: string) => void;
   onBack: () => void;
 }) {
@@ -536,23 +757,31 @@ function BrandDirectoryView({
 
       const countByBrand = new Map<string, number>();
       const productIdToBrand = new Map<string, string>();
+      const scoreSumByBrand = new Map<string, { sum: number; n: number }>();
       for (const row of productRows) {
         if (!row.brand_id) continue;
         countByBrand.set(row.brand_id, (countByBrand.get(row.brand_id) ?? 0) + 1);
         productIdToBrand.set(row.id, row.brand_id);
+        if (typeof row.average_score === "number") {
+          const agg = scoreSumByBrand.get(row.brand_id) ?? { sum: 0, n: 0 };
+          agg.sum += row.average_score;
+          agg.n += 1;
+          scoreSumByBrand.set(row.brand_id, agg);
+        }
       }
 
       const entries: BrandDirectoryEntry[] = ((brandRows ?? []) as CatalogBrandRow[])
         .map((b) => {
           const productCount = countByBrand.get(b.id) ?? 0;
           if (productCount === 0) return null;
+          const agg = scoreSumByBrand.get(b.id);
           return {
             id: b.id,
             name: b.name,
             slug: b.slug,
             logoUrl: b.logo_url ?? null,
             productCount,
-            avgScore: null as number | null,
+            avgScore: agg ? Math.round(agg.sum / agg.n) : null,
           };
         })
         .filter((e): e is BrandDirectoryEntry => e !== null);
@@ -563,10 +792,11 @@ function BrandDirectoryView({
       }
 
       // Best-match score, scored in the background against the current
-      // profile (see scoreCatalogProducts - resolves it from the signed-in
-      // user's or local hair_profile_id automatically). Not blocking the
-      // list itself since this is a heavier batch call across the whole
-      // catalog.
+      // profile. Anonymous/no-profile visitors get the bar viz (avgScore,
+      // above) instead - scoreCatalogProducts can't resolve a profile to
+      // score against for them, so skip the heavy whole-catalog batch call
+      // entirely rather than firing one that's guaranteed to error.
+      if (!isProfiled) return;
       const allIds = productRows.map((r) => r.id);
       if (allIds.length === 0) return;
       setScoring(true);
@@ -589,7 +819,7 @@ function BrandDirectoryView({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isProfiled]);
 
   const filtered = searchTerm.trim()
     ? brands.filter((b) => b.name.toLowerCase().includes(searchTerm.trim().toLowerCase()))
@@ -654,20 +884,40 @@ function BrandDirectoryView({
                         key={b.id}
                         type="button"
                         onClick={() => onSelectBrand(b.slug)}
-                        className="flex w-full items-center gap-4 border-b border-[#f0f0f0] py-3.5 text-left"
+                        className="group flex w-full items-center gap-4 border-b border-[#f0f0f0] py-3.5 text-left"
                       >
                         <BrandLogoOrInitial name={b.name} logoUrl={b.logoUrl} />
                         <div className="min-w-0 flex-1">
                           <p className="font-sans text-[14px] font-medium lowercase text-dark">{b.name}</p>
                           <p className="font-mono text-[9px] text-muted">{b.productCount} products</p>
+
+                          {isProfiled ? (
+                            typeof bestScore === "number" && (
+                              <p className={`mt-1 font-mono text-[16px] font-bold ${bestMatchTierClass(bestScore)}`}>
+                                {bestScore} best match
+                              </p>
+                            )
+                          ) : (
+                            typeof b.avgScore === "number" && (
+                              <>
+                                <div className="mt-1.5 flex items-center gap-1.5">
+                                  <div className="h-[3px] w-[80px] bg-[#e8e8e8]">
+                                    <div
+                                      className="h-full bg-dark"
+                                      style={{ width: `${Math.max(0, Math.min(100, b.avgScore))}%` }}
+                                    />
+                                  </div>
+                                  <span className="font-mono text-[9px] text-muted">
+                                    {overallScoreLabel(b.avgScore)}
+                                  </span>
+                                </div>
+                                <p className="mt-1 block font-mono text-[8px] text-[#aaa] sm:hidden sm:group-hover:block">
+                                  create a free profile to see your personal match score
+                                </p>
+                              </>
+                            )
+                          )}
                         </div>
-                        {typeof bestScore === "number" ? (
-                          <span className={`shrink-0 font-mono text-[10px] ${bestMatchTierClass(bestScore)}`}>
-                            best match: {bestScore}
-                          </span>
-                        ) : typeof b.avgScore === "number" ? (
-                          <span className="shrink-0 font-mono text-[10px] text-muted">avg: {b.avgScore}</span>
-                        ) : null}
                       </button>
                     );
                   })}
@@ -685,6 +935,7 @@ function BrandDirectoryView({
 function BrandCatalogView({
   slug,
   user,
+  isProfiled,
   curlType,
   porosity,
   budgetRange,
@@ -693,6 +944,7 @@ function BrandCatalogView({
 }: {
   slug: string;
   user: { id: string } | null;
+  isProfiled: boolean;
   curlType: string | null;
   porosity: string | null;
   budgetRange: string | null;
@@ -702,7 +954,7 @@ function BrandCatalogView({
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [brand, setBrand] = useState<CatalogBrandRow | null>(null);
-  const [products, setProducts] = useState<(Product & { averageScore: number | null })[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [scoresByCode, setScoresByCode] = useState<Record<string, ScoreState>>({});
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [expandedCardCode, setExpandedCardCode] = useState<string | null>(null);
@@ -730,33 +982,25 @@ function BrandCatalogView({
       }
       setBrand(brandRow as CatalogBrandRow);
 
-      // average_score doesn't exist until supabase/add_brand_directory.sql
-      // is run - see fetchAllCatalogProductsWithAverageScore's comment;
-      // same fallback here since naming it explicitly errors the whole
-      // query out pre-migration.
-      let rows: (QoylProductRow & { average_score: number | null })[];
-      const { data: withScore, error: withScoreError } = await supabase
+      const select = await qoylProductSelect();
+      const { data: productRows } = await supabase
         .from("catalog_products")
-        .select(`${QOYL_PRODUCT_SELECT}, average_score`)
+        .select(select)
         .eq("brand_id", brandRow.id)
         .order("name");
-      if (!withScoreError) {
-        rows = (withScore ?? []) as unknown as (QoylProductRow & { average_score: number | null })[];
-      } else {
-        const { data: withoutScore } = await supabase
-          .from("catalog_products")
-          .select(QOYL_PRODUCT_SELECT)
-          .eq("brand_id", brandRow.id)
-          .order("name");
-        rows = ((withoutScore ?? []) as unknown as QoylProductRow[]).map((r) => ({ ...r, average_score: null }));
-      }
 
       if (cancelled) return;
-      const mapped = rows.map((r) => ({ ...toQoylProduct(r), averageScore: r.average_score ?? null }));
+      const mapped = ((productRows ?? []) as unknown as QoylProductRow[]).map(toQoylProduct);
       setProducts(mapped);
       setLoading(false);
 
-      if (mapped.length > 0) {
+      // Anonymous/no-profile visitors never get real per-user scores -
+      // scoreCatalogProducts can't resolve a profile to score against for
+      // them at all (see loadScoringProfile in lib/compatibility.ts), so
+      // skip the call and let ResultCard fall back to each product's own
+      // averageScore ("avg match") instead of firing a batch of
+      // guaranteed-to-error requests.
+      if (isProfiled && mapped.length > 0) {
         const outcomes = await scoreCatalogProducts(mapped.map((p) => p.catalogProductId));
         if (cancelled) return;
         const idByCode = new Map(mapped.map((p) => [p.catalogProductId, p.code]));
@@ -776,7 +1020,9 @@ function BrandCatalogView({
     return () => {
       cancelled = true;
     };
-  }, [slug]);
+    // isProfiled included so this re-scores if a visitor creates a
+    // profile while already viewing this brand page.
+  }, [slug, isProfiled]);
 
   // Logged once per brand actually loaded, not once per re-render.
   useEffect(() => {
@@ -813,7 +1059,7 @@ function BrandCatalogView({
     );
   }
 
-  const scoreForSort = (p: Product & { averageScore: number | null }): number => {
+  const scoreForSort = (p: Product): number => {
     const state = scoresByCode[p.code];
     if (state?.status === "done") return state.result.normalizedScore;
     return p.averageScore ?? -1;
@@ -863,7 +1109,7 @@ function BrandCatalogView({
                   {products.length} product{products.length === 1 ? "" : "s"} in the qoyl catalog
                 </p>
               </div>
-              {bestProduct && (
+              {isProfiled && bestProduct && (
                 <div className="shrink-0 text-right">
                   <p className="font-mono text-[9px] text-muted">your best match</p>
                   <p className={`font-mono text-[32px] font-bold leading-none ${bestMatchTierClass(bestProduct.score)}`}>
@@ -872,6 +1118,16 @@ function BrandCatalogView({
                   <p className="mt-1 max-w-[140px] font-sans text-[11px] font-light text-muted">
                     {bestProduct.p.name}
                   </p>
+                </div>
+              )}
+              {!isProfiled && products.length > 0 && (
+                <div className="shrink-0 text-right">
+                  <p className="font-sans text-[14px] font-medium text-dark">
+                    {products.length} product{products.length === 1 ? "" : "s"} scored
+                  </p>
+                  <Link href="/profile" className="mt-1 inline-block font-mono text-[10px] text-muted hover:text-dark">
+                    see how they match your hair →
+                  </Link>
                 </div>
               )}
             </div>
@@ -903,7 +1159,7 @@ function BrandCatalogView({
             </div>
           )}
 
-          {brand && filtered.length >= 20 && (
+          {brand && isProfiled && filtered.length >= 20 && (
             <p className="sticky top-0 z-10 mt-3 bg-white py-1.5 font-mono text-[9px] lowercase text-muted">
               showing {filtered.length} of {products.length}
             </p>
@@ -913,36 +1169,91 @@ function BrandCatalogView({
             <p className="mt-6 text-sm text-dark/50">No products in this category yet.</p>
           )}
 
+          {brand && filtered.length > 0 && !isProfiled && <ScoreExplainerBanner />}
+
           {brand && filtered.length > 0 && (
-            <ul className="mt-2">
-              {filtered.map((product) => (
-                <ResultCard
-                  key={product.code}
-                  product={product}
-                  scoreState={scoresByCode[product.code]}
-                  cardExpanded={expandedCardCode === product.code}
-                  onToggleCard={() => {
-                    setExpandedCardCode((prev) => (prev === product.code ? null : product.code));
-                    setIngredientsExpanded(false);
-                  }}
-                  ingredientsExpanded={ingredientsExpanded}
-                  onToggleIngredients={(e) => {
-                    e.stopPropagation();
-                    setIngredientsExpanded((v) => !v);
-                  }}
-                  curlType={curlType}
-                  porosity={porosity}
-                  budgetRange={budgetRange}
-                  colorTreated={colorTreated}
-                />
-              ))}
-            </ul>
+            <>
+              <ul className="mt-2">
+                {(isProfiled ? filtered : filtered.slice(0, 4)).map((product) => (
+                  <ResultCard
+                    key={product.code}
+                    product={product}
+                    scoreState={scoresByCode[product.code]}
+                    cardExpanded={expandedCardCode === product.code}
+                    onToggleCard={() => {
+                      setExpandedCardCode((prev) => (prev === product.code ? null : product.code));
+                      setIngredientsExpanded(false);
+                    }}
+                    ingredientsExpanded={ingredientsExpanded}
+                    onToggleIngredients={(e) => {
+                      e.stopPropagation();
+                      setIngredientsExpanded((v) => !v);
+                    }}
+                    curlType={curlType}
+                    porosity={porosity}
+                    budgetRange={budgetRange}
+                    colorTreated={colorTreated}
+                    isProfiled={isProfiled}
+                  />
+                ))}
+              </ul>
+
+              {!isProfiled && filtered.length > 4 && (
+                <BlurredResultsGroup
+                  gateTitle="your scores. not averages."
+                  gateDescription={
+                    <>
+                      create a free profile — takes 2 minutes — to see exactly how every {brand?.name}{" "}
+                      product scores for your specific curl type, porosity, and climate.
+                    </>
+                  }
+                  placement="brand_catalog"
+                  brandSlug={slug}
+                  userId={user?.id}
+                  productsShownBeforeGate={4}
+                >
+                  {filtered.slice(4, 8).map((product) => (
+                    <ResultCard
+                      key={product.code}
+                      product={product}
+                      scoreState={undefined}
+                      cardExpanded={false}
+                      onToggleCard={() => {}}
+                      ingredientsExpanded={false}
+                      onToggleIngredients={() => {}}
+                      curlType={curlType}
+                      porosity={porosity}
+                      budgetRange={budgetRange}
+                      colorTreated={colorTreated}
+                      isProfiled={false}
+                    />
+                  ))}
+                </BlurredResultsGroup>
+              )}
+
+              {!isProfiled && filtered.length > 8 && (
+                <p className="mt-4 text-center font-mono text-[10px] text-muted">
+                  + {filtered.length - 8} more products — visible with a free profile
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>
     </main>
   );
 }
+
+// Main search results' blur gate (item 6) has no real session/location to
+// draw a live example from for an anonymous visitor - rotates between a
+// few generic profiles instead, matching the request's "just use a common
+// profile... rotates between a few examples."
+const EXAMPLE_PROFILE_LINES = [
+  "4c high porosity in atlanta",
+  "3b low porosity in denver",
+  "4a medium porosity in houston",
+  "2c fine hair in seattle",
+];
 
 function SearchPageContent() {
   const router = useRouter();
@@ -1175,6 +1486,12 @@ function SearchPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, brandsLite]);
 
+  // Picked once per mount, not re-rolled on every render - see
+  // EXAMPLE_PROFILE_LINES above.
+  const [exampleProfileLine] = useState(
+    () => EXAMPLE_PROFILE_LINES[Math.floor(Math.random() * EXAMPLE_PROFILE_LINES.length)]
+  );
+
   const [hasScrolledCategories, setHasScrolledCategories] = useState(false);
   // Weight filter pills, item 6 - "Lightweight"/"Medium"/"Rich" split the
   // 5 internal ProductWeight tiers into 3 non-overlapping buckets (the
@@ -1396,7 +1713,11 @@ function SearchPageContent() {
         setScoresByCode({});
         setWeightFilter("all");
 
-        if (qoylProducts.length > 0) {
+        // Anonymous/no-profile visitors never get real per-user scores -
+        // see the identical note in BrandCatalogView. They fall back to
+        // each product's own averageScore ("avg match" in ResultCard)
+        // instead of firing a batch that's guaranteed to error.
+        if (qoylProducts.length > 0 && canSearch) {
           scoreResults(qoylProducts, thisRequest);
         }
       } catch {
@@ -1460,15 +1781,21 @@ function SearchPageContent() {
     );
   }
 
-  if (!canSearch) {
-    return <SearchAuthGate variant={user ? "no-profile" : "anonymous"} />;
-  }
+  // canSearch used to hard-block the entire page behind SearchAuthGate for
+  // anyone with no hair profile at all. That's been replaced by the
+  // anonymous teaser + blur-gate experience below (see BlurredResultsGroup) -
+  // everyone can browse now, "isProfiled" just decides real per-user
+  // scores vs. average_score, and whether results past the first 4 are
+  // blurred. SearchAuthGate itself is left in place (unused here) rather
+  // than deleted, since removing a whole component isn't this task's ask.
+  const isProfiled = canSearch;
 
   if (brandSlugParam) {
     return (
       <BrandCatalogView
         slug={brandSlugParam}
         user={user ?? null}
+        isProfiled={isProfiled}
         curlType={resolvedCurlType}
         porosity={resolvedPorosity}
         budgetRange={user ? hairProfile?.budget_range ?? null : localProfileHairInfo?.budget_range ?? null}
@@ -1481,7 +1808,7 @@ function SearchPageContent() {
   }
 
   if (isBrandsDirectory) {
-    return <BrandDirectoryView onSelectBrand={goToBrand} onBack={backToSearch} />;
+    return <BrandDirectoryView isProfiled={isProfiled} onSelectBrand={goToBrand} onBack={backToSearch} />;
   }
 
   // Browsing a category with no search term - sort by compatibility score
@@ -1493,24 +1820,20 @@ function SearchPageContent() {
   // name/brand relevance order from fetchQoylProducts and should never be
   // silently re-sorted by score.
   //
-  // The request's spec also asked for a separate "no profile" anonymous
-  // sort (average_score DESC across all porosity levels, needing a new
-  // catalog_products.average_score column). That branch can't actually
-  // be reached here: canSearch (above) already requires either a signed-
-  // in hairProfile or a local hair_profile_id before this component ever
-  // renders results, and both paths give loadScoringProfile() (in
-  // lib/compatibility.ts, used by scoreCatalogProducts) a real profile to
-  // score against - auth-context.tsx mirrors the signed-in user's
-  // hair_profile_id into localStorage too. So every visitor who can see
-  // results already gets scored against their own real profile; there's
-  // no reachable case that needs a separate average-across-everyone
-  // fallback or its own SQL column. Skipped rather than adding dead code
-  // and an unused migration - see the message to the user for the SQL
-  // that was NOT run and why.
+  // UPDATE: an anonymous/no-profile "no reachable case" note used to live
+  // here - no longer true. canSearch/isProfiled no longer hard-blocks the
+  // page (see the blur-gate work above), so an anonymous visitor really
+  // does land on category browse with an empty scoresByCode, and
+  // scoreForSort below now falls back to catalog_products.average_score
+  // for them, same as BrandCatalogView/BrandDirectoryView.
   const isPureCategoryBrowse = Boolean(categorySlug) && query.trim() === "";
   const scoreForSort = (p: Product): number => {
     const state = scoresByCode[p.code];
-    return state?.status === "done" ? state.result.normalizedScore : -1;
+    if (state?.status === "done") return state.result.normalizedScore;
+    // Anonymous/no-profile visitors never populate scoresByCode (see the
+    // canSearch guard around scoreResults above) - fall back to the
+    // catalog-wide average, same as BrandCatalogView's scoreForSort.
+    return p.averageScore ?? -1;
   };
   const categorySortedResults = isPureCategoryBrowse
     ? [...results].sort((a, b) => scoreForSort(b) - scoreForSort(a))
@@ -1520,7 +1843,9 @@ function SearchPageContent() {
     resolvedCurlType && resolvedCurlType !== "not_sure" ? resolvedCurlType : null;
   const sortLabelPorosity =
     resolvedPorosity && resolvedPorosity !== "not_sure" ? `${resolvedPorosity} porosity ` : "";
-  const sortNoticeText = sortLabelCurlType
+  const sortNoticeText = !canSearch
+    ? "sorted by average compatibility"
+    : sortLabelCurlType
     ? `sorted by match for your ${sortLabelCurlType} ${sortLabelPorosity}hair`
     : "sorted by compatibility with your hair profile";
 
@@ -1723,7 +2048,11 @@ function SearchPageContent() {
             </p>
           )}
 
-        {!loading && results.length > 0 && (
+        {/* Weight classification comes from real per-product scoring
+            (classifyProductWeight, run inside scoreCatalogProducts) -
+            anonymous/no-profile visitors never get that, so these pills
+            would just filter every result down to zero. */}
+        {!loading && results.length > 0 && canSearch && (
           <div className="mt-3 flex flex-wrap gap-2">
             {(
               [
@@ -1749,32 +2078,72 @@ function SearchPageContent() {
           </div>
         )}
 
+        {!loading && results.length > 0 && !canSearch && <ScoreExplainerBanner />}
+
         {!loading && results.length > 0 && (
-          <ul className="mt-2">
-            {filteredResults.length === 0 && (
-              <p className="mt-4 font-sans text-[12px] text-dark/50">
-                No results match this weight filter yet - results are still scoring, or none of
-                these products match.
-              </p>
+          <>
+            <ul className="mt-2">
+              {filteredResults.length === 0 && (
+                <p className="mt-4 font-sans text-[12px] text-dark/50">
+                  No results match this weight filter yet - results are still scoring, or none of
+                  these products match.
+                </p>
+              )}
+              {(canSearch ? filteredResults : filteredResults.slice(0, 4)).map((product) => (
+                <ResultCard
+                  key={product.code}
+                  product={product}
+                  scoreState={scoresByCode[product.code]}
+                  cardExpanded={expandedCardCode === product.code}
+                  onToggleCard={() => toggleCard(product.code)}
+                  ingredientsExpanded={ingredientsExpanded}
+                  onToggleIngredients={toggleIngredients}
+                  curlType={user ? hairProfile?.curl_type ?? null : localProfileHairInfo?.curl_type ?? null}
+                  porosity={user ? hairProfile?.porosity ?? null : localProfileHairInfo?.porosity ?? null}
+                  budgetRange={user ? hairProfile?.budget_range ?? null : localProfileHairInfo?.budget_range ?? null}
+                  colorTreated={isColorTreatedYes(
+                    user ? hairProfile?.color_treated : localProfileHairInfo?.color_treated
+                  )}
+                  isProfiled={canSearch}
+                />
+              ))}
+            </ul>
+
+            {!canSearch && filteredResults.length > 4 && (
+              <BlurredResultsGroup
+                gateTitle="your scores. not averages."
+                gateDescription={
+                  <>
+                    these are average scores across all hair types.
+                    <br />
+                    {exampleProfileLine} scores differently.
+                    <br />
+                    create a free profile to see your exact match.
+                  </>
+                }
+                placement="search"
+                userId={user?.id}
+                productsShownBeforeGate={4}
+              >
+                {filteredResults.slice(4).map((product) => (
+                  <ResultCard
+                    key={product.code}
+                    product={product}
+                    scoreState={undefined}
+                    cardExpanded={false}
+                    onToggleCard={() => {}}
+                    ingredientsExpanded={false}
+                    onToggleIngredients={() => {}}
+                    curlType={null}
+                    porosity={null}
+                    budgetRange={null}
+                    colorTreated={false}
+                    isProfiled={false}
+                  />
+                ))}
+              </BlurredResultsGroup>
             )}
-            {filteredResults.map((product) => (
-              <ResultCard
-                key={product.code}
-                product={product}
-                scoreState={scoresByCode[product.code]}
-                cardExpanded={expandedCardCode === product.code}
-                onToggleCard={() => toggleCard(product.code)}
-                ingredientsExpanded={ingredientsExpanded}
-                onToggleIngredients={toggleIngredients}
-                curlType={user ? hairProfile?.curl_type ?? null : localProfileHairInfo?.curl_type ?? null}
-                porosity={user ? hairProfile?.porosity ?? null : localProfileHairInfo?.porosity ?? null}
-                budgetRange={user ? hairProfile?.budget_range ?? null : localProfileHairInfo?.budget_range ?? null}
-                colorTreated={isColorTreatedYes(
-                  user ? hairProfile?.color_treated : localProfileHairInfo?.color_treated
-                )}
-              />
-            ))}
-          </ul>
+          </>
         )}
 
         {showNoResults && (
