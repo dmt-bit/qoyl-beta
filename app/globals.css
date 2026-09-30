@@ -34,6 +34,22 @@ body {
   overflow-x: hidden;
 }
 
+/* Behold Instagram widget (components/HomeFooterSection.tsx) - styled to
+   match the site's black-border aesthetic. ::part() support varies by
+   Behold's own widget version; the component also wraps the widget in a
+   plain bordered div as a fallback in case these don't take effect. */
+behold-widget {
+  display: block;
+  width: 100%;
+}
+behold-widget::part(grid) {
+  gap: 1px;
+  background: #0a0a0a;
+}
+behold-widget::part(item) {
+  border-radius: 0;
+}
+
 /* Redesign item 6 - lowercase as a *visual* treatment, not a content
    change: the underlying text (aria labels, copy, brand/product names)
    stays whatever case it was authored in; only the rendered glyphs are

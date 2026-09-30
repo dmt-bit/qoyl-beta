@@ -202,24 +202,44 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
     [runProgressBar]
   );
 
+  // Shuffle only - deliberately NOT calling activateTile here. This used
+  // to shuffle and activate in the same synchronous effect, but the
+  // <video> elements for the freshly-shuffled items don't exist in the
+  // DOM yet at that point (shuffledItems was still null on the render
+  // that just finished) - videoRefs.current was empty, so the very first
+  // activateTile() call silently did nothing to any real video element.
+  // The bug that produced: every tile showing solid black/no video on
+  // first load, correcting itself only once the natural DURATION timeout
+  // fired and called activateTile again for tile 2 - by which point refs
+  // existed. That's "exactly how it looked on the second cycle."
   useEffect(() => {
     const items = shuffle(VIDEOS);
     const queue = shuffle(Array.from({ length: TILE_COUNT }, (_, i) => i));
     playQueueRef.current = queue;
     queuePosRef.current = 0;
-    setShuffledItems(items);
     setQueuePos(0);
-    activateTile(queue[0], items);
+    setShuffledItems(items);
+  }, []);
+
+  // Fires once shuffledItems is set and the <video> elements it produced
+  // have actually mounted (so videoRefs.current is populated) - calls
+  // .load() on every tile simultaneously first, so every blurred
+  // (inactive) tile has real first-frame video data to show through the
+  // blur instead of a black box, then activates the first queue entry
+  // against a real video element.
+  useEffect(() => {
+    if (!shuffledItems) return;
+    videoRefs.current.forEach((video) => video?.load());
+    activateTile(playQueueRef.current[0], shuffledItems);
 
     return () => {
       if (advanceTimerRef.current) clearTimeout(advanceTimerRef.current);
       if (statementTimerRef.current) clearTimeout(statementTimerRef.current);
     };
-    // Only ever runs once on mount - activateTile is stable (see its own
-    // useCallback deps) and re-running this on every render would
-    // re-shuffle mid-session.
+    // Only re-fires if shuffledItems identity changes, which after the
+    // effect above only happens once (mount) - activateTile is stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [shuffledItems]);
 
   function handleTileClick(idx: number) {
     if (!shuffledItems || idx === activeIdxRef.current) return;
@@ -240,6 +260,14 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
     >
       {PLACEMENTS.map((placement, idx) => {
         const item = shuffledItems?.[idx];
+        // activeIdx is null until the second effect above activates the
+        // first tile, so every tile's filter is "blurred" (never "none")
+        // on the very first paint already - this was always a plain
+        // inline style computed from state on every render, never a CSS
+        // class toggled after mount. What was missing was real video
+        // frame data to show through that blur (see the .load() fix
+        // above) - a blurred tile with nothing loaded under it still
+        // looks solid black.
         const isActive = activeIdx === idx;
         return (
           <button
