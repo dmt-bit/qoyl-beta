@@ -484,6 +484,113 @@ function ResultCard({
   );
 }
 
+// Idle-state default for /search (no query, no category selected) -
+// used to be its own "trending products this week" section on the home
+// page (components/MasonryFeed.tsx, no longer rendered anywhere - see
+// app/page.tsx's redesign); ported here rather than left orphaned, per
+// the request's "move this INTO search as a default state." The old
+// section wasn't really "trending" by any popularity signal (no such
+// data exists) - it showed recently-added verified catalog products,
+// personally scored when a profile exists. Same behavior here, just
+// relocated.
+function TrendingProductsSection({
+  isProfiled,
+  curlType,
+  porosity,
+  budgetRange,
+  colorTreated,
+}: {
+  isProfiled: boolean;
+  curlType: string | null;
+  porosity: string | null;
+  budgetRange: string | null;
+  colorTreated: boolean;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [scoresByCode, setScoresByCode] = useState<Record<string, ScoreState>>({});
+  const [expandedCardCode, setExpandedCardCode] = useState<string | null>(null);
+  const [ingredientsExpanded, setIngredientsExpanded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      const select = await qoylProductSelect();
+      const { data } = await supabase
+        .from("catalog_products")
+        .select(select)
+        .eq("is_verified", true)
+        .order("created_at", { ascending: false })
+        .limit(8);
+      if (cancelled) return;
+      const mapped = ((data ?? []) as unknown as QoylProductRow[]).map(toQoylProduct);
+      setProducts(mapped);
+      setLoading(false);
+
+      if (isProfiled && mapped.length > 0) {
+        const outcomes = await scoreCatalogProducts(mapped.map((p) => p.catalogProductId));
+        if (cancelled) return;
+        const idByCode = new Map(mapped.map((p) => [p.catalogProductId, p.code]));
+        const next: Record<string, ScoreState> = {};
+        for (const [productId, outcome] of Object.entries(outcomes)) {
+          const code = idByCode.get(productId);
+          if (!code) continue;
+          next[code] =
+            outcome.error || !outcome.result
+              ? { status: "error", error: outcome.error ?? "Something went wrong." }
+              : { status: "done", result: outcome.result };
+        }
+        setScoresByCode(next);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isProfiled]);
+
+  if (loading) return <p className="mt-6 text-sm text-dark/50">Loading...</p>;
+  if (products.length === 0) return null;
+
+  const sorted = [...products].sort((a, b) => {
+    const stateA = scoresByCode[a.code];
+    const stateB = scoresByCode[b.code];
+    const scoreA = stateA?.status === "done" ? stateA.result.normalizedScore : a.averageScore ?? -1;
+    const scoreB = stateB?.status === "done" ? stateB.result.normalizedScore : b.averageScore ?? -1;
+    return scoreB - scoreA;
+  });
+
+  return (
+    <div className="mt-6">
+      <p className="font-mono text-[10px] lowercase text-muted">trending now</p>
+      <ul className="mt-2">
+        {sorted.map((product) => (
+          <ResultCard
+            key={product.code}
+            product={product}
+            scoreState={scoresByCode[product.code]}
+            cardExpanded={expandedCardCode === product.code}
+            onToggleCard={() => {
+              setExpandedCardCode((prev) => (prev === product.code ? null : product.code));
+              setIngredientsExpanded(false);
+            }}
+            ingredientsExpanded={ingredientsExpanded}
+            onToggleIngredients={(e) => {
+              e.stopPropagation();
+              setIngredientsExpanded((v) => !v);
+            }}
+            curlType={curlType}
+            porosity={porosity}
+            budgetRange={budgetRange}
+            colorTreated={colorTreated}
+            isProfiled={isProfiled}
+          />
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function DisclaimerBanner() {
   return (
     <div
@@ -2025,9 +2132,15 @@ function SearchPageContent() {
         )}
 
         {!categorySlug && query.trim() === "" && !hasSearched && (
-          <p className="mt-6 text-sm text-dark/50">
-            Search a product or browse by category above
-          </p>
+          <TrendingProductsSection
+            isProfiled={canSearch}
+            curlType={resolvedCurlType}
+            porosity={resolvedPorosity}
+            budgetRange={user ? hairProfile?.budget_range ?? null : localProfileHairInfo?.budget_range ?? null}
+            colorTreated={isColorTreatedYes(
+              user ? hairProfile?.color_treated : localProfileHairInfo?.color_treated
+            )}
+          />
         )}
 
         {loading && (

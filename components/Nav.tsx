@@ -126,32 +126,6 @@ function PersonIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: nu
   );
 }
 
-// Wraps PersonIcon with an optional small bronze notification dot in the
-// top-right corner - a gentle nudge for subscribers who haven't opened
-// their routine in over 7 days (see lib/routineVisit.ts).
-function PersonNavIcon({ size = 18, showDot = false }: { size?: number; showDot?: boolean }) {
-  return (
-    <span className="relative inline-flex">
-      <PersonIcon size={size} />
-      {showDot && (
-        <span
-          aria-hidden
-          className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-bronze ring-2 ring-[#ffffff]"
-        />
-      )}
-    </span>
-  );
-}
-
-function CompassIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 9l-3.5 1.5L10 14l3.5-1.5L15 9z" />
-    </svg>
-  );
-}
-
 function CalendarIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
@@ -172,97 +146,44 @@ function GridIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: numb
   );
 }
 
-// The slim (mobile) / expanded (desktop) side rail shown only on the
-// home page, replacing the top nav entirely there - every other page
-function HomeSideNavDesktop({
-  user,
-  hasProfile,
-  showRoutineNudge,
-  pathname,
-}: {
-  user: unknown;
-  hasProfile: boolean;
-  showRoutineNudge: boolean;
-  pathname: string;
-}) {
+// Home ("/") has its own search-first hero now (see app/page.tsx,
+// components/HomeHero.tsx) - the desktop nav there is intentionally
+// minimal per that redesign: wordmark, sign in (or Dashboard once
+// signed in), and a Style Match pill. Replaces the old persistent left
+// side rail entirely; every other page keeps the full center-links nav
+// below.
+function HomeDesktopNav({ user, showRoutineNudge }: { user: unknown; showRoutineNudge: boolean }) {
   return (
-    <div className="fixed bottom-0 left-0 top-0 z-50 hidden w-[200px] flex-col overflow-y-auto border-r border-bronze/40 bg-[#ffffff]/80 backdrop-blur-md sm:flex">
-      <Link href="/" className="px-6 py-6 font-serif text-2xl font-bold lowercase text-dark">
-        qoyl
-      </Link>
-
-      <div className="flex flex-col gap-1 px-3">
-        <SideNavLink href="/search" label="Search a Product" icon={<SearchIcon size={16} />} pathname={pathname} />
-        <SideNavLink href="/style-match" label="Style Match" icon={<SparkleIcon size={16} className="text-dark" />} pathname={pathname} />
-        <SideNavLink
-          href={user ? "/dashboard" : "/auth"}
-          label="Dashboard"
-          icon={<PersonNavIcon size={16} showDot={showRoutineNudge} />}
-          pathname={pathname}
-        />
-        <SideNavLink href="/travel" label="Travel Kit" icon={<CompassIcon size={16} />} pathname={pathname} />
-        {hasProfile && (
-          <SideNavLink href="/routine" label="My Routine" icon={<CalendarIcon size={16} />} pathname={pathname} />
-        )}
-      </div>
-
-      <p className="px-6 pb-2 pt-6 text-[10px] font-semibold uppercase tracking-[0.15em] text-bronze">
-        The Feed
-      </p>
-      <div className="flex flex-col gap-1 px-3 pb-6">
-        {TABS.map((tab) => (
-          <Link
-            key={tab.key}
-            href={tab.key === "all" ? "/posts" : `/posts?type=${tab.key}`}
-            className="rounded-lg px-3 py-2 text-sm text-dark/70 transition-colors hover:bg-[#f5f5f5] hover:text-dark"
-          >
-            {FEED_LABEL_OVERRIDES[tab.key] ?? tab.label}
-          </Link>
-        ))}
-        <Link
-          href="/events"
-          className="rounded-lg px-3 py-2 text-sm text-dark/70 transition-colors hover:bg-[#f5f5f5] hover:text-dark"
-        >
-          Events
+    <div className="hidden border-b border-bronze/20 px-6 py-4 sm:block">
+      <div className="mx-auto flex max-w-5xl items-center justify-between">
+        <Link href="/" className="shrink-0 font-serif text-xl font-bold lowercase text-dark">
+          qoyl
         </Link>
-      </div>
-
-      {!user && (
-        <div className="mt-auto px-3 pb-6">
+        <div className="flex shrink-0 items-center gap-4 whitespace-nowrap text-sm">
+          {user ? (
+            <Link href="/dashboard" className="relative font-medium text-dark/70 transition-colors hover:text-dark">
+              Dashboard
+              {showRoutineNudge && (
+                <span
+                  aria-hidden
+                  className="absolute -right-2 -top-0.5 h-1.5 w-1.5 rounded-full bg-bronze"
+                />
+              )}
+            </Link>
+          ) : (
+            <Link href="/auth" className="font-medium text-bronze2 transition-colors hover:text-dark">
+              Sign in
+            </Link>
+          )}
           <Link
-            href="/auth"
-            className="block rounded-lg px-3 py-2 text-sm font-medium text-bronze2 transition-colors hover:text-dark"
+            href="/style-match"
+            className="whitespace-nowrap bg-bronze px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
           >
-            Sign in
+            Style Match
           </Link>
         </div>
-      )}
+      </div>
     </div>
-  );
-}
-
-function SideNavLink({
-  href,
-  label,
-  icon,
-  pathname,
-}: {
-  href: string;
-  label: string;
-  icon: React.ReactNode;
-  pathname: string;
-}) {
-  const active = isLinkActive(pathname, href);
-  return (
-    <Link
-      href={href}
-      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-        active ? "bg-dark text-cream" : "text-dark/70 hover:bg-[#f5f5f5] hover:text-dark"
-      }`}
-    >
-      {icon}
-      {label}
-    </Link>
   );
 }
 
@@ -344,6 +265,8 @@ function BottomNav({
   const searchActive = pathname.startsWith("/search");
   const styleActive = pathname.startsWith("/style-match");
   const routineActive = pathname.startsWith("/routine");
+  // Was "Feed" - home is a search-first hero now (see app/page.tsx), not
+  // a feed, so the tab is relabeled. Route/active-state logic unchanged.
   const feedActive = pathname === "/";
 
   return (
@@ -354,7 +277,7 @@ function BottomNav({
     >
       <BottomNavTab
         href="/"
-        label="Feed"
+        label="Home"
         active={feedActive}
         icon={<HouseIcon size={20} className={`shrink-0 ${feedActive ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`} />}
       />
@@ -491,11 +414,11 @@ export default function Nav() {
   // someone else's client brief.
   if (pathname.startsWith("/style-match/summary/")) return null;
 
-  // The home page ("/") still replaces the desktop top nav with a
-  // persistent left side rail (see HomeSideNavDesktop above) - but on
-  // mobile, every page (including home) now shares the same simplified
-  // top bar (wordmark + hamburger only) and the same fixed BottomNav;
-  // the old mobile-only side-strip workaround is gone entirely.
+  // The home page ("/") gets its own minimal desktop nav (see
+  // HomeDesktopNav above) - every other page keeps the full center-links
+  // nav. On mobile, every page (including home) shares the same
+  // simplified top bar (wordmark + hamburger only) and the same fixed
+  // BottomNav.
   const isHome = pathname === "/";
 
   return (
@@ -518,14 +441,7 @@ export default function Nav() {
         </button>
       </div>
 
-      {isHome && (
-        <HomeSideNavDesktop
-          user={user}
-          hasProfile={hasProfile}
-          showRoutineNudge={showRoutineNudge}
-          pathname={pathname}
-        />
-      )}
+      {isHome && <HomeDesktopNav user={user} showRoutineNudge={showRoutineNudge} />}
 
       {!isHome && (
       <>
