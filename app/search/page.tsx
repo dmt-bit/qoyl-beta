@@ -440,6 +440,510 @@ function DisclaimerBanner() {
   );
 }
 
+// ---- Brand directory + brand catalog page --------------------------------
+//
+// catalog_brands is missing logo_url/description until
+// supabase/add_brand_directory.sql is run - selected with "*" rather than
+// an explicit column list so this doesn't error out pre-migration, and
+// read defensively below.
+type CatalogBrandRow = {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url?: string | null;
+  description?: string | null;
+  website?: string | null;
+};
+
+type BrandDirectoryEntry = {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  productCount: number;
+  // From catalog_products.average_score, when the migration has run -
+  // null otherwise. Only ever shown if a per-user best-match score isn't
+  // available (see bestScoreByBrand below).
+  avgScore: number | null;
+};
+
+function BrandLogoOrInitial({ name, logoUrl, size = 32 }: { name: string; logoUrl: string | null; size?: number }) {
+  if (logoUrl) {
+    return (
+      <div className="relative shrink-0 overflow-hidden" style={{ width: size, height: size }}>
+        <Image src={logoUrl} alt="" fill sizes={`${size}px`} className="object-contain" />
+      </div>
+    );
+  }
+  return (
+    <div
+      className="flex shrink-0 items-center justify-center bg-dark font-sans font-bold text-white"
+      style={{ width: size, height: size, fontSize: size * 0.44 }}
+    >
+      {name.trim().charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+function bestMatchTierClass(score: number): string {
+  return TIER_CLASSES[scoreTier(score)];
+}
+
+// catalog_products.average_score doesn't exist until
+// supabase/add_brand_directory.sql is run - selecting it explicitly by
+// name errors the WHOLE query out (not just that column) on a real
+// Postgrest "column does not exist" error, which would otherwise take
+// id/brand_id down with it. Falls back to the same query without it,
+// treating every average_score as null, so brand counts/ids still work
+// pre-migration.
+async function fetchAllCatalogProductsWithAverageScore(): Promise<
+  { id: string; brand_id: string | null; average_score: number | null }[]
+> {
+  const { data, error } = await supabase.from("catalog_products").select("id, brand_id, average_score");
+  if (!error) return data ?? [];
+  const fallback = await supabase.from("catalog_products").select("id, brand_id");
+  return (fallback.data ?? []).map((r) => ({ ...r, average_score: null }));
+}
+
+// Brand directory - "brands" tab on /search. Fetches every catalog_brands
+// row with at least one catalog_products row, groups by first letter, and
+// (since /search's canSearch gate already guarantees a real profile -
+// signed-in or local - before this ever renders) scores the whole catalog
+// once in the background to show each brand's best-matching score.
+function BrandDirectoryView({
+  onSelectBrand,
+  onBack,
+}: {
+  onSelectBrand: (slug: string) => void;
+  onBack: () => void;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [brands, setBrands] = useState<BrandDirectoryEntry[]>([]);
+  const [bestScoreByBrand, setBestScoreByBrand] = useState<Record<string, number>>({});
+  const [scoring, setScoring] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      const [{ data: brandRows }, productRows] = await Promise.all([
+        supabase.from("catalog_brands").select("*").order("name"),
+        fetchAllCatalogProductsWithAverageScore(),
+      ]);
+      if (cancelled) return;
+
+      const countByBrand = new Map<string, number>();
+      const productIdToBrand = new Map<string, string>();
+      for (const row of productRows) {
+        if (!row.brand_id) continue;
+        countByBrand.set(row.brand_id, (countByBrand.get(row.brand_id) ?? 0) + 1);
+        productIdToBrand.set(row.id, row.brand_id);
+      }
+
+      const entries: BrandDirectoryEntry[] = ((brandRows ?? []) as CatalogBrandRow[])
+        .map((b) => {
+          const productCount = countByBrand.get(b.id) ?? 0;
+          if (productCount === 0) return null;
+          return {
+            id: b.id,
+            name: b.name,
+            slug: b.slug,
+            logoUrl: b.logo_url ?? null,
+            productCount,
+            avgScore: null as number | null,
+          };
+        })
+        .filter((e): e is BrandDirectoryEntry => e !== null);
+
+      if (!cancelled) {
+        setBrands(entries);
+        setLoading(false);
+      }
+
+      // Best-match score, scored in the background against the current
+      // profile (see scoreCatalogProducts - resolves it from the signed-in
+      // user's or local hair_profile_id automatically). Not blocking the
+      // list itself since this is a heavier batch call across the whole
+      // catalog.
+      const allIds = productRows.map((r) => r.id);
+      if (allIds.length === 0) return;
+      setScoring(true);
+      const outcomes = await scoreCatalogProducts(allIds);
+      if (cancelled) return;
+      const bestByBrand = new Map<string, number>();
+      for (const [productId, outcome] of Object.entries(outcomes)) {
+        if (!outcome.result) continue;
+        const brandId = productIdToBrand.get(productId);
+        if (!brandId) continue;
+        const current = bestByBrand.get(brandId) ?? -1;
+        if (outcome.result.normalizedScore > current) {
+          bestByBrand.set(brandId, outcome.result.normalizedScore);
+        }
+      }
+      setBestScoreByBrand(Object.fromEntries(bestByBrand));
+      setScoring(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filtered = searchTerm.trim()
+    ? brands.filter((b) => b.name.toLowerCase().includes(searchTerm.trim().toLowerCase()))
+    : brands;
+
+  const grouped = new Map<string, BrandDirectoryEntry[]>();
+  for (const b of filtered) {
+    const letter = b.name.trim().charAt(0).toUpperCase();
+    const list = grouped.get(letter) ?? [];
+    list.push(b);
+    grouped.set(letter, list);
+  }
+  const letters = Array.from(grouped.keys()).sort();
+
+  return (
+    <main className="min-h-screen bg-white font-sans text-dark">
+      <HairTypeStrip tileSize={120} />
+      <div className="px-4 py-10 sm:px-6">
+        <div className="mx-auto max-w-md">
+          <button
+            type="button"
+            onClick={onBack}
+            className="font-mono text-[10px] lowercase text-muted hover:text-dark"
+          >
+            ← all products
+          </button>
+
+          <h1 className="mt-3 font-serif text-3xl font-semibold text-dark sm:text-4xl">Brands</h1>
+          <p className="mt-2 text-sm text-dark/70">
+            Browse the full Qoyl catalog by brand{scoring ? " - scoring your matches..." : ""}.
+          </p>
+
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="search brands..."
+            className="mt-4 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
+          />
+
+          {loading && <p className="mt-6 text-sm text-dark/50">Loading brands...</p>}
+
+          {!loading && filtered.length === 0 && (
+            <p className="mt-6 text-sm text-dark/50">No brands match &quot;{searchTerm}&quot;.</p>
+          )}
+
+          {!loading &&
+            letters.map((letter) => {
+              const list = grouped.get(letter) ?? [];
+              return (
+                <div key={letter} className="mt-6">
+                  <div className="flex items-baseline gap-2 border-b border-[#e8e8e8] pb-1.5">
+                    <span className="font-mono text-[11px] font-bold tracking-wide text-dark">
+                      {letter}
+                    </span>
+                    <span className="font-mono text-[9px] text-muted">({list.length})</span>
+                  </div>
+                  {list.map((b) => {
+                    const bestScore = bestScoreByBrand[b.id];
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => onSelectBrand(b.slug)}
+                        className="flex w-full items-center gap-4 border-b border-[#f0f0f0] py-3.5 text-left"
+                      >
+                        <BrandLogoOrInitial name={b.name} logoUrl={b.logoUrl} />
+                        <div className="min-w-0 flex-1">
+                          <p className="font-sans text-[14px] font-medium lowercase text-dark">{b.name}</p>
+                          <p className="font-mono text-[9px] text-muted">{b.productCount} products</p>
+                        </div>
+                        {typeof bestScore === "number" ? (
+                          <span className={`shrink-0 font-mono text-[10px] ${bestMatchTierClass(bestScore)}`}>
+                            best match: {bestScore}
+                          </span>
+                        ) : typeof b.avgScore === "number" ? (
+                          <span className="shrink-0 font-mono text-[10px] text-muted">avg: {b.avgScore}</span>
+                        ) : null}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })}
+        </div>
+      </div>
+    </main>
+  );
+}
+
+// Brand catalog page - /search?brand=[slug]. Reuses ResultCard (the same
+// product card as the main search results) for the grid.
+function BrandCatalogView({
+  slug,
+  user,
+  curlType,
+  porosity,
+  budgetRange,
+  colorTreated,
+  onBack,
+}: {
+  slug: string;
+  user: { id: string } | null;
+  curlType: string | null;
+  porosity: string | null;
+  budgetRange: string | null;
+  colorTreated: boolean;
+  onBack: () => void;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [brand, setBrand] = useState<CatalogBrandRow | null>(null);
+  const [products, setProducts] = useState<(Product & { averageScore: number | null })[]>([]);
+  const [scoresByCode, setScoresByCode] = useState<Record<string, ScoreState>>({});
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [expandedCardCode, setExpandedCardCode] = useState<string | null>(null);
+  const [ingredientsExpanded, setIngredientsExpanded] = useState(false);
+  const loggedViewRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setNotFound(false);
+    setCategoryFilter(null);
+
+    (async () => {
+      const { data: brandRow } = await supabase
+        .from("catalog_brands")
+        .select("*")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (!brandRow) {
+        setNotFound(true);
+        setLoading(false);
+        return;
+      }
+      setBrand(brandRow as CatalogBrandRow);
+
+      // average_score doesn't exist until supabase/add_brand_directory.sql
+      // is run - see fetchAllCatalogProductsWithAverageScore's comment;
+      // same fallback here since naming it explicitly errors the whole
+      // query out pre-migration.
+      let rows: (QoylProductRow & { average_score: number | null })[];
+      const { data: withScore, error: withScoreError } = await supabase
+        .from("catalog_products")
+        .select(`${QOYL_PRODUCT_SELECT}, average_score`)
+        .eq("brand_id", brandRow.id)
+        .order("name");
+      if (!withScoreError) {
+        rows = (withScore ?? []) as unknown as (QoylProductRow & { average_score: number | null })[];
+      } else {
+        const { data: withoutScore } = await supabase
+          .from("catalog_products")
+          .select(QOYL_PRODUCT_SELECT)
+          .eq("brand_id", brandRow.id)
+          .order("name");
+        rows = ((withoutScore ?? []) as unknown as QoylProductRow[]).map((r) => ({ ...r, average_score: null }));
+      }
+
+      if (cancelled) return;
+      const mapped = rows.map((r) => ({ ...toQoylProduct(r), averageScore: r.average_score ?? null }));
+      setProducts(mapped);
+      setLoading(false);
+
+      if (mapped.length > 0) {
+        const outcomes = await scoreCatalogProducts(mapped.map((p) => p.catalogProductId));
+        if (cancelled) return;
+        const idByCode = new Map(mapped.map((p) => [p.catalogProductId, p.code]));
+        const next: Record<string, ScoreState> = {};
+        for (const [productId, outcome] of Object.entries(outcomes)) {
+          const code = idByCode.get(productId);
+          if (!code) continue;
+          next[code] =
+            outcome.error || !outcome.result
+              ? { status: "error", error: outcome.error ?? "Something went wrong." }
+              : { status: "done", result: outcome.result };
+        }
+        setScoresByCode(next);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug]);
+
+  // Logged once per brand actually loaded, not once per re-render.
+  useEffect(() => {
+    if (!brand || loggedViewRef.current === brand.id) return;
+    loggedViewRef.current = brand.id;
+    const scores = Object.values(scoresByCode)
+      .filter((s): s is { status: "done"; result: ScoreResult } => s.status === "done")
+      .map((s) => s.result.normalizedScore);
+    const topScore = scores.length > 0 ? Math.max(...scores) : null;
+    logMlEvent("brand_catalog_view", {
+      userId: user?.id ?? null,
+      metadata: {
+        brand_name: brand.name,
+        product_count: products.length,
+        curl_type: curlType,
+        porosity,
+        top_score: topScore,
+      },
+    });
+    // Only re-fires if the brand identity changes (guarded above) - scores
+    // still trickle in after this first fire, which is fine, the event is
+    // a "did they open this brand" signal, not a perfectly final score.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brand]);
+
+  if (notFound) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center bg-white px-4 font-sans text-dark">
+        <p className="text-sm text-dark/60">Couldn&apos;t find that brand.</p>
+        <button type="button" onClick={onBack} className="mt-3 font-mono text-[10px] lowercase text-muted hover:text-dark">
+          ← all brands
+        </button>
+      </main>
+    );
+  }
+
+  const scoreForSort = (p: Product & { averageScore: number | null }): number => {
+    const state = scoresByCode[p.code];
+    if (state?.status === "done") return state.result.normalizedScore;
+    return p.averageScore ?? -1;
+  };
+
+  const availableCategorySlugs = Array.from(
+    new Set(products.map((p) => p.categorySlug).filter((s): s is string => Boolean(s)))
+  );
+  const availableCategories = PRODUCT_CATEGORIES.filter((c) => availableCategorySlugs.includes(c.slug));
+
+  const filtered = (categoryFilter ? products.filter((p) => p.categorySlug === categoryFilter) : products)
+    .slice()
+    .sort((a, b) => scoreForSort(b) - scoreForSort(a));
+
+  const bestProduct = products.length
+    ? products
+        .map((p) => {
+          const state = scoresByCode[p.code];
+          return { p, score: state?.status === "done" ? state.result.normalizedScore : -1 };
+        })
+        .filter((x) => x.score >= 0)
+        .sort((a, b) => b.score - a.score)[0]
+    : undefined;
+
+  return (
+    <main className="min-h-screen bg-white font-sans text-dark">
+      <HairTypeStrip tileSize={120} />
+      <div className="px-4 py-6 sm:px-6">
+        <div className="mx-auto max-w-md">
+          <button type="button" onClick={onBack} className="font-mono text-[10px] lowercase text-muted hover:text-dark">
+            ← all brands
+          </button>
+
+          {loading && !brand && <p className="mt-6 text-sm text-dark/50">Loading...</p>}
+
+          {brand && (
+            <div className="mt-4 flex items-start justify-between gap-4 border-b border-dark pb-6">
+              <div className="min-w-0">
+                <BrandLogoOrInitial name={brand.name} logoUrl={brand.logo_url ?? null} size={48} />
+                <h1
+                  className="mt-3 font-sans text-2xl font-bold lowercase text-dark"
+                  style={{ letterSpacing: "-0.8px" }}
+                >
+                  {brand.name}
+                </h1>
+                <p className="mt-1 font-mono text-[10px] text-muted">
+                  {products.length} product{products.length === 1 ? "" : "s"} in the qoyl catalog
+                </p>
+              </div>
+              {bestProduct && (
+                <div className="shrink-0 text-right">
+                  <p className="font-mono text-[9px] text-muted">your best match</p>
+                  <p className={`font-mono text-[32px] font-bold leading-none ${bestMatchTierClass(bestProduct.score)}`}>
+                    {bestProduct.score}
+                  </p>
+                  <p className="mt-1 max-w-[140px] font-sans text-[11px] font-light text-muted">
+                    {bestProduct.p.name}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {brand && availableCategories.length > 0 && (
+            <div className="no-scrollbar mt-4 flex gap-2 overflow-x-auto pb-1">
+              <button
+                type="button"
+                onClick={() => setCategoryFilter(null)}
+                className={`shrink-0 whitespace-nowrap rounded-full border border-bronze px-3 py-1.5 font-sans text-xs font-medium transition-colors ${
+                  categoryFilter === null ? "bg-dark text-white" : "bg-transparent text-bronze hover:bg-bronze/10"
+                }`}
+              >
+                all
+              </button>
+              {availableCategories.map((c) => (
+                <button
+                  key={c.slug}
+                  type="button"
+                  onClick={() => setCategoryFilter(c.slug)}
+                  className={`shrink-0 whitespace-nowrap rounded-full border border-bronze px-3 py-1.5 font-sans text-xs font-medium transition-colors ${
+                    categoryFilter === c.slug ? "bg-dark text-white" : "bg-transparent text-bronze hover:bg-bronze/10"
+                  }`}
+                >
+                  {c.label.toLowerCase()}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {brand && filtered.length >= 20 && (
+            <p className="sticky top-0 z-10 mt-3 bg-white py-1.5 font-mono text-[9px] lowercase text-muted">
+              showing {filtered.length} of {products.length}
+            </p>
+          )}
+
+          {brand && filtered.length === 0 && !loading && (
+            <p className="mt-6 text-sm text-dark/50">No products in this category yet.</p>
+          )}
+
+          {brand && filtered.length > 0 && (
+            <ul className="mt-2">
+              {filtered.map((product) => (
+                <ResultCard
+                  key={product.code}
+                  product={product}
+                  scoreState={scoresByCode[product.code]}
+                  cardExpanded={expandedCardCode === product.code}
+                  onToggleCard={() => {
+                    setExpandedCardCode((prev) => (prev === product.code ? null : product.code));
+                    setIngredientsExpanded(false);
+                  }}
+                  ingredientsExpanded={ingredientsExpanded}
+                  onToggleIngredients={(e) => {
+                    e.stopPropagation();
+                    setIngredientsExpanded((v) => !v);
+                  }}
+                  curlType={curlType}
+                  porosity={porosity}
+                  budgetRange={budgetRange}
+                  colorTreated={colorTreated}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </main>
+  );
+}
+
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -580,6 +1084,96 @@ function SearchPageContent() {
     setCategorySlug((prev) => (prev === slug ? null : slug));
     setQuery("");
   }
+
+  // Brand directory/catalog (see BrandDirectoryView/BrandCatalogView
+  // above) are their own URL-driven views on this same route, read fresh
+  // from searchParams rather than component state. Deliberately NOT
+  // clearing categorySlug/query state when navigating into them - doing
+  // that in the same tick as router.push raced against the URL-sync
+  // effect below (whose deps are query/categorySlug): clearing them would
+  // re-fire that effect before searchParams reflects the new URL,
+  // occasionally clobbering the brand/view param it had just pushed.
+  // Leaving this state untouched means neither fetch effect below
+  // re-runs during the transition (their deps don't change), so they
+  // just sit idle/stale underneath the brand view - and a user's
+  // previous category selection is still there if they navigate back.
+  const brandSlugParam = searchParams.get("brand");
+  const isBrandsDirectory = !brandSlugParam && searchParams.get("view") === "brands";
+
+  function goToBrandsDirectory() {
+    router.push("/search?view=brands", { scroll: false });
+  }
+
+  function goToBrand(slug: string) {
+    router.push(`/search?brand=${slug}`, { scroll: false });
+  }
+
+  // "← all brands" from the brand catalog page - always the directory,
+  // scroll preserved (not a reset-to-top navigation) per the request.
+  function backToBrandsDirectory() {
+    router.push("/search?view=brands", { scroll: false });
+  }
+
+  // "← all products" from the brand directory, back to plain search.
+  function backToSearch() {
+    router.push("/search", { scroll: false });
+  }
+
+  // Lightweight brand list for the main search bar's brand suggestions
+  // (item 4) - name/slug/count only, fetched once regardless of which
+  // view is active, separate from BrandDirectoryView's own fuller fetch
+  // (which also needs logos/scores and only runs once that view mounts).
+  const [brandsLite, setBrandsLite] = useState<{ id: string; name: string; slug: string; productCount: number }[]>(
+    []
+  );
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [{ data: brandRows }, { data: productRows }] = await Promise.all([
+        supabase.from("catalog_brands").select("id, name, slug"),
+        supabase.from("catalog_products").select("brand_id"),
+      ]);
+      if (cancelled) return;
+      const countByBrand = new Map<string, number>();
+      for (const row of productRows ?? []) {
+        if (!row.brand_id) continue;
+        countByBrand.set(row.brand_id, (countByBrand.get(row.brand_id) ?? 0) + 1);
+      }
+      setBrandsLite(
+        (brandRows ?? [])
+          .map((b) => ({ ...b, productCount: countByBrand.get(b.id) ?? 0 }))
+          .filter((b) => b.productCount > 0)
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const brandMatches = query.trim()
+    ? brandsLite
+        .filter((b) => b.name.toLowerCase().includes(query.trim().toLowerCase()))
+        .slice(0, 3)
+    : [];
+
+  // Best-effort brand_search ml_event, debounced with the same 300ms as
+  // the product search below so typing doesn't spam an event per
+  // keystroke - only fires once brand matches actually settle for the
+  // query the user is still on.
+  useEffect(() => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    const timeoutId = setTimeout(() => {
+      const matches = brandsLite.filter((b) => b.name.toLowerCase().includes(trimmed.toLowerCase()));
+      if (matches.length === 0) return;
+      logMlEvent("brand_search", {
+        userId: user?.id ?? null,
+        metadata: { query: trimmed, brand_matched: matches[0].name },
+      });
+    }, 300);
+    return () => clearTimeout(timeoutId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, brandsLite]);
 
   const [hasScrolledCategories, setHasScrolledCategories] = useState(false);
   // Weight filter pills, item 6 - "Lightweight"/"Medium"/"Rich" split the
@@ -737,6 +1331,12 @@ function SearchPageContent() {
   // immediately, separately from the debounced fetch below, so the URL
   // reflects what's typed/selected even before the fetch settles.
   useEffect(() => {
+    // Brand directory/catalog (view=brands / brand=[slug]) are a separate
+    // URL-driven view (see goToBrandsDirectory/goToBrand/backTo* above) -
+    // this effect only owns category/q, so it bails while either brand
+    // param is present rather than stripping it out on every
+    // category/query state change.
+    if (searchParams.get("brand") || searchParams.get("view") === "brands") return;
     const params = new URLSearchParams();
     if (categorySlug) params.set("category", categorySlug);
     if (query.trim()) params.set("q", query);
@@ -862,6 +1462,26 @@ function SearchPageContent() {
 
   if (!canSearch) {
     return <SearchAuthGate variant={user ? "no-profile" : "anonymous"} />;
+  }
+
+  if (brandSlugParam) {
+    return (
+      <BrandCatalogView
+        slug={brandSlugParam}
+        user={user ?? null}
+        curlType={resolvedCurlType}
+        porosity={resolvedPorosity}
+        budgetRange={user ? hairProfile?.budget_range ?? null : localProfileHairInfo?.budget_range ?? null}
+        colorTreated={isColorTreatedYes(
+          user ? hairProfile?.color_treated ?? null : localProfileHairInfo?.color_treated ?? null
+        )}
+        onBack={backToBrandsDirectory}
+      />
+    );
+  }
+
+  if (isBrandsDirectory) {
+    return <BrandDirectoryView onSelectBrand={goToBrand} onBack={backToSearch} />;
   }
 
   // Browsing a category with no search term - sort by compatibility score
@@ -1006,6 +1626,13 @@ function SearchPageContent() {
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={goToBrandsDirectory}
+              className="shrink-0 whitespace-nowrap rounded-full border border-dark bg-dark px-3 py-1.5 font-sans text-xs font-medium text-white transition-colors hover:bg-bronze2"
+            >
+              brands
+            </button>
           </div>
           <div className="pointer-events-none absolute inset-y-0 right-0 flex w-10 items-center justify-end bg-gradient-to-r from-transparent to-dark">
             {!hasScrolledCategories && (
@@ -1025,6 +1652,29 @@ function SearchPageContent() {
           placeholder="Search by product name or brand..."
           className="mt-4 w-full border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
         />
+
+        {brandMatches.length > 0 && (
+          <div className="mt-2 border border-bronze/20">
+            {brandMatches.map((b) => (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => goToBrand(b.slug)}
+                className="flex w-full items-center gap-2 border-b border-bronze/10 px-3 py-2 text-left last:border-b-0 hover:bg-warm"
+              >
+                <span className="inline-flex h-5 shrink-0 items-center justify-center bg-dark px-1.5 font-mono text-[9px] text-white">
+                  brand
+                </span>
+                <span className="min-w-0 flex-1 truncate font-sans text-[13px] font-medium lowercase text-dark">
+                  {b.name}
+                </span>
+                <span className="shrink-0 font-mono text-[9px] text-muted">
+                  {b.productCount} product{b.productCount === 1 ? "" : "s"} →
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {showPreShampooTip && (
           <p className="mt-3 font-sans text-[12px] font-light text-[#666]">

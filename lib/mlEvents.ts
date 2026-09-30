@@ -15,7 +15,12 @@ export type MlEventType =
   | "search_profiled"
   | "style_match_profile_gate_shown"
   | "style_match_profile_created"
-  | "travel_kit_purchased_299";
+  | "travel_kit_purchased_299"
+  // Brand directory/catalog (/search's Brands tab, see app/search/page.tsx) -
+  // direct signal for which brands users are most curious about, for
+  // prioritizing new SKUs and B2B brand pitches.
+  | "brand_catalog_view"
+  | "brand_search";
 
 export async function logMlEvent(
   eventType: MlEventType,

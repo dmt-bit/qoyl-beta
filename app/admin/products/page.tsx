@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { PRODUCT_CATEGORIES } from "@/lib/productCategories";
 import { FunctionSelectorGrid, FUNCTION_CARDS, type IngredientFunction } from "@/components/FunctionSelectorGrid";
 
@@ -722,8 +722,291 @@ function CoverageTab({ password }: { password: string }) {
   );
 }
 
+type AdminBrand = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logo_url: string | null;
+  website: string | null;
+  product_count: number;
+  avg_score: number | null;
+};
+
+type BrandFormValues = {
+  name: string;
+  slug: string;
+  description: string;
+  logo_url: string;
+  website_url: string;
+};
+
+const EMPTY_BRAND_FORM: BrandFormValues = {
+  name: "",
+  slug: "",
+  description: "",
+  logo_url: "",
+  website_url: "",
+};
+
+function brandToFormValues(b: AdminBrand): BrandFormValues {
+  return {
+    name: b.name,
+    slug: b.slug,
+    description: b.description ?? "",
+    logo_url: b.logo_url ?? "",
+    website_url: b.website ?? "",
+  };
+}
+
+function BrandFormFields({
+  values,
+  onChange,
+}: {
+  values: BrandFormValues;
+  onChange: (values: BrandFormValues) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <label className="block">
+        <span className="text-xs font-medium text-dark/60">Brand name</span>
+        <input
+          type="text"
+          value={values.name}
+          onChange={(e) => onChange({ ...values, name: e.target.value })}
+          className="mt-1 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2 text-sm text-dark focus:border-bronze focus:outline-none"
+        />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-dark/60">Slug</span>
+        <input
+          type="text"
+          value={values.slug}
+          onChange={(e) => onChange({ ...values, slug: e.target.value })}
+          placeholder="auto-generated if left blank"
+          className="mt-1 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2 text-sm text-dark placeholder:text-dark/30 focus:border-bronze focus:outline-none"
+        />
+      </label>
+      <label className="block sm:col-span-2">
+        <span className="text-xs font-medium text-dark/60">Description</span>
+        <textarea
+          value={values.description}
+          onChange={(e) => onChange({ ...values, description: e.target.value })}
+          rows={2}
+          className="mt-1 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2 text-sm text-dark focus:border-bronze focus:outline-none"
+        />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-dark/60">Logo URL (Cloudinary)</span>
+        <input
+          type="text"
+          value={values.logo_url}
+          onChange={(e) => onChange({ ...values, logo_url: e.target.value })}
+          className="mt-1 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2 text-sm text-dark focus:border-bronze focus:outline-none"
+        />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-dark/60">Website URL</span>
+        <input
+          type="text"
+          value={values.website_url}
+          onChange={(e) => onChange({ ...values, website_url: e.target.value })}
+          className="mt-1 w-full rounded-lg border border-bronze/40 bg-transparent px-3 py-2 text-sm text-dark focus:border-bronze focus:outline-none"
+        />
+      </label>
+      {values.logo_url && (
+        <div className="flex items-center gap-2 sm:col-span-2">
+          <span className="text-xs text-dark/40">preview:</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={values.logo_url} alt="" className="h-8 w-8 object-contain" />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BrandsTab({ password }: { password: string }) {
+  const [brands, setBrands] = useState<AdminBrand[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<BrandFormValues>(EMPTY_BRAND_FORM);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState<BrandFormValues>(EMPTY_BRAND_FORM);
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  async function loadBrands() {
+    setLoading(true);
+    setLoadError(null);
+    const res = await fetch("/api/admin/brands", { headers: { "x-admin-password": password } });
+    const data = await res.json();
+    setLoading(false);
+    if (!res.ok) {
+      setLoadError(data.error ?? "Failed to load brands.");
+      return;
+    }
+    setBrands(data.brands ?? []);
+  }
+
+  useEffect(() => {
+    loadBrands();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function startEdit(b: AdminBrand) {
+    setEditingId(b.id);
+    setEditForm(brandToFormValues(b));
+    setEditError(null);
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingId) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    const res = await fetch(`/api/admin/brands/${editingId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      body: JSON.stringify(editForm),
+    });
+    const data = await res.json();
+    setEditSubmitting(false);
+    if (!res.ok) {
+      setEditError(data.error ?? "Failed to save brand.");
+      return;
+    }
+    setEditingId(null);
+    loadBrands();
+  }
+
+  async function handleAddSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setAddSubmitting(true);
+    setAddError(null);
+    const res = await fetch("/api/admin/brands", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      body: JSON.stringify(addForm),
+    });
+    const data = await res.json();
+    setAddSubmitting(false);
+    if (!res.ok) {
+      setAddError(data.error ?? "Failed to add brand.");
+      return;
+    }
+    setShowAddForm(false);
+    setAddForm(EMPTY_BRAND_FORM);
+    loadBrands();
+  }
+
+  if (loading) {
+    return <p className="mt-8 font-sans text-sm text-dark/50">Loading brands...</p>;
+  }
+
+  return (
+    <div className="mt-8">
+      {loadError && (
+        <p className="mb-4 rounded-md bg-red/10 px-3 py-2 text-sm text-red">
+          {loadError} - logo_url/description need supabase/add_brand_directory.sql run first.
+        </p>
+      )}
+
+      <div className="flex items-center justify-between">
+        <p className="font-mono text-[10px] lowercase text-muted">{brands.length} brands</p>
+        <button
+          type="button"
+          onClick={() => setShowAddForm((v) => !v)}
+          className="rounded-lg border border-bronze px-3 py-1.5 text-xs font-medium text-bronze2 hover:bg-bronze/10"
+        >
+          {showAddForm ? "cancel" : "+ add brand"}
+        </button>
+      </div>
+
+      {showAddForm && (
+        <form onSubmit={handleAddSubmit} className="mt-4 rounded-xl border border-bronze/30 p-4">
+          <BrandFormFields values={addForm} onChange={setAddForm} />
+          {addError && <p className="mt-2 text-sm text-red">{addError}</p>}
+          <button
+            type="submit"
+            disabled={addSubmitting}
+            className="mt-3 rounded-lg bg-bronze px-4 py-2 text-sm font-semibold text-cream hover:bg-bronze2 disabled:opacity-50"
+          >
+            {addSubmitting ? "Adding..." : "Add brand"}
+          </button>
+        </form>
+      )}
+
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full border-collapse text-left font-sans text-[12px]">
+          <thead>
+            <tr className="border-b border-dark/20 text-dark/50">
+              <th className="py-2 pr-3 font-medium">Logo</th>
+              <th className="py-2 pr-3 font-medium">Brand name</th>
+              <th className="py-2 pr-3 font-medium">Products</th>
+              <th className="py-2 pr-3 font-medium">Avg score</th>
+              <th className="py-2 pr-3 font-medium">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {brands.map((b) => (
+              <Fragment key={b.id}>
+                <tr className="border-b border-dark/10 align-middle">
+                  <td className="py-2 pr-3">
+                    {b.logo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={b.logo_url} alt="" className="h-8 w-8 object-contain" />
+                    ) : (
+                      <div className="flex h-8 w-8 items-center justify-center bg-dark text-[11px] font-bold text-white">
+                        {b.name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-2 pr-3 text-dark">{b.name}</td>
+                  <td className="py-2 pr-3 text-dark">{b.product_count}</td>
+                  <td className="py-2 pr-3 text-dark">{b.avg_score ?? "—"}</td>
+                  <td className="py-2 pr-3">
+                    <button
+                      type="button"
+                      onClick={() => (editingId === b.id ? setEditingId(null) : startEdit(b))}
+                      className="text-bronze2 underline underline-offset-2 hover:text-dark"
+                    >
+                      {editingId === b.id ? "close" : "edit"}
+                    </button>
+                  </td>
+                </tr>
+                {editingId === b.id && (
+                  <tr key={`${b.id}-edit`} className="border-b border-dark/10">
+                    <td colSpan={5} className="bg-warm/40 p-4">
+                      <form onSubmit={handleEditSubmit}>
+                        <BrandFormFields values={editForm} onChange={setEditForm} />
+                        {editError && <p className="mt-2 text-sm text-red">{editError}</p>}
+                        <button
+                          type="submit"
+                          disabled={editSubmitting}
+                          className="mt-3 rounded-lg bg-bronze px-4 py-2 text-sm font-semibold text-cream hover:bg-bronze2 disabled:opacity-50"
+                        >
+                          {editSubmitting ? "Saving..." : "Save"}
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminProductsPage() {
-  const [activeTab, setActiveTab] = useState<"products" | "coverage">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "coverage" | "brands">("products");
   const [password, setPassword] = useState("");
   const [authorized, setAuthorized] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -979,7 +1262,7 @@ export default function AdminProductsPage() {
         </h1>
 
         <div className="mt-6 flex gap-6 border-b border-bronze/20">
-          {(["products", "coverage"] as const).map((tab) => (
+          {(["products", "coverage", "brands"] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -990,12 +1273,14 @@ export default function AdminProductsPage() {
                   : "text-dark/50 hover:text-dark/80"
               }`}
             >
-              {tab === "products" ? "Products" : "Coverage"}
+              {tab === "products" ? "Products" : tab === "coverage" ? "Coverage" : "Brands"}
             </button>
           ))}
         </div>
 
         {activeTab === "coverage" && <CoverageTab password={password} />}
+
+        {activeTab === "brands" && <BrandsTab password={password} />}
 
         {activeTab === "products" && (
         <>
