@@ -120,6 +120,9 @@ const FOOTER_LINKS = [
   { href: "/for-brands", label: "for brands" },
   { href: "/for-stylists", label: "for stylists" },
   { href: "/privacy", label: "privacy" },
+  // Public but not prominently surfaced (see app/ai/page.tsx) - same
+  // weight as every other link here, nothing calling extra attention.
+  { href: "/ai", label: "built with ai" },
 ];
 
 function FooterLinksSection() {

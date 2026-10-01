@@ -414,8 +414,11 @@ export default function Nav() {
   // The public Style Match summary page is a standalone shareable
   // document (see components/Footer.tsx's matching check) - a stylist
   // with no Qoyl account shouldn't see the app's own nav chrome around
-  // someone else's client brief.
-  if (pathname.startsWith("/style-match/summary/")) return null;
+  // someone else's client brief. /ai is the same shape of exception - a
+  // standalone portfolio case study (app/ai/page.tsx) with its own
+  // minimal header/footer built in, not meant to carry the app's bottom
+  // nav/hamburger menu at all.
+  if (pathname.startsWith("/style-match/summary/") || pathname === "/ai") return null;
 
   // The home page ("/") gets its own minimal desktop nav (see
   // HomeDesktopNav above) - every other page keeps the full center-links

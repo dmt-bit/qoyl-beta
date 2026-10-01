@@ -13,9 +13,11 @@ export default function Footer() {
   // The public Style Match summary page (app/style-match/summary/[id])
   // is a standalone shareable document, not a page within the app shell
   // - it has its own footer, and showing this one too would be a
-  // confusing double-footer for a stylist who has no Qoyl account.
+  // confusing double-footer for a stylist who has no Qoyl account. /ai
+  // (the AI case study, app/ai/page.tsx) is the same shape of exception -
+  // it builds its own minimal footer in-page.
   const pathname = usePathname();
-  if (pathname.startsWith("/style-match/summary/")) return null;
+  if (pathname.startsWith("/style-match/summary/") || pathname === "/ai") return null;
 
   return (
     <footer className="print-hide border-t border-bronze/20 bg-white px-4 py-6 font-sans sm:px-6">
@@ -33,6 +35,15 @@ export default function Footer() {
             className="text-dark/50 underline underline-offset-2 hover:text-dark/70"
           >
             Privacy Policy
+          </Link>
+          {/* Public but not prominently surfaced (see app/ai/page.tsx) -
+              one quiet link here, same weight as the others, nothing
+              that calls extra attention to it. */}
+          <Link
+            href="/ai"
+            className="text-dark/50 underline underline-offset-2 hover:text-dark/70"
+          >
+            built with ai →
           </Link>
         </div>
       </div>
