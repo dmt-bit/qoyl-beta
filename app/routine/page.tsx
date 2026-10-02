@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Collapse from "@/components/Collapse";
@@ -28,7 +29,6 @@ import {
   estimateRefreshDayMinutes,
   estimateWashDayMinutes,
   getPreShampooStep,
-  refreshDaySummaryLabel,
   type RoutineStepDetail,
   type WashDayKey,
   type WashDaySteps,
@@ -1046,13 +1046,6 @@ const WASH_PILL_LABEL: Record<WashDayType, string> = {
   protein: "protein treatment",
   refresh: "refresh day",
 };
-const WASH_PILL_CLASSES: Record<WashDayType, string> = {
-  chelate: "bg-dark text-white",
-  clarify: "bg-dark text-white",
-  wash: "bg-white text-dark border border-dark",
-  protein: "bg-green text-white",
-  refresh: "bg-[#d9d9d9] text-dark",
-};
 
 function formatCheckOffTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
@@ -1156,33 +1149,41 @@ function TodayCheckOffButton({
 
   if (localCompletedAt) {
     return (
-      <div className="relative mt-4">
-        <div className="flex h-11 w-full items-center justify-between bg-dark px-4">
-          <span className="font-sans text-[13px] font-medium lowercase text-white">completed today ✓</span>
-          <button
-            type="button"
-            onClick={handleUndo}
-            disabled={undoing}
-            className="font-mono text-[9px] text-white/60 underline underline-offset-2 hover:text-white disabled:opacity-50"
-          >
-            {undoing ? "…" : "undo"}
-          </button>
+      <div className="relative mt-5">
+        <div className="flex min-h-[44px] w-full flex-col justify-center gap-1 bg-dark px-4 py-2.5">
+          <div className="flex w-full items-center justify-between">
+            <span
+              className="font-sans text-[12px] font-medium lowercase text-white"
+              style={{ letterSpacing: "0.04em" }}
+            >
+              completed today ✓
+            </span>
+            <button
+              type="button"
+              onClick={handleUndo}
+              disabled={undoing}
+              className="font-mono text-[9px] text-white/60 underline underline-offset-2 hover:text-white disabled:opacity-50"
+            >
+              {undoing ? "…" : "undo"}
+            </button>
+          </div>
+          <p className="w-full font-mono text-[9px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+            completed at {formatCheckOffTime(localCompletedAt)}
+          </p>
         </div>
-        <p className="mt-1.5 font-mono text-[9px] text-muted">
-          completed at {formatCheckOffTime(localCompletedAt)}
-        </p>
         {showConfetti && <ConfettiBurst />}
       </div>
     );
   }
 
   return (
-    <div className="relative mt-4">
+    <div className="relative mt-5">
       <button
         type="button"
         onClick={handleCheckOff}
         disabled={saving}
-        className="flex h-11 w-full items-center justify-center border border-dark bg-white font-sans text-[13px] font-medium lowercase text-dark transition-colors hover:bg-[#f5f5f5] disabled:opacity-60"
+        className="flex h-11 w-full items-center justify-center border border-dark bg-white font-sans text-[12px] font-medium lowercase text-dark transition-colors hover:bg-[#f5f5f5] disabled:opacity-60"
+        style={{ letterSpacing: "0.04em" }}
       >
         {saving ? "saving…" : "mark today as complete →"}
       </button>
@@ -1191,8 +1192,18 @@ function TodayCheckOffButton({
   );
 }
 
-// SECTION 1 - Hero: curl type, porosity/city, today's wash-type pill,
-// streak, and the check-off button. Full-width, not scrollable.
+// Hero's wash-type badge colors - wash day black/white, refresh day
+// white/black-border, protein green, chelating amber. Streak now lives
+// only in RoutineTopBar above (Part 1), not duplicated here.
+function heroBadgeClass(type: WashDayType): string {
+  if (type === "chelate" || type === "clarify") return "bg-[#C4831A] text-white";
+  if (type === "protein") return "bg-green text-white";
+  if (type === "refresh") return "bg-white text-dark border border-dark";
+  return "bg-dark text-white"; // wash
+}
+
+// SECTION 1 - Hero: curl type, porosity/city, today's wash-type badge,
+// and the check-off button. Full-width, not scrollable.
 function HeroSection({
   data,
   cityLabel,
@@ -1215,31 +1226,28 @@ function HeroSection({
   // "today" only, never affected by tapping a different day elsewhere on
   // the page (see selectedIso in StepsSection/ProductsSection below).
   const todayWash = data.calendarDays.find((d) => d.date === data.todayIso) as WashDay;
-  const isRefresh = todayWash.washType === "refresh";
   const todaySteps = getStepsForDay(data, todayWash);
   const todayMinutes = getMinutesForDay(todaySteps, todayWash);
-  const heroSubline = isRefresh
-    ? `${refreshDaySummaryLabel(Boolean(todayWash.showScalpCheck))} · ${todaySteps.length} steps · est. ${todayMinutes} min`
-    : `${washTypeShortLabel(todayWash.washType)} · ${todaySteps.length} steps · est. ${todayMinutes} min`;
 
   return (
-    <div id="section-today" className="w-full border-b border-dark bg-white px-5 pb-5 pt-6">
+    <div id="today" className="w-full border-b border-dark bg-white px-4 pt-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="font-mono text-[72px] font-bold leading-none text-dark">
+          <p className="font-mono text-[64px] font-bold leading-none text-dark" style={{ letterSpacing: "-3px" }}>
             {showCurl ? data.curlType : "—"}
           </p>
-          <p className="mt-2 font-mono text-[10px] text-muted">{subline || "your hair"}</p>
+          <p className="mt-2 font-mono text-[9px] tracking-[0.06em] text-muted">{subline || "your hair"}</p>
         </div>
         <div className="flex shrink-0 flex-col items-end pt-1 text-right">
-          <p className="font-sans text-xl font-bold lowercase text-dark">{isRefresh ? "refresh day" : "wash day"}</p>
-          <p className="mt-1 whitespace-nowrap font-mono text-[10px] text-muted">{heroSubline}</p>
-          <p className="mt-2 whitespace-nowrap font-mono text-[10px]">
-            {data.streak >= 3 ? (
-              <span className="text-dark">🔥 {data.streak}-day streak</span>
-            ) : (
-              <span className="text-muted">start your streak today</span>
-            )}
+          <span
+            className={`whitespace-nowrap px-3 py-[5px] font-mono text-[9px] lowercase tracking-wide ${heroBadgeClass(
+              todayWash.washType
+            )}`}
+          >
+            {WASH_PILL_LABEL[todayWash.washType]}
+          </span>
+          <p className="mt-1.5 whitespace-nowrap font-mono text-[9px] text-muted">
+            {todaySteps.length} steps · est. {todayMinutes} min
           </p>
         </div>
       </div>
@@ -1269,15 +1277,15 @@ function dayCompletionState(
   return "future";
 }
 
-// Refresh days get a deliberately quiet pill here - "small, gray outlined
-// ... not the focus" - so the colored wash-type pills (chelating/regular/
-// protein/co-wash) still read as the notable events in the strip.
-function upcomingPillLabel(type: WashDayType): string {
-  return type === "refresh" ? "refresh" : WASH_PILL_LABEL[type];
-}
-function upcomingPillClass(type: WashDayType): string {
-  if (type === "refresh") return "border border-muted text-muted bg-transparent";
-  return WASH_PILL_CLASSES[type];
+// Wash indicator dot colors (Part 4) - regular wash filled black, refresh
+// outlined gray, protein filled green, chelating filled amber. A
+// completed day replaces this dot with a small green checkmark instead
+// (handled in UpcomingDayCard directly, not here).
+function washDotClass(type: WashDayType): string {
+  if (type === "chelate" || type === "clarify") return "bg-[#C4831A]";
+  if (type === "protein") return "bg-green";
+  if (type === "refresh") return "border border-[#e8e8e8] bg-transparent";
+  return "bg-dark";
 }
 
 function UpcomingDayCard({
@@ -1294,52 +1302,38 @@ function UpcomingDayCard({
   const d = new Date(`${day.date}T00:00:00`);
   const dayName = d.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
   const dateNum = d.getDate();
-
-  if (state === "today") {
-    return (
-      <button
-        type="button"
-        onClick={() => onSelect(day.date)}
-        className={`flex h-[88px] w-[72px] shrink-0 flex-col justify-between border-2 p-2 ${
-          isSelected ? "border-dark bg-dark" : "border-dark bg-dark"
-        }`}
-      >
-        <span className="font-sans text-[9px] lowercase text-white/70">{dayName}</span>
-        <span className="font-mono text-[22px] font-bold leading-none text-white">{dateNum}</span>
-        <span className="self-start bg-white px-1.5 py-0.5 font-mono text-[8px] font-bold lowercase text-dark">
-          {upcomingPillLabel(day.washType)}
-        </span>
-      </button>
-    );
-  }
+  const isToday = state === "today";
+  const isCompleted = state === "completed";
+  const isMissed = state === "missed";
+  const isDark = isToday || isSelected;
 
   return (
     <button
       type="button"
       onClick={() => onSelect(day.date)}
-      className={`relative flex h-[88px] w-[72px] shrink-0 flex-col justify-between border p-2 ${
-        isSelected ? "border-dark bg-dark" : "border-[#e0e0e0] bg-white"
+      className={`relative flex w-[60px] shrink-0 flex-col items-center border px-1.5 py-2 text-center ${
+        isToday ? "border-2 border-dark bg-dark" : isSelected ? "border-dark bg-dark" : "border-[#e8e8e8] bg-white"
       }`}
     >
-      <span className={`font-sans text-[9px] lowercase ${isSelected ? "text-white/70" : "text-muted"}`}>{dayName}</span>
+      <span className={`font-mono text-[7px] lowercase ${isDark ? "text-[#666]" : "text-muted"}`}>{dayName}</span>
       <span
-        className={`font-mono text-[22px] font-bold leading-none ${
-          isSelected ? "text-white" : state === "completed" ? "text-muted" : "text-dark"
+        className={`mt-0.5 font-mono text-[20px] font-bold leading-none ${
+          isDark ? "text-white" : isCompleted ? "text-muted" : "text-dark"
         }`}
+        style={{ marginBottom: "6px" }}
       >
         {dateNum}
       </span>
-      <span
-        className={`self-start px-1.5 py-0.5 font-mono text-[8px] font-bold lowercase ${
-          isSelected ? "border border-white/50 bg-transparent text-white" : upcomingPillClass(day.washType)
-        }`}
-      >
-        {upcomingPillLabel(day.washType)}
-      </span>
-      {state === "completed" && (
-        <span className={`absolute right-1 top-1 text-[10px] leading-none ${isSelected ? "text-white" : "text-dark"}`}>✓</span>
+      {isCompleted ? (
+        <span className={`font-mono text-[8px] ${isDark ? "text-white" : "text-green"}`}>✓</span>
+      ) : (
+        <span
+          className={`h-1.5 w-1.5 rounded-full ${
+            isDark ? (day.washType === "refresh" ? "border border-white" : "bg-white") : washDotClass(day.washType)
+          }`}
+        />
       )}
-      {state === "missed" && <span className="absolute bottom-1 right-1 h-1.5 w-1.5 rounded-full bg-amber" />}
+      {isMissed && <span className="absolute bottom-1 right-1 h-1 w-1 rounded-full bg-[#C4831A]" />}
     </button>
   );
 }
@@ -1360,15 +1354,15 @@ function UpcomingSection({
   const visibleDays = data.calendarDays.filter((d) => d.date >= cutoffIso);
 
   return (
-    <div id="section-upcoming" className="w-full border-b border-dark bg-white">
-      <div className="flex items-center justify-between px-5 pt-4">
-        <span className="font-mono text-[10px] lowercase text-muted">upcoming</span>
-        <button type="button" onClick={onViewCalendar} className="font-mono text-[10px] lowercase text-muted">
+    <div id="upcoming" className="w-full border-b border-dark bg-white">
+      <div className="flex items-center justify-between px-4 pb-2.5 pt-5">
+        <span className="font-mono text-[9px] lowercase text-muted">upcoming</span>
+        <button type="button" onClick={onViewCalendar} className="font-mono text-[8px] lowercase text-[#bbb]">
           view full calendar ↓
         </button>
       </div>
       {visibleDays.length > 0 ? (
-        <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto px-5 pb-4">
+        <div className="no-scrollbar flex gap-[6px] overflow-x-auto px-4 pb-4">
           {visibleDays.map((day) => (
             <UpcomingDayCard
               key={day.date}
@@ -1386,13 +1380,81 @@ function UpcomingSection({
   );
 }
 
+// Editorial image break (Parts 5 and 8) - pulls a real visual_library
+// image via the same public bridge MasonryFeed.tsx already uses
+// (getFallbackImage can't be called directly from a "use client" file -
+// it needs the service role). Cleanly renders nothing if no image comes
+// back, rather than an empty placeholder box.
+function EditorialImageBreak({
+  heightPx,
+  hairTypes,
+  category,
+  label,
+}: {
+  heightPx: number;
+  hairTypes: string[];
+  category: string;
+  label: string;
+}) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const hairTypesKey = hairTypes.join(",");
+
+  useEffect(() => {
+    let cancelled = false;
+    const params = new URLSearchParams({ category });
+    if (hairTypesKey) params.set("hair_types", hairTypesKey);
+    fetch(`/api/visual-library/fallback?${params.toString()}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (!cancelled) setImageUrl(json.url ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setImageUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [category, hairTypesKey]);
+
+  if (!imageUrl) return null;
+
+  return (
+    <div className="relative w-full overflow-hidden border-y border-dark" style={{ height: heightPx }}>
+      <Image src={imageUrl} alt="" fill sizes="100vw" className="object-cover" />
+      <div className="absolute inset-x-0 bottom-0 border-t-[1.5px] border-dark bg-white px-4 py-2">
+        <p className="font-mono text-[9px] lowercase tracking-[0.08em] text-dark">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 // SECTION 3 - Steps: one horizontally scrollable, scroll-snapping card
 // per step of today's wash-day sequence (reusing stepsByWashType exactly
 // as computed server-side), plus any additionalNotes appended as trailing
 // cards so that content isn't lost by the restructure.
+// Fuzzy title match against the step-type icon set (Part 7) - steps are
+// generated copy, not a fixed enum, so there's no productCategory-style
+// exact key to switch on; a generic dot covers anything that doesn't
+// match one of the known step types.
+function stepIcon(title: string): string {
+  const t = title.toLowerCase();
+  if (t.includes("pre-shampoo") || t.includes("pre shampoo")) return "◐";
+  if (t.includes("shampoo")) return "🚿";
+  if (t.includes("deep condition")) return "⬡";
+  if (t.includes("condition")) return "○";
+  if (t.includes("detangle")) return "⟠";
+  if (t.includes("moisturize")) return "💧";
+  if (t.includes("seal")) return "✦";
+  if (t.includes("scalp")) return "◎";
+  if (t.includes("style") || t.includes("styling")) return "◈";
+  if (t.includes("protect")) return "🌙";
+  return "•";
+}
+
 function StepCard({
   step,
   index,
+  total,
   products,
   onViewProduct,
   onViewTool,
@@ -1406,6 +1468,7 @@ function StepCard({
     toolIds?: string[] | null;
   };
   index: number;
+  total: number;
   products: (ProductPick | DailyProductPick)[];
   onViewProduct: () => void;
   onViewTool: (toolId: string) => void;
@@ -1417,25 +1480,34 @@ function StepCard({
 
   return (
     <div
-      className="flex min-h-[160px] w-[calc(100vw-56px)] max-w-[340px] shrink-0 flex-col border border-dark bg-white p-5"
+      className="flex min-h-[200px] w-[calc(100vw-48px)] max-w-[340px] shrink-0 flex-col border-r border-dark bg-white p-5"
       style={{ scrollSnapAlign: "start" }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <span className="font-mono text-[11px] font-bold text-muted">step {String(index + 1).padStart(2, "0")}</span>
-        <span className="font-sans text-[15px] font-bold lowercase text-dark">{step.title}</span>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex h-8 w-8 items-center justify-center border border-dark text-sm">{stepIcon(step.title)}</div>
+        <span className="font-mono text-[8px] tracking-wide text-[#bbb]">
+          step {String(index + 1).padStart(2, "0")} of {String(total).padStart(2, "0")}
+        </span>
       </div>
-      <p className="mt-2 flex-1 font-sans text-[13px] font-light leading-[1.7] text-[#444]">{step.body}</p>
+      <p className="mt-2 font-sans text-sm font-semibold lowercase text-dark" style={{ letterSpacing: "-0.3px" }}>
+        {step.title}
+      </p>
+      <p className="mt-2 flex-1 font-sans text-xs font-light leading-[1.7] text-[#666]">{step.body}</p>
 
-      <div className="mt-3 flex items-center justify-between gap-2">
+      <div className="mt-3.5 flex items-center justify-between gap-2 border-t border-[#f0f0f0] pt-2.5">
         {step.why ? (
-          <button type="button" onClick={() => setShowWhy((v) => !v)} className="font-mono text-[9px] text-[#bbb]">
-            why
+          <button
+            type="button"
+            onClick={() => setShowWhy((v) => !v)}
+            className="font-mono text-[8px] tracking-wide text-[#bbb]"
+          >
+            why this matters →
           </button>
         ) : (
           <span />
         )}
         {step.timerMinutes && (
-          <span className="font-mono text-[9px] text-muted">set timer · {step.timerMinutes}</span>
+          <span className="bg-[#f5f5f5] px-2 py-[3px] font-mono text-[8px] text-muted">⏱ {step.timerMinutes}</span>
         )}
       </div>
       {showWhy && step.why && (
@@ -1463,11 +1535,35 @@ function StepCard({
         <button
           type="button"
           onClick={onViewProduct}
-          className="mt-3 self-start border border-dark bg-white px-2.5 py-1 font-mono text-[10px] lowercase text-dark"
+          className="mt-2 flex w-full items-center justify-between border border-[#e8e8e8] px-2.5 py-1.5 font-mono text-[8px] lowercase text-muted"
         >
-          {primary.productName.length > 26 ? `${primary.productName.slice(0, 26)}…` : primary.productName} →
+          <span>{primary.productName.length > 20 ? `${primary.productName.slice(0, 20)}…` : primary.productName}</span>
+          <span>→</span>
         </button>
       )}
+    </div>
+  );
+}
+
+// Shared chapter-heading treatment for Steps/Products/Tools (Parts 6, 9,
+// 11) - the "flat text label" headers these three sections used before
+// are replaced by this everywhere; Upcoming/Calendar keep their own
+// simpler label rows (never given a chapter number by the request).
+function ChapterHeading({ number, title, sub }: { number: string; title: string; sub: string }) {
+  return (
+    <div className="px-4 pt-7">
+      <p className="font-mono text-[9px] tracking-[0.14em] text-[#ccc]" style={{ marginBottom: "4px" }}>
+        {number}
+      </p>
+      <h2
+        className="font-sans font-bold lowercase leading-none text-dark"
+        style={{ fontSize: "clamp(22px, 6vw, 28px)", letterSpacing: "-1px", marginBottom: "4px" }}
+      >
+        {title}
+      </h2>
+      <p className="font-mono text-[9px] tracking-wide text-muted" style={{ marginBottom: "20px" }}>
+        {sub}
+      </p>
     </div>
   );
 }
@@ -1519,23 +1615,40 @@ function StepsSection({
   }
 
   function scrollToProducts() {
-    document.getElementById("section-products")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById("products")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   if (!selectedWash) {
     return (
-      <div id="section-steps" className="w-full border-b border-dark bg-white px-5 py-6">
+      <div id="steps" className="w-full border-b border-dark bg-white px-5 py-6">
         <span className="font-mono text-[10px] lowercase text-muted">routine</span>
         <p className="mt-2 font-sans text-[13px] text-[#444]">No routine data for this date.</p>
       </div>
     );
   }
 
+  const minutes = getMinutesForDay(steps, selectedWash);
+  const porosityLabel = data.porosity && data.porosity !== "not sure" ? `${data.porosity} porosity` : null;
+  const curlLabel = data.curlType && data.curlType !== "not_sure" ? data.curlType : null;
+
   return (
-    <div id="section-steps" className="w-full border-b border-dark bg-white pt-4">
-      <div className="px-5">
-        <div className="flex items-center gap-2">
-          <span className="font-mono text-[10px] lowercase text-muted">
+    <>
+      <EditorialImageBreak
+        heightPx={160}
+        hairTypes={curlLabel ? [curlLabel] : []}
+        category="lifestyle"
+        label={`today's steps · ${washTypeShortLabel(selectedWash.washType)}${
+          curlLabel ? ` · ${curlLabel}${porosityLabel ? ` ${porosityLabel}` : ""}` : ""
+        }`}
+      />
+      <div id="steps" className="w-full border-b border-dark bg-white">
+        <ChapterHeading
+          number="01 · steps"
+          title="today's routine"
+          sub={`${washTypeShortLabel(selectedWash.washType)} · ${total} step${total === 1 ? "" : "s"} · est. ${minutes} min`}
+        />
+        <div className="-mt-5 flex items-center gap-2 px-4 pb-2">
+          <span className="font-mono text-[9px] lowercase text-[#bbb]">
             {dayHeaderLabel(selectedIso, selectedWash.washType)}
           </span>
           {dayState === "completed" && (
@@ -1549,21 +1662,17 @@ function StepsSection({
             </span>
           )}
         </div>
-        <p className="mt-0.5 font-mono text-[9px] text-[#bbb]">
-          {total} step{total === 1 ? "" : "s"}
-        </p>
-      </div>
       <div
         ref={scrollerRef}
         onScroll={handleScroll}
-        className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-5 pb-4"
-        style={{ scrollSnapType: "x mandatory" }}
+        className="no-scrollbar step-scroll mt-1 flex gap-3 overflow-x-auto border-t border-dark px-4 pb-4 pt-4"
       >
         {steps.map((step, i) => (
           <StepCard
             key={step.title}
             step={step}
             index={i}
+            total={total}
             products={productsForSteps}
             onViewProduct={scrollToProducts}
             onViewTool={onViewTool}
@@ -1574,6 +1683,7 @@ function StepsSection({
             key={note.title}
             step={{ title: note.title, body: note.body, why: note.why, timerMinutes: null, productCategory: null, toolIds: null }}
             index={steps.length + i}
+            total={total}
             products={productsForSteps}
             onViewProduct={scrollToProducts}
             onViewTool={onViewTool}
@@ -1581,21 +1691,27 @@ function StepsSection({
         ))}
       </div>
       {total > 0 && (
-        <div className="flex flex-col items-center gap-2 pb-4">
-          <p className="font-mono text-[9px] text-muted">
-            step {current + 1} of {total}
-          </p>
-          <div className="flex gap-1.5">
+        <div className="flex flex-col items-center gap-2 border-b border-[#e8e8e8] px-4 py-2.5">
+          <div className="flex gap-1">
             {Array.from({ length: total }).map((_, i) => (
               <span
                 key={i}
-                className={`h-1.5 w-1.5 rounded-full ${i === current ? "bg-dark" : "border border-dark"}`}
+                className="h-1 w-1 rounded-full transition-transform"
+                style={
+                  i === current
+                    ? { background: "#0a0a0a", transform: "scale(1.3)" }
+                    : { background: "#e8e8e8" }
+                }
               />
             ))}
           </div>
+          <p className="font-mono text-[9px] text-muted">
+            step {current + 1} of {total}
+          </p>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -1609,6 +1725,28 @@ function isDailyPick(pick: ProductPick | DailyProductPick): pick is DailyProduct
   return "dailyLabel" in pick;
 }
 
+// Top color bar (Part 10) - keyed on the same RoutineSection the rest of
+// the page already colors by (SECTION_META/CalendarLegend above), not a
+// new parallel category system.
+function productTopBarClass(section: RoutineSection): string {
+  if (section === "clarify") return "bg-[#C4831A]"; // chelating product
+  if (section === "protein") return "bg-green"; // protein treatment product
+  if (section === "between") return "bg-[#888888]"; // refresh day product
+  if (section === "styling") return "bg-[#e8e8e8]"; // every wash product
+  return "bg-[#0a0a0a]"; // regular wash day product
+}
+
+// Weight tag (Part 10) - a simpler scheme than WEIGHT_PILL_CLASSES' full
+// 5-tier color set: lightweight/medium are unstyled text, heavy/very_heavy
+// get a plain border, and a hair-mask's "Intensive treatment" label gets
+// the one accent color.
+function weightTagClass(weight: ProductWeight, categorySlug?: string | null): string {
+  const isIntensive = categorySlug === "hair-mask" && (weight === "heavy" || weight === "very_heavy");
+  if (isIntensive) return "border border-[#C4831A] text-[#C4831A]";
+  if (weight === "heavy" || weight === "very_heavy") return "border border-[#888] text-muted";
+  return "text-muted";
+}
+
 function CompactProductCard({ pick, note }: { pick: ProductPick | DailyProductPick; note?: string }) {
   const [showWhy, setShowWhy] = useState(false);
   const { primary } = pick;
@@ -1620,67 +1758,95 @@ function CompactProductCard({ pick, note }: { pick: ProductPick | DailyProductPi
   if (pick.noProductsYet || !primary) {
     return (
       <div
-        className="flex min-h-[140px] w-[calc(100vw-56px)] max-w-[340px] shrink-0 flex-col justify-between border border-dark bg-white p-5"
+        className="flex min-h-[140px] w-[calc(100vw-48px)] max-w-[340px] shrink-0 flex-col justify-between overflow-hidden border-r border-dark bg-white"
         style={{ scrollSnapAlign: "start" }}
       >
-        <span className="font-mono text-[9px] uppercase tracking-wide text-muted">{headerLabel}</span>
-        {daily ? (
-          <p className="mt-3 font-sans text-sm text-dark/60">
-            add a {pick.categoryLabel.toLowerCase()} to your routine to complete your daily refresh
-          </p>
-        ) : (
-          <p className="mt-3 font-sans text-sm text-dark/60">No pick yet for this category.</p>
-        )}
-        <Link
-          href={`/search?category=${encodeURIComponent(pick.searchCategorySlug)}`}
-          className="mt-2 font-mono text-[9px] text-dark"
-        >
-          search catalog →
-        </Link>
+        <div className={`h-[3px] w-full ${productTopBarClass(pick.section)}`} />
+        <div className="flex flex-1 flex-col justify-between p-4">
+          <span className="font-mono text-[8px] lowercase tracking-[0.1em] text-muted">{headerLabel}</span>
+          {daily ? (
+            <p className="mt-3 font-sans text-sm text-dark/60">
+              add a {pick.categoryLabel.toLowerCase()} to your routine to complete your daily refresh
+            </p>
+          ) : (
+            <p className="mt-3 font-sans text-sm text-dark/60">No pick yet for this category.</p>
+          )}
+          <Link
+            href={`/search?category=${encodeURIComponent(pick.searchCategorySlug)}`}
+            className="mt-2 font-mono text-[9px] text-dark"
+          >
+            search catalog →
+          </Link>
+        </div>
       </div>
     );
   }
 
-  const dotClass = pick.section === "protein" ? "bg-green" : pick.section === "clarify" ? "bg-[#B08D57]" : "bg-dark";
+  const tier = scoreTier(primary.score);
 
   return (
     <div
-      className="flex min-h-[140px] w-[calc(100vw-56px)] max-w-[340px] shrink-0 flex-col border border-dark bg-white p-5"
+      className="flex w-[calc(100vw-48px)] max-w-[340px] shrink-0 flex-col overflow-hidden border-r border-dark bg-white"
       style={{ scrollSnapAlign: "start" }}
     >
-      <div className="flex items-center gap-1.5">
-        <span className="font-mono text-[9px] uppercase tracking-wide text-muted">{headerLabel}</span>
-        <span className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
-      </div>
-      <p className="mt-2 font-sans text-base font-bold lowercase tracking-[-0.3px] text-dark">{primary.productName}</p>
-      <p className="font-sans text-xs font-light text-muted">{primary.brandName}</p>
+      <div className={`h-[3px] w-full ${productTopBarClass(pick.section)}`} />
+      <div className="p-4">
+        <span className="font-mono text-[8px] lowercase tracking-[0.1em] text-muted">{headerLabel}</span>
+        <p
+          className="mt-2 font-sans text-[15px] font-semibold lowercase text-dark"
+          style={{ letterSpacing: "-0.4px", marginBottom: "2px" }}
+        >
+          {primary.productName}
+        </p>
+        <p className="font-mono text-[9px] text-muted" style={{ marginBottom: "12px" }}>
+          {primary.brandName}
+        </p>
 
-      <div className="mt-2 flex items-baseline gap-1">
-        <span className="font-mono text-[32px] font-bold text-dark">{primary.score}</span>
-        <span className="font-mono text-[10px] text-muted">/ 100</span>
-      </div>
-      <span className={`mt-1 inline-block self-start px-1.5 py-0.5 font-mono text-[8px] ${WEIGHT_PILL_CLASSES[primary.weight]}`}>
-        {weightPillLabel(primary.weight, pick.category)}
-      </span>
-
-      {/* Daily refresh picks always show their rationale inline (see the
-          request's "always have something to show" for these 5
-          categories) rather than hiding it behind the "why this was
-          picked" toggle used for wash-day products. */}
-      {daily ? (
-        <p className="mt-2 text-xs leading-relaxed text-[#444]">{daily.dailyWhy}</p>
-      ) : (
-        <div className="mt-auto flex items-center justify-between pt-3">
-          <button type="button" onClick={() => setShowWhy((v) => !v)} className="font-mono text-[9px] text-muted">
-            why this was picked →
-          </button>
+        <div className="flex items-baseline gap-1">
+          <span className={`text-[36px] leading-none ${TIER_CLASSES[tier]}`}>{primary.score}</span>
+          <span className="font-mono text-xs text-[#bbb]">/ 100</span>
         </div>
-      )}
-      {shownNote && <p className="mt-2 border-l-2 border-dark bg-[#f5f5f5] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#444]">{shownNote}</p>}
-      <div className="mt-2 flex items-center justify-end">
-        <ShopButton productName={primary.productName} brandName={primary.brandName} className="font-mono text-[9px] text-dark" />
+        <p className="font-mono text-[8px] tracking-wide text-muted">your match</p>
+        <span
+          className={`mt-1.5 inline-block px-1.5 py-0.5 font-mono text-[8px] ${weightTagClass(
+            primary.weight,
+            pick.category
+          )}`}
+        >
+          {weightPillLabel(primary.weight, pick.category)}
+        </span>
+
+        {/* Daily refresh picks always show their rationale inline (see
+            the request's "always have something to show" for these 5
+            categories) rather than hiding it behind the "why picked"
+            toggle used for wash-day products. */}
+        {daily && <p className="mt-2 text-xs leading-relaxed text-[#444]">{daily.dailyWhy}</p>}
+        {shownNote && (
+          <p className="mt-2 border-l-2 border-dark bg-[#f5f5f5] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#444]">
+            {shownNote}
+          </p>
+        )}
+        {!daily && showWhy && <p className="mt-2 text-xs leading-relaxed text-[#444]">{primary.why}</p>}
+
+        <div className="mt-2.5 flex gap-2 border-t border-[#f0f0f0] pt-2.5">
+          {!daily && (
+            <button
+              type="button"
+              onClick={() => setShowWhy((v) => !v)}
+              className="flex-1 border border-[#e8e8e8] bg-white px-1 py-[7px] font-mono text-[8px] lowercase tracking-wide text-muted"
+            >
+              why picked →
+            </button>
+          )}
+          <ShopButton
+            productName={primary.productName}
+            brandName={primary.brandName}
+            className={`flex items-center justify-center bg-dark px-1 py-[7px] font-mono text-[8px] lowercase tracking-wide text-white ${
+              daily ? "w-full" : "flex-1"
+            }`}
+          />
+        </div>
       </div>
-      {!daily && showWhy && <p className="mt-2 text-xs leading-relaxed text-[#444]">{primary.why}</p>}
     </div>
   );
 }
@@ -1694,21 +1860,22 @@ function ProductsSection({ data, selectedIso }: { data: RoutineData; selectedIso
   // them in practice; kept as a defensive fallback for the same reason
   // as StepsSection's equivalent.
   const selectedPicks = selectedWash ? getProductsForDay(data, selectedWash) : [];
+  const curlLabel = data.curlType && data.curlType !== "not_sure" ? data.curlType : null;
+  const categoryList = selectedPicks.map((p) => (isDailyPick(p) ? p.dailyLabel : p.categoryLabel).toLowerCase()).join(" · ");
 
   return (
-    <div id="section-products" className="w-full border-b border-dark bg-white pt-4">
-      <div className="px-5">
-        <span className="font-mono text-[10px] lowercase text-muted">your products</span>
-        <p className="mt-0.5 font-mono text-[9px] text-[#bbb]">
-          {selectedWash ? `for ${dayHeaderLabel(selectedIso, selectedWash.washType)}` : "for your routine"}
-        </p>
-      </div>
+    <>
+      <EditorialImageBreak
+        heightPx={120}
+        hairTypes={curlLabel ? [curlLabel] : []}
+        category="product"
+        label={`your products · today's ${selectedWash ? washTypeShortLabel(selectedWash.washType) : "routine"}`}
+      />
+      <div id="products" className="w-full border-b border-dark bg-white">
+        <ChapterHeading number="02 · products" title="use today" sub={categoryList || "no products needed today"} />
 
-      {selectedPicks.length > 0 ? (
-        <div
-          className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-5 pb-4"
-          style={{ scrollSnapType: "x mandatory" }}
-        >
+        {selectedPicks.length > 0 ? (
+          <div className="no-scrollbar product-scroll -mt-5 flex gap-3 overflow-x-auto border-t border-dark px-4 pb-4 pt-4">
           {selectedPicks.map((pick) => (
             <CompactProductCard
               key={pick.category}
@@ -1721,16 +1888,18 @@ function ProductsSection({ data, selectedIso }: { data: RoutineData; selectedIso
               }
             />
           ))}
-        </div>
-      ) : (
-        <p className="px-5 pb-4 pt-3 font-sans text-[13px] text-dark/60">No wash products needed today.</p>
-      )}
+          </div>
+        ) : (
+          <p className="border-t border-dark px-4 pb-4 pt-3 font-sans text-[13px] text-dark/60">
+            No wash products needed today.
+          </p>
+        )}
 
-      <div className="px-5 pb-4">
-        <button type="button" onClick={() => setShowAll((v) => !v)} className="font-mono text-[10px] lowercase text-muted">
-          {showAll ? "hide all products ↑" : "see all products ↓"}
-        </button>
-      </div>
+        <div className="px-4 pb-4">
+          <button type="button" onClick={() => setShowAll((v) => !v)} className="font-mono text-[10px] lowercase text-muted">
+            {showAll ? "hide all products ↑" : "see all products ↓"}
+          </button>
+        </div>
 
       <Collapse show={showAll}>
         <div className="px-5 pb-6">
@@ -1843,7 +2012,8 @@ function ProductsSection({ data, selectedIso }: { data: RoutineData; selectedIso
           </Link>
         </div>
       </Collapse>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -1854,69 +2024,110 @@ function ProductsSection({ data, selectedIso }: { data: RoutineData; selectedIso
 // above (same dimensions/scroll-snap) so the two sections read as one
 // family of cards. id={`tool-${tool.id}`} is the scroll/highlight target
 // tapped tool chips in StepCard (above) jump to.
+const TOOL_ICON: Record<string, string> = {
+  accessories: "◆",
+  application: "✦",
+  detangling: "⟠",
+  drying: "☼",
+  heat: "▲",
+  protective: "◉",
+  styling: "◈",
+};
+
+// Priority label color (Part 11) - essential bold black, recommended
+// gray, optional (unused by the current tool data, but a real HairTool
+// priority value) lightest gray.
+function toolPriorityClass(priority: string): string {
+  if (priority === "essential") return "font-bold text-dark";
+  if (priority === "recommended") return "text-[#888]";
+  return "text-[#bbb]";
+}
+
+// Compact 110px card by default (Part 11) - tapping it expands inline to
+// the full existing detail (description, why it matters/what to look
+// for toggles, price, amazon link, avoid_if) rather than dropping any of
+// that real tool data to fit the new compact exterior.
 function RoutineToolCard({ tool, highlighted }: { tool: HairTool; highlighted: boolean }) {
-  const [expanded, setExpanded] = useState<"why" | "lookFor" | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [detailTab, setDetailTab] = useState<"why" | "lookFor" | null>(null);
+
+  // A tool chip tapped from a StepCard scrolls here and highlights this
+  // card briefly (see scrollToTool in RoutineContent) - auto-expanding it
+  // too so that still actually shows the tool's detail, now that cards
+  // are collapsed by default (Part 11), rather than just pointing at a
+  // closed card.
+  useEffect(() => {
+    if (highlighted) setExpanded(true);
+  }, [highlighted]);
 
   return (
     <div
       id={`tool-${tool.id}`}
-      className={`flex min-h-[160px] w-[calc(100vw-56px)] max-w-[340px] shrink-0 flex-col bg-white p-5 transition-colors ${
+      className={`shrink-0 bg-white transition-colors ${
         highlighted ? "border-2 border-dark bg-[#f5f5f5]" : "border border-dark"
-      }`}
+      } ${expanded ? "w-[calc(100vw-48px)] max-w-[340px] p-5" : "w-[110px] p-3"}`}
       style={{ scrollSnapAlign: "start" }}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span
-          className={`px-2 py-0.5 font-mono text-[9px] lowercase ${
-            tool.priority === "essential" ? "bg-dark text-white" : "border border-dark text-dark"
-          }`}
+      <button type="button" onClick={() => setExpanded((v) => !v)} className="block w-full text-left">
+        <div className="flex h-8 w-8 items-center justify-center border border-[#e8e8e8] text-base" style={{ marginBottom: "8px" }}>
+          {TOOL_ICON[tool.category] ?? "•"}
+        </div>
+        <p
+          className="font-sans text-[11px] font-medium lowercase text-dark"
+          style={{ letterSpacing: "-0.2px", marginBottom: "2px" }}
         >
+          {tool.name}
+        </p>
+        <p className={`font-mono text-[7px] lowercase tracking-wide ${toolPriorityClass(tool.priority)}`}>
           {tool.priority}
-        </span>
-        <span className="font-mono text-[9px] uppercase tracking-wide text-muted">{tool.category}</span>
-      </div>
-      <p className="mt-2 font-sans text-base font-bold lowercase text-dark">{tool.name}</p>
-      <p className="mt-2 flex-1 font-sans text-[13px] font-light leading-[1.7] text-[#444]">{tool.description}</p>
+        </p>
+      </button>
 
-      <div className="mt-2 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => (v === "why" ? null : "why"))}
-          className="font-mono text-[9px] text-[#bbb]"
-        >
-          why it matters →
-        </button>
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => (v === "lookFor" ? null : "lookFor"))}
-          className="font-mono text-[9px] text-[#bbb]"
-        >
-          what to look for →
-        </button>
-      </div>
       {expanded && (
-        <p className="mt-2 border-l-2 border-dark bg-[#f5f5f5] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#444]">
-          {expanded === "why" ? tool.why_it_matters : tool.what_to_look_for}
-        </p>
-      )}
+        <div className="mt-3">
+          <p className="font-sans text-[13px] font-light leading-[1.7] text-[#444]">{tool.description}</p>
 
-      <div className="mt-auto flex items-center justify-between pt-3">
-        <span className="font-mono text-[13px] font-bold text-dark">{tool.price_range}</span>
-        <a
-          href={`https://www.amazon.com/s?k=${encodeURIComponent(tool.amazon_search)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-mono text-[9px] text-muted"
-        >
-          shop on amazon →
-        </a>
-      </div>
+          <div className="mt-2 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setDetailTab((v) => (v === "why" ? null : "why"))}
+              className="font-mono text-[9px] text-[#bbb]"
+            >
+              why it matters →
+            </button>
+            <button
+              type="button"
+              onClick={() => setDetailTab((v) => (v === "lookFor" ? null : "lookFor"))}
+              className="font-mono text-[9px] text-[#bbb]"
+            >
+              what to look for →
+            </button>
+          </div>
+          {detailTab && (
+            <p className="mt-2 border-l-2 border-dark bg-[#f5f5f5] px-2.5 py-1.5 text-xs italic leading-relaxed text-[#444]">
+              {detailTab === "why" ? tool.why_it_matters : tool.what_to_look_for}
+            </p>
+          )}
 
-      {tool.avoid_if && (
-        <p className="mt-2 text-[11px] leading-relaxed text-amber">
-          <span className="font-mono text-[8px] text-muted">note: </span>
-          {tool.avoid_if}
-        </p>
+          <div className="mt-3 flex items-center justify-between">
+            <span className="font-mono text-[13px] font-bold text-dark">{tool.price_range}</span>
+            <a
+              href={`https://www.amazon.com/s?k=${encodeURIComponent(tool.amazon_search)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[9px] text-muted"
+            >
+              shop on amazon →
+            </a>
+          </div>
+
+          {tool.avoid_if && (
+            <p className="mt-2 text-[11px] leading-relaxed text-amber">
+              <span className="font-mono text-[8px] text-muted">note: </span>
+              {tool.avoid_if}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
@@ -1943,16 +2154,11 @@ function ToolsSection({
   if (essential.length === 0 && recommended.length === 0) return null;
 
   return (
-    <div id="section-tools" className="w-full border-b border-dark bg-white pt-4">
-      <div className="px-5">
-        <span className="font-mono text-[10px] lowercase text-muted">your tools</span>
-      </div>
+    <div id="tools" className="w-full border-b border-dark bg-white">
+      <ChapterHeading number="03 · tools" title="your tools" sub="essential · recommended" />
 
       {essential.length > 0 && (
-        <div
-          className="no-scrollbar mt-3 flex gap-3 overflow-x-auto px-5 pb-4"
-          style={{ scrollSnapType: "x mandatory" }}
-        >
+        <div className="no-scrollbar step-scroll -mt-5 flex gap-2 overflow-x-auto border-t border-dark px-4 pb-4 pt-4">
           {essential.map((tool) => (
             <RoutineToolCard key={tool.id} tool={tool} highlighted={tool.id === highlightedToolId} />
           ))}
@@ -1961,16 +2167,13 @@ function ToolsSection({
 
       {recommended.length > 0 && (
         <>
-          <div className="px-5 pb-4">
+          <div className="px-4 pb-4">
             <button type="button" onClick={onToggleRecommended} className="font-mono text-[10px] lowercase text-muted">
               {showRecommended ? "hide recommended tools ↑" : "+ show recommended tools"}
             </button>
           </div>
           <Collapse show={showRecommended}>
-            <div
-              className="no-scrollbar flex gap-3 overflow-x-auto px-5 pb-6"
-              style={{ scrollSnapType: "x mandatory" }}
-            >
+            <div className="no-scrollbar step-scroll flex gap-2 overflow-x-auto px-4 pb-6">
               {recommended.map((tool) => (
                 <RoutineToolCard key={tool.id} tool={tool} highlighted={tool.id === highlightedToolId} />
               ))}
@@ -2004,16 +2207,20 @@ function CalendarAccordionSection({
   const monthLabel = months.map((m) => m.label).join(" + ");
 
   return (
-    <div id="section-calendar" className="w-full bg-[#f5f0ea] px-5 py-5">
-      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-3 text-left">
+    <div id="calendar" className="w-full bg-white">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex w-full cursor-pointer items-center justify-between gap-3 border-t border-dark px-4 py-4 text-left"
+      >
         <div>
-          <p className="font-mono text-[10px] lowercase text-muted">full 30-day calendar</p>
+          <p className="font-mono text-[9px] lowercase text-muted">full 30-day calendar</p>
           <p className="mt-0.5 font-mono text-[9px] text-[#bbb]">{monthLabel}</p>
         </div>
-        <span className="shrink-0 font-mono text-[10px] lowercase text-muted">{expanded ? "collapse ↑" : "expand ↓"}</span>
+        <span className="shrink-0 font-mono text-[9px] lowercase text-muted">{expanded ? "collapse ↑" : "expand ↓"}</span>
       </button>
       <Collapse show={expanded}>
-        <div className="mt-4">
+        <div className="border-b border-dark bg-[#fafafa] px-4 py-4">
           <WashCalendarGrid
             calendarDays={data.calendarDays}
             todayIso={data.todayIso}
@@ -2058,31 +2265,47 @@ function productAccentClass(pick: ProductPick): string {
 }
 
 const MINI_NAV_SECTIONS: { id: string; label: string }[] = [
-  { id: "section-today", label: "today" },
-  { id: "section-upcoming", label: "upcoming" },
-  { id: "section-steps", label: "steps" },
-  { id: "section-products", label: "products" },
-  { id: "section-tools", label: "tools" },
-  { id: "section-calendar", label: "calendar" },
+  { id: "today", label: "today" },
+  { id: "upcoming", label: "upcoming" },
+  { id: "steps", label: "steps" },
+  { id: "products", label: "products" },
+  { id: "tools", label: "tools" },
+  { id: "calendar", label: "calendar" },
 ];
 
-// Sticky mini-nav: hidden until the hero scrolls out of view, then
-// tracks which of the six sections is currently in view (scroll-spy)
-// and lets a tap jump straight to any of them.
-function RoutineMiniNav() {
-  const [visible, setVisible] = useState(false);
-  const [active, setActive] = useState(MINI_NAV_SECTIONS[0].id);
+// "my routine" + today's day/wash-type + streak - the page's own
+// persistent header, separate from (and sitting above) the mini-nav
+// below. Fixed height (h-12 = 48px) so the mini-nav's sticky top value
+// has a real, exact number to stack under - same reasoning as other
+// pages this session giving a nav bar an explicit height for a sibling's
+// calc/sticky math to depend on.
+function RoutineTopBar({ data }: { data: RoutineData }) {
+  const todayWash = data.calendarDays.find((d) => d.date === data.todayIso) as WashDay;
+  const weekday = new Date(`${data.todayIso}T00:00:00`)
+    .toLocaleDateString("en-US", { weekday: "long" })
+    .toLowerCase();
 
-  useEffect(() => {
-    const hero = document.getElementById("section-today");
-    if (!hero) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setVisible(!entry.isIntersecting),
-      { threshold: 0 }
-    );
-    observer.observe(hero);
-    return () => observer.disconnect();
-  }, []);
+  return (
+    <div className="print-hide sticky top-0 z-[95] flex h-12 w-full items-center justify-between border-b border-dark bg-white px-4">
+      <div>
+        <p className="font-sans text-[11px] font-bold lowercase text-dark" style={{ letterSpacing: "-0.3px" }}>
+          my routine
+        </p>
+        <p className="font-mono text-[8px] tracking-wide text-muted">
+          {weekday} · {washTypeShortLabel(todayWash.washType)}
+        </p>
+      </div>
+      {data.streak >= 1 && <p className="font-mono text-[10px] font-bold text-dark">🔥 {data.streak}</p>}
+    </div>
+  );
+}
+
+// Sticky mini-nav, always visible right below RoutineTopBar (not gated
+// on scroll position) - tracks which of the six sections is in view
+// (scroll-spy via IntersectionObserver) and lets a tap jump straight to
+// any of them.
+function RoutineMiniNav() {
+  const [active, setActive] = useState(MINI_NAV_SECTIONS[0].id);
 
   useEffect(() => {
     const targets = MINI_NAV_SECTIONS.map((s) => document.getElementById(s.id)).filter(
@@ -2091,12 +2314,11 @@ function RoutineMiniNav() {
     if (targets.length === 0) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        const visibleEntries = entries.filter((e) => e.isIntersecting);
-        if (visibleEntries.length === 0) return;
-        const top = visibleEntries.sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        setActive(top.target.id);
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActive(entry.target.id);
+        });
       },
-      { rootMargin: "-80px 0px -60% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] }
+      { threshold: 0.3, rootMargin: "-48px 0px 0px 0px" }
     );
     targets.forEach((t) => observer.observe(t));
     return () => observer.disconnect();
@@ -2106,24 +2328,20 @@ function RoutineMiniNav() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  if (!visible) return null;
-
   return (
-    <div className="print-hide sticky top-0 z-40 w-full border-b border-dark bg-white">
-      <div className="flex w-full">
-        {MINI_NAV_SECTIONS.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => goTo(s.id)}
-            className={`flex-1 border-b-2 py-3 font-mono text-[9px] lowercase transition-colors ${
-              active === s.id ? "border-dark text-dark" : "border-transparent text-muted"
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
+    <div className="no-scrollbar print-hide sticky top-12 z-[90] flex w-full overflow-x-auto border-b border-dark bg-white">
+      {MINI_NAV_SECTIONS.map((s, i) => (
+        <button
+          key={s.id}
+          type="button"
+          onClick={() => goTo(s.id)}
+          className={`shrink-0 whitespace-nowrap px-[14px] py-[9px] font-mono text-[8px] lowercase tracking-[0.1em] transition-colors ${
+            i < MINI_NAV_SECTIONS.length - 1 ? "border-r border-[#e8e8e8]" : ""
+          } ${active === s.id ? "border-b-2 border-dark text-dark" : "border-b-2 border-transparent text-muted"}`}
+        >
+          {s.label}
+        </button>
+      ))}
     </div>
   );
 }
@@ -2232,7 +2450,7 @@ function RoutineContent() {
   function expandAndScrollToCalendar() {
     setCalendarExpanded(true);
     requestAnimationFrame(() => {
-      document.getElementById("section-calendar")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("calendar")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -2243,7 +2461,7 @@ function RoutineContent() {
   function handleSelectDay(iso: string) {
     setSelectedIso(iso);
     requestAnimationFrame(() => {
-      document.getElementById("section-steps")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.getElementById("steps")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -2281,6 +2499,9 @@ function RoutineContent() {
         </p>
       </div>
 
+      <RoutineTopBar data={data} />
+      <RoutineMiniNav />
+
       <HeroSection data={data} cityLabel={cityLabel} userId={user!.id} onChanged={() => loadRoutine(user!.id)} />
 
       {(showWelcome || hasPlaceholderCards || data.childSafetyNote || data.focusNote) && (
@@ -2317,8 +2538,6 @@ function RoutineContent() {
           {data.focusNote && <p className="font-sans text-[12px] leading-relaxed text-dark/90">{data.focusNote}</p>}
         </div>
       )}
-
-      <RoutineMiniNav />
 
       {isBothFocus && data.protectiveStyle && (
         <div className="print-hide flex w-full gap-2 border-b border-dark bg-white px-5">

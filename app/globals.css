@@ -144,6 +144,23 @@ body.modal-open {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  /* /routine's step/product horizontal scroll-snap containers
+     (app/routine/page.tsx) - .no-scrollbar above already covers hiding
+     the scrollbar identically to the request's .routine-scroll, so that
+     wasn't duplicated under a second name. */
+  .step-scroll,
+  .product-scroll {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Smooth scroll for /routine's mini-nav section jumps
+   (app/routine/page.tsx) - sitewide since nothing else on the site uses
+   an anchor-jump pattern that this would conflict with. */
+html {
+  scroll-behavior: smooth;
 }
 
 @keyframes tab-scroll-hint {
