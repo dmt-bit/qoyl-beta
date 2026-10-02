@@ -29,6 +29,20 @@ export default function ForStylistsPage() {
         >
           get in touch →
         </a>
+
+        {/* Secondary CTA (item 6) - the request asked for this on
+            business.qoyl.live/stylists, a separate app/repo this
+            session has no access to (same boundary already documented
+            in lib/brandCatalogProducts.ts/lib/styleShoppingList.ts).
+            Added here instead, on qoyl-beta's own stylists page, which
+            serves the same purpose. */}
+        <p className="mt-6 font-mono text-[10px] text-muted">
+          know a stylist who should be here?{" "}
+          <Link href="/recommend-a-stylist" className="text-dark underline underline-offset-2 hover:text-bronze2">
+            recommend them →
+          </Link>
+        </p>
+
         <p className="mt-8 text-xs text-dark/40">
           <Link href="/" className="underline underline-offset-2 hover:text-dark/70">
             ← back to qoyl

@@ -7,6 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { COMMUNITY_PREFILL_KEY } from "@/components/CommunityGrid";
 import PostCard, { Post } from "@/components/PostCard";
 import ShopButton from "@/components/ShopButton";
+import StylistRecommendationBlock from "@/components/StylistRecommendationBlock";
 import { useAuth } from "@/lib/auth-context";
 import { TIER_CLASSES, curlFamily, scoreTier, type CurlFamily } from "@/lib/compatibility";
 import {
@@ -763,6 +764,10 @@ function StyleMatchContent() {
   const [humanHairOnlyFilter, setHumanHairOnlyFilter] = useState(false);
   const [stylistsLoading, setStylistsLoading] = useState(false);
   const [marketEstimate, setMarketEstimate] = useState<MarketEstimate | null>(null);
+  // City resolved inside loadStylists below - kept in state too so the
+  // "recommend a stylist" empty state (components/StylistRecommendationBlock.tsx)
+  // can pre-fill its city field without re-resolving the zip lookup itself.
+  const [stylistCityLabel, setStylistCityLabel] = useState<string | null>(null);
 
   const completedRef = useRef(false);
   const [savingChoice, setSavingChoice] = useState<"diy" | "stylist" | null>(null);
@@ -1216,6 +1221,7 @@ function StyleMatchContent() {
           if (!cancelled) setStylists([]);
           return;
         }
+        if (!cancelled) setStylistCityLabel(cityState.city);
         const params = new URLSearchParams({
           city: cityState.city,
           curl_type: curlType,
@@ -2733,14 +2739,14 @@ function StyleMatchContent() {
                       </p>
                     )}
 
-                    <a
-                      href="https://business.qoyl.live/apply/stylist"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="mt-4 inline-block text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
-                    >
-                      Know a great stylist? Refer them →
-                    </a>
+                    <div className="mt-4">
+                      <StylistRecommendationBlock
+                        userId={user?.id ?? null}
+                        curlType={hairProfile?.curl_type ?? null}
+                        city={stylistCityLabel}
+                        styleSpecialty={detected?.style_name ?? null}
+                      />
+                    </div>
                   </div>
                 )}
               </div>

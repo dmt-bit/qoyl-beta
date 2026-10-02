@@ -26,7 +26,13 @@ export type MlEventType =
   // metric: what fraction of people who see the gate tap through.
   | "blur_gate_shown"
   | "blur_gate_cta_tapped"
-  | "blur_gate_signin_tapped";
+  | "blur_gate_signin_tapped"
+  // "Recommend a stylist" (Style Match's "book a stylist" empty state,
+  // app/api/stylist-recommendations/route.ts logs this server-side
+  // directly via the admin client, same pattern as /api/routine's
+  // missing_daily_product - not through logMlEvent below) - signals
+  // which cities/styles/hair types are most underserved by stylists.
+  | "stylist_recommended";
 
 export async function logMlEvent(
   eventType: MlEventType,

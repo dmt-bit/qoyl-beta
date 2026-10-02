@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import StylistRecommendationBlock from "@/components/StylistRecommendationBlock";
 import type { StyleMatchSummaryData } from "@/lib/styleMatchSummary";
 
 const LENGTH_DIFFERENCE_LABELS: Record<string, string> = {
@@ -406,6 +407,16 @@ function StyleMatchSummaryContent({ id }: { id: string }) {
             </div>
           ) : (
             <p className="mt-3 text-sm text-dark/50">No pricing estimate available for this style yet.</p>
+          )}
+
+          {!data.matchedStylist?.service && (
+            <div className="print-hide mt-4">
+              <StylistRecommendationBlock
+                curlType={data.clientProfile.curlType}
+                city={data.clientProfile.cityState}
+                styleSpecialty={data.detectedStyle}
+              />
+            </div>
           )}
         </section>
 
