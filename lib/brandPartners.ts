@@ -17,7 +17,12 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 // this checks instead of the request's assumed 'active'.
 export async function getPartnerBrandNames(): Promise<Set<string>> {
   const admin = getSupabaseAdmin();
-  const { data, error } = await admin.from("brand_accounts").select("company_name").eq("status", "approved");
+  // 'approved' = application accepted, 'active' = paid subscription (set by
+  // the Stripe webhook in qoyl-business). Both count as a brand partner.
+  const { data, error } = await admin
+    .from("brand_accounts")
+    .select("company_name")
+    .in("status", ["approved", "active"]);
 
   if (error) {
     console.error("[brandPartners] brand_accounts query failed:", error.message);

@@ -11,3 +11,5 @@ export async function GET() {
   const names = await getPartnerBrandNames();
   return NextResponse.json({ partnerBrandNames: Array.from(names) });
 }
+
+export const dynamic = "force-dynamic";
