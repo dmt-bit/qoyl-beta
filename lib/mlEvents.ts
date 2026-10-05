@@ -32,7 +32,13 @@ export type MlEventType =
   // directly via the admin client, same pattern as /api/routine's
   // missing_daily_product - not through logMlEvent below) - signals
   // which cities/styles/hair types are most underserved by stylists.
-  | "stylist_recommended";
+  | "stylist_recommended"
+  // Routine-level interaction flags (see lib/routineInteractions.ts).
+  // routine_flags_generated is logged server-side from /api/routine; the
+  // read/dismiss events are client-side taps on the routine page.
+  | "routine_flags_generated"
+  | "routine_flag_read"
+  | "routine_flag_dismissed";
 
 export async function logMlEvent(
   eventType: MlEventType,

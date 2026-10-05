@@ -4,6 +4,7 @@
 // obvious to whoever reads this next, not just implied.
 
 export type ClimateZone = "humid" | "dry" | "cold-dry" | "tropical";
+export const CLIMATE_ZONES: readonly ClimateZone[] = ["humid", "dry", "cold-dry", "tropical"];
 export type WaterHardness = "hard" | "moderate" | "soft";
 
 export const CLIMATE_LABELS: Record<ClimateZone, string> = {

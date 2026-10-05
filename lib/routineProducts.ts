@@ -12,6 +12,7 @@ import {
 import { budgetMaxUsd, isBudgetActive } from "@/lib/priceContext";
 import type { ProtectiveStyleType } from "@/lib/protectiveStyleRoutine";
 import type { ProductWeight } from "@/lib/productWeight";
+import type { RoutineIngredient } from "@/lib/routineInteractions";
 
 // Real product recommendations for the routine (paid /routine page + its
 // email, see app/api/routine/route.ts and lib/sendRoutineEmail.ts).
@@ -310,6 +311,9 @@ export type RoutineProductCandidate = {
   // lib/compatibility.ts's nameKeywordBadgeLabel. Null unless the
   // product name's keyword modifier is significant (>= 6).
   nameKeywordBadge: string | null;
+  // Scored ingredient matches (INCI name, 1-based position, primary
+  // function) - feeds analyzeRoutineInteractions in app/api/routine.
+  ingredients: RoutineIngredient[];
 };
 
 export type RoutineProductPick = {
@@ -673,6 +677,11 @@ async function rankCategoryProducts(
         priceUsd: row.price_usd ?? null,
         containsSulfates: result.matches.some((m) => isSulfate(m.ingredient_name)),
         nameKeywordBadge: nameKeywordBadgeLabel(result),
+        ingredients: result.matches.map((m) => ({
+          inciName: m.inciName,
+          position: m.position,
+          primaryFunction: m.primaryFunction,
+        })),
       };
     })
     .filter((c): c is RoutineProductCandidate => c !== null)

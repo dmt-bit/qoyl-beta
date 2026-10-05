@@ -23,6 +23,8 @@ import {
 } from "@/lib/routineProducts";
 import { getChildSafetyNote, isChildSafetyProfile } from "@/lib/childSafety";
 import { buildScoringProfile, curlFamily, isColorTreatedYes } from "@/lib/compatibility";
+import { analyzeRoutineInteractions } from "@/lib/routineInteractions";
+import { CLIMATE_ZONES } from "@/lib/locationFactors";
 import { fetchBrandProductsForCurlType } from "@/lib/brandCatalogProducts";
 import {
   generateProtectiveStyleCalendar,
@@ -123,6 +125,41 @@ export async function GET(request: Request) {
       // them (client-side, by washType === "refresh").
       getDailyRefreshProducts(porosity, curlType, hairConcerns, scalpCondition, colorTreated === "yes", budgetRange),
     ]);
+
+  // Routine-level interactions across the primary picks (how the products
+  // work together, not individually) - see lib/routineInteractions.ts.
+  // Computed here rather than in the client because the ingredient data
+  // lives on the server-side picks.
+  const routineFlags = analyzeRoutineInteractions(
+    products
+      .filter((p) => p.primary && !p.noProductsYet)
+      .map((p) => ({
+        name: p.primary!.productName,
+        category: p.category,
+        ingredients: p.primary!.ingredients,
+      })),
+    { porosity, family: curlFamily(curlType), colorTreated: colorTreated === "yes" },
+    CLIMATE_ZONES.find((z) => z === profile?.climate) ?? null
+  );
+
+  if (routineFlags.length > 0) {
+    const { error: flagsEventError } = await getSupabaseAdmin().from("ml_events").insert({
+      event_type: "routine_flags_generated",
+      user_id: userId,
+      metadata: {
+        flag_count: routineFlags.length,
+        warning_count: routineFlags.filter((f) => f.type === "warning").length,
+        flag_types: routineFlags.map((f) => f.title),
+        curl_type: curlType,
+        porosity,
+        climate: profile?.climate ?? null,
+        product_count: products.filter((p) => p.primary && !p.noProductsYet).length,
+      },
+    });
+    if (flagsEventError) {
+      console.error("Failed to log routine_flags_generated ml_event:", flagsEventError.message);
+    }
+  }
 
   // Attaches whether each refresh day's conditional "scalp check" step
   // applies (see lib/routineSteps.ts's shouldShowScalpCheckStep) - kept
@@ -238,6 +275,7 @@ export async function GET(request: Request) {
     refreshScalpCheckStep: REFRESH_SCALP_CHECK_STEP,
     additionalNotes,
     products,
+    routineFlags,
     refreshDailyProducts,
     brandProducts,
     avoidIngredients,

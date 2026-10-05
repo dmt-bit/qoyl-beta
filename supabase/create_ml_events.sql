@@ -17,11 +17,13 @@ alter table ml_events enable row level security;
 -- ones, and from the client-side Style Match/profile funnel - anon and
 -- authenticated both need insert, matching product_searches' own policy
 -- shape.
+drop policy if exists "Allow anon insert" on ml_events;
 create policy "Allow anon insert"
   on ml_events for insert
   to anon
   with check (true);
 
+drop policy if exists "Allow authenticated insert" on ml_events;
 create policy "Allow authenticated insert"
   on ml_events for insert
   to authenticated

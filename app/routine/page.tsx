@@ -10,6 +10,8 @@ import { useAuth } from "@/lib/auth-context";
 import { curlFamily, CurlFamily, scoreTier, TIER_CLASSES } from "@/lib/compatibility";
 import { ProductWeight, WEIGHT_PILL_CLASSES, weightFitNote, weightPillLabel } from "@/lib/productWeight";
 import { WashDay, WashDayType } from "@/lib/routineCalendar";
+import { logMlEvent } from "@/lib/mlEvents";
+import type { RoutineFlag } from "@/lib/routineInteractions";
 import {
   categoryNote,
   getCategoryGuidanceTips,
@@ -120,6 +122,7 @@ type RoutineData = {
   refreshScalpCheckStep: RoutineStepDetail;
   additionalNotes: RoutineStep[];
   products: ProductPick[];
+  routineFlags: RoutineFlag[];
   refreshDailyProducts: DailyProductPick[];
   brandProducts: RoutineBrandProduct[];
   avoidIngredients: AvoidIngredient[];
@@ -1263,6 +1266,207 @@ function HeroSection({
   );
 }
 
+// ---- Routine interaction flags (lib/routineInteractions.ts, computed in
+// /api/routine) ----------------------------------------------------------
+
+const FLAG_DISMISS_KEY_PREFIX = "routine_flag_dismissed:";
+const FLAG_DISMISS_MS = 7 * 24 * 60 * 60 * 1000;
+const FLAG_BODY_COLLAPSIBLE_OVER = 80;
+
+const FLAG_COLORS: Record<RoutineFlag["type"], { border: string; dot: string; title: string }> = {
+  warning: { border: "#B03030", dot: "#B03030", title: "#0a0a0a" },
+  tip: { border: "#C4831A", dot: "#C4831A", title: "#0a0a0a" },
+  positive: { border: "#2D7A3D", dot: "#2D7A3D", title: "#2D7A3D" },
+};
+
+// Dismissal is per flag title (one entry per flag type), for 7 days.
+// Reads and writes are wrapped - storage can be blocked (private windows).
+function isFlagDismissed(title: string): boolean {
+  try {
+    const raw = localStorage.getItem(FLAG_DISMISS_KEY_PREFIX + title);
+    return raw !== null && Date.now() - Number(raw) < FLAG_DISMISS_MS;
+  } catch {
+    return false;
+  }
+}
+
+function markFlagDismissed(title: string): void {
+  try {
+    localStorage.setItem(FLAG_DISMISS_KEY_PREFIX + title, String(Date.now()));
+  } catch {
+    // Dismissed for this session only if storage is unavailable.
+  }
+}
+
+function RoutineFlagsSection({ flags, userId }: { flags: RoutineFlag[]; userId: string }) {
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setDismissed(new Set(flags.filter((f) => isFlagDismissed(f.title)).map((f) => f.title)));
+    setHydrated(true);
+  }, [flags]);
+
+  // Rendered only after localStorage is read, so a dismissed flag never
+  // flashes on screen before it hides.
+  const visible = flags.filter((f) => !dismissed.has(f.title));
+  if (!hydrated || visible.length === 0) return null;
+
+  function toggleCollapsed(flag: RoutineFlag) {
+    if (flag.body.length <= FLAG_BODY_COLLAPSIBLE_OVER) return;
+    const wasCollapsed = collapsed.has(flag.title);
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(flag.title)) next.delete(flag.title);
+      else next.add(flag.title);
+      return next;
+    });
+    if (wasCollapsed) {
+      logMlEvent("routine_flag_read", {
+        userId,
+        metadata: { flag_title: flag.title, flag_type: flag.type },
+      });
+    }
+  }
+
+  function dismiss(flag: RoutineFlag) {
+    markFlagDismissed(flag.title);
+    setDismissed((prev) => new Set(prev).add(flag.title));
+    logMlEvent("routine_flag_dismissed", { userId, metadata: { flag_title: flag.title } });
+  }
+
+  return (
+    <section id="routine-flags" className="print-hide w-full border-b border-dark bg-white px-5 py-6">
+      <p className="mb-3 font-mono text-[9px] lowercase text-[#888]" style={{ letterSpacing: "0.1em" }}>
+        routine analysis
+      </p>
+
+      {visible.map((flag) => {
+        const colors = FLAG_COLORS[flag.type];
+        const isCollapsed = collapsed.has(flag.title);
+        const collapsible = flag.body.length > FLAG_BODY_COLLAPSIBLE_OVER;
+        return (
+          <div
+            key={flag.title}
+            className="relative mb-1.5 border border-[#e8e8e8] bg-white py-3.5 pl-4 pr-9"
+            style={{ borderLeft: `3px solid ${colors.border}` }}
+          >
+            <button
+              type="button"
+              onClick={() => toggleCollapsed(flag)}
+              disabled={!collapsible}
+              aria-expanded={collapsible ? !isCollapsed : undefined}
+              className="block w-full text-left disabled:cursor-default"
+            >
+              <span className="flex items-center gap-2">
+                <span className="h-[5px] w-[5px] shrink-0 rounded-full" style={{ background: colors.dot }} />
+                <span className="font-sans text-[13px] font-medium lowercase" style={{ color: colors.title }}>
+                  {flag.title}
+                </span>
+              </span>
+              {!isCollapsed && (
+                <span className="mt-1 block font-sans font-light text-[#666]" style={{ fontSize: "12px", lineHeight: "1.65" }}>
+                  {flag.body}
+                </span>
+              )}
+            </button>
+            {!isCollapsed && flag.affected_products && flag.affected_products.length > 0 && (
+              <p className="mt-1.5 font-mono text-[9px] text-[#888]">
+                affects: {flag.affected_products.join(" · ")}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => dismiss(flag)}
+              aria-label={`dismiss ${flag.title}`}
+              className="absolute right-2 top-2 font-mono text-[10px] text-[#ccc] hover:text-dark"
+            >
+              ×
+            </button>
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+// "how it works with your other products" - the per-product slice of the
+// routine flags, shown under "why picked" (see CompactProductCard).
+function ProductInteractionNote({ flags, productName }: { flags: RoutineFlag[]; productName: string }) {
+  const relevant = flags.filter((f) => f.affected_products?.includes(productName));
+  return (
+    <div>
+      <p className="mb-1 font-mono text-[9px] lowercase text-[#888]" style={{ marginTop: "12px", letterSpacing: "0.1em" }}>
+        how it works with your other products
+      </p>
+      {relevant.length === 0 ? (
+        <p className="font-sans text-xs font-light text-[#888]">no interactions detected with your other routine products</p>
+      ) : (
+        relevant.map((f) => (
+          <p key={f.title} className="mt-1 font-sans text-xs leading-relaxed" style={{ color: FLAG_COLORS[f.type].dot }}>
+            {f.body}
+          </p>
+        ))
+      )}
+    </div>
+  );
+}
+
+// Wash-day application order, and the refresh-day subset. Only categories
+// the user actually has a pick for are shown (see buildSequenceChips).
+const WASH_SEQUENCE = [
+  "pre-shampoo",
+  "clarifying-shampoo",
+  "shampoo",
+  "co-wash",
+  "conditioner",
+  "deep-conditioner",
+  "protein-treatment",
+  "leave-in",
+  "curl-cream",
+  "styler",
+  "oil",
+  "gel",
+];
+const REFRESH_SEQUENCE = ["leave-in", "styler", "oil"];
+const DAILY_SEQUENCE_KEY: Record<string, string> = {
+  "daily-leave-in": "leave-in",
+  "daily-sealant": "oil",
+  "daily-styling": "styler",
+};
+
+function buildSequenceChips(picks: (ProductPick | DailyProductPick)[], refreshDay: boolean): string[] {
+  const present = new Set(
+    picks
+      .filter((p) => p.primary && !p.noProductsYet)
+      .map((p) => DAILY_SEQUENCE_KEY[p.category] ?? p.category)
+  );
+  return (refreshDay ? REFRESH_SEQUENCE : WASH_SEQUENCE).filter((key) => present.has(key));
+}
+
+function SequenceStrip({ chips }: { chips: string[] }) {
+  // A single chip isn't a sequence.
+  if (chips.length < 2) return null;
+  return (
+    <div className="px-4 pb-4">
+      <p className="font-mono text-[9px] lowercase text-[#888]" style={{ letterSpacing: "0.1em" }}>
+        apply in this order
+      </p>
+      <div className="no-scrollbar mt-2 flex items-center gap-1.5 overflow-x-auto">
+        {chips.map((chip, i) => (
+          <span key={chip} className="flex shrink-0 items-center gap-1.5">
+            {i > 0 && <span className="font-mono text-[8px] text-[#ccc]">→</span>}
+            <span className="whitespace-nowrap border border-[#e8e8e8] px-2.5 py-1 font-mono text-[8px] lowercase text-dark">
+              {chip}
+            </span>
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // SECTION 2 - Upcoming: a horizontal row of every date in the 30-day
 // wash calendar from 7 days ago through the end of the window, each
 // carrying today/completed/missed state derived entirely from existing
@@ -1747,7 +1951,15 @@ function weightTagClass(weight: ProductWeight, categorySlug?: string | null): st
   return "text-muted";
 }
 
-function CompactProductCard({ pick, note }: { pick: ProductPick | DailyProductPick; note?: string }) {
+function CompactProductCard({
+  pick,
+  note,
+  flags,
+}: {
+  pick: ProductPick | DailyProductPick;
+  note?: string;
+  flags: RoutineFlag[];
+}) {
   const [showWhy, setShowWhy] = useState(false);
   const { primary } = pick;
   const daily = isDailyPick(pick) ? pick : null;
@@ -1827,6 +2039,7 @@ function CompactProductCard({ pick, note }: { pick: ProductPick | DailyProductPi
           </p>
         )}
         {!daily && showWhy && <p className="mt-2 text-xs leading-relaxed text-[#444]">{primary.why}</p>}
+        {!daily && showWhy && <ProductInteractionNote flags={flags} productName={primary.productName} />}
 
         <div className="mt-2.5 flex gap-2 border-t border-[#f0f0f0] pt-2.5">
           {!daily && (
@@ -1880,6 +2093,7 @@ function ProductsSection({ data, selectedIso }: { data: RoutineData; selectedIso
             <CompactProductCard
               key={pick.category}
               pick={pick}
+              flags={data.routineFlags}
               note={
                 pick.category === "hair-mask" && selectedPicks.every((p) => p.category !== "deep-conditioner") &&
                 data.products.some((p) => p.category === "deep-conditioner" && !p.noProductsYet)
@@ -1893,6 +2107,10 @@ function ProductsSection({ data, selectedIso }: { data: RoutineData; selectedIso
           <p className="border-t border-dark px-4 pb-4 pt-3 font-sans text-[13px] text-dark/60">
             No wash products needed today.
           </p>
+        )}
+
+        {selectedPicks.length > 0 && (
+          <SequenceStrip chips={buildSequenceChips(selectedPicks, selectedWash?.washType === "refresh")} />
         )}
 
         <div className="px-4 pb-4">
@@ -2503,6 +2721,8 @@ function RoutineContent() {
       <RoutineMiniNav />
 
       <HeroSection data={data} cityLabel={cityLabel} userId={user!.id} onChanged={() => loadRoutine(user!.id)} />
+
+      <RoutineFlagsSection flags={data.routineFlags} userId={user!.id} />
 
       {(showWelcome || hasPlaceholderCards || data.childSafetyNote || data.focusNote) && (
         <div className="print-hide w-full border-b border-dark bg-white px-5 py-4">
