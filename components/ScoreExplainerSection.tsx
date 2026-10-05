@@ -90,6 +90,20 @@ export default function ScoreExplainerSection() {
       </p>
 
       <div
+        className="flex items-center gap-3 border-t border-[#f0f0f0]"
+        style={{ padding: "16px 0", marginTop: "16px" }}
+      >
+        <div
+          className="shrink-0 rounded-full"
+          style={{ width: "6px", height: "6px", background: "#2D7A3D" }}
+        />
+        <p className="font-sans font-light text-[#666]" style={{ fontSize: "13px", lineHeight: "1.65", margin: 0 }}>
+          brands pay qoyl to see their ingredient data.{" "}
+          <span style={{ color: "#0a0a0a", fontWeight: 400 }}>they cannot change their scores.</span>
+        </p>
+      </div>
+
+      <div
         className="mt-7 grid grid-cols-1 gap-px border-t border-dark bg-dark sm:grid-cols-3"
       >
         {CARDS.map((card) => (

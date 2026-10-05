@@ -216,6 +216,70 @@ function IngredientRow({ match }: { match: Match }) {
   );
 }
 
+// Quiet disclosure, not a badge - tap (mobile) or hover (desktop) shows
+// the full explanation; closes on an outside tap/click or after 4s.
+// stopPropagation on the wrapper so tapping this never also triggers
+// ResultCard's own onToggleCard (its whole header row is a tap target).
+// Pure, reused by every component that renders ResultCard (SearchPageContent,
+// BrandCatalogView, TrendingProductsSection) rather than each refetching
+// or recomputing its own copy - see the partnerBrandNames fetch in
+// SearchPageContent, threaded down as a prop to the other two.
+function isBrandPartner(partnerBrandNames: Set<string>, brandName: string): boolean {
+  return partnerBrandNames.has(brandName.trim().toLowerCase());
+}
+
+function BrandPartnerIndicator() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("click", handleOutside);
+    const timer = setTimeout(() => setOpen(false), 4000);
+    return () => {
+      document.removeEventListener("click", handleOutside);
+      clearTimeout(timer);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative inline-block" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className="lowercase text-[#ccc]"
+        style={{ fontFamily: "var(--font-space-mono), 'Space Mono', monospace", fontSize: "7px", letterSpacing: "0.06em" }}
+      >
+        brand partner · score unaffected
+      </button>
+      {open && (
+        <div
+          className="absolute left-0 top-full z-50 mt-1 border border-[#e8e8e8] bg-white"
+          style={{ padding: "10px 12px", maxWidth: "240px" }}
+        >
+          <p
+            className="font-light text-[#666]"
+            style={{
+              fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif",
+              fontSize: "11px",
+              lineHeight: "1.65",
+            }}
+          >
+            this brand uses qoyl&apos;s intelligence dashboard. their score is computed from
+            ingredients — the same way as every other product. their subscription does not affect
+            their score.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ResultCard({
   product,
   scoreState,
@@ -228,6 +292,7 @@ function ResultCard({
   budgetRange,
   colorTreated,
   isProfiled,
+  isBrandPartner,
 }: {
   product: Product;
   scoreState: ScoreState | undefined;
@@ -245,6 +310,11 @@ function ResultCard({
   // always-visible score block below falls back to
   // product.averageScore, labeled "avg match" instead of "your match".
   isProfiled: boolean;
+  // Whether this product's brand has an approved brand_accounts entry -
+  // see lib/brandPartners.ts for why that's resolved via a fetched name
+  // set rather than a direct join (brand_accounts has no brand_id column
+  // and RLS blocks anon reads of it anyway).
+  isBrandPartner: boolean;
 }) {
   const matches = scoreState?.status === "done" ? scoreState.result.matches : [];
   const preview = matches.slice(0, 4);
@@ -324,6 +394,12 @@ function ResultCard({
                 </span>
               )}
             </div>
+
+            {isBrandPartner && (
+              <div className="mt-0.5">
+                <BrandPartnerIndicator />
+              </div>
+            )}
 
             <div className="mt-1.5">
               {displayScore !== null ? (
@@ -499,12 +575,14 @@ function TrendingProductsSection({
   porosity,
   budgetRange,
   colorTreated,
+  partnerBrandNames,
 }: {
   isProfiled: boolean;
   curlType: string | null;
   porosity: string | null;
   budgetRange: string | null;
   colorTreated: boolean;
+  partnerBrandNames: Set<string>;
 }) {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
@@ -584,6 +662,7 @@ function TrendingProductsSection({
             budgetRange={budgetRange}
             colorTreated={colorTreated}
             isProfiled={isProfiled}
+            isBrandPartner={isBrandPartner(partnerBrandNames, product.brand)}
           />
         ))}
       </ul>
@@ -670,6 +749,74 @@ async function fetchAllCatalogProductsWithAverageScore(): Promise<
 // page that shows product cards (main search + brand catalog), since
 // it's explaining the same score concept everywhere.
 const SCORE_EXPLAINER_DISMISSED_KEY = "qoyl_score_explainer_dismissed";
+
+// One-time dismissible strip - "scores are computed from ingredients,
+// not commercial relationships" (see the equivalent statement on the
+// home page's ScoreExplainerSection, and the brand-partner disclosure on
+// ResultCard below - this is the search-results-specific placement of
+// the same mechanism, shown once per visitor rather than once per page
+// load). Mounted briefly during its own fade-out so the CSS transition
+// actually plays, rather than unmounting instantly on dismiss.
+const UNBIASED_STRIP_DISMISSED_KEY = "qoyl_unbiased_dismissed";
+
+function UnbiasedScoringStrip() {
+  const [shouldRender, setShouldRender] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    let dismissed = false;
+    try {
+      dismissed = localStorage.getItem(UNBIASED_STRIP_DISMISSED_KEY) === "true";
+    } catch {
+      dismissed = false;
+    }
+    if (!dismissed) {
+      setShouldRender(true);
+      requestAnimationFrame(() => setVisible(true));
+    }
+  }, []);
+
+  function handleDismiss() {
+    try {
+      localStorage.setItem(UNBIASED_STRIP_DISMISSED_KEY, "true");
+    } catch {
+      // Best-effort - if storage is blocked, the strip just reappears
+      // next load, which is a fine fallback.
+    }
+    setVisible(false);
+    setTimeout(() => setShouldRender(false), 300);
+  }
+
+  if (!shouldRender) return null;
+
+  return (
+    <div
+      className="flex w-full items-center justify-between overflow-hidden border-b border-[#e8e8e8] bg-[#fafafa]"
+      style={{
+        padding: "10px 16px",
+        maxHeight: visible ? "60px" : "0px",
+        opacity: visible ? 1 : 0,
+        transition: "max-height 0.3s ease, opacity 0.3s ease",
+      }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="shrink-0 rounded-full" style={{ width: "5px", height: "5px", background: "#2D7A3D" }} />
+        <p className="lowercase text-[#888]" style={{ fontFamily: "var(--font-space-mono), 'Space Mono', monospace", fontSize: "9px", letterSpacing: "0.04em" }}>
+          scores are computed from ingredients — no brand improves their score by paying qoyl.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={handleDismiss}
+        aria-label="Dismiss"
+        className="shrink-0"
+        style={{ fontSize: "14px", color: "#ccc", background: "none", border: "none", cursor: "pointer", padding: "0 0 0 12px" }}
+      >
+        ×
+      </button>
+    </div>
+  );
+}
 
 function ScoreExplainerBanner() {
   // Defaults to hidden until the localStorage check resolves, rather than
@@ -1047,6 +1194,7 @@ function BrandCatalogView({
   porosity,
   budgetRange,
   colorTreated,
+  partnerBrandNames,
   onBack,
 }: {
   slug: string;
@@ -1056,6 +1204,7 @@ function BrandCatalogView({
   porosity: string | null;
   budgetRange: string | null;
   colorTreated: boolean;
+  partnerBrandNames: Set<string>;
   onBack: () => void;
 }) {
   const [loading, setLoading] = useState(true);
@@ -1301,6 +1450,7 @@ function BrandCatalogView({
                     budgetRange={budgetRange}
                     colorTreated={colorTreated}
                     isProfiled={isProfiled}
+                    isBrandPartner={isBrandPartner(partnerBrandNames, product.brand)}
                   />
                 ))}
               </ul>
@@ -1333,6 +1483,7 @@ function BrandCatalogView({
                       budgetRange={budgetRange}
                       colorTreated={colorTreated}
                       isProfiled={false}
+                      isBrandPartner={isBrandPartner(partnerBrandNames, product.brand)}
                     />
                   ))}
                 </BlurredResultsGroup>
@@ -1380,6 +1531,28 @@ function SearchPageContent() {
       cancelled = true;
     };
   }, [user]);
+
+  // Brand-partner disclosure (ResultCard's BrandPartnerIndicator) -
+  // fetched once, regardless of which view (results/brand catalog/
+  // trending) is active, and threaded down as a prop to
+  // BrandCatalogView/TrendingProductsSection below, which are separate
+  // top-level components, not nested in this one.
+  const [partnerBrandNames, setPartnerBrandNames] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/brand-partners")
+      .then((res) => res.json())
+      .then((json) => {
+        if (!cancelled) setPartnerBrandNames(new Set(json.partnerBrandNames ?? []));
+      })
+      .catch(() => {
+        // Best-effort - the indicator just doesn't show if this fails.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
 
   // Anonymous visitors who built a profile without an account (no login,
   // just a hair_profile_id in localStorage) keep the existing "no account
@@ -1909,6 +2082,7 @@ function SearchPageContent() {
         colorTreated={isColorTreatedYes(
           user ? hairProfile?.color_treated ?? null : localProfileHairInfo?.color_treated ?? null
         )}
+        partnerBrandNames={partnerBrandNames}
         onBack={backToBrandsDirectory}
       />
     );
@@ -2140,6 +2314,7 @@ function SearchPageContent() {
             colorTreated={isColorTreatedYes(
               user ? hairProfile?.color_treated : localProfileHairInfo?.color_treated
             )}
+            partnerBrandNames={partnerBrandNames}
           />
         )}
 
@@ -2191,6 +2366,8 @@ function SearchPageContent() {
           </div>
         )}
 
+        {!loading && results.length > 0 && <UnbiasedScoringStrip />}
+
         {!loading && results.length > 0 && !canSearch && <ScoreExplainerBanner />}
 
         {!loading && results.length > 0 && (
@@ -2218,6 +2395,7 @@ function SearchPageContent() {
                     user ? hairProfile?.color_treated : localProfileHairInfo?.color_treated
                   )}
                   isProfiled={canSearch}
+                  isBrandPartner={isBrandPartner(partnerBrandNames, product.brand)}
                 />
               ))}
             </ul>
@@ -2252,6 +2430,7 @@ function SearchPageContent() {
                     budgetRange={null}
                     colorTreated={false}
                     isProfiled={false}
+                    isBrandPartner={isBrandPartner(partnerBrandNames, product.brand)}
                   />
                 ))}
               </BlurredResultsGroup>

@@ -45,6 +45,16 @@ export default function Footer() {
           >
             built with ai →
           </Link>
+          {/* Quietest possible link to the conflicts-of-interest section.
+              Wording is "scores can't be bought" rather than the spec's
+              "scores are ..." claim - the spec forbids that claim word
+              in user-facing copy. */}
+          <Link
+            href="/how-we-score#conflicts"
+            className="font-mono text-[9px] text-[#aaa] hover:text-dark/70"
+          >
+            scores can&apos;t be bought →
+          </Link>
         </div>
       </div>
       <p className="mt-2 text-center text-[10px] text-dark/40">
