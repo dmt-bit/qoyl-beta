@@ -228,46 +228,72 @@ function TravelKitProductCard({ item }: { item: TravelKitProduct }) {
   );
 }
 
+// ---- Shared backdrop ----
+// Full-bleed photo behind every /travel view. Photo and overlay are fixed
+// layers (z-0, z-1); view content sits in a z-2 wrapper above both. The
+// bottom nav (z-[100]) stays above all of it.
+const TRAVEL_BACKGROUND_URL =
+  "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1791174170/pexels-mo-eid-1268975-12309587.jpg";
+
+function TravelShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative min-h-[100svh] overflow-x-hidden">
+      <div className="fixed inset-0 z-0 overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element -- Cloudinary already optimizes this (f_auto,q_auto); next/image would re-proxy it */}
+        <img
+          src={TRAVEL_BACKGROUND_URL}
+          alt=""
+          className="h-full w-full object-cover object-center"
+        />
+      </div>
+      <div className="fixed inset-0 z-[1] bg-black/55" />
+      <div className="relative z-[2]">{children}</div>
+    </div>
+  );
+}
+
 // ---- STATE A: landing ----
 
 function LandingView({
   onBuildClick,
   error,
-  cancelled,
 }: {
   onBuildClick: () => void;
   error: string | null;
-  cancelled: boolean;
 }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-4 py-16 font-sans text-dark sm:px-6">
+    <main className="flex min-h-[100svh] items-center justify-center px-4 py-16 font-sans sm:px-6">
       <div className="mx-auto max-w-xl text-center">
-        <h1 className="font-serif text-4xl font-semibold leading-tight text-dark sm:text-5xl">
-          Your hair goes where you go.
+        <h1
+          className="font-sans font-bold lowercase text-white"
+          style={{
+            fontSize: "clamp(28px, 7vw, 48px)",
+            letterSpacing: "-1.5px",
+            lineHeight: 1.1,
+            textShadow: "0 1px 8px rgba(0,0,0,0.8)",
+          }}
+        >
+          pack right for your hair.
         </h1>
-        <p className="mx-auto mt-5 max-w-lg text-base text-dark/70">
-          Different climates, different water, different routines. Tell us
-          where you&apos;re headed and we will build you a personalized list
-          of 5 products matched to your hair profile and your destination.
+        <p
+          className="mx-auto mt-5 max-w-lg font-sans font-light text-white/80"
+          style={{ fontSize: "14px", marginBottom: "28px" }}
+        >
+          tell us where you&apos;re going — we&apos;ll build your travel kit.
         </p>
 
-        {cancelled && (
-          <p className="mt-4 text-sm text-dark/60">
-            No worries - you can build your kit anytime.
-          </p>
-        )}
         {error && <p className="mt-4 text-sm text-red">{error}</p>}
 
         <button
           type="button"
           onClick={onBuildClick}
-          className="mx-auto mt-8 flex h-[52px] w-full max-w-sm items-center justify-center rounded-full bg-bronze px-6 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 sm:w-auto sm:px-10"
+          className="mx-auto mt-2 flex h-[52px] w-full max-w-sm items-center justify-center rounded-full bg-bronze px-6 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 sm:w-auto sm:px-10"
         >
-          Build my travel kit - $2.99 →
+          build my travel kit →
         </button>
 
-        <p className="mt-4 text-xs text-dark/50">
-          One-time purchase. Yours to keep and shop from before you leave.
+        <p className="mt-4 text-xs text-white/70">
+          Free. Yours to keep and shop from before you leave.
         </p>
       </div>
     </main>
@@ -337,8 +363,8 @@ function SurveyView({
   const step3Valid = Boolean(protectiveStyle) && Boolean(hairPriority);
 
   return (
-    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
-      <div className="mx-auto max-w-md">
+    <main className="min-h-[100svh] px-4 py-10 font-sans text-dark sm:px-6">
+      <div className="mx-auto max-w-[480px] border border-dark bg-white p-7">
         <ProgressBar step={step} totalSteps={totalSteps} />
 
         <div key={step} className="fade-step mt-8">
@@ -516,7 +542,7 @@ function SurveyView({
                 disabled={submitting}
                 className="mt-6 w-full rounded-lg bg-bronze py-4 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
               >
-                {submitting ? "Please wait..." : "Get my travel kit - $2.99 →"}
+                {submitting ? "Please wait..." : "build my travel kit →"}
               </button>
             </div>
           )}
@@ -569,21 +595,31 @@ function SurveyView({
 
 function GeneratingView({ destination }: { destination: string }) {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-white px-4 font-sans text-dark">
-      <h1 className="font-serif text-2xl font-bold lowercase text-dark">qoyl</h1>
-      <div className="mt-8 flex gap-2">
-        {[0, 1, 2].map((i) => (
-          <span
-            key={i}
-            className="h-2.5 w-2.5 animate-bounce rounded-full bg-bronze"
-            style={{ animationDelay: `${i * 150}ms` }}
-          />
-        ))}
-      </div>
-      <p className="mt-8 font-serif text-xl text-dark">
-        Building your kit for {destination}...
-      </p>
-    </main>
+    <TravelShell>
+      <main className="flex min-h-[100svh] flex-col items-center justify-center px-4 font-sans text-white">
+        <h1
+          className="font-serif text-2xl font-bold lowercase text-white"
+          style={{ textShadow: "0 1px 8px rgba(0,0,0,0.8)" }}
+        >
+          qoyl
+        </h1>
+        <div className="mt-8 flex gap-2">
+          {[0, 1, 2].map((i) => (
+            <span
+              key={i}
+              className="h-2.5 w-2.5 animate-bounce rounded-full bg-bronze"
+              style={{ animationDelay: `${i * 150}ms` }}
+            />
+          ))}
+        </div>
+        <p
+          className="mt-8 font-serif text-xl text-white"
+          style={{ textShadow: "0 1px 8px rgba(0,0,0,0.8)" }}
+        >
+          Building your kit for {destination}...
+        </p>
+      </main>
+    </TravelShell>
   );
 }
 
@@ -639,8 +675,8 @@ function KitView({
   }, [hairProfile]);
 
   return (
-    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
-      <div className="mx-auto max-w-md">
+    <main className="min-h-[100svh] px-4 py-10 font-sans text-dark sm:px-6">
+      <div className="mx-auto max-w-md border border-dark bg-white/[0.97] p-7">
         {welcome && ready && !welcomeDismissed && (
           <div className="mb-4 flex items-start justify-between gap-4 bg-bronze px-4 py-3">
             <p className="text-sm text-dark">
@@ -819,7 +855,6 @@ function TravelPageContent() {
   const { user, loading: authLoading } = useAuth();
 
   const kitIdParam = searchParams.get("kit");
-  const paymentStatus = searchParams.get("payment");
   const welcome = searchParams.get("welcome") === "true";
   const forceNewParam = searchParams.get("new") === "true";
 
@@ -830,26 +865,6 @@ function TravelPageContent() {
     { id: string; destination: string; created_at: string }[]
   >([]);
   const [landingError, setLandingError] = useState<string | null>(null);
-  const [isAdminUser, setIsAdminUser] = useState(false);
-
-  useEffect(() => {
-    if (!user) {
-      setIsAdminUser(false);
-      return;
-    }
-    let cancelled = false;
-    fetch(`/api/purchases?user_id=${user.id}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled) setIsAdminUser(Boolean(data.isAdmin));
-      })
-      .catch(() => {
-        if (!cancelled) setIsAdminUser(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
 
   // Set right before an explicit "start a new trip" action (Plan another
   // trip / Build my travel kit) so the auto-detection effect below never
@@ -860,11 +875,10 @@ function TravelPageContent() {
   const skipAutoKitRef = useRef(false);
 
   // Resolves which kit (if any) to show. Two cases:
-  // - ?kit=<id> present (dashboard's "View kit" link, the Stripe success
+  // - ?kit=<id> present (dashboard's "View kit" link, the post-submit
   //    redirect, or the trip switcher below): load that exact row
-  //    regardless of status - right after the Stripe redirect the
-  //    webhook may not have flipped it to 'active' yet, and KitView
-  //    already renders a "still being generated" note for that case.
+  //    regardless of status - KitView already renders a "still being
+  //    generated" note if it isn't 'active' yet.
   // - No ?kit= (a bare /travel visit): look up the user's active kits
   //    and default to the most recent one by created_at, so a returning
   //    user sees their kit immediately instead of the landing page.
@@ -931,9 +945,10 @@ function TravelPageContent() {
     };
   }, [kitIdParam, user, authLoading, forceNewParam]);
 
-  // Right after the Stripe success redirect, the webhook that flips
-  // status to 'active' and fills in products may not have landed yet -
-  // without this, the page just sits on "still being generated" forever
+  // The submit handler awaits generation before redirecting, so the row
+  // is normally ready on arrival - but a slow or refreshed load can still
+  // land on a row that isn't active yet. Without this, the page would sit
+  // on "still being generated" forever
   // until the user manually refreshes. Polls the same row every 2s (up
   // to 10 tries) while it's showing but not ready, and updates `kit` in
   // place as soon as it is. Also covers the "active but products still
@@ -1061,8 +1076,8 @@ function TravelPageContent() {
         // Single server-side route saves the row (service role client,
         // never subject to a client RLS session) and sends the admin
         // notification atomically - see app/api/travel-kits/route.ts.
-        // Awaited, since the returned id is required for Stripe
-        // checkout below, unlike a pure side-effect notification.
+        // Awaited, since the returned id is required to generate the
+        // kit below.
         const saveRes = await fetch("/api/travel-kits", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1098,52 +1113,25 @@ function TravelPageContent() {
       setView("generating");
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      if (isAdminUser) {
-        // Admin bypass - runs the exact same activation logic Stripe's
-        // webhook would run after payment, just without Stripe. See
-        // app/api/travel-kits/admin-activate/route.ts.
-        const activateRes = await fetch("/api/travel-kits/admin-activate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ user_id: user.id, travel_kit_id: travelKitId }),
-        });
-        const activateData = await activateRes.json();
-
-        if (!activateRes.ok) {
-          setSubmitError(
-            activateData.error ?? "Something went wrong. Please try again."
-          );
-          setSubmitting(false);
-          setView("survey");
-          return;
-        }
-
-        router.push(`/travel?kit=${travelKitId}&welcome=true`);
-        return;
-      }
-
-      const res = await fetch("/api/stripe/checkout", {
+      // Travel kits are free - generate, activate, and email it right
+      // here. See app/api/travel-kits/generate/route.ts.
+      const generateRes = await fetch("/api/travel-kits/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_type: "travel_kit",
-          user_id: user.id,
-          email: user.email,
-          travel_kit_id: travelKitId,
-        }),
+        body: JSON.stringify({ user_id: user.id, travel_kit_id: travelKitId }),
       });
-      const checkoutData = await res.json();
+      const generateData = await generateRes.json();
 
-      if (!res.ok || !checkoutData.url) {
+      if (!generateRes.ok) {
         setSubmitError(
-          checkoutData.error ?? "Something went wrong. Please try again."
+          generateData.error ?? "Something went wrong. Please try again."
         );
         setSubmitting(false);
         setView("survey");
         return;
       }
 
-      window.location.href = checkoutData.url;
+      router.push(`/travel?kit=${travelKitId}&welcome=true`);
     } catch {
       setSubmitError("Couldn't reach the server. Please try again.");
       setSubmitting(false);
@@ -1153,22 +1141,26 @@ function TravelPageContent() {
 
   if (authLoading || resolvingKit) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-white font-sans">
-        <p className="text-sm text-dark/60">Loading...</p>
-      </main>
+      <TravelShell>
+        <main className="flex min-h-[100svh] items-center justify-center font-sans">
+          <p className="text-sm text-white/80">Loading...</p>
+        </main>
+      </TravelShell>
     );
   }
 
   if (view === "kit" && kit) {
     return (
-      <KitView
-        kit={kit}
-        welcome={welcome}
-        activeKits={activeKits}
-        onSwitchKit={handleSwitchKit}
-        onBuildAnother={handleBuildAnother}
-        pollExhausted={pollExhausted}
-      />
+      <TravelShell>
+        <KitView
+          kit={kit}
+          welcome={welcome}
+          activeKits={activeKits}
+          onSwitchKit={handleSwitchKit}
+          onBuildAnother={handleBuildAnother}
+          pollExhausted={pollExhausted}
+        />
+      </TravelShell>
     );
   }
 
@@ -1178,41 +1170,41 @@ function TravelPageContent() {
 
   if (view === "survey") {
     return (
-      <SurveyView
-        step={step}
-        totalSteps={4}
-        destination={destination}
-        setDestination={setDestination}
-        climate={climate}
-        dateMode={dateMode}
-        setDateMode={setDateMode}
-        departureDate={departureDate}
-        setDepartureDate={setDepartureDate}
-        returnDate={returnDate}
-        setReturnDate={setReturnDate}
-        travelMonthInput={travelMonthInput}
-        setTravelMonthInput={setTravelMonthInput}
-        swimming={swimming}
-        setSwimming={setSwimming}
-        protectiveStyle={protectiveStyle}
-        setProtectiveStyle={setProtectiveStyle}
-        hairPriority={hairPriority}
-        setHairPriority={setHairPriority}
-        onNext={() => setStep((s) => Math.min(4, s + 1))}
-        onBack={() => setStep((s) => Math.max(1, s - 1))}
-        onSubmit={handleSurveySubmit}
-        submitting={submitting}
-        submitError={submitError}
-      />
+      <TravelShell>
+        <SurveyView
+          step={step}
+          totalSteps={4}
+          destination={destination}
+          setDestination={setDestination}
+          climate={climate}
+          dateMode={dateMode}
+          setDateMode={setDateMode}
+          departureDate={departureDate}
+          setDepartureDate={setDepartureDate}
+          returnDate={returnDate}
+          setReturnDate={setReturnDate}
+          travelMonthInput={travelMonthInput}
+          setTravelMonthInput={setTravelMonthInput}
+          swimming={swimming}
+          setSwimming={setSwimming}
+          protectiveStyle={protectiveStyle}
+          setProtectiveStyle={setProtectiveStyle}
+          hairPriority={hairPriority}
+          setHairPriority={setHairPriority}
+          onNext={() => setStep((s) => Math.min(4, s + 1))}
+          onBack={() => setStep((s) => Math.max(1, s - 1))}
+          onSubmit={handleSurveySubmit}
+          submitting={submitting}
+          submitError={submitError}
+        />
+      </TravelShell>
     );
   }
 
   return (
-    <LandingView
-      onBuildClick={handleBuildClick}
-      error={landingError}
-      cancelled={paymentStatus === "cancelled"}
-    />
+    <TravelShell>
+      <LandingView onBuildClick={handleBuildClick} error={landingError} />
+    </TravelShell>
   );
 }
 

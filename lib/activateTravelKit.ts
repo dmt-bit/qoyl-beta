@@ -4,25 +4,17 @@ import { generateTravelKitProducts } from "@/lib/travelKitGenerator";
 import { sendTravelKitEmail } from "@/lib/sendTravelKitEmail";
 import { formatTripDatesForNotification } from "@/lib/tripDates";
 
-// Shared by the real Stripe webhook (app/api/stripe/webhook/route.ts)
-// and the admin bypass (app/api/travel-kits/admin-activate/route.ts) -
-// same generation/activation/notification logic either way, so the two
-// paths can't quietly drift apart. `source` only changes what shows up
-// in the internal notification email, not the kit itself.
+// Generates, activates, and emails a travel kit. Called from
+// app/api/travel-kits/generate/route.ts on form submit - travel kits are
+// free, so there is no payment step that gates this anymore.
 export async function activateTravelKit({
   travelKitId,
   userId,
   recipientEmail,
-  stripeSessionId,
-  stripeCustomerId,
-  source,
 }: {
   travelKitId: string;
   userId: string;
   recipientEmail: string | null;
-  stripeSessionId: string | null;
-  stripeCustomerId: string | null;
-  source: "stripe" | "admin_bypass";
 }): Promise<{ ok: boolean }> {
   const admin = getSupabaseAdmin();
 
@@ -52,7 +44,6 @@ export async function activateTravelKit({
     .update({
       status: "active",
       products,
-      stripe_session_id: stripeSessionId,
     })
     .eq("id", travelKitId);
 
@@ -90,19 +81,14 @@ export async function activateTravelKit({
     }
   }
 
-  const subjectPrefix = source === "admin_bypass" ? "[Admin bypass] " : "";
-  const amountLine = source === "admin_bypass" ? "Amount: $0 (admin bypass, no payment)" : "Amount: $2.99";
-
   await sendNotificationEmail(
-    `${subjectPrefix}Travel kit purchased - ${travelKitRow.destination}`,
-    `Travel kit ${source === "admin_bypass" ? "generated via admin bypass (no payment)" : "purchased and generated"} - ${travelKitRow.destination} for ${userId}.
+    `Travel kit generated - ${travelKitRow.destination}`,
+    `Travel kit generated (free) - ${travelKitRow.destination} for ${userId}.
 
 User ID: ${userId}
 Customer email: ${recipientEmail ?? "Unknown"}
 Destination: ${travelKitRow.destination}
 ${formatTripDatesForNotification(travelKitRow.departure_date, travelKitRow.return_date, travelKitRow.travel_month)}
-Stripe customer: ${stripeCustomerId ?? "none"}
-${amountLine}
 
 Curl type: ${travelProfile?.curl_type ?? "Not set"}
 Porosity: ${travelProfile?.porosity ?? "Not set"}

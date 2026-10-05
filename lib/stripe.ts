@@ -16,7 +16,9 @@ export function getStripe(): Stripe {
   return stripeClient;
 }
 
-export type ProductType = "routine_subscription" | "travel_kit";
+// travel_kit is no longer a Stripe product - travel kits are free (see
+// app/api/travel-kits/generate/route.ts), so it was removed from here.
+export type ProductType = "routine_subscription";
 
 export const STRIPE_PRODUCTS: Record<
   ProductType,
@@ -46,16 +48,5 @@ export const STRIPE_PRODUCTS: Record<
     unitAmount: 799,
     currency: "usd",
     priceId: process.env.STRIPE_ROUTINE_PRICE_ID,
-  },
-  travel_kit: {
-    name: "Qoyl Travel Kit",
-    mode: "payment",
-    // $2.99 (was $4.99). This is documentation only -- the actual charge
-    // amount comes from the Stripe Price object STRIPE_TRAVEL_PRICE_ID
-    // points at. MANUAL STEP: create a new $2.99 Price in the Stripe
-    // Dashboard and update STRIPE_TRAVEL_PRICE_ID (Vercel env vars) to it.
-    unitAmount: 299,
-    currency: "usd",
-    priceId: process.env.STRIPE_TRAVEL_PRICE_ID,
   },
 };

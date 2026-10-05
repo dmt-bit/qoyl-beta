@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { activateTravelKit } from "@/lib/activateTravelKit";
 import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendRoutineEmail } from "@/lib/sendRoutineEmail";
@@ -88,40 +87,8 @@ export async function POST(request: Request) {
             : session.customer?.id ?? "none";
         const purchaseTimestamp = new Date().toISOString();
 
-        if (productType === "travel_kit") {
-          const travelKitId = session.metadata?.travel_kit_id;
-
-          if (!travelKitId) {
-            console.error(
-              "checkout.session.completed travel_kit purchase missing travel_kit_id metadata:",
-              session.id
-            );
-          } else {
-            await activateTravelKit({
-              travelKitId,
-              userId,
-              recipientEmail:
-                session.customer_email ?? session.customer_details?.email ?? null,
-              stripeSessionId: session.id,
-              stripeCustomerId: stripeCustomerId === "none" ? null : stripeCustomerId,
-              source: "stripe",
-            });
-
-            // Item 9 - travel kit price is now $2.99 (was $4.99); this
-            // event name pins that so ML training data doesn't need to
-            // join back through Stripe to know which price was in effect.
-            const { error: mlEventError } = await getSupabaseAdmin()
-              .from("ml_events")
-              .insert({
-                event_type: "travel_kit_purchased_299",
-                user_id: userId,
-                metadata: { travel_kit_id: travelKitId, stripe_session_id: session.id },
-              });
-            if (mlEventError) {
-              console.error("Failed to log travel_kit_purchased_299 ml_event:", mlEventError);
-            }
-          }
-        }
+        // Travel kits are free now (generated from /api/travel-kits/generate
+        // on form submit), so there is no travel_kit payment branch here.
 
         if (productType === "routine_subscription") {
           // Anchors the wash-day cycle (see lib/routineCalendar.ts) to

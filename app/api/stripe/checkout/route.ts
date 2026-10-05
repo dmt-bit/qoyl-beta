@@ -7,24 +7,15 @@ export async function POST(request: Request) {
     product_type,
     user_id,
     email,
-    travel_kit_id,
   }: {
     product_type?: ProductType;
     user_id?: string;
     email?: string;
-    travel_kit_id?: string;
   } = body;
 
   if (!product_type || !user_id || !email) {
     return NextResponse.json(
       { error: "product_type, user_id, and email are required." },
-      { status: 400 }
-    );
-  }
-
-  if (product_type === "travel_kit" && !travel_kit_id) {
-    return NextResponse.json(
-      { error: "travel_kit_id is required for travel_kit checkout." },
       { status: 400 }
     );
   }
@@ -49,21 +40,13 @@ export async function POST(request: Request) {
   const origin = request.headers.get("origin") ?? new URL(request.url).origin;
 
   // routine_subscription lands the user on their new routine directly;
-  // travel_kit lands back on /travel showing the kit that was just
-  // generated (see the webhook, which populates travel_kits.products
-  // before this redirect happens); anything else still lands on the
-  // dashboard.
+  // anything else still lands on the dashboard.
   const successUrl =
     product_type === "routine_subscription"
       ? `${origin}/routine?welcome=true`
-      : product_type === "travel_kit"
-      ? `${origin}/travel?kit=${travel_kit_id}&welcome=true`
       : `${origin}/dashboard?payment=success`;
 
-  const cancelUrl =
-    product_type === "travel_kit"
-      ? `${origin}/travel?payment=cancelled`
-      : `${origin}/dashboard?payment=cancelled`;
+  const cancelUrl = `${origin}/dashboard?payment=cancelled`;
 
   try {
     const session = await getStripe().checkout.sessions.create({
@@ -75,7 +58,6 @@ export async function POST(request: Request) {
       metadata: {
         user_id,
         product_type,
-        ...(travel_kit_id ? { travel_kit_id } : {}),
       },
       ...(product.mode === "subscription"
         ? {
