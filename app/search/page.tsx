@@ -293,6 +293,7 @@ function ResultCard({
   colorTreated,
   isProfiled,
   isBrandPartner,
+  onScoreRevealed,
 }: {
   product: Product;
   scoreState: ScoreState | undefined;
@@ -315,6 +316,9 @@ function ResultCard({
   // set rather than a direct join (brand_accounts has no brand_id column
   // and RLS blocks anon reads of it anyway).
   isBrandPartner: boolean;
+  // Fires when a card's score is revealed (opened, and the score is ready) -
+  // the parent logs score_revealed. See the reveal block below.
+  onScoreRevealed?: (score: number) => void;
 }) {
   const matches = scoreState?.status === "done" ? scoreState.result.matches : [];
   const preview = matches.slice(0, 4);
@@ -335,18 +339,21 @@ function ResultCard({
   const containsSulfates =
     scoreState?.status === "done" ? matches.some((m) => isSulfate(m.ingredient_name)) : false;
 
-  // Always-visible glance score (item 3) - "your match" for a profiled
-  // viewer (real per-user score, once scoring finishes), "avg match" for
-  // an anonymous one (catalog_products.average_score, not personalized -
-  // scoreCatalogProducts can't run without a profile at all). Replaces
-  // the old "tap to see compatibility score" gate entirely; tapping the
-  // card now only reveals the ingredient-level breakdown below.
+  // The score is only shown once a card is opened - it's the answer to the
+  // tap, not part of the results list. "your match" for a profiled viewer
+  // (real per-user score), "avg match" for an anonymous one
+  // (catalog_products.average_score, not personalized).
   const displayScore = isProfiled
     ? scoreState?.status === "done"
       ? scoreState.result.normalizedScore
       : null
     : product.averageScore;
   const displayLabel = isProfiled ? "your match" : "avg match";
+
+  useEffect(() => {
+    if (cardExpanded && displayScore !== null) onScoreRevealed?.(displayScore);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardExpanded, displayScore]);
 
   return (
     <li className="border-b border-[#e8e8e8]">
@@ -401,30 +408,26 @@ function ResultCard({
               </div>
             )}
 
-            <div className="mt-1.5">
-              {displayScore !== null ? (
-                <>
-                  <span className="font-mono text-[28px] font-bold leading-none text-dark">
-                    {displayScore}
-                  </span>
-                  <div className="my-1 h-px w-8 bg-[#e8e8e8]" />
-                  <p className="font-mono text-[8px] lowercase text-[#aaa]" style={{ letterSpacing: "0.08em" }}>
-                    {displayLabel}
-                  </p>
-                </>
-              ) : isProfiled && scoreState?.status === "loading" ? (
-                <p className="font-sans text-[10px] text-dark/50">Scoring...</p>
-              ) : isProfiled && scoreState?.status === "error" ? (
-                <p className="font-sans text-[10px] text-red">Couldn&apos;t score this product.</p>
-              ) : (
-                <p className="font-sans text-[10px] text-dark/30">Not yet scored</p>
-              )}
-              {!cardExpanded && (
-                <p className="mt-1 font-sans text-[11px] text-bronze">
-                  Tap for full ingredient breakdown →
-                </p>
-              )}
-            </div>
+            {cardExpanded && (
+              <div className="mt-2">
+                {displayScore !== null ? (
+                  <>
+                    <span
+                      className={`block text-[64px] leading-none ${TIER_CLASSES[scoreTier(displayScore)]}`}
+                    >
+                      {displayScore}
+                    </span>
+                    <p className="mt-1 font-mono text-[9px] lowercase text-[#888]" style={{ letterSpacing: "0.08em" }}>
+                      {displayLabel}
+                    </p>
+                  </>
+                ) : isProfiled && scoreState?.status === "loading" ? (
+                  <p className="font-sans text-[11px] text-dark/50">Scoring...</p>
+                ) : isProfiled && scoreState?.status === "error" ? (
+                  <p className="font-sans text-[11px] text-red">Couldn&apos;t score this product.</p>
+                ) : null}
+              </div>
+            )}
 
             {cardExpanded && tier && scoreState?.status === "done" && productWeight && (
               <>
@@ -442,7 +445,7 @@ function ResultCard({
                   <span
                     className={`inline-block rounded-full px-2 py-0.5 font-sans text-[11px] font-semibold ${TIER_CLASSES[tier]}`}
                   >
-                    {scoreState.result.normalizedScore} · {TIER_LABELS[tier]}
+                    {TIER_LABELS[tier]}
                   </span>
                   {nameKeywordBadgeLabel(scoreState.result) && (
                     <span className="inline-block rounded-full border border-bronze px-2 py-0.5 font-sans text-[9px] font-medium text-bronze2">
@@ -744,12 +747,6 @@ async function fetchAllCatalogProductsWithAverageScore(): Promise<
   return (data ?? []).map((r) => ({ ...r, average_score: null }));
 }
 
-// Dismissible, shown-once explainer for the "avg match" score anonymous
-// visitors see (item 3) - localStorage-gated, one flag shared by every
-// page that shows product cards (main search + brand catalog), since
-// it's explaining the same score concept everywhere.
-const SCORE_EXPLAINER_DISMISSED_KEY = "qoyl_score_explainer_dismissed";
-
 // One-time dismissible strip - "scores are computed from ingredients,
 // not commercial relationships" (see the equivalent statement on the
 // home page's ScoreExplainerSection, and the brand-partner disclosure on
@@ -818,45 +815,6 @@ function UnbiasedScoringStrip() {
   );
 }
 
-function ScoreExplainerBanner() {
-  // Defaults to hidden until the localStorage check resolves, rather than
-  // flashing the banner in on every load before the check runs.
-  const [dismissed, setDismissed] = useState(true);
-  useEffect(() => {
-    try {
-      setDismissed(localStorage.getItem(SCORE_EXPLAINER_DISMISSED_KEY) === "true");
-    } catch {
-      setDismissed(false);
-    }
-  }, []);
-
-  if (dismissed) return null;
-
-  return (
-    <div className="mt-3 flex items-start justify-between gap-3 border border-[#e8e8e8] bg-white px-4 py-2.5">
-      <p className="font-sans text-[12px] font-light leading-relaxed text-[#666]">
-        these scores show how well each product works across all hair types. create a profile to see
-        your personal score.
-      </p>
-      <button
-        type="button"
-        onClick={() => {
-          try {
-            localStorage.setItem(SCORE_EXPLAINER_DISMISSED_KEY, "true");
-          } catch {
-            // Best-effort - if storage is blocked, the banner just
-            // reappears next load, which is a fine fallback.
-          }
-          setDismissed(true);
-        }}
-        aria-label="Dismiss"
-        className="shrink-0 font-sans text-sm leading-none text-dark/40 hover:text-dark"
-      >
-        ×
-      </button>
-    </div>
-  );
-}
 
 // Anonymous/no-profile teaser gate. CSS blur only, per the request: the
 // data is already fetched (not a server-side gate - nothing sensitive to
@@ -1425,8 +1383,6 @@ function BrandCatalogView({
             <p className="mt-6 text-sm text-dark/50">No products in this category yet.</p>
           )}
 
-          {brand && filtered.length > 0 && !isProfiled && <ScoreExplainerBanner />}
-
           {brand && filtered.length > 0 && (
             <>
               <ul className="mt-2">
@@ -1501,17 +1457,6 @@ function BrandCatalogView({
     </main>
   );
 }
-
-// Main search results' blur gate (item 6) has no real session/location to
-// draw a live example from for an anonymous visitor - rotates between a
-// few generic profiles instead, matching the request's "just use a common
-// profile... rotates between a few examples."
-const EXAMPLE_PROFILE_LINES = [
-  "4c high porosity in atlanta",
-  "3b low porosity in denver",
-  "4a medium porosity in houston",
-  "2c fine hair in seattle",
-];
 
 function SearchPageContent() {
   const router = useRouter();
@@ -1766,11 +1711,6 @@ function SearchPageContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, brandsLite]);
 
-  // Picked once per mount, not re-rolled on every render - see
-  // EXAMPLE_PROFILE_LINES above.
-  const [exampleProfileLine] = useState(
-    () => EXAMPLE_PROFILE_LINES[Math.floor(Math.random() * EXAMPLE_PROFILE_LINES.length)]
-  );
 
   const [hasScrolledCategories, setHasScrolledCategories] = useState(false);
   // Weight filter pills, item 6 - "Lightweight"/"Medium"/"Rich" split the
@@ -2024,6 +1964,42 @@ function SearchPageContent() {
     setIngredientsExpanded((prev) => !prev);
   }
 
+  // Engagement logging for the main results list (see lib/mlEvents.ts).
+  // product_tapped fires when a card opens (not when it closes); position
+  // is 1-based within the list as displayed. score_revealed fires from the
+  // card once its score is on screen.
+  function logProductTapped(product: Product, position: number) {
+    logMlEvent("product_tapped", {
+      userId: user?.id ?? null,
+      entityId: product.catalogProductId,
+      entityType: "product",
+      metadata: {
+        source: "search",
+        position,
+        query: query.trim() || null,
+        category: categorySlug || null,
+        curl_type: resolvedCurlType,
+        porosity: resolvedPorosity,
+        had_profile: canSearch,
+      },
+    });
+  }
+
+  function logScoreRevealed(product: Product, score: number) {
+    logMlEvent("score_revealed", {
+      userId: user?.id ?? null,
+      entityId: product.catalogProductId,
+      entityType: "product",
+      metadata: {
+        score,
+        source: "search_tap",
+        product_id: product.catalogProductId,
+        curl_type: resolvedCurlType,
+        porosity: resolvedPorosity,
+      },
+    });
+  }
+
   async function handleManualSubmit(e: React.FormEvent) {
     e.preventDefault();
     setManualScoring(true);
@@ -2119,16 +2095,6 @@ function SearchPageContent() {
   const categorySortedResults = isPureCategoryBrowse
     ? [...results].sort((a, b) => scoreForSort(b) - scoreForSort(a))
     : results;
-
-  const sortLabelCurlType =
-    resolvedCurlType && resolvedCurlType !== "not_sure" ? resolvedCurlType : null;
-  const sortLabelPorosity =
-    resolvedPorosity && resolvedPorosity !== "not_sure" ? `${resolvedPorosity} porosity ` : "";
-  const sortNoticeText = !canSearch
-    ? "sorted by average compatibility"
-    : sortLabelCurlType
-    ? `sorted by match for your ${sortLabelCurlType} ${sortLabelPorosity}hair`
-    : "sorted by compatibility with your hair profile";
 
   let filteredResults =
     weightFilter === "all"
@@ -2247,10 +2213,6 @@ function SearchPageContent() {
           </div>
         </div>
 
-        {isPureCategoryBrowse && (
-          <p className="mt-2 font-mono text-[9px] lowercase text-muted">{sortNoticeText}</p>
-        )}
-
         <input
           type="text"
           value={query}
@@ -2368,8 +2330,6 @@ function SearchPageContent() {
 
         {!loading && results.length > 0 && <UnbiasedScoringStrip />}
 
-        {!loading && results.length > 0 && !canSearch && <ScoreExplainerBanner />}
-
         {!loading && results.length > 0 && (
           <>
             <ul className="mt-2">
@@ -2379,13 +2339,17 @@ function SearchPageContent() {
                   these products match.
                 </p>
               )}
-              {(canSearch ? filteredResults : filteredResults.slice(0, 4)).map((product) => (
+              {(canSearch ? filteredResults : filteredResults.slice(0, 4)).map((product, index) => (
                 <ResultCard
                   key={product.code}
                   product={product}
                   scoreState={scoresByCode[product.code]}
                   cardExpanded={expandedCardCode === product.code}
-                  onToggleCard={() => toggleCard(product.code)}
+                  onToggleCard={() => {
+                    if (expandedCardCode !== product.code) logProductTapped(product, index + 1);
+                    toggleCard(product.code);
+                  }}
+                  onScoreRevealed={(score) => logScoreRevealed(product, score)}
                   ingredientsExpanded={ingredientsExpanded}
                   onToggleIngredients={toggleIngredients}
                   curlType={user ? hairProfile?.curl_type ?? null : localProfileHairInfo?.curl_type ?? null}
@@ -2402,15 +2366,9 @@ function SearchPageContent() {
 
             {!canSearch && filteredResults.length > 4 && (
               <BlurredResultsGroup
-                gateTitle="your scores. not averages."
+                gateTitle="personalized results."
                 gateDescription={
-                  <>
-                    these are average scores across all hair types.
-                    <br />
-                    {exampleProfileLine} scores differently.
-                    <br />
-                    create a free profile to see your exact match.
-                  </>
+                  <>create a free profile to see personalized results — sorted for your specific hair type.</>
                 }
                 placement="search"
                 userId={user?.id}

@@ -7,9 +7,16 @@ create table if not exists ml_events (
   id uuid primary key default gen_random_uuid(),
   event_type text not null,
   user_id uuid references auth.users(id),
+  -- What the event is about (a product, a brand, ...), when there is one.
+  entity_id text,
+  entity_type text,
   metadata jsonb,
   created_at timestamptz not null default now()
 );
+
+-- For a table created before entity_id/entity_type existed.
+alter table ml_events add column if not exists entity_id text;
+alter table ml_events add column if not exists entity_type text;
 
 alter table ml_events enable row level security;
 

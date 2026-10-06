@@ -38,16 +38,29 @@ export type MlEventType =
   // read/dismiss events are client-side taps on the routine page.
   | "routine_flags_generated"
   | "routine_flag_read"
-  | "routine_flag_dismissed";
+  | "routine_flag_dismissed"
+  // Product engagement (search results, see app/search/page.tsx). Taps are
+  // the primary engagement signal; score_revealed marks the moment the
+  // score was shown, so the gap between the two is drop-off on the detail.
+  | "product_tapped"
+  | "score_revealed";
 
 export async function logMlEvent(
   eventType: MlEventType,
-  params: { userId?: string | null; metadata?: Record<string, unknown> } = {}
+  params: {
+    userId?: string | null;
+    // The product/brand/etc. this event is about, when there is one.
+    entityId?: string | null;
+    entityType?: string | null;
+    metadata?: Record<string, unknown>;
+  } = {}
 ): Promise<void> {
   try {
     await supabase.from("ml_events").insert({
       event_type: eventType,
       user_id: params.userId ?? null,
+      entity_id: params.entityId ?? null,
+      entity_type: params.entityType ?? null,
       metadata: params.metadata ?? null,
     });
   } catch (err) {
