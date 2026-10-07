@@ -358,7 +358,7 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
         style={{ width: "0%", background: "rgba(255,255,255,0.7)" }}
       />
 
-      <div className="absolute inset-x-0 bottom-2 z-[60] flex justify-center gap-[5px]">
+      <div className="absolute inset-x-0 bottom-[120px] z-[60] flex justify-center gap-[5px] sm:bottom-[60px]">
         {Array.from({ length: TILE_COUNT }).map((_, i) => (
           <span
             key={i}

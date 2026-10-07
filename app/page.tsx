@@ -2,14 +2,13 @@ import EventStrip, { getNextPublishedEvent } from "@/components/EventStrip";
 import HeroCollage from "@/components/HeroCollage";
 import HomeFooterSection from "@/components/HomeFooterSection";
 import HomeSearchStrip from "@/components/HomeSearchStrip";
-import ReturningUserBar from "@/components/ReturningUserBar";
 import ScoreExplainerSection from "@/components/ScoreExplainerSection";
 import StyleMatchCTAStrip from "@/components/StyleMatchCTAStrip";
 
 export const dynamic = "force-dynamic";
 
 // Video collage hero replacing the old feed-based home page entirely.
-// HeroCollage/HomeSearchStrip/ReturningUserBar are all self-positioning
+// HeroCollage and HomeSearchStrip are self-positioning
 // (fixed, or sized via their own hasEventStrip-aware className) - no
 // extra wrapper/height math needed here. HomeFooterSection (Instagram
 // embed + newsletter + footer links) replaces what used to be "the qoyl
@@ -26,11 +25,14 @@ export default async function Home() {
 
       <HeroCollage hasEventStrip={Boolean(event)} />
       <HomeSearchStrip />
-      <ReturningUserBar />
 
-      <ScoreExplainerSection />
-      <StyleMatchCTAStrip />
-      <HomeFooterSection />
+      {/* The fixed search strip covers 54px above the bottom nav; this keeps
+          the last section scrollable above it on mobile. */}
+      <div className="pb-[54px] sm:pb-0">
+        <ScoreExplainerSection />
+        <StyleMatchCTAStrip />
+        <HomeFooterSection />
+      </div>
     </>
   );
 }

@@ -219,29 +219,10 @@ export default function HomeSearchStrip() {
 
   return (
     <>
-      {/* Mode tabs - sit on top of the strip */}
-      <div className="fixed inset-x-0 bottom-[114px] z-[80] flex h-[22px] items-end gap-5 bg-white px-[14px] sm:bottom-[54px]">
-        {(["ask", "search"] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => {
-              setMode(m);
-              setAnswer(null);
-            }}
-            className={`pb-0.5 font-mono text-[9px] lowercase tracking-[0.08em] ${
-              mode === m ? "border-b-2 border-dark text-dark" : "text-[#888]"
-            }`}
-          >
-            {m === "ask" ? "ask a question" : "search products"}
-          </button>
-        ))}
-      </div>
-
       {/* Suggestion chips (ask mode, focused, empty) */}
       {showChips && (
         <div
-          className="fixed bottom-[140px] left-4 right-4 z-[70] flex gap-1.5 overflow-x-auto sm:bottom-[80px]"
+          className="fixed bottom-[118px] left-4 right-4 z-[70] flex gap-1.5 overflow-x-auto sm:bottom-[58px]"
           style={{ scrollbarWidth: "none" }}
         >
           {suggestions.map((s) => (
@@ -266,7 +247,7 @@ export default function HomeSearchStrip() {
         <div
           role="dialog"
           aria-label="hair question answer"
-          className="fixed inset-x-0 bottom-[140px] z-[79] max-h-[320px] overflow-y-auto border-t border-dark bg-white/[0.97] px-4 py-5 transition-transform duration-300 ease-out sm:bottom-[80px]"
+          className="fixed inset-x-0 bottom-[114px] z-[79] max-h-[320px] overflow-y-auto border-t border-dark bg-white/[0.97] px-4 py-5 transition-transform duration-300 ease-out sm:bottom-[54px]"
           style={{ transform: cardShown ? "translateY(0)" : "translateY(24px)", opacity: cardShown ? 1 : 0 }}
         >
           <button
@@ -300,11 +281,26 @@ export default function HomeSearchStrip() {
         </div>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        className="fixed inset-x-0 bottom-[60px] z-[80] flex h-[54px] items-center gap-2 border-t border-dark bg-white px-[14px] py-[9px] sm:bottom-0"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-      >
+      <div className="fixed inset-x-0 bottom-[60px] z-[80] flex h-[54px] flex-col border-t border-dark bg-white sm:bottom-0">
+      <div className="flex h-[20px] items-end gap-5 px-[14px]">
+        {(["ask", "search"] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => {
+              setMode(m);
+              setAnswer(null);
+            }}
+            className={`font-mono text-[9px] lowercase tracking-[0.08em] ${
+              mode === m ? "border-b-2 border-dark pb-px text-dark" : "pb-[3px] text-[#888]"
+            }`}
+          >
+            {m === "ask" ? "ask a question" : "search products"}
+          </button>
+        ))}
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex h-[34px] items-center gap-2 px-[14px]">
         <div className="relative flex-1">
           <input
             ref={inputRef}
@@ -315,7 +311,7 @@ export default function HomeSearchStrip() {
             onBlur={() => setFocused(false)}
             placeholder={mode === "search" ? "search a product or brand..." : ""}
             disabled={asking}
-            className="w-full appearance-none rounded-none border border-dark bg-white px-[11px] py-[7px] text-dark placeholder:text-[#bbb] focus:outline-none"
+            className="h-[30px] w-full appearance-none rounded-none border border-dark bg-white px-[11px] py-0 text-dark placeholder:text-[#bbb] focus:outline-none"
             style={{ fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif", fontSize: "16px" }}
           />
           {mode === "ask" && !query && (
@@ -349,13 +345,14 @@ export default function HomeSearchStrip() {
         ) : (
           <button
             type="submit"
-            className="shrink-0 whitespace-nowrap bg-dark px-[14px] py-2 text-[11px] font-medium lowercase text-white"
+            className="h-[30px] shrink-0 whitespace-nowrap bg-dark px-[14px] text-[11px] font-medium lowercase text-white"
             style={{ fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif" }}
           >
             {mode === "ask" ? "ask →" : "search →"}
           </button>
         )}
       </form>
+      </div>
     </>
   );
 }
