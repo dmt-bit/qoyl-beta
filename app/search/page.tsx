@@ -4,6 +4,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import { BrandLogo } from "@/components/BrandLogo";
 import AnonymousProfileBanner from "@/components/AnonymousProfileBanner";
 import HairTypeStrip from "@/components/HairTypeStrip";
 import ShopButton from "@/components/ShopButton";
@@ -58,6 +59,9 @@ type Product = {
   code: string;
   name: string;
   brand: string;
+  // Brand page slug and website domain (for the logo), when known.
+  brandSlug?: string | null;
+  brandDomain?: string | null;
   catalogProductId: string;
   imageUrl: string | null;
   categorySlug: string | null;
@@ -75,7 +79,7 @@ type QoylProductRow = {
   name: string;
   barcode: string | null;
   image_url: string | null;
-  catalog_brands: { name: string } | null;
+  catalog_brands: { name: string; slug: string; website_domain: string | null } | null;
   categories: { slug: string } | null;
   price_usd: number | null;
   average_score?: number | null;
@@ -87,7 +91,7 @@ type QoylProductRow = {
 // different schema. Keeping qoyl-beta's consumer catalog on separate
 // tables avoids colliding with that.
 const QOYL_PRODUCT_SELECT_BASE =
-  "id, name, barcode, image_url, catalog_brands(name), categories(slug), price_usd";
+  "id, name, barcode, image_url, catalog_brands(name, slug, website_domain), categories(slug), price_usd";
 
 // catalog_products.average_score doesn't exist until
 // supabase/add_brand_directory.sql has been run - naming it explicitly in
@@ -112,6 +116,8 @@ function toQoylProduct(p: QoylProductRow): Product {
     code: p.id,
     name: p.name,
     brand: p.catalog_brands?.name ?? "Unknown brand",
+    brandSlug: p.catalog_brands?.slug ?? null,
+    brandDomain: p.catalog_brands?.website_domain ?? null,
     catalogProductId: p.id,
     imageUrl: p.image_url,
     categorySlug: p.categories?.slug ?? null,
@@ -388,7 +394,8 @@ function ResultCard({
               <span className="font-sans text-[13px] font-medium text-dark">
                 {product.name}
               </span>
-              <span className="font-sans text-[11px] text-muted">
+              <span className="inline-flex items-center gap-1.5 font-sans text-[11px] text-muted">
+                <BrandLogo brandName={product.brand} domain={product.brandDomain} size={16} />
                 {product.brand}
               </span>
               <span className="shrink-0 rounded-full border border-bronze/40 px-1.5 py-0.5 font-sans text-[8px] font-medium text-bronze2">
@@ -409,6 +416,18 @@ function ResultCard({
 
             {cardExpanded && (
               <div className="mt-2">
+                <div className="mb-3 flex items-center gap-3">
+                  <BrandLogo brandName={product.brand} domain={product.brandDomain} size={48} />
+                  {product.brandSlug && (
+                    <Link
+                      href={`/search?brand=${product.brandSlug}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-mono text-[10px] lowercase text-dark underline underline-offset-2"
+                    >
+                      {product.brand.toLowerCase()} →
+                    </Link>
+                  )}
+                </div>
                 {displayScore !== null ? (
                   <>
                     <span
@@ -695,40 +714,22 @@ type CatalogBrandRow = {
   id: string;
   name: string;
   slug: string;
-  logo_url?: string | null;
-  description?: string | null;
   website?: string | null;
+  website_domain?: string | null;
+  description?: string | null;
 };
 
 type BrandDirectoryEntry = {
   id: string;
   name: string;
   slug: string;
-  logoUrl: string | null;
+  websiteDomain: string | null;
   productCount: number;
   // From catalog_products.average_score, when the migration has run -
   // null otherwise. Only ever shown if a per-user best-match score isn't
   // available (see bestScoreByBrand below).
   avgScore: number | null;
 };
-
-function BrandLogoOrInitial({ name, logoUrl, size = 32 }: { name: string; logoUrl: string | null; size?: number }) {
-  if (logoUrl) {
-    return (
-      <div className="relative shrink-0 overflow-hidden" style={{ width: size, height: size }}>
-        <Image src={logoUrl} alt="" fill sizes={`${size}px`} className="object-contain" />
-      </div>
-    );
-  }
-  return (
-    <div
-      className="flex shrink-0 items-center justify-center bg-dark font-sans font-bold text-white"
-      style={{ width: size, height: size, fontSize: size * 0.44 }}
-    >
-      {name.trim().charAt(0).toUpperCase()}
-    </div>
-  );
-}
 
 function bestMatchTierClass(score: number): string {
   return TIER_CLASSES[scoreTier(score)];
@@ -990,7 +991,7 @@ function BrandDirectoryView({
             id: b.id,
             name: b.name,
             slug: b.slug,
-            logoUrl: b.logo_url ?? null,
+            websiteDomain: b.website_domain ?? null,
             productCount,
             avgScore: agg ? Math.round(agg.sum / agg.n) : null,
           };
@@ -1097,7 +1098,7 @@ function BrandDirectoryView({
                         onClick={() => onSelectBrand(b.slug)}
                         className="group flex w-full items-center gap-4 border-b border-[#f0f0f0] py-3.5 text-left"
                       >
-                        <BrandLogoOrInitial name={b.name} logoUrl={b.logoUrl} />
+                        <BrandLogo brandName={b.name} domain={b.websiteDomain} size={36} />
                         <div className="min-w-0 flex-1">
                           <p className="font-sans text-[14px] font-medium lowercase text-dark">{b.name}</p>
                           <p className="font-mono text-[9px] text-muted">{b.productCount} products</p>
@@ -1311,7 +1312,7 @@ function BrandCatalogView({
           {brand && (
             <div className="mt-4 flex items-start justify-between gap-4 border-b border-dark pb-6">
               <div className="min-w-0">
-                <BrandLogoOrInitial name={brand.name} logoUrl={brand.logo_url ?? null} size={48} />
+                <BrandLogo brandName={brand.name} domain={brand.website_domain ?? null} size={48} />
                 <h1
                   className="mt-3 font-sans text-2xl font-bold lowercase text-dark"
                   style={{ letterSpacing: "-0.8px" }}
