@@ -323,15 +323,15 @@ const STYLE_MATCH_FEATURE_PILLS = ["Tutorials", "Shopping list", "Stylist match"
 function StyleMatchPromoHero() {
   return (
     <div className="relative">
-      <div className="relative h-[380px] w-full overflow-hidden bg-white sm:h-[440px]">
+      <div className="relative h-[470px] w-full overflow-hidden bg-white sm:h-[530px]">
         <Image
           src="https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1791340492/copy_of_pexels-svet-svet-2156448907-35140064.jpg"
           alt=""
           fill
           sizes="100vw"
-          className="object-cover object-top"
+          className="object-cover object-center"
         />
-        {/* Light scrim behind just the wordmark - the headline moved
+  {/* Light scrim behind just the wordmark - the headline moved
             off the photo entirely into the white banner below, so the
             rest of the image stays clean with no overlay/text on it. */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-dark/60 to-transparent" />
