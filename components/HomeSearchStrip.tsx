@@ -222,7 +222,7 @@ export default function HomeSearchStrip() {
       {/* Suggestion chips (ask mode, focused, empty) */}
       {showChips && (
         <div
-          className="fixed bottom-[118px] left-4 right-4 z-[70] flex gap-1.5 overflow-x-auto sm:bottom-[58px]"
+          className="fixed bottom-[calc(118px_+_env(safe-area-inset-bottom))] left-4 right-4 z-[70] flex gap-1.5 overflow-x-auto sm:bottom-[58px]"
           style={{ scrollbarWidth: "none" }}
         >
           {suggestions.map((s) => (
@@ -247,7 +247,7 @@ export default function HomeSearchStrip() {
         <div
           role="dialog"
           aria-label="hair question answer"
-          className="fixed inset-x-0 bottom-[114px] z-[79] max-h-[320px] overflow-y-auto border-t border-dark bg-white/[0.97] px-4 py-5 transition-transform duration-300 ease-out sm:bottom-[54px]"
+          className="fixed inset-x-0 bottom-[calc(114px_+_env(safe-area-inset-bottom))] z-[79] max-h-[320px] overflow-y-auto border-t border-dark bg-white/[0.97] px-4 py-5 transition-transform duration-300 ease-out sm:bottom-[54px]"
           style={{ transform: cardShown ? "translateY(0)" : "translateY(24px)", opacity: cardShown ? 1 : 0 }}
         >
           <button
@@ -281,7 +281,7 @@ export default function HomeSearchStrip() {
         </div>
       )}
 
-      <div className="fixed inset-x-0 bottom-[60px] z-[80] flex h-[54px] flex-col border-t border-dark bg-white sm:bottom-0">
+      <div className="fixed inset-x-0 bottom-[calc(60px_+_env(safe-area-inset-bottom))] z-[80] flex h-[54px] flex-col border-t border-dark bg-white sm:bottom-0">
       <div className="flex h-[20px] items-end gap-5 px-[14px]">
         {(["ask", "search"] as const).map((m) => (
           <button

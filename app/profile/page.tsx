@@ -9,6 +9,7 @@ import Collapse from "@/components/Collapse";
 import ExtensionProfileForm from "@/components/ExtensionProfileForm";
 import HairJourneySection from "@/components/HairJourneySection";
 import HairTypeStrip from "@/components/HairTypeStrip";
+import HomeScreenStep from "@/components/HomeScreenStep";
 import InfoTooltip from "@/components/InfoTooltip";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -869,6 +870,9 @@ function ProfileForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // Set once the profile saves: the home screen step shows first, then
+  // the redirect to this path.
+  const [afterHomeScreen, setAfterHomeScreen] = useState<string | null>(null);
   const [hydratedFromProfileId, setHydratedFromProfileId] = useState<
     string | null
   >(null);
@@ -1055,11 +1059,20 @@ function ProfileForm() {
       if (user) await refreshHairProfile();
       if (searchParams.get("from") === "style-match") {
         logMlEvent("style_match_profile_created", { userId: user?.id ?? null });
-        router.push("/style-match");
+        setAfterHomeScreen("/style-match");
       } else {
-        router.push("/dashboard");
+        setAfterHomeScreen("/dashboard");
       }
     }
+  }
+
+  if (afterHomeScreen) {
+    return (
+      <HomeScreenStep
+        userId={user?.id ?? null}
+        onDone={() => router.push(afterHomeScreen)}
+      />
+    );
   }
 
   if (user && hairProfileLoading) {

@@ -43,7 +43,12 @@ export type MlEventType =
   // the primary engagement signal; score_revealed marks the moment the
   // score was shown, so the gap between the two is drop-off on the detail.
   | "product_tapped"
-  | "score_revealed";
+  | "score_revealed"
+  // Home screen install prompt (profile step, see components/HomeScreenStep.tsx).
+  // added vs skipped shows whether the prompt is working (skip > 70% = rework it).
+  | "home_screen_prompt_shown"
+  | "home_screen_added"
+  | "home_screen_skipped";
 
 export async function logMlEvent(
   eventType: MlEventType,

@@ -275,8 +275,8 @@ function BottomNav({
   return (
     <nav
       data-testid="bottom-nav"
-      className="fixed inset-x-0 bottom-0 z-[100] flex h-[60px] border-t border-[#e8e8e8] bg-[#ffffff] sm:hidden"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      className="fixed inset-x-0 bottom-0 z-[100] flex border-t border-[#e8e8e8] bg-[#ffffff] sm:hidden"
+      style={{ height: "calc(60px + env(safe-area-inset-bottom))", paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <BottomNavTab
         href="/"
@@ -433,7 +433,7 @@ export default function Nav() {
           (feed/search/style match/routine/profile) now lives in
           BottomNav below; the hamburger here is secondary navigation
           (feed filters by hair type, account, learn). */}
-      <div className="flex h-[52px] items-center justify-between px-4 sm:hidden">
+      <div className="flex items-center justify-between px-4 sm:hidden" style={{ height: "calc(52px + env(safe-area-inset-top))", paddingTop: "env(safe-area-inset-top)" }}>
         <Link href="/" className="font-serif text-xl font-bold lowercase text-dark">
           qoyl
         </Link>
@@ -543,7 +543,7 @@ export default function Nav() {
             menuOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          <div className="flex h-[52px] items-center justify-between px-4">
+          <div className="flex items-center justify-between px-4" style={{ height: "calc(52px + env(safe-area-inset-top))", paddingTop: "env(safe-area-inset-top)" }}>
             <Link href="/" onClick={closeMenu} className="font-serif text-xl font-bold lowercase text-dark">
               qoyl
             </Link>
