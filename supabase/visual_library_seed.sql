@@ -54,7 +54,7 @@ INSERT INTO visual_library (image_url, hair_types, categories, mood, card_types)
   ARRAY['post','product','style']
 ),
 (
-  'https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1791340492/copy_of_pexels-svet-svet-2156448907-35140064.jpg',
+  'https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-svet-svet-2156448907-35140064',
   ARRAY['all'],
   ARRAY['lifestyle'],
   'dark_editorial',

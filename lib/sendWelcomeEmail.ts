@@ -41,7 +41,7 @@ export async function sendWelcomeEmail(
 <body style="margin:0;padding:0;background:#ffffff;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
 <div style="max-width:560px;margin:0 auto;background:#ffffff;">
   <div style="position:relative;width:100%;overflow:hidden;">
-    <img src="https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1791340492/copy_of_pexels-svet-svet-2156448907-35140064.jpg" alt="Natural hair" width="560" style="width:100%;height:380px;object-fit:cover;object-position:center 20%;display:block;"/>
+    <img src="https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-svet-svet-2156448907-35140064" alt="Natural hair" width="560" style="width:100%;height:380px;object-fit:cover;object-position:center 20%;display:block;"/>
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom, rgba(14,12,10,0.35) 0%, rgba(14,12,10,0.55) 50%, rgba(14,12,10,0.92) 100%);"></div>
     <div style="position:absolute;top:28px;left:0;right:0;text-align:center;">
       <span style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:32px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">qoyl</span>
