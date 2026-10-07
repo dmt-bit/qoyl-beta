@@ -66,6 +66,9 @@ export type StyleShoppingList = {
   amazonFallback: StaticShoppingItem[];
   fakeHair: FakeHairItem[];
   fakeHairNote: string | null;
+  // "matched to your natural hair color: [color]" - set only when the photo
+  // analysis detected a color and the fake hair section is shown.
+  fakeHairColorNote: string | null;
   fakeHairTip: string | null;
   showFakeHairSection: boolean;
   // Item 4 - preference-specific messaging shown alongside the fake
@@ -1000,7 +1003,13 @@ export async function buildStyleShoppingList(input: {
   // guesses buildTools falls back to otherwise).
   heatRequired?: boolean;
   // Used only for hair seller catalog matching (color blend + pack count).
+  // Prefer the photo-detected natural hair color when known - the profile's
+  // color_type is a color *treatment* type (permanent/highlights/henna/...),
+  // not an actual color word, so it was never a usable match input here.
   detectedColor?: string | null;
+  // Same value, kept separately so the UI note below can show exactly what
+  // was detected rather than whichever fallback produced detectedColor.
+  naturalHairColor?: string | null;
   hairLength?: string | null;
 }): Promise<StyleShoppingList> {
   const categorySlugs = pickCategoriesForStyle(
@@ -1073,6 +1082,10 @@ export async function buildStyleShoppingList(input: {
     amazonFallback,
     fakeHair,
     fakeHairNote: showFakeHairSection ? FAKE_HAIR_NOTE : null,
+    fakeHairColorNote:
+      showFakeHairSection && input.naturalHairColor
+        ? `matched to your natural hair color: ${input.naturalHairColor}`
+        : null,
     fakeHairTip: showFakeHairSection ? FAKE_HAIR_TIP : null,
     showFakeHairSection,
     fakeHairPreferenceNote: showFakeHairSection && preference ? PREFERENCE_NOTE[preference] ?? null : null,

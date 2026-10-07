@@ -36,10 +36,13 @@ export type HairProfile = {
   daily_search_reset_at: string | null;
   style_match_count: number | null;
   hair_addition_preference: string | null;
+  // Set at most once, from the first photo a user uploads to Style Match -
+  // see app/api/style-match/create/route.ts.
+  face_shape: string | null;
 };
 
 const HAIR_PROFILE_COLUMNS =
-  "id, curl_type, porosity, scalp_condition, strand_thickness, zip_code, climate, water_hardness, hair_concerns, first_name, last_name, email, shower_filter, color_treated, color_type, extensions, extension_type, extension_care, budget_range, routine_focus, notes, updated_at, profile_for, age_range, adult_age_range, gender, hair_goals, daily_search_count, daily_search_reset_at, style_match_count, hair_addition_preference";
+  "id, curl_type, porosity, scalp_condition, strand_thickness, zip_code, climate, water_hardness, hair_concerns, first_name, last_name, email, shower_filter, color_treated, color_type, extensions, extension_type, extension_care, budget_range, routine_focus, notes, updated_at, profile_for, age_range, adult_age_range, gender, hair_goals, daily_search_count, daily_search_reset_at, style_match_count, hair_addition_preference, face_shape";
 
 export async function fetchHairProfileByUserId(
   userId: string

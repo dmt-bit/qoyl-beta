@@ -28,6 +28,9 @@ const IMAGE_EXTENSION_BY_MIME: Record<string, string> = {
 // usable directly by the client and stored on style_matches/saved_styles.
 // Best-effort: a failure here must not fail the whole analysis, since
 // the detected style is the important part and image_url is secondary.
+//
+// TODO: evaluate whether to delete the image from storage after analysis.
+// Currently retained for the summary document display.
 async function uploadStyleImage(base64: string, mediaType: string): Promise<string | null> {
   const extension = IMAGE_EXTENSION_BY_MIME[mediaType];
   if (!extension) return null;
@@ -120,7 +123,22 @@ CUTS - identify when the photo shows a haircut rather than a styling technique o
 A cut changes the hair's actual length via scissors, not just how existing length is styled - if what's shown could only be achieved by cutting hair (not detangling/curling/braiding it), this is a cut.
 
 COLOR - note when a color service (not just the cut/style) is part of what's shown:
-color_type options: balayage, highlights, ombre, sombre, single_process, color_melt, money_piece, vivid_color, natural (no color treatment visible)`;
+color_type options: balayage, highlights, ombre, sombre, single_process, color_melt, money_piece, vivid_color, natural (no color treatment visible)
+
+FACE SHAPE DETECTION:
+If a face is clearly visible in the image, identify the face shape:
+- oval: forehead slightly wider than jaw, face length ~1.5x width
+- round: similar width and length, soft curved jawline
+- square: strong jaw, similar width at forehead and jaw
+- heart: wider forehead, narrow chin
+- diamond: narrow forehead and jaw, wide cheekbones
+- oblong: longer than wide, similar width throughout
+If this is an inspiration photo (hair from behind, celebrity photo, or no face visible) return "unknown". Never guess - "unknown" is correct when uncertain.
+
+NATURAL HAIR COLOR:
+Describe the visible hair color in plain language.
+Focus on the natural hair, not extensions or wig color if those are clearly artificial.
+If the person is wearing a wig or extensions, describe what you can see of their natural hair if visible, otherwise null.`;
 
 // Shortened deliberately - fewer/shorter fields means less output for
 // the model to generate, which is a direct, significant chunk of total
@@ -162,6 +180,8 @@ function buildAnalysisInstructions(opts: {
     `"estimated_time": "X hours"`,
     `"difficulty": "beginner/intermediate/advanced"`,
     `"compatible_hair_types": []`,
+    `"face_shape": "oval/round/square/heart/diamond/oblong/unknown - detect from the photo if a face is visible; unknown if no face is visible or confidence is too low"`,
+    `"natural_hair_color": "plain text description (e.g. 'dark brown', 'medium blonde', 'black', 'light auburn') of the person's natural/current hair color - used to match fake hair color to their natural hair - or null if no hair is visible or it can't be determined"`,
   ];
 
   if (opts.colorMatch) {
@@ -189,6 +209,7 @@ type BraidType =
   | "marley-twist"
   | "spring-twist";
 type ApproximateLength = "twa" | "short" | "medium" | "long" | "waist" | "hip";
+type FaceShape = "oval" | "round" | "square" | "heart" | "diamond" | "oblong" | "unknown";
 
 type DetectedStyle = {
   style_name: string;
@@ -211,6 +232,8 @@ type DetectedStyle = {
   estimated_time: string;
   difficulty: string;
   compatible_hair_types: string[];
+  face_shape?: FaceShape | null;
+  natural_hair_color?: string | null;
   detected_color?: string | null;
   hair_type_translation?: string | null;
   image_url?: string | null;

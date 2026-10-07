@@ -65,6 +65,8 @@ type DetectedStyle = {
   difficulty: string;
   compatible_hair_types: string[];
   maintenance_tips?: string;
+  face_shape?: "oval" | "round" | "square" | "heart" | "diamond" | "oblong" | "unknown" | null;
+  natural_hair_color?: string | null;
   detected_color?: string | null;
   hair_type_translation?: string | null;
   image_url?: string | null;
@@ -123,6 +125,8 @@ type StyleRow = {
   estimated_time: string | null;
   difficulty: string | null;
   image_url?: string | null;
+  // Soft ranking signal (see visibleInspoStyles) - empty/missing = universal.
+  face_shapes_flattering?: string[] | null;
   // Resolved once in loadInspoStyles() for any row with no image_url -
   // never re-fetched per render (see lib/visualLibrary.ts).
   fallback_image_url?: string | null;
@@ -881,6 +885,8 @@ function StyleMatchContent() {
             image_url: finalStyle.image_url ?? null,
             detected_style: finalStyle.style_name,
             detected_details: finalStyle,
+            face_shape: finalStyle.face_shape ?? null,
+            natural_hair_color: finalStyle.natural_hair_color ?? null,
             match_mode: "deep",
             color_match: Boolean(colorMatch),
             length_difference: lengthDifference,
@@ -1204,7 +1210,12 @@ function StyleMatchContent() {
           translationToolsNeeded: translation?.tools_needed ?? undefined,
           curlType: curlType || null,
           heatRequired: translation?.heat_required ?? undefined,
-          detectedColor: detected!.detected_color ?? null,
+          // natural_hair_color is the fallback: a real color word from the
+          // photo ("dark brown"), unlike hair_profiles.color_type, which is
+          // a color *treatment* type (permanent/highlights/henna/...), not
+          // an actual color - see lib/styleShoppingList.ts.
+          detectedColor: detected!.detected_color ?? detected!.natural_hair_color ?? null,
+          naturalHairColor: detected!.natural_hair_color ?? null,
           hairLength: detected!.hair_length ?? null,
         });
         if (!cancelled) setShoppingList(list);
@@ -1333,7 +1344,9 @@ function StyleMatchContent() {
     try {
       const { data, error: fetchError } = await supabase
         .from("styles")
-        .select("id, name, slug, description, hair_types_compatible, requires_fake_hair, estimated_time, difficulty, image_url")
+        .select(
+          "id, name, slug, description, hair_types_compatible, requires_fake_hair, estimated_time, difficulty, image_url, face_shapes_flattering"
+        )
         .order("name", { ascending: true });
 
       const rows = !fetchError && data && data.length > 0 ? (data as StyleRow[]) : STATIC_STYLES;
@@ -1377,13 +1390,30 @@ function StyleMatchContent() {
     setFamilyAutoSelected(false);
   }
 
-  const visibleInspoStyles = inspoStyles.filter((s) => {
-    const codes = s.hair_types_compatible ?? [];
-    const familyOk = codes.some((c) => FAMILY_CODES[selectedFamily].includes(c));
-    const vibes = VIBE_TAGS_BY_SLUG[s.slug] ?? [];
-    const vibeOk = selectedVibe === "all" || vibes.includes(selectedVibe);
-    return familyOk && vibeOk;
-  });
+  // Soft rank by face shape, never a filter - a style with no
+  // face_shapes_flattering (or an empty one) is universal and ranks
+  // the same as a match. Array.prototype.sort is stable, so ties keep
+  // their existing (alphabetical, from the query's .order("name")) order.
+  const userFaceShape =
+    hairProfile?.face_shape && hairProfile.face_shape !== "unknown" ? hairProfile.face_shape : null;
+
+  const visibleInspoStyles = inspoStyles
+    .filter((s) => {
+      const codes = s.hair_types_compatible ?? [];
+      const familyOk = codes.some((c) => FAMILY_CODES[selectedFamily].includes(c));
+      const vibes = VIBE_TAGS_BY_SLUG[s.slug] ?? [];
+      const vibeOk = selectedVibe === "all" || vibes.includes(selectedVibe);
+      return familyOk && vibeOk;
+    })
+    .sort((a, b) => {
+      if (!userFaceShape) return 0;
+      const flatters = (s: StyleRow) =>
+        !s.face_shapes_flattering?.length || s.face_shapes_flattering.includes(userFaceShape);
+      const aFlatters = flatters(a);
+      const bFlatters = flatters(b);
+      if (aFlatters === bFlatters) return 0;
+      return aFlatters ? -1 : 1;
+    });
 
   // Tapping an inspo card pre-fills the style name and jumps straight
   // into the same survey every other match goes through, unlike the
@@ -2412,6 +2442,11 @@ function StyleMatchContent() {
                         <p className="mt-1 text-xs text-dark/50">
                           no matched brands yet for this style — generic search shown
                         </p>
+                        {shoppingList.fakeHairColorNote && (
+                          <p className="mt-2 font-mono text-[9px] lowercase text-[#888]">
+                            {shoppingList.fakeHairColorNote}
+                          </p>
+                        )}
                         {shoppingList.fakeHairNote && <p className="mt-3 text-xs text-dark/50">{shoppingList.fakeHairNote}</p>}
                         {shoppingList.fakeHairTip && (
                           <p className="mt-2 text-xs text-bronze2">Tip: {shoppingList.fakeHairTip}</p>

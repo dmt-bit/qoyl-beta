@@ -35,7 +35,7 @@ const SYSTEMS: System[] = [
       {
         type: "p",
         text:
-          "The Vision API prompt is structured to return a JSON object with 18 fields including style_name, style_slug, confidence, alternative_style, face_shape, bang_length, requires_fake_hair, approximate_length, has_color_treatment, style_is_cut, and loc_type. Each field drives a downstream product decision.",
+          "The Vision API prompt is structured to return a JSON object with 20 fields including style_name, confidence, alternative_style, bang_length, requires_fake_hair, approximate_length, has_color_treatment, style_is_cut, loc_type, face_shape (added after an audit of this page's own claims), and natural_hair_color. Each field drives a downstream product decision.",
       },
       {
         type: "callout",
@@ -130,7 +130,7 @@ const SYSTEMS: System[] = [
       {
         type: "p",
         text:
-          "Privacy: the selfie is analyzed in a single API call and never written to storage. The face_shape and natural_hair_color fields are stored on the style_matches row; the image is not.",
+          "The uploaded photo is stored in Supabase Storage, and a public URL is saved to the style_matches row for reference in the summary document. Face shape and natural hair color are extracted from the image and stored as text fields - the image itself is retained for the session summary.",
       },
     ],
   },

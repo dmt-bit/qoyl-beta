@@ -31,11 +31,17 @@ export async function GET(request: Request) {
   if (userId && (!curlType || !hairColor)) {
     const { data: profile } = await admin
       .from("hair_profiles")
-      .select("curl_type, color_type")
+      .select("curl_type, natural_hair_color, color_type")
       .eq("user_id", userId)
       .maybeSingle();
     curlType = curlType ?? profile?.curl_type ?? null;
-    hairColor = hairColor ?? profile?.color_type ?? null;
+    // natural_hair_color (e.g. "dark brown", set from a Style Match photo -
+    // see app/api/style-match/create/route.ts) is an actual color word, the
+    // shape hairColorFamily() below expects. color_type is a color
+    // *treatment* type (permanent/highlights/henna/...), never a color
+    // word, so it was never a usable match input here - kept as the last
+    // resort only in case it was ever hand-entered as a color by mistake.
+    hairColor = hairColor ?? profile?.natural_hair_color ?? profile?.color_type ?? null;
   }
 
   const matches = await matchFakeHairProducts({
