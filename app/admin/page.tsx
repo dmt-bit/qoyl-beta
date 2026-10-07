@@ -14,6 +14,15 @@ type StyleMatchAnalytics = {
   conversion: { rate: number; followedThroughCount: number; totalCount: number };
 };
 
+type HomeScreenStats = {
+  standaloneUsers30d: number;
+  standaloneSessions30d: number;
+  promptedCount: number;
+  addedCount: number;
+  skippedCount: number;
+  installRate: number | null;
+};
+
 const INPUT_CLASS =
   "w-full rounded-lg border border-bronze/40 bg-transparent px-4 py-3 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none";
 
@@ -58,6 +67,7 @@ export default function AdminPage() {
   const [checkingStoredAuth, setCheckingStoredAuth] = useState(true);
 
   const [analytics, setAnalytics] = useState<StyleMatchAnalytics | null>(null);
+  const [homeScreenStats, setHomeScreenStats] = useState<HomeScreenStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -66,9 +76,10 @@ export default function AdminPage() {
     setAuthError(null);
     setLoadError(null);
 
-    const res = await fetch("/api/admin/style-match-analytics", {
-      headers: { "x-admin-password": pw },
-    });
+    const [res, homeScreenRes] = await Promise.all([
+      fetch("/api/admin/style-match-analytics", { headers: { "x-admin-password": pw } }),
+      fetch("/api/admin/home-screen-stats", { headers: { "x-admin-password": pw } }),
+    ]);
 
     setLoading(false);
 
@@ -82,6 +93,7 @@ export default function AdminPage() {
     }
 
     setAnalytics(await res.json());
+    if (homeScreenRes.ok) setHomeScreenStats(await homeScreenRes.json());
     return true;
   }
 
@@ -218,6 +230,44 @@ export default function AdminPage() {
                   emptyLabel="No zip codes on file for matched users yet."
                 />
               </div>
+            </>
+          )}
+        </section>
+
+        <section className="mt-10 mb-8">
+          <h2 className="font-serif text-2xl font-semibold text-dark">Home screen install</h2>
+          <p className="mt-1 text-sm text-dark/60">
+            Proxy metric for installed users - standalone mode is only checked when the app is
+            open, so this undercounts anyone who installed but hasn&apos;t opened it in 30 days.
+          </p>
+
+          {homeScreenStats && (
+            <>
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <StatCard
+                  label="Users launched from home screen this month"
+                  value={homeScreenStats.standaloneUsers30d}
+                />
+                <StatCard label="Total standalone sessions" value={homeScreenStats.standaloneSessions30d} />
+                <StatCard label="Users prompted to install" value={homeScreenStats.promptedCount} />
+                <StatCard label="Tapped 'I added it'" value={homeScreenStats.addedCount} />
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <StatCard label="Skipped" value={homeScreenStats.skippedCount} />
+                <StatCard
+                  label="Install rate (added / prompted)"
+                  value={homeScreenStats.installRate != null ? `${homeScreenStats.installRate}%` : "—"}
+                />
+              </div>
+              {homeScreenStats.installRate != null && (
+                <p className="mt-3 text-xs text-dark/50">
+                  {homeScreenStats.installRate < 15
+                    ? "Under 15% - the prompt copy probably needs work."
+                    : homeScreenStats.installRate > 40
+                    ? "Over 40% - this is working well."
+                    : "Middle of the expected range."}
+                </p>
+              )}
             </>
           )}
         </section>

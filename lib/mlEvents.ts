@@ -44,11 +44,14 @@ export type MlEventType =
   // score was shown, so the gap between the two is drop-off on the detail.
   | "product_tapped"
   | "score_revealed"
-  // Home screen install prompt (profile step, see components/HomeScreenStep.tsx).
+  // Home screen install prompt (login-count triggered, see
+  // components/HomeScreenPrompt.tsx and app/api/home-screen-prompt).
   // added vs skipped shows whether the prompt is working (skip > 70% = rework it).
   | "home_screen_prompt_shown"
   | "home_screen_added"
   | "home_screen_skipped"
+  // Standalone (home screen) app launch - app/api/log-standalone.
+  | "launched_standalone"
   // Time-based feedback survey (components/FeedbackSurveyTrigger.tsx).
   | "feedback_survey_shown";
 

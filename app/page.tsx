@@ -1,6 +1,5 @@
 import EventStrip, { getNextPublishedEvent } from "@/components/EventStrip";
 import HeroCollage from "@/components/HeroCollage";
-import HomeScreenBanner from "@/components/HomeScreenBanner";
 import HomeFooterSection from "@/components/HomeFooterSection";
 import HomeSearchStrip from "@/components/HomeSearchStrip";
 import ScoreExplainerSection from "@/components/ScoreExplainerSection";
@@ -24,7 +23,6 @@ export default async function Home() {
     <>
       {event && <EventStrip event={event} />}
 
-      <HomeScreenBanner />
       <HeroCollage hasEventStrip={Boolean(event)} />
       <HomeSearchStrip />
 
