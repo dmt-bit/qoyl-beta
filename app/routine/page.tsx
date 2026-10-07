@@ -12,6 +12,7 @@ import { ProductWeight, WEIGHT_PILL_CLASSES, weightFitNote, weightPillLabel } fr
 import { WashDay, WashDayType } from "@/lib/routineCalendar";
 import { logMlEvent } from "@/lib/mlEvents";
 import type { RoutineFlag } from "@/lib/routineInteractions";
+import { getRoutineImages } from "@/lib/routineImages";
 import {
   categoryNote,
   getCategoryGuidanceTips,
@@ -1584,49 +1585,33 @@ function UpcomingSection({
   );
 }
 
-// Editorial image break (Parts 5 and 8) - pulls a real visual_library
-// image via the same public bridge MasonryFeed.tsx already uses
-// (getFallbackImage can't be called directly from a "use client" file -
-// it needs the service role). Cleanly renders nothing if no image comes
-// back, rather than an empty placeholder box.
+// Editorial image break between routine sections. The image is chosen by
+// the caller from lib/routineImages.ts (matched to the user's curl type), so
+// this component just lays it out: full width, never wider than the
+// viewport, centered on the top of the photo so faces and hair stay in frame.
+// The label bar sits on the bottom edge as a single line.
 function EditorialImageBreak({
   heightPx,
-  hairTypes,
-  category,
+  imageUrl,
   label,
 }: {
   heightPx: number;
-  hairTypes: string[];
-  category: string;
+  imageUrl: string;
   label: string;
 }) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const hairTypesKey = hairTypes.join(",");
-
-  useEffect(() => {
-    let cancelled = false;
-    const params = new URLSearchParams({ category });
-    if (hairTypesKey) params.set("hair_types", hairTypesKey);
-    fetch(`/api/visual-library/fallback?${params.toString()}`)
-      .then((res) => res.json())
-      .then((json) => {
-        if (!cancelled) setImageUrl(json.url ?? null);
-      })
-      .catch(() => {
-        if (!cancelled) setImageUrl(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [category, hairTypesKey]);
-
-  if (!imageUrl) return null;
-
   return (
-    <div className="relative w-full overflow-hidden border-y border-dark" style={{ height: heightPx }}>
-      <Image src={imageUrl} alt="" fill sizes="100vw" className="object-cover" />
-      <div className="absolute inset-x-0 bottom-0 border-t-[1.5px] border-dark bg-white px-4 py-2">
-        <p className="font-mono text-[9px] lowercase tracking-[0.08em] text-dark">{label}</p>
+    <div
+      className="relative w-full max-w-[100vw] overflow-hidden border-y border-dark"
+      style={{ height: heightPx }}
+    >
+      <Image src={imageUrl} alt="" fill sizes="100vw" className="object-cover object-top" />
+      <div className="absolute inset-x-0 bottom-0 overflow-hidden border-t-[1.5px] border-dark bg-white px-4 py-2">
+        <p
+          className="overflow-hidden text-ellipsis whitespace-nowrap font-mono text-[9px] lowercase text-dark"
+          style={{ letterSpacing: "0.08em" }}
+        >
+          {label}
+        </p>
       </div>
     </div>
   );
@@ -1838,9 +1823,8 @@ function StepsSection({
   return (
     <>
       <EditorialImageBreak
-        heightPx={160}
-        hairTypes={curlLabel ? [curlLabel] : []}
-        category="lifestyle"
+        heightPx={200}
+        imageUrl={getRoutineImages(data.curlType).break1}
         label={`today's steps · ${washTypeShortLabel(selectedWash.washType)}${
           curlLabel ? ` · ${curlLabel}${porosityLabel ? ` ${porosityLabel}` : ""}` : ""
         }`}
@@ -2073,15 +2057,13 @@ function ProductsSection({ data, selectedIso }: { data: RoutineData; selectedIso
   // them in practice; kept as a defensive fallback for the same reason
   // as StepsSection's equivalent.
   const selectedPicks = selectedWash ? getProductsForDay(data, selectedWash) : [];
-  const curlLabel = data.curlType && data.curlType !== "not_sure" ? data.curlType : null;
   const categoryList = selectedPicks.map((p) => (isDailyPick(p) ? p.dailyLabel : p.categoryLabel).toLowerCase()).join(" · ");
 
   return (
     <>
       <EditorialImageBreak
-        heightPx={120}
-        hairTypes={curlLabel ? [curlLabel] : []}
-        category="product"
+        heightPx={140}
+        imageUrl={getRoutineImages(data.curlType).break2}
         label={`your products · today's ${selectedWash ? washTypeShortLabel(selectedWash.washType) : "routine"}`}
       />
       <div id="products" className="w-full border-b border-dark bg-white">
