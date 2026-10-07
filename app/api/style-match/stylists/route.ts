@@ -41,7 +41,10 @@ export async function GET(request: Request) {
     .from("stylist_accounts")
     .select("id, display_name, salon_name, photo_url, booking_url, hair_types_served, services_structured")
     .ilike("city", city)
-    .eq("status", "active");
+    .eq("status", "active")
+    // Dashboard Section 1's toggle (qoyl-business, app/stylist/dashboard) -
+    // a stylist can hide from matching without canceling their subscription.
+    .eq("accepting_new_clients", true);
 
   if (error) {
     console.error("[style-match/stylists] Failed to query stylist_accounts:", error);
