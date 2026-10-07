@@ -211,10 +211,23 @@ export function analyzeRoutineInteractions(
   }
 
   // ---- CHECK 7 - LCO vs LOC order -----------------------------------------
+  // Layering order (leave-in/cream/oil) is a curl-definition technique -
+  // not relevant for straight hair, which has no curl pattern to layer
+  // for (diagnostic audit, 2026-10-07). Straight hair gets its own, much
+  // simpler layering note instead of LCO/LOC.
 
   const hasOil = routineProducts.some((p) => p.category === "oil");
+  const hasHeatProtectant = routineProducts.some((p) => p.category === "heat-protectant");
 
-  if (hasLeaveIn && hasOil && profile.porosity === "high") {
+  if (profile.family === "straight" && hasHeatProtectant) {
+    flags.push({
+      type: "tip",
+      priority: "low",
+      title: "layering order",
+      body: "apply conditioner to ends, then heat protectant or styling product to lengths. straight hair doesn't need the leave-in/cream/oil layering curlier textures use - keeping it simple avoids weighing down fine strands.",
+      affected_products: [],
+    });
+  } else if (hasLeaveIn && hasOil && profile.porosity === "high") {
     flags.push({
       type: "positive",
       priority: "low",
@@ -222,9 +235,7 @@ export function analyzeRoutineInteractions(
       body: "your routine has a leave-in and an oil - ideal for high porosity hair. apply in this order: leave-in first to add moisture, cream to define, oil last to seal. applying oil first blocks the leave-in from absorbing.",
       affected_products: [],
     });
-  }
-
-  if (hasLeaveIn && hasOil && profile.porosity === "low") {
+  } else if (hasLeaveIn && hasOil && profile.porosity === "low") {
     flags.push({
       type: "tip",
       priority: "medium",

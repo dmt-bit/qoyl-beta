@@ -23,12 +23,21 @@ export const PRODUCT_CATEGORIES: ProductCategory[] = [
   { label: "Heat Protectant", slug: "heat-protectant" },
   { label: "Styler", slug: "styler" },
   { label: "Gel", slug: "gel" },
-  { label: "Oil", slug: "oil" },
+  // Renamed from "Oil" (diagnostic audit, 2026-10-07) - the category holds
+  // both heavy butter-forward oils and lightweight shine serums; the old
+  // single-word label read as one undifferentiated bucket. See the filter
+  // note shown alongside it on /search for straight/wavy profiles.
+  { label: "Oils & Serums", slug: "oil" },
   { label: "Curl Cream", slug: "curl-cream" },
   { label: "Mousse", slug: "mousse" },
   { label: "Scalp Treatment", slug: "scalp-treatment" },
   { label: "Treatment", slug: "treatment" },
   { label: "Other", slug: "other" },
+  // New categories (diagnostic audit, 2026-10-07) - see
+  // supabase/straight_hair_scoring_fixes.sql. Straight/wavy hair's two
+  // most common, previously unfilterable needs.
+  { label: "Volumizing", slug: "volumizing" },
+  { label: "Shine & Finishing", slug: "shine-finishing" },
 ];
 
 export const CATEGORY_LABEL_BY_SLUG: Record<string, string> = Object.fromEntries(

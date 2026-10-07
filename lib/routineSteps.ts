@@ -155,7 +155,7 @@ const STRAIGHT_REGULAR: RoutineStepDetail[] = [
   STRAIGHT_CLARIFYING[2],
   step(
     "Style",
-    "Style as desired. For volume: blow dry with round brush or volumizing mousse. For sleek: blow dry with tension downward. For waves: scrunch in texturizing spray while damp and air dry."
+    "Style as desired. For volume: blow dry with round brush or volumizing mousse. For sleek: blow dry with tension downward. For texture: work texturizing spray through damp hair with your fingers and air dry."
   ),
   STRAIGHT_CLARIFYING[4],
 ];
@@ -748,7 +748,7 @@ const REFRESH_MOISTURIZE_STEP: Record<RefreshStepFamily, RoutineStepDetail> = {
 
 const REFRESH_SEAL_ENDS_STEP: RoutineStepDetail = step(
   "Seal your ends",
-  "Apply a small amount of your sealant or oil to your fingertips and work it through your ends - the oldest, driest part of your hair. Ends sealed daily retain length. Ends left dry break off.\n\nFor coily hair: focus on any sections that feel dry or look dull.\nFor wavy/curly: a pea-sized amount of oil or butter on the ends only - more than that will weigh down your wave pattern.\nFor straight hair: one drop of serum or oil on the ends to prevent split ends and add shine.",
+  "Apply a small amount of your sealant or oil to your fingertips and work it through your ends - the oldest, driest part of your hair. Ends sealed daily retain length. Ends left dry break off.\n\nFor coily hair: focus on any sections that feel dry or look dull.\nFor wavy/curly: a pea-sized amount of oil or butter on the ends only - more than that will weigh down your wave pattern.\nFor straight hair: one drop of serum or lightweight oil on the ends to prevent split ends and add shine - butter is the wrong texture for straight ends.",
   null, null, "daily-sealant"
 );
 
@@ -799,7 +799,7 @@ const REFRESH_STYLE_AND_PROTECT_STEP: Record<RefreshStepFamily, RoutineStepDetai
 
 const REFRESH_PROTECT_TONIGHT_STEP: RoutineStepDetail = step(
   "Protect tonight",
-  "Before bed: gather hair into your preferred protective style - pineapple, loose bun, or braids for curly/coily hair. Put on your satin bonnet or sleep on your satin pillowcase.",
+  "Before bed: gather hair into your preferred protective style.\n\nFor coily hair: pineapple, twists, or braids.\nFor wavy/curly: a loose pineapple or braid to preserve your pattern overnight.\nFor straight hair: loosely braid or wrap your hair to reduce tangles and friction overnight - there's no pattern to protect, just length.\n\nSleep on a satin pillowcase or use a loose satin wrap - reduces friction and prevents the frizz and bedhead that shows most visibly overnight.",
   "This single step prevents most overnight breakage and frizz."
 );
 

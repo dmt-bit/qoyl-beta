@@ -1562,6 +1562,7 @@ function SearchPageContent() {
   // pick /routine shows, not something tracked client-side.
   const resolvedCurlType = user ? hairProfile?.curl_type ?? null : localProfileHairInfo?.curl_type ?? null;
   const resolvedPorosity = user ? hairProfile?.porosity ?? null : localProfileHairInfo?.porosity ?? null;
+  const resolvedFamily = curlFamily(resolvedCurlType);
   const isCoilyPreShampooCandidate = ["3c", "4a", "4b", "4c"].includes(resolvedCurlType ?? "");
   const [showPreShampooTip, setShowPreShampooTip] = useState(false);
 
@@ -2078,10 +2079,22 @@ function SearchPageContent() {
     ? [...results].sort((a, b) => scoreForSort(b) - scoreForSort(a))
     : results;
 
+  // A product with zero linked ingredients scores a flat 0 for everyone
+  // (see ScoreResult.hasIngredientData) - that used to rank it dead last
+  // instead of being excluded, which is the wrong behavior (a missing-data
+  // problem, not a bad-product problem). Dropped from results entirely
+  // once we know the real reason for the 0. Anonymous/no-profile visitors
+  // never populate scoresByCode, so this only applies once a real score
+  // has resolved.
+  const resultsWithIngredientData = categorySortedResults.filter((product) => {
+    const state = scoresByCode[product.code];
+    return state?.status !== "done" || state.result.hasIngredientData;
+  });
+
   let filteredResults =
     weightFilter === "all"
-      ? categorySortedResults
-      : categorySortedResults.filter((product) => {
+      ? resultsWithIngredientData
+      : resultsWithIngredientData.filter((product) => {
           const state = scoresByCode[product.code];
           if (state?.status !== "done") return false;
           const w = state.result.productWeight;
@@ -2275,8 +2288,28 @@ function SearchPageContent() {
           categorySlug &&
           query.trim() === "" && (
             <p className="mt-6 text-sm text-dark/70">
-              All {CATEGORY_LABEL_BY_SLUG[categorySlug] ?? categorySlug}s in
-              the Qoyl catalog ({results.length} products)
+              All{" "}
+              {(() => {
+                const label = CATEGORY_LABEL_BY_SLUG[categorySlug] ?? categorySlug;
+                return label.toLowerCase().endsWith("s") ? label : `${label}s`;
+              })()}{" "}
+              in the Qoyl catalog ({results.length} products)
+            </p>
+          )}
+
+        {/* "oil" bundles heavy butter-forward oils with lightweight shine
+            serums - the category average reads low for straight/wavy hair
+            (diagnostic audit, 2026-10-07) even though individual
+            lightweight picks already score well and already sort first.
+            This just explains what's already happening, it doesn't change
+            the sort. */}
+        {!loading &&
+          hasSearched &&
+          categorySlug === "oil" &&
+          query.trim() === "" &&
+          (resolvedFamily === "straight" || resolvedFamily === "wavy") && (
+            <p className="mt-1 font-mono text-[9px] text-[#888]">
+              showing lightweight oils first - sorted for your hair type
             </p>
           )}
 

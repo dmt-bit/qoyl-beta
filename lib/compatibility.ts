@@ -87,6 +87,13 @@ export type ScoreResult = {
   // INCI names of any formaldehyde-releasing preservative present -
   // see applyFormaldehydeReleaserOverride. Empty array (not null) when none.
   formaldehydeReleasersPresent: string[];
+  // False only when the product has zero linked catalog_product_ingredients
+  // rows (see diagnostic audit, 2026-10-07) - normalizedScore is a flat 0
+  // in that case, which used to rank the product dead last rather than
+  // excluding it. Callers that list/sort/filter results should drop a
+  // product with hasIngredientData: false instead of treating 0 as a real
+  // (bad) score - see app/search/page.tsx.
+  hasIngredientData: boolean;
 };
 
 export type IngredientInteraction = {
@@ -362,6 +369,88 @@ export function getWeightModifier(
   if (category && RINSE_OUT_TREATMENT_CATEGORIES.includes(category)) return 0;
   if (!family) return 0; // "not_sure" or unrecognized curl type - no adjustment
   return WEIGHT_MODIFIERS[family][weight];
+}
+
+// ---- Category-level positive bonuses for straight/wavy -----------------
+//
+// Diagnostic audit (2026-10-07) found three missing positive signals for
+// straight/wavy hair: heat protectant and dry shampoo both scored no
+// higher than any other category despite being core, near-daily products
+// for this texture, and the "oil" category's average was dragged down by
+// heavy butter-forward oils even though lightweight shine oils already
+// scored well individually. These are product-level bonuses (same tier
+// as getWeightModifier above - applied once per product, not per
+// ingredient) rather than per-ingredient nudges, since "is this a heat
+// protectant" and "is this oil actually lightweight" are both
+// whole-product judgments.
+//
+// Real INCI names verified against the live ingredients table - Phenyl
+// Trimethicone isn't in the catalog yet, kept here anyway so it starts
+// working the moment it's added rather than needing a second edit.
+const HEAT_PROTECTANT_INGREDIENTS = new Set([
+  "cyclopentasiloxane",
+  "cyclomethicone",
+  "dimethiconol",
+  "phenyl trimethicone",
+  "bis-aminopropyl dimethicone",
+  "amodimethicone",
+  "hydrolyzed wheat protein",
+  "hydrolyzed keratin",
+  "polyquaternium-37",
+  "polyquaternium-11",
+]);
+
+// Real INCI names, not the common names the request listed ("argan oil",
+// "jojoba") - those strings never appear in ingredients.inci_name, so
+// matching on them would silently never fire. The last three mirror
+// LIGHT_OILS below (argan/jojoba/grapeseed by INCI) - duplicated as
+// plain strings rather than referencing that const directly, since it's
+// declared later in this file and this Set is built at module load.
+const LIGHTWEIGHT_OIL_MARKERS = new Set([
+  "cyclopentasiloxane",
+  "isododecane",
+  "c12-15 alkyl benzoate",
+  "caprylic/capric triglyceride",
+  "squalane",
+  "vitis vinifera seed oil", // Grapeseed Oil
+  "simmondsia chinensis seed oil", // Jojoba Oil
+  "argania spinosa kernel oil", // Argan Oil
+]);
+
+export function getCategoryBonusModifier(
+  orderedIngredientNames: string[],
+  family: CurlFamily | null,
+  category: string | null
+): number {
+  if (family !== "straight" && family !== "wavy") return 0;
+
+  let bonus = 0;
+  const lowerNames = orderedIngredientNames.map((n) => n.trim().toLowerCase());
+
+  if (category === "heat-protectant") {
+    // Flat category bonus - heat protectants are correctly formulated for
+    // heat styling regardless of exact formula, and straight/wavy hair
+    // reaches for one nearly every wash day.
+    bonus += 5;
+    if (lowerNames.slice(0, 5).some((n) => HEAT_PROTECTANT_INGREDIENTS.has(n))) {
+      bonus += 8;
+    }
+  }
+
+  if (category === "dry-shampoo") {
+    // Straight hair's flat cuticle lets scalp sebum travel down the shaft
+    // fastest, so dry shampoo is a core product here, not an afterthought -
+    // bigger bonus than wavy, which sheds oil more slowly.
+    bonus += family === "straight" ? 8 : 5;
+  }
+
+  if (category === "oil") {
+    if (lowerNames.slice(0, 3).some((n) => LIGHTWEIGHT_OIL_MARKERS.has(n))) {
+      bonus += family === "straight" ? 5 : 3;
+    }
+  }
+
+  return bonus;
 }
 
 // Exported for reuse by admin tooling (the function-tag score-generation
@@ -1826,6 +1915,7 @@ function resolveScoreResult(
       unscoredIngredientNames: [],
       interactionsDetected: [],
       formaldehydeReleasersPresent: [],
+      hasIngredientData: false,
     };
   }
 
@@ -2015,7 +2105,14 @@ function resolveScoreResult(
     .map((i) => i.inci_name);
   const productWeight = classifyProductWeight(orderedIngredientNames, category ?? "", productName ?? "");
   const weightModifier = getWeightModifier(productWeight, family, category);
-  const scoreBeforeNameKeywords = Math.min(100, Math.max(0, baseScore + weightModifier));
+  // Category bonus - see getCategoryBonusModifier above. Same tier as the
+  // weight modifier (once per product, after aggregation); stacks with it
+  // rather than replacing it.
+  const categoryBonusModifier = getCategoryBonusModifier(orderedIngredientNames, family, category);
+  const scoreBeforeNameKeywords = Math.min(
+    100,
+    Math.max(0, baseScore + weightModifier + categoryBonusModifier)
+  );
 
   // Product-name keyword scoring - a second, independent signal stacked
   // on top of the ingredient score (see getNameKeywordModifiers above).
@@ -2055,6 +2152,7 @@ function resolveScoreResult(
     unscoredIngredientNames,
     interactionsDetected,
     formaldehydeReleasersPresent,
+    hasIngredientData: true,
   };
 }
 
@@ -2078,6 +2176,7 @@ async function scorePositionedIngredients(
         unscoredIngredientNames: [],
         interactionsDetected: [],
         formaldehydeReleasersPresent: [],
+        hasIngredientData: false,
       },
     };
   }

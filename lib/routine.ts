@@ -39,7 +39,7 @@ const STRAIGHT_ROUTINE: RoutineStep[] = [
   {
     title: "4. Style",
     description:
-      "Air dry or diffuse on low heat to preserve whatever natural body and movement your hair has.",
+      "Air dry or blow dry on low heat to preserve whatever natural body and movement your hair has.",
   },
 ];
 
