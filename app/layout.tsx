@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Space_Mono } from "next/font/google";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import FeedbackSurveyTrigger from "@/components/FeedbackSurveyTrigger";
 import { AuthProvider } from "@/lib/auth-context";
 import "./globals.css";
 
@@ -69,6 +70,7 @@ export default function RootLayout({
           <Nav />
           {children}
           <Footer />
+          <FeedbackSurveyTrigger />
         </AuthProvider>
       </body>
     </html>

@@ -48,7 +48,9 @@ export type MlEventType =
   // added vs skipped shows whether the prompt is working (skip > 70% = rework it).
   | "home_screen_prompt_shown"
   | "home_screen_added"
-  | "home_screen_skipped";
+  | "home_screen_skipped"
+  // Time-based feedback survey (components/FeedbackSurveyTrigger.tsx).
+  | "feedback_survey_shown";
 
 export async function logMlEvent(
   eventType: MlEventType,

@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import AnonymousProfileBanner from "@/components/AnonymousProfileBanner";
-import FeedbackSurveyModal from "@/components/FeedbackSurveyModal";
 import HairTypeStrip from "@/components/HairTypeStrip";
 import ShopButton from "@/components/ShopButton";
 import { useAuth } from "@/lib/auth-context";
@@ -1741,31 +1740,14 @@ function SearchPageContent() {
   const [manualScoreResult, setManualScoreResult] = useState<ScoreResult | null>(
     null
   );
-  const [showSurvey, setShowSurvey] = useState(false);
-
   const latestRequestRef = useRef("");
 
-  // Only counts completed searches for signed-in users, and only until
-  // the survey has been submitted or dismissed once - after that
-  // localStorage flag is set, this is a no-op forever.
-  function recordSearchCompletion() {
-    if (!user) return;
-    if (localStorage.getItem("feedback_submitted") === "true") return;
+  // The feedback survey is no longer triggered by search count - it's
+  // time-based, mounted app-wide (components/FeedbackSurveyTrigger.tsx).
 
-    const count =
-      parseInt(localStorage.getItem("product_search_count") ?? "0", 10) + 1;
-    localStorage.setItem("product_search_count", String(count));
-
-    if (count === 2) {
-      setShowSurvey(true);
-    }
-  }
-
-  // Drives AnonymousProfileBanner (item 10) - a separate per-device
-  // counter from product_search_count above, since that one is
-  // signed-in-only and reset by the feedback flag. This one only ever
-  // grows, purely to know when an anonymous visitor has tried the
-  // product enough times (3+) for the profile nudge to be worth showing.
+  // Drives AnonymousProfileBanner (item 10) - a per-device counter for
+  // anonymous visitors, used to know when they've tried the product enough
+  // times (3+) for the profile nudge to be worth showing.
   const [anonSearchCount, setAnonSearchCount] = useState(0);
   useEffect(() => {
     const stored = parseInt(localStorage.getItem("qoyl_anon_search_count") ?? "0", 10);
@@ -1860,7 +1842,6 @@ function SearchPageContent() {
       }
     }
 
-    recordSearchCompletion();
     recordAnonSearchCompletion();
   }
 
@@ -2497,9 +2478,6 @@ function SearchPageContent() {
       </div>
       </div>
 
-      {showSurvey && (
-        <FeedbackSurveyModal onClose={() => setShowSurvey(false)} />
-      )}
     </main>
   );
 }
