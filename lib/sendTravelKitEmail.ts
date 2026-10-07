@@ -12,15 +12,6 @@ const SWIMMING_LABELS: Record<string, string> = {
   multiple: "Multiple (pool + ocean etc)",
 };
 
-const PROTECTIVE_STYLE_LABELS: Record<string, string> = {
-  none: "Wearing natural hair",
-  braids_twists: "Braids or twists",
-  weave_sew_in: "Weave or sew-in",
-  wig: "Wig",
-  locs: "Locs",
-  not_sure: "Not sure yet",
-};
-
 const CLIMATE_LABELS: Record<string, string> = {
   humid: "Humid",
   tropical: "Tropical",
@@ -74,7 +65,9 @@ export type SendTravelKitEmailInput = {
   travelMonth: string | null;
   climate: string | null;
   swimming: string | null;
-  protectiveStyle: string | null;
+  // Human label for the hair situation (e.g. "wig + natural mix") - see
+  // HAIR_SITUATION_LABEL in lib/travelSurvey.ts.
+  hairSituation: string | null;
   products: TravelKitProduct[];
 };
 
@@ -105,9 +98,7 @@ export async function sendTravelKitEmail(
   const contextChips = [
     input.climate ? CLIMATE_LABELS[input.climate] ?? input.climate : null,
     input.swimming ? SWIMMING_LABELS[input.swimming] ?? input.swimming : null,
-    input.protectiveStyle
-      ? PROTECTIVE_STYLE_LABELS[input.protectiveStyle] ?? input.protectiveStyle
-      : null,
+    input.hairSituation,
   ]
     .filter((c): c is string => Boolean(c))
     .join(" &middot; ");

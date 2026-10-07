@@ -26,7 +26,24 @@ export async function POST(request: Request) {
     swimming,
     protective_style,
     hair_priority,
+    trip_length,
+    hair_situation,
+    under_wig,
+    wig_type,
+    wig_adhesive,
+    extension_type,
+    natural_under_extensions,
+    style_age,
+    wash_plan,
+    wash_access,
+    wash_frequency,
   }: Record<string, string | null> = body;
+
+  // Keep only string concerns - the column is text[] and the form only ever
+  // sends known values, but this route is public.
+  const concernList: string[] = Array.isArray(body.concerns)
+    ? (body.concerns as unknown[]).filter((c): c is string => typeof c === "string").slice(0, 10)
+    : [];
 
   console.log("[travel-kits] request body:", JSON.stringify(body));
 
@@ -51,6 +68,18 @@ export async function POST(request: Request) {
       swimming,
       protective_style,
       hair_priority,
+      trip_length,
+      hair_situation,
+      under_wig,
+      wig_type,
+      wig_adhesive,
+      extension_type,
+      natural_under_extensions,
+      style_age,
+      wash_plan,
+      wash_access,
+      wash_frequency,
+      concerns: concernList,
       status: "pending_payment",
     })
     .select("id")

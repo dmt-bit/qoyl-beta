@@ -10,6 +10,25 @@ import { classifyClimateFromDestination } from "@/lib/destinationClimate";
 import type { ClimateZone } from "@/lib/locationFactors";
 import { supabase } from "@/lib/supabase";
 import type { TravelKitProduct } from "@/lib/travelKitGenerator";
+import {
+  EMPTY_SURVEY,
+  HAIR_SITUATION_LABEL,
+  hairSituationComplete,
+  legacyProtectiveStyle,
+  type Concern,
+  type HairSituation,
+  type ExtensionType,
+  type NaturalUnderExtensions,
+  type StyleAge,
+  type TravelSurveyData,
+  type TripLength,
+  type UnderWig,
+  type WashAccess,
+  type WashFrequency,
+  type WashPlan,
+  type WigAdhesive,
+  type WigType,
+} from "@/lib/travelSurvey";
 
 type DateMode = "exact" | "month";
 
@@ -68,22 +87,6 @@ const PROTECTIVE_STYLE_OPTIONS: { value: string; label: string }[] = [
   { value: "wig", label: "Wig" },
   { value: "locs", label: "Locs" },
   { value: "not_sure", label: "Not sure yet" },
-];
-
-const HAIR_PRIORITY_OPTIONS: { value: string; label: string }[] = [
-  { value: "low_maintenance", label: "Low maintenance - keep it simple" },
-  {
-    value: "moisture",
-    label: "Moisture retention - my hair gets dry when I travel",
-  },
-  {
-    value: "definition",
-    label: "Definition and styling - I want my hair to look great",
-  },
-  {
-    value: "scalp_health",
-    label: "Scalp health - focus on keeping my scalp fresh",
-  },
 ];
 
 function labelFor(options: { value: string; label: string }[], value: string | null) {
@@ -302,9 +305,117 @@ function LandingView({
 
 // ---- STATE B: survey ----
 
+// Five steps: destination + dates, trip length, hair situation (with its
+// follow-ups on the same step), water and concerns, review.
+const TOTAL_SURVEY_STEPS = 5;
+
+const TRIP_LENGTH_OPTIONS: { value: TripLength; label: string }[] = [
+  { value: "short", label: "1-3 days" },
+  { value: "week", label: "4-7 days" },
+  { value: "two_weeks", label: "1-2 weeks" },
+  { value: "extended", label: "2+ weeks" },
+];
+
+const HAIR_SITUATION_OPTIONS: { value: HairSituation; label: string; sub: string }[] = [
+  { value: "natural", label: "my natural hair", sub: "styling day to day" },
+  { value: "protective", label: "protective style installed", sub: "braids, twists, or locs already done" },
+  { value: "wig", label: "wig", sub: "bringing one or more wigs" },
+  { value: "extensions", label: "extensions", sub: "clip-ins, tape-ins, or sew-in" },
+  { value: "mix", label: "mix", sub: "wig some days, natural others" },
+];
+
+const UNDER_WIG_OPTIONS: { value: UnderWig; label: string }[] = [
+  { value: "full_hair", label: "full natural hair - I need products for both" },
+  { value: "cornrows", label: "cornrows or braids - minimal" },
+  { value: "minimal", label: "very short or shaved - scalp care only" },
+];
+
+const WIG_TYPE_OPTIONS: { value: WigType; label: string }[] = [
+  { value: "human", label: "human hair" },
+  { value: "synthetic", label: "synthetic" },
+];
+
+const WIG_ADHESIVE_OPTIONS: { value: WigAdhesive; label: string }[] = [
+  { value: "glue", label: "glue or adhesive" },
+  { value: "got2b", label: "got2b or freeze spray" },
+  { value: "grip", label: "wig grip or band - no adhesive" },
+];
+
+const EXTENSION_TYPE_OPTIONS: { value: ExtensionType; label: string }[] = [
+  { value: "clip_in", label: "clip-ins - I remove them nightly" },
+  { value: "permanent", label: "tape-ins or sew-in - permanent for the trip" },
+  { value: "braiding_hair", label: "braiding hair or faux locs already installed" },
+];
+
+const NATURAL_UNDER_EXTENSIONS_OPTIONS: { value: NaturalUnderExtensions; label: string }[] = [
+  { value: "full", label: "full natural hair needing care" },
+  { value: "minimal", label: "low maintenance - minimal needed" },
+];
+
+const STYLE_AGE_OPTIONS: { value: StyleAge; label: string }[] = [
+  { value: "fresh", label: "fresh - just done" },
+  { value: "recent", label: "1-2 weeks ago" },
+  { value: "older", label: "3+ weeks - may need refreshing" },
+];
+
+const WASH_PLAN_OPTIONS: { value: WashPlan; label: string }[] = [
+  { value: "none", label: "no - refresh only" },
+  { value: "once", label: "yes - once" },
+  { value: "multiple", label: "yes - multiple times" },
+];
+
+const WASH_ACCESS_OPTIONS: { value: WashAccess; label: string }[] = [
+  { value: "full", label: "yes - full bathroom" },
+  { value: "limited", label: "limited - hotel sink only" },
+  { value: "minimal", label: "minimal - camping or similar" },
+];
+
+const WASH_FREQUENCY_OPTIONS: { value: WashFrequency; label: string }[] = [
+  { value: "none", label: "not at all - refresh only" },
+  { value: "once", label: "once during the trip" },
+  { value: "regular", label: "every few days" },
+];
+
+const CONCERN_OPTIONS: { value: Concern; label: string }[] = [
+  { value: "humidity", label: "humidity and frizz" },
+  { value: "dry_climate", label: "dry climate - moisture retention" },
+  { value: "color", label: "color protection" },
+  { value: "scalp", label: "scalp concerns" },
+  { value: "activity", label: "heavy sweating or activity" },
+];
+
+const HAIR_SITUATION_REVIEW_LABEL: Record<HairSituation, string> = HAIR_SITUATION_LABEL;
+
+function SubQuestion<T extends string>({
+  title,
+  options,
+  value,
+  onChange,
+}: {
+  title: string;
+  options: { value: T; label: string }[];
+  value: T | null;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="mt-6">
+      <p className="font-serif text-lg text-bronze2">{title}</p>
+      <div className="mt-3 space-y-2.5">
+        {options.map((option) => (
+          <Pill
+            key={option.value}
+            label={option.label}
+            selected={value === option.value}
+            onClick={() => onChange(option.value)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SurveyView({
   step,
-  totalSteps,
   destination,
   setDestination,
   climate,
@@ -316,12 +427,9 @@ function SurveyView({
   setReturnDate,
   travelMonthInput,
   setTravelMonthInput,
-  swimming,
-  setSwimming,
-  protectiveStyle,
-  setProtectiveStyle,
-  hairPriority,
-  setHairPriority,
+  survey,
+  setSurveyField,
+  onToggleConcern,
   onNext,
   onBack,
   onSubmit,
@@ -329,7 +437,6 @@ function SurveyView({
   submitError,
 }: {
   step: number;
-  totalSteps: number;
   destination: string;
   setDestination: (v: string) => void;
   climate: ClimateZone | null;
@@ -341,12 +448,9 @@ function SurveyView({
   setReturnDate: (v: string) => void;
   travelMonthInput: string;
   setTravelMonthInput: (v: string) => void;
-  swimming: string | null;
-  setSwimming: (v: string) => void;
-  protectiveStyle: string | null;
-  setProtectiveStyle: (v: string) => void;
-  hairPriority: string | null;
-  setHairPriority: (v: string) => void;
+  survey: TravelSurveyData;
+  setSurveyField: <K extends keyof TravelSurveyData>(key: K, value: TravelSurveyData[K]) => void;
+  onToggleConcern: (c: Concern) => void;
   onNext: () => void;
   onBack: () => void;
   onSubmit: () => void;
@@ -359,20 +463,20 @@ function SurveyView({
     (dateMode === "exact"
       ? Boolean(departureDate) && Boolean(returnDate) && returnDate >= departureDate
       : Boolean(travelMonthInput));
-  const step2Valid = Boolean(swimming);
-  const step3Valid = Boolean(protectiveStyle) && Boolean(hairPriority);
+  const step2Valid = Boolean(survey.trip_length);
+  const step3Valid = Boolean(survey.hair_situation) && hairSituationComplete(survey);
+  const step4Valid = Boolean(survey.swimming);
+  const stepValid = [step1Valid, step2Valid, step3Valid, step4Valid][step - 1] ?? false;
 
   return (
     <main className="min-h-[100svh] px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-[480px] border border-dark bg-white p-7">
-        <ProgressBar step={step} totalSteps={totalSteps} />
+        <ProgressBar step={step} totalSteps={TOTAL_SURVEY_STEPS} />
 
         <div key={step} className="fade-step mt-8">
           {step === 1 && (
             <div>
-              <h2 className="font-serif text-2xl font-semibold text-dark">
-                Where are you headed?
-              </h2>
+              <h2 className="font-serif text-2xl font-semibold text-dark">Where are you headed?</h2>
               <input
                 type="text"
                 value={destination}
@@ -459,6 +563,127 @@ function SurveyView({
 
           {step === 2 && (
             <div>
+              <h2 className="font-serif text-2xl font-semibold text-dark">How long is your trip?</h2>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                {TRIP_LENGTH_OPTIONS.map((option) => (
+                  <Pill
+                    key={option.value}
+                    label={option.label}
+                    selected={survey.trip_length === option.value}
+                    onClick={() => setSurveyField("trip_length", option.value)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div>
+              <h2 className="font-serif text-2xl font-semibold text-dark">
+                What will your hair be doing on this trip?
+              </h2>
+              <div className="mt-4 space-y-2.5">
+                {HAIR_SITUATION_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setSurveyField("hair_situation", option.value)}
+                    className={`w-full border px-4 py-3 text-left transition-colors ${
+                      survey.hair_situation === option.value
+                        ? "border-bronze bg-bronze text-cream"
+                        : "border-bronze/40 text-dark hover:border-bronze"
+                    }`}
+                  >
+                    <span className="block text-sm font-medium">{option.label}</span>
+                    <span
+                      className={`block text-xs ${
+                        survey.hair_situation === option.value ? "text-cream/80" : "text-dark/60"
+                      }`}
+                    >
+                      {option.sub}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {survey.hair_situation === "wig" && (
+                <div className="fade-step">
+                  <SubQuestion
+                    title="what's under the wig?"
+                    options={UNDER_WIG_OPTIONS}
+                    value={survey.under_wig}
+                    onChange={(v) => setSurveyField("under_wig", v)}
+                  />
+                  <SubQuestion
+                    title="what type of wig?"
+                    options={WIG_TYPE_OPTIONS}
+                    value={survey.wig_type}
+                    onChange={(v) => setSurveyField("wig_type", v)}
+                  />
+                  <SubQuestion
+                    title="how do you secure it?"
+                    options={WIG_ADHESIVE_OPTIONS}
+                    value={survey.wig_adhesive}
+                    onChange={(v) => setSurveyField("wig_adhesive", v)}
+                  />
+                </div>
+              )}
+
+              {survey.hair_situation === "extensions" && (
+                <div className="fade-step">
+                  <SubQuestion
+                    title="what type of extensions?"
+                    options={EXTENSION_TYPE_OPTIONS}
+                    value={survey.extension_type}
+                    onChange={(v) => setSurveyField("extension_type", v)}
+                  />
+                  <SubQuestion
+                    title="what's your natural hair underneath like?"
+                    options={NATURAL_UNDER_EXTENSIONS_OPTIONS}
+                    value={survey.natural_under_extensions}
+                    onChange={(v) => setSurveyField("natural_under_extensions", v)}
+                  />
+                </div>
+              )}
+
+              {survey.hair_situation === "protective" && (
+                <div className="fade-step">
+                  <SubQuestion
+                    title="when was it installed?"
+                    options={STYLE_AGE_OPTIONS}
+                    value={survey.style_age}
+                    onChange={(v) => setSurveyField("style_age", v)}
+                  />
+                  <SubQuestion
+                    title="will you wash it on this trip?"
+                    options={WASH_PLAN_OPTIONS}
+                    value={survey.wash_plan}
+                    onChange={(v) => setSurveyField("wash_plan", v)}
+                  />
+                </div>
+              )}
+
+              {(survey.hair_situation === "natural" || survey.hair_situation === "mix") && (
+                <div className="fade-step">
+                  <SubQuestion
+                    title="will you have washing access?"
+                    options={WASH_ACCESS_OPTIONS}
+                    value={survey.wash_access}
+                    onChange={(v) => setSurveyField("wash_access", v)}
+                  />
+                  <SubQuestion
+                    title="how often will you wash?"
+                    options={WASH_FREQUENCY_OPTIONS}
+                    value={survey.wash_frequency}
+                    onChange={(v) => setSurveyField("wash_frequency", v)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {step === 4 && (
+            <div>
               <h2 className="font-serif text-2xl font-semibold text-dark">
                 Will you be swimming or in water?
               </h2>
@@ -467,74 +692,51 @@ function SurveyView({
                   <Pill
                     key={option.value}
                     label={option.label}
-                    selected={swimming === option.value}
-                    onClick={() => setSwimming(option.value)}
-                  />
-                ))}
-              </div>
-              <p className="mt-4 text-xs text-dark/50">
-                Chlorine, salt water, and minerals affect your hair
-                differently. This helps us include the right protective and
-                clarifying products.
-              </p>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div>
-              <h2 className="font-serif text-2xl font-semibold text-dark">
-                Are you planning a protective style for this trip?
-              </h2>
-              <div className="mt-4 space-y-2.5">
-                {PROTECTIVE_STYLE_OPTIONS.map((option) => (
-                  <Pill
-                    key={option.value}
-                    label={option.label}
-                    selected={protectiveStyle === option.value}
-                    onClick={() => setProtectiveStyle(option.value)}
+                    selected={survey.swimming === option.value}
+                    onClick={() => setSurveyField("swimming", option.value)}
                   />
                 ))}
               </div>
 
-              <h2 className="mt-8 font-serif text-2xl font-semibold text-dark">
-                What&apos;s your hair priority on this trip?
-              </h2>
-              <div className="mt-4 space-y-2.5">
-                {HAIR_PRIORITY_OPTIONS.map((option) => (
+              <p className="mt-8 font-serif text-lg text-bronze2">anything specific to pack for?</p>
+              <p className="mt-1 text-xs text-dark/60">select all that apply</p>
+              <div className="mt-3 space-y-2.5">
+                {CONCERN_OPTIONS.map((option) => (
                   <Pill
                     key={option.value}
                     label={option.label}
-                    selected={hairPriority === option.value}
-                    onClick={() => setHairPriority(option.value)}
+                    selected={survey.concerns.includes(option.value)}
+                    onClick={() => onToggleConcern(option.value)}
                   />
                 ))}
               </div>
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div>
-              <h2 className="font-serif text-2xl font-semibold text-dark">
-                Review your trip
-              </h2>
-              <p className="mt-3 text-sm text-dark/80">
-                Your trip to {destination || "-"} ·{" "}
-                {dateMode === "exact"
-                  ? formatTripDateRange(departureDate || null, returnDate || null, null)
-                  : formatTripDateRange(null, null, travelMonthInput ? formatMonthInputValue(travelMonthInput) : null)}{" "}
-                ·{" "}
-                {CLIMATE_LABELS[climate ?? ""] ?? "-"} ·{" "}
-                {labelFor(SWIMMING_OPTIONS, swimming)} ·{" "}
-                {labelFor(PROTECTIVE_STYLE_OPTIONS, protectiveStyle)}
-              </p>
+              <h2 className="font-serif text-2xl font-semibold text-dark">Review your trip</h2>
+              <div className="mt-4 border border-bronze/40 p-4 text-sm leading-relaxed text-dark/80">
+                <p>
+                  <span className="font-medium text-dark">{destination}</span>
+                  {climate ? ` · ${CLIMATE_LABELS[climate]}` : ""}
+                </p>
+                <p>{labelFor(TRIP_LENGTH_OPTIONS, survey.trip_length)}</p>
+                <p>
+                  {survey.hair_situation ? HAIR_SITUATION_REVIEW_LABEL[survey.hair_situation] : "-"}
+                  {survey.hair_situation === "wig" && survey.wig_type ? ` · ${survey.wig_type} wig` : ""}
+                </p>
+                <p>{labelFor(SWIMMING_OPTIONS, survey.swimming)}</p>
+                {survey.concerns.length > 0 && (
+                  <p>{survey.concerns.map((c) => labelFor(CONCERN_OPTIONS, c)).join(" · ")}</p>
+                )}
+              </div>
               <p className="mt-4 text-sm text-dark/70">
-                Based on your profile and trip details we will build you a
-                personalized list of 5 products. Ready?
+                Based on your profile and trip details we will build you a personalized list of
+                products. Ready?
               </p>
 
-              {submitError && (
-                <p className="mt-4 text-sm text-red">{submitError}</p>
-              )}
+              {submitError && <p className="mt-4 text-sm text-red">{submitError}</p>}
 
               <button
                 type="button"
@@ -548,7 +750,7 @@ function SurveyView({
           )}
         </div>
 
-        {step < 4 && (
+        {step < TOTAL_SURVEY_STEPS && (
           <div className="mt-8 flex items-center justify-between">
             {step > 1 ? (
               <button
@@ -564,18 +766,14 @@ function SurveyView({
             <button
               type="button"
               onClick={onNext}
-              disabled={
-                (step === 1 && !step1Valid) ||
-                (step === 2 && !step2Valid) ||
-                (step === 3 && !step3Valid)
-              }
+              disabled={!stepValid}
               className="bg-bronze px-6 py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
             >
               Next →
             </button>
           </div>
         )}
-        {step === 4 && (
+        {step === TOTAL_SURVEY_STEPS && (
           <div className="mt-6">
             <button
               type="button"
@@ -849,6 +1047,34 @@ function isKitReady(row: Pick<TravelKitRow, "status" | "products"> | null): bool
   return Boolean(row) && row!.status === "active" && row!.products !== null;
 }
 
+// Client side of kit generation: the kit row is the source of truth, so we
+// poll it instead of trusting the generate request to come back. The
+// timeout sits a little above the server's own 25s limit, so the server's
+// 'failed' row usually arrives first.
+const KIT_BUILD_TIMEOUT_MS = 28_000;
+
+type KitBuildOutcome = { status: "active" } | { status: "failed"; message: string };
+
+async function waitForKit(travelKitId: string): Promise<KitBuildOutcome> {
+  const started = Date.now();
+  while (Date.now() - started < KIT_BUILD_TIMEOUT_MS) {
+    await new Promise((resolve) => setTimeout(resolve, KIT_POLL_INTERVAL_MS));
+    const { data } = await supabase
+      .from("travel_kits")
+      .select("status, error_message")
+      .eq("id", travelKitId)
+      .maybeSingle();
+    if (data?.status === "active") return { status: "active" };
+    if (data?.status === "failed") {
+      return { status: "failed", message: data.error_message || "Something went wrong. Please try again." };
+    }
+  }
+  return {
+    status: "failed",
+    message: "This is taking longer than expected. Please try again.",
+  };
+}
+
 function TravelPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -999,9 +1225,7 @@ function TravelPageContent() {
   const [departureDate, setDepartureDate] = useState("");
   const [returnDate, setReturnDate] = useState("");
   const [travelMonthInput, setTravelMonthInput] = useState("");
-  const [swimming, setSwimming] = useState<string | null>(null);
-  const [protectiveStyle, setProtectiveStyle] = useState<string | null>(null);
-  const [hairPriority, setHairPriority] = useState<string | null>(null);
+  const [survey, setSurvey] = useState<TravelSurveyData>(EMPTY_SURVEY);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [pendingKitId, setPendingKitId] = useState<string | null>(null);
@@ -1024,6 +1248,19 @@ function TravelPageContent() {
     return () => clearTimeout(timeoutId);
   }, [destination]);
 
+  function setSurveyField<K extends keyof TravelSurveyData>(key: K, value: TravelSurveyData[K]) {
+    setSurvey((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function toggleConcern(concern: Concern) {
+    setSurvey((prev) => ({
+      ...prev,
+      concerns: prev.concerns.includes(concern)
+        ? prev.concerns.filter((c) => c !== concern)
+        : [...prev.concerns, concern],
+    }));
+  }
+
   function resetSurvey() {
     setStep(1);
     setDestination("");
@@ -1032,9 +1269,7 @@ function TravelPageContent() {
     setDepartureDate("");
     setReturnDate("");
     setTravelMonthInput("");
-    setSwimming(null);
-    setProtectiveStyle(null);
-    setHairPriority(null);
+    setSurvey(EMPTY_SURVEY);
     setSubmitError(null);
     setPendingKitId(null);
   }
@@ -1069,15 +1304,22 @@ function TravelPageContent() {
     setSubmitError(null);
     setSubmitting(true);
 
+    // A failed build clears pendingKitId (see failSurvey), so the next submit
+    // saves a fresh row with the answers as they are now - a retry never
+    // silently reuses an old row with stale answers.
+    const failSurvey = (message: string) => {
+      setSubmitError(message);
+      setSubmitting(false);
+      setPendingKitId(null);
+      setView("survey");
+    };
+
     try {
       let travelKitId = pendingKitId;
 
       if (!travelKitId) {
-        // Single server-side route saves the row (service role client,
-        // never subject to a client RLS session) and sends the admin
-        // notification atomically - see app/api/travel-kits/route.ts.
-        // Awaited, since the returned id is required to generate the
-        // kit below.
+        // Single server-side route saves the row (service role client) and
+        // sends the admin notification - see app/api/travel-kits/route.ts.
         const saveRes = await fetch("/api/travel-kits", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1091,18 +1333,28 @@ function TravelPageContent() {
                 ? formatMonthInputValue(travelMonthInput)
                 : null,
             climate,
-            swimming,
-            protective_style: protectiveStyle,
-            hair_priority: hairPriority,
+            swimming: survey.swimming,
+            // Legacy column, still read by KitView and older email paths.
+            protective_style: legacyProtectiveStyle(survey),
+            hair_priority: null,
+            trip_length: survey.trip_length,
+            hair_situation: survey.hair_situation,
+            under_wig: survey.under_wig,
+            wig_type: survey.wig_type,
+            wig_adhesive: survey.wig_adhesive,
+            extension_type: survey.extension_type,
+            natural_under_extensions: survey.natural_under_extensions,
+            style_age: survey.style_age,
+            wash_plan: survey.wash_plan,
+            wash_access: survey.wash_access,
+            wash_frequency: survey.wash_frequency,
+            concerns: survey.concerns,
           }),
         });
         const saveData = await saveRes.json();
 
         if (!saveRes.ok || !saveData.id) {
-          setSubmitError(
-            saveData.error ?? "Couldn't save your trip details. Please try again."
-          );
-          setSubmitting(false);
+          failSurvey(saveData.error ?? "Couldn't save your trip details. Please try again.");
           return;
         }
 
@@ -1110,32 +1362,40 @@ function TravelPageContent() {
         setPendingKitId(travelKitId);
       }
 
+      if (!travelKitId) throw new Error("No travel kit id after save.");
       setView("generating");
-      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Travel kits are free - generate, activate, and email it right
-      // here. See app/api/travel-kits/generate/route.ts.
-      const generateRes = await fetch("/api/travel-kits/generate", {
+      // Fire the build; the outcome comes from the kit row. The response is
+      // only read for an early failure, so a slow response can't hold the
+      // screen open.
+      const generatePromise = fetch("/api/travel-kits/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ user_id: user.id, travel_kit_id: travelKitId }),
-      });
-      const generateData = await generateRes.json();
+      })
+        .then(async (res) => ({ ok: res.ok, body: await res.json().catch(() => ({})) }))
+        .catch(() => null);
 
-      if (!generateRes.ok) {
-        setSubmitError(
-          generateData.error ?? "Something went wrong. Please try again."
-        );
-        setSubmitting(false);
-        setView("survey");
+      const earlyFailure = generatePromise.then((result) =>
+        result && !result.ok && result.body?.status === "failed"
+          ? (result.body.error as string) ?? "Something went wrong. Please try again."
+          : null
+      );
+
+      const outcome = await Promise.race([
+        waitForKit(travelKitId),
+        earlyFailure.then((message) =>
+          message ? ({ status: "failed", message } as KitBuildOutcome) : new Promise<never>(() => {})
+        ),
+      ]);
+
+      if (outcome.status === "active") {
+        router.push(`/travel?kit=${travelKitId}&welcome=true`);
         return;
       }
-
-      router.push(`/travel?kit=${travelKitId}&welcome=true`);
+      failSurvey(outcome.message);
     } catch {
-      setSubmitError("Couldn't reach the server. Please try again.");
-      setSubmitting(false);
-      setView("survey");
+      failSurvey("Couldn't reach the server. Please try again.");
     }
   }
 
@@ -1173,7 +1433,6 @@ function TravelPageContent() {
       <TravelShell>
         <SurveyView
           step={step}
-          totalSteps={4}
           destination={destination}
           setDestination={setDestination}
           climate={climate}
@@ -1185,13 +1444,10 @@ function TravelPageContent() {
           setReturnDate={setReturnDate}
           travelMonthInput={travelMonthInput}
           setTravelMonthInput={setTravelMonthInput}
-          swimming={swimming}
-          setSwimming={setSwimming}
-          protectiveStyle={protectiveStyle}
-          setProtectiveStyle={setProtectiveStyle}
-          hairPriority={hairPriority}
-          setHairPriority={setHairPriority}
-          onNext={() => setStep((s) => Math.min(4, s + 1))}
+          survey={survey}
+          setSurveyField={setSurveyField}
+          onToggleConcern={toggleConcern}
+          onNext={() => setStep((s) => Math.min(TOTAL_SURVEY_STEPS, s + 1))}
           onBack={() => setStep((s) => Math.max(1, s - 1))}
           onSubmit={handleSurveySubmit}
           submitting={submitting}
