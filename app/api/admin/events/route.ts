@@ -74,6 +74,9 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
+  if (Number.isNaN(new Date(event_date).getTime())) {
+    return NextResponse.json({ error: "Invalid event date." }, { status: 400 });
+  }
 
   const admin = getSupabaseAdmin();
   const slug = await generateUniqueEventSlug(title);

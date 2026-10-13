@@ -202,7 +202,28 @@ export default function EventForm({ password, initialEvent }: { password: string
     if (!values.title.trim()) return setError("Title is required.");
     if (!values.short_description.trim()) return setError("Short description is required.");
     if (!values.description.trim()) return setError("Full description is required.");
-    if (!values.event_date || !values.event_time) return setError("Event date and time are required.");
+
+    // Named per-field rather than one combined message - see the root-
+    // cause note on toIsoDateTime above. The most common real trigger
+    // isn't these two checks (date and time typed into the wrong state
+    // key, or similar) - it's a native <input type="time"> left on a
+    // partially-entered value (hour typed, AM/PM segment never
+    // confirmed), which the browser reports as an empty string even
+    // though the field visually shows something. Naming the field at
+    // least tells the admin which box to look at again.
+    if (!values.event_date && !values.event_time) return setError("Event date and time are required.");
+    if (!values.event_date) return setError("Event date is required.");
+    if (!values.event_time) return setError("Event time is required.");
+
+    // Both fields are non-empty strings, but a native date/time input can
+    // still hand back a value its own Date constructor won't parse (rare,
+    // but toIsoDateTime returning null here would otherwise silently send
+    // event_date: null to the API instead of failing loudly on the form).
+    if (!toIsoDateTime(values.event_date, values.event_time)) {
+      return setError(
+        "Event date/time couldn't be read - re-enter the time (make sure AM/PM is set if your browser shows a 12-hour clock)."
+      );
+    }
 
     setSaving(true);
     const payload = buildPayload(statusOverride);
@@ -339,6 +360,10 @@ export default function EventForm({ password, initialEvent }: { password: string
               className={INPUT_CLASS}
             />
           </div>
+          <p className="font-mono text-[9px] text-muted">
+            if save keeps saying the date/time is required, re-pick the time field - on a 12-hour clock
+            the browser won&apos;t register a value until AM/PM is also set
+          </p>
           <label className="flex items-center gap-2 font-sans text-sm text-dark">
             <input type="checkbox" checked={values.is_virtual} onChange={(e) => set("is_virtual", e.target.checked)} />
             is this a virtual event?

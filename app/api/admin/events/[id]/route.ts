@@ -41,6 +41,18 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (body[field] !== undefined) updates[field] = body[field];
   }
 
+  // event_date is NOT NULL/timestamptz on the real table - the client
+  // (EventForm) already guards against sending null/invalid here, but
+  // this route is reachable independently of that form, and a null or
+  // unparseable value would otherwise surface as a raw Postgres
+  // constraint/type error instead of a clear 400.
+  if ("event_date" in updates) {
+    const parsed = typeof updates.event_date === "string" ? new Date(updates.event_date) : null;
+    if (!parsed || Number.isNaN(parsed.getTime())) {
+      return NextResponse.json({ error: "Invalid event date." }, { status: 400 });
+    }
+  }
+
   // A title change alone never regenerates the slug (that would break a
   // shared/saved link) - the slug only changes when the caller explicitly
   // sends one, which is what re-validates/de-duplicates it here.
