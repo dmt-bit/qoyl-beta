@@ -33,7 +33,18 @@ const TIMEZONES = [
 // fixing this would need a timezone column added to the table.
 function toIsoDateTime(date: string, time: string): string | null {
   if (!date || !time) return null;
-  const d = new Date(`${date}T${time}`);
+  let normalizedTime = time.trim();
+  // Handle 12-hour format like "2:00 PM" or "2:00PM"
+  const match12 = normalizedTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    let hours = parseInt(match12[1], 10);
+    const minutes = match12[2];
+    const meridiem = match12[3].toUpperCase();
+    if (meridiem === "AM" && hours === 12) hours = 0;
+    if (meridiem === "PM" && hours !== 12) hours += 12;
+    normalizedTime = `${String(hours).padStart(2, "0")}:${minutes}`;
+  }
+  const d = new Date(`${date}T${normalizedTime}`);
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 function splitIsoDateTime(iso: string | null): { date: string; time: string } {
@@ -203,26 +214,19 @@ export default function EventForm({ password, initialEvent }: { password: string
     if (!values.short_description.trim()) return setError("Short description is required.");
     if (!values.description.trim()) return setError("Full description is required.");
 
-    // Named per-field rather than one combined message - see the root-
-    // cause note on toIsoDateTime above. The most common real trigger
-    // isn't these two checks (date and time typed into the wrong state
-    // key, or similar) - it's a native <input type="time"> left on a
-    // partially-entered value (hour typed, AM/PM segment never
-    // confirmed), which the browser reports as an empty string even
-    // though the field visually shows something. Naming the field at
-    // least tells the admin which box to look at again.
+    // Named per-field rather than one combined message, so the admin
+    // knows which box to revisit.
     if (!values.event_date && !values.event_time) return setError("Event date and time are required.");
     if (!values.event_date) return setError("Event date is required.");
     if (!values.event_time) return setError("Event time is required.");
 
-    // Both fields are non-empty strings, but a native date/time input can
-    // still hand back a value its own Date constructor won't parse (rare,
-    // but toIsoDateTime returning null here would otherwise silently send
-    // event_date: null to the API instead of failing loudly on the form).
+    // event_time is a free-typed string now (see toIsoDateTime above, and
+    // its format comment on /SECTION 2/) - both fields can be non-empty
+    // and still fail to parse (typo, unsupported format) instead of the
+    // old native-input empty-string case. Catching it here instead of
+    // silently sending event_date: null to the API.
     if (!toIsoDateTime(values.event_date, values.event_time)) {
-      return setError(
-        "Event date/time couldn't be read - re-enter the time (make sure AM/PM is set if your browser shows a 12-hour clock)."
-      );
+      return setError("Event time couldn't be read - use 24-hour format (14:00) or 12-hour with AM/PM (2:00 PM).");
     }
 
     setSaving(true);
@@ -342,14 +346,14 @@ export default function EventForm({ password, initialEvent }: { password: string
         <div className="mt-3 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <input type="date" value={values.event_date} onChange={(e) => set("event_date", e.target.value)} className={INPUT_CLASS} />
-            <input type="time" value={values.event_time} onChange={(e) => set("event_time", e.target.value)} className={INPUT_CLASS} />
+            <input type="text" value={values.event_time} onChange={(e) => set("event_time", e.target.value)} placeholder="e.g. 14:00 or 2:00 PM" className={INPUT_CLASS} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <input
-              type="time"
+              type="text"
               value={values.event_end_time}
               onChange={(e) => set("event_end_time", e.target.value)}
-              placeholder="End time (optional)"
+              placeholder="End time (optional, e.g. 16:00)"
               className={INPUT_CLASS}
             />
             <select value={values.timezone} onChange={(e) => set("timezone", e.target.value)} className={INPUT_CLASS}>
@@ -361,8 +365,7 @@ export default function EventForm({ password, initialEvent }: { password: string
             </select>
           </div>
           <p className="font-mono text-[9px] text-muted">
-            if save keeps saying the date/time is required, re-pick the time field - on a 12-hour clock
-            the browser won&apos;t register a value until AM/PM is also set
+            use 24-hour format (14:00) or 12-hour with AM/PM (2:00 PM)
           </p>
           <label className="flex items-center gap-2 font-sans text-sm text-dark">
             <input type="checkbox" checked={values.is_virtual} onChange={(e) => set("is_virtual", e.target.checked)} />
