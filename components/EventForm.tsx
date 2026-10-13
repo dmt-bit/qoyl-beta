@@ -342,16 +342,9 @@ export default function EventForm({ password, initialEvent }: { password: string
         <div className="mt-3 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <input type="date" value={values.event_date} onChange={(e) => set("event_date", e.target.value)} className={INPUT_CLASS} />
-            <select value={values.timezone} onChange={(e) => set("timezone", e.target.value)} className={INPUT_CLASS}>
-              {TIMEZONES.map((tz) => (
-                <option key={tz.value} value={tz.value}>
-                  {tz.label}
-                </option>
-              ))}
-            </select>
+            <input type="time" value={values.event_time} onChange={(e) => set("event_time", e.target.value)} className={INPUT_CLASS} />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <input type="time" value={values.event_time} onChange={(e) => set("event_time", e.target.value)} className={INPUT_CLASS} />
             <input
               type="time"
               value={values.event_end_time}
@@ -359,6 +352,13 @@ export default function EventForm({ password, initialEvent }: { password: string
               placeholder="End time (optional)"
               className={INPUT_CLASS}
             />
+            <select value={values.timezone} onChange={(e) => set("timezone", e.target.value)} className={INPUT_CLASS}>
+              {TIMEZONES.map((tz) => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                </option>
+              ))}
+            </select>
           </div>
           <p className="font-mono text-[9px] text-muted">
             if save keeps saying the date/time is required, re-pick the time field - on a 12-hour clock
