@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { TABS } from "@/lib/postTabs";
 import { shouldShowRoutineNudge } from "@/lib/routineVisit";
 import { supabase } from "@/lib/supabase";
+import { BOO_EVENT } from "@/lib/boo/config";
 
 const DESKTOP_CENTER_LINKS_BASE = [
   { href: "/style-match", label: "Style Match" },
@@ -15,13 +16,25 @@ const DESKTOP_CENTER_LINKS_BASE = [
   { href: "/how-we-score", label: "How We Score" },
 ];
 
+// Seasonal, self-removing - hides itself the morning after pickup rather
+// than needing a follow-up PR to take it back down. Computed inside the
+// builder function (called on every render) rather than hoisted to a
+// module-level constant, so it still re-evaluates if this tab stays open
+// across the cutoff instant.
+function isBooBasketLive(): boolean {
+  return new Date() <= new Date(BOO_EVENT.navCutoff);
+}
+
 // Routine is free for everyone now - "My Routine" only needs a saved
 // hair profile to be worth showing here (no profile yet keeps it out of
 // the top nav, still reachable via the hamburger menu). Inserted between
 // Style Match and Travel specifically, matching the request.
 function buildDesktopCenterLinks(hasProfile: boolean) {
-  if (!hasProfile) return DESKTOP_CENTER_LINKS_BASE;
-  const [styleMatch, ...rest] = DESKTOP_CENTER_LINKS_BASE;
+  const base = isBooBasketLive()
+    ? [...DESKTOP_CENTER_LINKS_BASE, { href: "/boo", label: "🎃 Boo Basket" }]
+    : DESKTOP_CENTER_LINKS_BASE;
+  if (!hasProfile) return base;
+  const [styleMatch, ...rest] = base;
   return [styleMatch, { href: "/routine", label: "My Routine" }, ...rest];
 }
 
@@ -578,6 +591,9 @@ export default function Nav() {
             onNavigate={closeMenu}
           />
           <MenuLink href="/travel" label="Travel Kit" icon={<SuitcaseIcon size={20} />} onNavigate={closeMenu} />
+          {isBooBasketLive() && (
+            <MenuLink href="/boo" label="🎃 Boo Basket" onNavigate={closeMenu} />
+          )}
 
           <MenuSectionLabel>The Feed</MenuSectionLabel>
           {TABS.map((tab) => (
