@@ -107,6 +107,189 @@ function minisInOrder(familyForSort: CurlFamily | null): string[] {
   return result;
 }
 
+// ---- Basket preview ------------------------------------------------------
+//
+// Asked for in app/boo/page.tsx against a BOO_CONFIG/BasketState/
+// PumpkinBucket shape that doesn't exist in this codebase (config lives
+// in lib/boo/config.ts, state is OrderDraft, there was never a
+// PumpkinBucket to remove). Built here instead, inside BooBuilder.tsx -
+// this is the component that actually owns `draft`/`step`, and
+// app/boo/page.tsx is just the thin auth wrapper around it (see its own
+// file comment). Scrunchies/"treats" (plural, selectable) don't exist
+// either - scrunchies were explicitly removed from this menu earlier,
+// and "treats" is the single candy yes/no toggle - mapped to the
+// closest real field in each case, noted inline below.
+
+const HAIR_TYPE_EMOJI: Record<CurlFamily, string> = {
+  straight: "💁",
+  wavy: "🌊",
+  curly: "🌀",
+  coily: "🧶",
+};
+
+type BasketChip = { key: string; label: string };
+
+function buildBasketChips(draft: OrderDraft, ownFamily: CurlFamily | null): BasketChip[] {
+  const chips: BasketChip[] = [];
+
+  if (draft.location) {
+    const loc = LOCATIONS.find((l) => l.id === draft.location);
+    if (loc) chips.push({ key: `loc-${draft.location}`, label: `📍 ${loc.label}` });
+  }
+
+  // "hairType" isn't a field the user picks directly for themselves -
+  // it's read from their profile (ownFamily) for a "for me" order, or
+  // draft.giftHairType for a gift.
+  const hairTypeForChip = draft.isGift ? draft.giftHairType : ownFamily;
+  if (hairTypeForChip && hairTypeForChip !== "not_sure") {
+    const emoji = HAIR_TYPE_EMOJI[hairTypeForChip as CurlFamily];
+    chips.push({
+      key: `hair-${hairTypeForChip}`,
+      label: `${emoji ?? "💁"} ${hairTypeForChip[0].toUpperCase()}${hairTypeForChip.slice(1)}`,
+    });
+  }
+
+  if (draft.size) {
+    chips.push({ key: `size-${draft.size}`, label: `🧺 ${SIZES[draft.size].label}` });
+  }
+
+  // minis/fullSizeProduct are already real display names in this data
+  // model (not ids into a separate menu lookup), so no extra lookup.
+  for (const mini of draft.minis) {
+    chips.push({ key: `mini-${mini}`, label: `🧴 ${mini.slice(0, 20)}` });
+  }
+  if (draft.fullSizeProduct) {
+    chips.push({ key: `full-${draft.fullSizeProduct}`, label: `✨ ${draft.fullSizeProduct.slice(0, 20)} (full)` });
+  }
+
+  if (draft.bonnetColor) {
+    chips.push({ key: `bonnet-${draft.bonnetColor}`, label: `🎀 ${draft.bonnetColor} bonnet` });
+  }
+
+  const hasBeanie = draft.size === "bigboo" || draft.beanieAddon;
+  if (hasBeanie && draft.beanieColor) {
+    chips.push({ key: `beanie-${draft.beanieColor}`, label: `🧢 ${draft.beanieColor} beanie` });
+  }
+
+  if (draft.tool) {
+    const tool = TOOLS.find((t) => t.val === draft.tool);
+    if (tool) chips.push({ key: `tool-${draft.tool}`, label: `${tool.emoji} ${tool.label}` });
+  }
+
+  // "treatId" (a selectable list) doesn't exist - candy here is the one
+  // yes/no toggle, so it only earns a chip when it's on.
+  if (draft.candy) {
+    chips.push({ key: "candy", label: "🍬 Halloween candy" });
+  }
+
+  return chips.slice(0, 10);
+}
+
+// Cosmetic only - how full the bag SVG below looks, not a real
+// completion gate (goNext()'s stepError() above is still what actually
+// blocks moving on).
+function fillPercentFor(draft: OrderDraft): number {
+  const checks = [Boolean(draft.location), Boolean(draft.size), draft.minis.length >= 2, Boolean(draft.bonnetColor), Boolean(draft.tool)];
+  if (draft.size === "bigboo") checks.push(Boolean(draft.fullSizeProduct), Boolean(draft.beanieColor));
+  else if (draft.beanieAddon) checks.push(Boolean(draft.beanieColor));
+  return checks.filter(Boolean).length / checks.length;
+}
+
+function SatinBagSvg({ fillPercent }: { fillPercent: number }) {
+  const bodyX = 10;
+  const bodyY = 25;
+  const bodyW = 80;
+  const bodyH = 75;
+  const clamped = Math.max(0, Math.min(1, fillPercent));
+  const fillH = bodyH * clamped;
+  const fillY = bodyY + (bodyH - fillH);
+
+  return (
+    <svg viewBox="0 0 100 115" width="100" height="115" className="mx-auto block">
+      <defs>
+        <linearGradient id="booBagGradient" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#f97316" />
+          <stop offset="100%" stopColor="#ea580c" />
+        </linearGradient>
+        <clipPath id="booBagClip">
+          <rect x={bodyX} y={bodyY} width={bodyW} height={bodyH} rx={18} />
+        </clipPath>
+      </defs>
+
+      {/* handles, arcing from the top corners */}
+      <path d="M 25 25 Q 25 5 40 8" fill="none" stroke="#c2410c" strokeWidth={3} strokeLinecap="round" />
+      <path d="M 75 25 Q 75 5 60 8" fill="none" stroke="#c2410c" strokeWidth={3} strokeLinecap="round" />
+
+      {/* body */}
+      <rect x={bodyX} y={bodyY} width={bodyW} height={bodyH} rx={18} fill="url(#booBagGradient)" />
+
+      {/* fill level, clipped to the body shape */}
+      <g clipPath="url(#booBagClip)">
+        <rect x={bodyX} y={fillY} width={bodyW} height={fillH} fill="#fde68a" fillOpacity={0.6} />
+      </g>
+
+      {/* gathered drawstring top - a trapezoid narrower than the body */}
+      <polygon points="30,25 70,25 62,14 38,14" fill="#ea580c" stroke="#c2410c" strokeWidth={1} />
+
+      {/* satin shine, upper-left to lower-right */}
+      <line x1="22" y1="35" x2="45" y2="95" stroke="rgba(255,255,255,0.35)" strokeWidth={6} strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function BasketPreview({
+  draft,
+  ownFamily,
+  step,
+  currentTotal,
+}: {
+  draft: OrderDraft;
+  ownFamily: CurlFamily | null;
+  step: number;
+  currentTotal: number;
+}) {
+  const [open, setOpen] = useState(step >= 2);
+  const chips = useMemo(() => buildBasketChips(draft, ownFamily), [draft, ownFamily]);
+  const fillPercent = fillPercentFor(draft);
+
+  return (
+    <div className="rounded-xl border border-orange-200 bg-white p-4">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center justify-between font-sans text-sm font-medium text-dark md:hidden"
+      >
+        <span>🧺 Your basket ({chips.length} items)</span>
+        <span>{open ? "▴" : "▾"}</span>
+      </button>
+
+      <div className={`${open ? "block" : "hidden"} mt-3 md:mt-0 md:block`}>
+        <SatinBagSvg fillPercent={fillPercent} />
+
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {chips.map((chip) => (
+            <span
+              key={chip.key}
+              className="chip-pop inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2.5 py-1 text-xs font-medium text-dark"
+            >
+              {chip.label}
+            </span>
+          ))}
+        </div>
+
+        {currentTotal > 0 && (
+          <div className="mt-3 border-t border-orange-100 pt-3">
+            <p className="text-lg font-bold text-orange-600">${(currentTotal / 100).toFixed(2)}</p>
+            <p className="text-xs text-gray-400">
+              Reserve for ${(BOO_EVENT.reservationCents / 100).toFixed(0)} now
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ProgressBar({ step }: { step: number }) {
   return (
     <div className="flex items-center gap-1.5">
@@ -161,6 +344,10 @@ export default function BooBuilder({
   const [success, setSuccess] = useState<{ orderIds: string[] } | null>(null);
 
   const ownFamily = useMemo(() => curlFamily(profile?.curl_type ?? null), [profile]);
+  // Running total for the basket currently being built - reuses the
+  // existing priceForDraft (already correct, including the beanie
+  // add-on) rather than a second, separately-maintained formula.
+  const currentTotal = priceForDraft(draft);
   const minisForDraft = useMemo(
     () => minisInOrder(draft.isGift ? (draft.giftHairType === "not_sure" ? null : (draft.giftHairType as CurlFamily | null)) : ownFamily),
     [draft.isGift, draft.giftHairType, ownFamily]
@@ -286,7 +473,7 @@ export default function BooBuilder({
   }
 
   return (
-    <div className="mx-auto max-w-lg pb-16">
+    <div className="mx-auto max-w-2xl pb-16">
       <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">🎃 build your boo basket</h1>
       <p className="mt-1 font-sans text-sm text-dark/60">pickup {BOO_EVENT.pickupDateLabel}</p>
 
@@ -301,6 +488,13 @@ export default function BooBuilder({
       )}
 
       {error && <p className="mt-4 text-sm text-red">{error}</p>}
+
+      <div className="md:grid md:grid-cols-[1fr_288px] md:items-start md:gap-8">
+      <div>
+      {/* Mobile-only collapsible basket preview */}
+      <div className="mt-6 md:hidden">
+        <BasketPreview draft={draft} ownFamily={ownFamily} step={step} currentTotal={currentTotal} />
+      </div>
 
       {/* ---- STEP 1: pickup location ---- */}
       {step === 1 && (
@@ -669,6 +863,13 @@ export default function BooBuilder({
           ← back
         </button>
       )}
+      </div>
+
+      {/* Desktop sticky sidebar - same BasketPreview, always visible */}
+      <div className="sticky top-24 hidden md:block">
+        <BasketPreview draft={draft} ownFamily={ownFamily} step={step} currentTotal={currentTotal} />
+      </div>
+      </div>
     </div>
   );
 }

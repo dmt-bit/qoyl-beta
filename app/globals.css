@@ -373,3 +373,19 @@ html {
     break-inside: avoid;
   }
 }
+
+/* Boo Basket preview chips (app/boo/_components/BooBuilder.tsx) - keyed
+   by value so a changed selection remounts its chip and replays this. */
+@keyframes chip-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.chip-pop {
+  animation: chip-pop 0.2s ease-out forwards;
+}
