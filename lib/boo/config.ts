@@ -91,7 +91,7 @@ export const SIZES: Record<
       "2 minis of your choice",
       "compact mirror + QR sticker",
       "your pick: scalp massager, detangling comb, or satin headband",
-      "golden ticket notice + stylist coupon + BOO5 card",
+      "golden ticket chance (Wash Day on Us) + BOO5 card",
     ],
   },
   bigboo: {
@@ -124,42 +124,45 @@ export const MAX_BASKETS_PER_ORDER = 3;
 // legacy "hair_type" column predates curl_type and isn't selected by
 // lib/hairProfile.ts). "generic" covers no-profile/not_sure users, whose
 // minis aren't re-sorted since there's no family to prefer.
-// Placeholder names - swap for real SKUs before launch.
+// Placeholder names - swap for real SKUs before launch. Exactly 5 per
+// family, type-appropriate only - no curl creams for straight/wavy, no
+// dry shampoo for coily, etc. Once a family is known, minisInOrder()
+// below returns just that family's 5 - no cross-family padding.
 export const MINIS_BY_HAIR_TYPE: Record<CurlFamily | "generic", string[]> = {
   straight: [
+    "Fine Hair Dry Shampoo",
     "Weightless Shine Serum",
     "Volumizing Root Lift Spray",
     "Silk Press Heat Protectant",
     "Clarifying Scalp Scrub",
-    "Fine Hair Dry Shampoo",
   ],
   wavy: [
-    "Wave Enhancing Mousse",
     "Sea Salt Texture Spray",
-    "Frizz-Free Curl Refresher",
+    "Wave Enhancing Mousse",
     "Lightweight Leave-In Mist",
+    "Frizz-Free Curl Refresher",
     "Beach Wave Styling Cream",
   ],
   curly: [
     "Curl Defining Custard",
-    "Moisture Bomb Leave-In Conditioner",
     "Slip Detangling Conditioner",
-    "Curl Refreshing Spray",
+    "Moisture Bomb Leave-In Conditioner",
     "Anti-Frizz Styling Gel",
+    "Curl Refreshing Spray",
   ],
   coily: [
     "Deep Moisture Hair Butter",
-    "Edge Control & Hold Gel",
-    "Protective Style Refresher Spray",
-    "Scalp Soothing Oil Blend",
     "Twist & Define Cream",
+    "Edge Control & Hold Gel",
+    "Scalp Soothing Oil Blend",
+    "Protective Style Refresher Spray",
   ],
   generic: [
-    "Moisture Bomb Leave-In Conditioner",
-    "Lightweight Daily Conditioner",
-    "All-Hair-Types Styling Cream",
     "Nourishing Hair Oil Blend",
     "Gentle Clarifying Shampoo",
+    "Lightweight Daily Conditioner",
+    "Moisture Bomb Leave-In Conditioner",
+    "All-Hair-Types Styling Cream",
   ],
 };
 

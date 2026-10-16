@@ -78,31 +78,25 @@ function priceForDraft(draft: OrderDraft): number {
   return cents;
 }
 
-// Full ordered mini catalog with the relevant hair-type family's picks
-// first (see MINIS_BY_HAIR_TYPE's comment on why this is CurlFamily, not
-// a literal "hair_type" column). familyForSort is the signed-in user's
-// own family for a "for me" order, or the gift recipient's stated hair
-// type for a gift order - null (no profile/not_sure/no selection yet)
-// falls back to the unsorted generic pool order.
+// Each family's list is now its own tight, type-appropriate 5 (see
+// lib/boo/config.ts) rather than a shared cross-family pool - no more
+// padding with irrelevant products once a family is known. familyForSort
+// is the signed-in user's own family for a "for me" order, or the gift
+// recipient's stated hair type for a gift order - null (no profile/
+// not_sure/no selection yet) is the only case that still needs a
+// combined list, since there's no family to narrow to.
 function minisInOrder(familyForSort: CurlFamily | null): string[] {
+  if (familyForSort) return MINIS_BY_HAIR_TYPE[familyForSort];
   const families: CurlFamily[] = ["straight", "wavy", "curly", "coily"];
-  const ordered = familyForSort
-    ? [familyForSort, ...families.filter((f) => f !== familyForSort)]
-    : families;
   const seen = new Set<string>();
-  const result: string[] = [];
-  for (const family of ordered) {
+  const result: string[] = [...MINIS_BY_HAIR_TYPE.generic];
+  result.forEach((n) => seen.add(n));
+  for (const family of families) {
     for (const name of MINIS_BY_HAIR_TYPE[family]) {
       if (!seen.has(name)) {
         seen.add(name);
         result.push(name);
       }
-    }
-  }
-  for (const name of MINIS_BY_HAIR_TYPE.generic) {
-    if (!seen.has(name)) {
-      seen.add(name);
-      result.push(name);
     }
   }
   return result;
@@ -163,10 +157,15 @@ export default function BooBuilder({
   const [bonnetColorExpanded, setBonnetColorExpanded] = useState(false);
 
   const ownFamily = useMemo(() => curlFamily(profile?.curl_type ?? null), [profile]);
-  const minisForDraft = useMemo(
-    () => minisInOrder(draft.isGift ? (draft.giftHairType === "not_sure" ? null : (draft.giftHairType as CurlFamily | null)) : ownFamily),
-    [draft.isGift, draft.giftHairType, ownFamily]
-  );
+  // The resolved family actually driving this basket's mini selection -
+  // the signed-in user's own for "for me", the stated recipient's for a
+  // gift. Used both to pick/sort minis and for step 4's contextual note.
+  const familyForDraft: CurlFamily | null = draft.isGift
+    ? draft.giftHairType !== "not_sure" && draft.giftHairType
+      ? (draft.giftHairType as CurlFamily)
+      : null
+    : ownFamily;
+  const minisForDraft = useMemo(() => minisInOrder(familyForDraft), [familyForDraft]);
 
   function set<K extends keyof OrderDraft>(key: K, value: OrderDraft[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -394,6 +393,11 @@ export default function BooBuilder({
       {/* ---- STEP 4: products (minis / extra minis / full-size) ---- */}
       {step === 4 && (
         <section className="mt-6 space-y-4">
+          {familyForDraft && (
+            <p className="mb-3 font-sans text-xs text-dark/60">
+              showing products scored highest for {familyForDraft} hair — curated for Chicago&apos;s fall climate.
+            </p>
+          )}
           <div>
             <p className={SECTION_LABEL_CLASS}>pick 2 minis ({draft.minis.length}/2)</p>
             <div className="mt-2 grid grid-cols-1 gap-2">
@@ -553,8 +557,13 @@ export default function BooBuilder({
           <div className="rounded-xl border border-bronze/30 bg-bronze/5 p-4">
             <p className={SECTION_LABEL_CLASS}>in every basket</p>
             <ul className="mt-2 space-y-1">
-              <li className="font-sans text-sm text-dark">Golden ticket notice</li>
-              <li className="font-sans text-sm text-dark">Stylist coupon</li>
+              {/* Replaces the old separate "Golden ticket notice"/
+                  "Stylist coupon" lines - this one line already names
+                  the prize the stylist coupon was referring to, so
+                  keeping both would just repeat "stylist" twice. */}
+              <li className="font-sans text-sm text-dark">
+                Wash Day on Us — 3 lucky baskets include a $75 stylist credit. You won&apos;t know until you open it.
+              </li>
               <li className="font-sans text-sm text-dark">BOO5 discount card</li>
             </ul>
           </div>
