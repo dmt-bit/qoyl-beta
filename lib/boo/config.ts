@@ -77,11 +77,11 @@ export const SIZES: Record<
     totalCents: 4500,
     remainderCents: 3000,
     includes: [
-      "satin drawstring bag",
-      "satin bonnet - your color",
-      "2 minis for your hair type",
-      "compact mirror",
-      "your pick of scalp massager, detangling comb, or satin headband",
+      "satin bonnet — black or your color",
+      "2 minis of your choice",
+      "compact mirror + QR sticker",
+      "your pick: scalp massager, detangling comb, or satin headband",
+      "golden ticket notice + stylist coupon + BOO5 card",
     ],
   },
   bigboo: {
