@@ -9,6 +9,7 @@ import {
   BEANIE_COLORS,
   BONNET_COLORS,
   BOO_EVENT,
+  BOO_STRIPE_PAYMENT_LINK,
   EXTRA_MINI_MAX,
   EXTRA_MINI_PRICE_CENTS,
   GIFT_HAIR_TYPE_OPTIONS,
@@ -154,11 +155,8 @@ export default function BooBuilder({
   const [completedBaskets, setCompletedBaskets] = useState<OrderDraft[]>([]);
   const [draft, setDraft] = useState<OrderDraft>(emptyDraft());
   const [step, setStep] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<"auto_charge" | "tap_to_pay" | null>(null);
-  const [guestEmail, setGuestEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<{ orderIds: string[] } | null>(null);
   // Step 5's bonnet choice: whether the non-black swatches are expanded.
   // Not part of OrderDraft - stepError only ever needs to know whether
   // draft.bonnetColor is set, not which UI path got it there.
@@ -227,8 +225,6 @@ export default function BooBuilder({
   async function reserve() {
     const err = stepError();
     if (err) return setError(err);
-    if (!paymentMethod) return setError("Pick a payment method.");
-    if (!userId && !guestEmail.trim()) return setError("Enter an email so we can reach you about pickup.");
 
     setError(null);
     setSubmitting(true);
@@ -236,7 +232,6 @@ export default function BooBuilder({
     const allBaskets = [...completedBaskets, draft];
     const orders = allBaskets.map((b) => ({
       user_id: userId,
-      guest_email: userId ? null : guestEmail.trim(),
       size: b.size as SizeId,
       size_price_cents: priceForDraft(b),
       location: b.location as BooLocationId,
@@ -258,37 +253,27 @@ export default function BooBuilder({
     const res = await fetch("/api/boo/reserve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orders, paymentMethod }),
+      body: JSON.stringify({ orders }),
     });
     const data = await res.json();
-    setSubmitting(false);
 
     if (!res.ok) {
+      setSubmitting(false);
       setError(data.error ?? "Failed to reserve. Try again.");
       return;
     }
-    setSuccess({ orderIds: data.orderIds ?? [] });
+
+    // Hosted Stripe Payment Link, not a PaymentIntent - no client secret
+    // to confirm client-side, just a redirect. client_reference_id is a
+    // single opaque string Stripe echoes back on its webhook/session;
+    // joined with commas since one submission can cover up to
+    // MAX_BASKETS_PER_ORDER boo_orders rows at once.
+    const orderIds: string[] = data.orderIds ?? [];
+    window.location.href = `${BOO_STRIPE_PAYMENT_LINK}?client_reference_id=${encodeURIComponent(orderIds.join(","))}`;
   }
 
   const allBasketsForReview = [...completedBaskets, draft];
   const totalCents = allBasketsForReview.reduce((sum, b) => sum + priceForDraft(b), 0);
-  const totalReservationCents = BOO_EVENT.reservationCents * allBasketsForReview.length;
-
-  if (success) {
-    return (
-      <div className="mx-auto max-w-lg py-16 text-center">
-        <p className="text-5xl">🎃</p>
-        <h1 className="mt-4 font-serif text-3xl font-semibold text-dark">reserved!</h1>
-        <p className="mt-2 font-sans text-sm text-dark/70">
-          {success.orderIds.length} basket{success.orderIds.length > 1 ? "s" : ""} reserved for{" "}
-          {BOO_EVENT.pickupDateLabel}. We&apos;ll text the exact address the night before.
-        </p>
-        <p className="mt-6 rounded-xl border border-amber/40 bg-amber/10 p-4 font-sans text-sm text-dark">
-          🎟️ 3 lucky bags hold a golden ticket to Find Your Stylist - you won&apos;t know until you open it.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="mx-auto max-w-lg pb-16">
@@ -628,41 +613,13 @@ export default function BooBuilder({
             </button>
           )}
 
-          {!userId && (
-            <div>
-              <p className={SECTION_LABEL_CLASS}>your email</p>
-              <input
-                type="email"
-                value={guestEmail}
-                onChange={(e) => setGuestEmail(e.target.value)}
-                placeholder="you@email.com"
-                className={`mt-2 ${INPUT_CLASS}`}
-              />
-              <p className="mt-1 font-mono text-[9px] text-muted">for pickup details and the Oct 25 charge/reminder</p>
-            </div>
-          )}
-
-          <div>
-            <p className={SECTION_LABEL_CLASS}>payment method</p>
-            <div className="mt-2 space-y-2">
-              <OptionCard selected={paymentMethod === "auto_charge"} onClick={() => setPaymentMethod("auto_charge")}>
-                <p className="font-sans text-sm font-medium">auto-charge</p>
-                <p className="mt-0.5 font-mono text-[10px] opacity-70">{BOO_EVENT.autoChargeLabel}</p>
-              </OptionCard>
-              <OptionCard selected={paymentMethod === "tap_to_pay"} onClick={() => setPaymentMethod("tap_to_pay")}>
-                <p className="font-sans text-sm font-medium">tap to pay</p>
-                <p className="mt-0.5 font-mono text-[10px] opacity-70">pay the remainder in person at pickup</p>
-              </OptionCard>
-            </div>
-          </div>
-
           <div className="flex items-baseline justify-between border-t border-bronze/20 pt-4">
             <p className="font-sans text-sm text-dark/70">
               {allBasketsForReview.length} basket{allBasketsForReview.length > 1 ? "s" : ""} · total $
               {(totalCents / 100).toFixed(2)}
             </p>
             <p className="font-mono text-xs text-dark/60">
-              due now: ${(totalReservationCents / 100).toFixed(2)}
+              due now: ${(BOO_EVENT.reservationCents / 100).toFixed(0)}
             </p>
           </div>
 
@@ -672,7 +629,7 @@ export default function BooBuilder({
             disabled={submitting}
             className="w-full bg-bronze py-3.5 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
           >
-            {submitting ? "reserving..." : `reserve for $${(totalReservationCents / 100).toFixed(2)} now →`}
+            {submitting ? "reserving..." : `reserve for $${(BOO_EVENT.reservationCents / 100).toFixed(0)} →`}
           </button>
         </section>
       )}

@@ -12,8 +12,18 @@ export const BOO_EVENT = {
   // the morning after pickup, Central time (Qoyl is Chicago-based).
   navCutoff: "2026-10-26T00:00:00-05:00",
   reservationCents: 1500,
+  // No longer used by the reserve flow (replaced by a hosted Stripe
+  // Payment Link, which has no auto-charge/tap-to-pay choice) - left
+  // in place rather than deleted since nothing asked for its removal.
   autoChargeLabel: "charged automatically the morning of pickup (Oct 25)",
 };
+
+// Hosted Stripe Payment Link for the flat $15 reservation deposit - one
+// fixed-price link, not a dynamically created PaymentIntent, so the
+// deposit is now flat per order regardless of basket count (previously
+// reservationCents * basket count). client_reference_id is appended by
+// the caller (see BooBuilder's reserve()).
+export const BOO_STRIPE_PAYMENT_LINK = "https://buy.stripe.com/28E28s3il5oX4Mo7Ug3ks0b";
 
 export type BooLocationId = "logan_square" | "hyde_park";
 

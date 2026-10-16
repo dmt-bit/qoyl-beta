@@ -1,15 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 
 type Mode = "sign-in" | "sign-up" | "forgot-password";
 
 export default function AuthPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuthPageContent />
+    </Suspense>
+  );
+}
+
+function AuthPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Only honored for a user who already has a hair profile (see the
+  // redirect effect below) - someone without one yet still goes to
+  // /profile first, since app/boo/page.tsx's whole point in requiring
+  // sign-in is a personalized basket, which needs that profile to exist.
+  const redirectParam = searchParams.get("redirect");
   const { user, loading, hairProfile, hairProfileLoading } = useAuth();
 
   const [mode, setMode] = useState<Mode>("sign-in");
@@ -26,8 +40,12 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (loading || hairProfileLoading || !user) return;
+    if (hairProfile && redirectParam) {
+      router.replace(redirectParam);
+      return;
+    }
     router.replace(hairProfile ? "/" : "/profile");
-  }, [user, loading, hairProfile, hairProfileLoading, router]);
+  }, [user, loading, hairProfile, hairProfileLoading, router, redirectParam]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

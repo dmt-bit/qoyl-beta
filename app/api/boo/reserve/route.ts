@@ -1,15 +1,16 @@
 import { NextResponse } from "next/server";
-import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { BOO_EVENT, MAX_BASKETS_PER_ORDER } from "@/lib/boo/config";
+import { MAX_BASKETS_PER_ORDER } from "@/lib/boo/config";
 
 // Public-facing reservation route - no admin auth. isAuthorizedAdmin
 // doesn't apply here (see lib/adminAuth.ts's x-admin-password check,
-// which only gates /admin/* tooling).
+// which only gates /admin/* tooling). Sign-in is still required to
+// reach this point in practice (app/boo/page.tsx gates BooBuilder on
+// a real user), but this route doesn't re-check that itself - it's
+// just creating pending order rows, not charging anything.
 
 type OrderPayload = {
   user_id?: string | null;
-  guest_email?: string | null;
   size: "boo" | "bigboo";
   size_price_cents: number;
   location: "logan_square" | "hyde_park";
@@ -30,12 +31,11 @@ type OrderPayload = {
 
 type RequestBody = {
   orders?: OrderPayload[];
-  paymentMethod?: "auto_charge" | "tap_to_pay";
 };
 
 export async function POST(request: Request) {
   const body: RequestBody = await request.json();
-  const { orders, paymentMethod } = body;
+  const { orders } = body;
 
   if (!orders || orders.length === 0) {
     return NextResponse.json({ error: "At least one basket is required." }, { status: 400 });
@@ -46,9 +46,6 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   }
-  if (paymentMethod !== "auto_charge" && paymentMethod !== "tap_to_pay") {
-    return NextResponse.json({ error: "A valid payment method is required." }, { status: 400 });
-  }
   for (const order of orders) {
     if (!order.size || !order.location || !order.bonnet_color || !order.tool) {
       return NextResponse.json({ error: "Each basket is missing a required field." }, { status: 400 });
@@ -58,35 +55,16 @@ export async function POST(request: Request) {
     }
   }
 
-  const totalReservationCents = BOO_EVENT.reservationCents * orders.length;
-
-  // TODO: for auto_charge, also create a SetupIntent here (and collect
-  // the card via its client secret alongside this PaymentIntent's) so a
-  // card is on file to charge automatically the morning of pickup. Not
-  // implemented yet - tap_to_pay orders settle the remainder in person
-  // regardless, so this only blocks auto_charge's actual Oct 25 charge,
-  // not today's $15 reservation below.
-  let clientSecret: string;
+  // No PaymentIntent here anymore - the $15 deposit is collected on
+  // Stripe's hosted Payment Link page (see BOO_STRIPE_PAYMENT_LINK),
+  // which this route's caller redirects to after getting orderIds back.
+  // reservation_paid stays false until a webhook reconciles payment by
+  // client_reference_id - not built yet, matching this request's file
+  // scope (no new API route was asked for here).
   try {
-    const paymentIntent = await getStripe().paymentIntents.create({
-      amount: totalReservationCents,
-      currency: "usd",
-      metadata: {
-        product: "boo_basket",
-        basket_count: String(orders.length),
-        payment_method: paymentMethod,
-      },
-      description: `Boo Basket reservation (${orders.length} basket${orders.length > 1 ? "s" : ""})`,
-    });
-    if (!paymentIntent.client_secret) {
-      return NextResponse.json({ error: "Failed to create payment intent." }, { status: 500 });
-    }
-    clientSecret = paymentIntent.client_secret;
-
     const admin = getSupabaseAdmin();
     const rows = orders.map((order) => ({
       user_id: order.user_id ?? null,
-      guest_email: order.guest_email ?? null,
       size: order.size,
       size_price_cents: order.size_price_cents,
       location: order.location,
@@ -103,8 +81,10 @@ export async function POST(request: Request) {
       gift_note: order.is_gift ? order.gift_note ?? null : null,
       gift_hair_type: order.is_gift ? order.gift_hair_type ?? null : null,
       gift_porosity: order.is_gift ? order.gift_porosity ?? null : null,
-      payment_method: paymentMethod,
-      stripe_payment_intent_id: paymentIntent.id,
+      // boo_orders.payment_method is NOT NULL with a CHECK constraint -
+      // widened to allow this value, see
+      // supabase/boo_orders_stripe_link.sql (not yet run live).
+      payment_method: "stripe_link",
       reservation_paid: false,
     }));
 
@@ -113,7 +93,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error?.message ?? "Failed to save order." }, { status: 500 });
     }
 
-    return NextResponse.json({ clientSecret, orderIds: inserted.map((r) => r.id) });
+    return NextResponse.json({ orderIds: inserted.map((r) => r.id) });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("Failed to create Boo Basket reservation:", err);
