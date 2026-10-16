@@ -46,8 +46,18 @@ export default function BooPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
-      <BooBuilder userId={user.id} profile={hairProfile} />
+    <main className="relative min-h-screen font-sans text-dark">
+      {/* background */}
+      <div
+        className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('https://res.cloudinary.com/kumxntij/image/upload/v1792163990/pexels-jetkerim-11742984.jpg')" }}
+      />
+      {/* overlay */}
+      <div className="fixed inset-0 -z-10 bg-white/70" />
+
+      <div className="px-4 py-10 sm:px-6">
+        <BooBuilder userId={user.id} profile={hairProfile} />
+      </div>
     </main>
   );
 }
