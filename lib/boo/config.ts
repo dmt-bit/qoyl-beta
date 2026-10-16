@@ -48,27 +48,25 @@ export const BEANIE_COLORS: SwatchColor[] = [
   { label: "Cream", hex: "#F0E6D2" },
 ];
 
-export type ToolId = "scalp_massager" | "detangling_comb" | "satin_headband";
+export type ToolId =
+  | "scalp_massager"
+  | "detangling_comb"
+  | "satin_headband"
+  | "mist_spray_bottle"
+  | "microfiber_towel"
+  | "heatless_curl_ribbon"
+  | "scalp_oil_applicator";
 
-export const TOOLS: { val: ToolId; label: string; emoji: string; desc: string }[] = [
-  {
-    val: "scalp_massager",
-    label: "Scalp massager",
-    emoji: "🪮",
-    desc: "silicone bristles for a 2-minute scalp massage before wash day",
-  },
-  {
-    val: "detangling_comb",
-    label: "Detangling comb",
-    emoji: "🦷",
-    desc: "wide-tooth, for gentle detangling on wet or dry hair",
-  },
-  {
-    val: "satin_headband",
-    label: "Satin headband",
-    emoji: "🎀",
-    desc: "keeps hair off your face without creasing edges",
-  },
+// emoji field dropped - the UI stopped rendering it (step 5's tool
+// cards) a few commits back.
+export const TOOLS: { val: ToolId; label: string; desc: string }[] = [
+  { val: "scalp_massager", label: "Scalp massager", desc: "silicone bristles for a 2-minute scalp massage before wash day" },
+  { val: "detangling_comb", label: "Detangling comb", desc: "wide-tooth, for gentle detangling on wet or dry hair" },
+  { val: "satin_headband", label: "Satin headband", desc: "keeps hair off your face without creasing edges" },
+  { val: "mist_spray_bottle", label: "Continuous mist spray bottle", desc: "fine, even mist for refreshing and moisturizing between wash days" },
+  { val: "microfiber_towel", label: "Microfiber towel", desc: "reduces frizz and breakage vs. a regular towel" },
+  { val: "heatless_curl_ribbon", label: "Heatless curl ribbon", desc: "overnight curls with zero heat damage" },
+  { val: "scalp_oil_applicator", label: "Scalp oil applicator bottle", desc: "precision tip for applying oils directly to the scalp" },
 ];
 
 export type SizeId = "boo" | "bigboo";
@@ -90,7 +88,7 @@ export const SIZES: Record<
       "satin bonnet — black or your color",
       "2 minis of your choice",
       "compact mirror + QR sticker",
-      "your pick: scalp massager, detangling comb, or satin headband",
+      "pick 3 tools: scalp massager, detangling comb, spray bottle, and more",
       "golden ticket chance (Wash Day on Us) + BOO5 card",
     ],
   },
@@ -102,8 +100,16 @@ export const SIZES: Record<
       "everything in Boo",
       "satin-lined beanie - your color",
       "1 full-size product",
+      "pick 5 tools",
     ],
   },
+};
+
+// How many tools each size gets to pick (step 5) - was a flat pick-1
+// before this; see stepError()/the step 5 UI in BooBuilder.tsx.
+export const TOOLS_INCLUDED: Record<SizeId, number> = {
+  boo: 3,
+  bigboo: 5,
 };
 
 export const EXTRA_MINI_PRICE_CENTS = 600;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { MAX_BASKETS_PER_ORDER } from "@/lib/boo/config";
+import { MAX_BASKETS_PER_ORDER, TOOLS_INCLUDED, type SizeId, type ToolId } from "@/lib/boo/config";
 
 // Public-facing reservation route - no admin auth. isAuthorizedAdmin
 // doesn't apply here (see lib/adminAuth.ts's x-admin-password check,
@@ -15,7 +15,7 @@ type OrderPayload = {
   size_price_cents: number;
   location: "logan_square" | "hyde_park";
   bonnet_color: string;
-  tool: "scalp_massager" | "detangling_comb" | "satin_headband";
+  tools: ToolId[];
   candy: boolean;
   beanie: boolean;
   beanie_color?: string | null;
@@ -47,8 +47,12 @@ export async function POST(request: Request) {
     );
   }
   for (const order of orders) {
-    if (!order.size || !order.location || !order.bonnet_color || !order.tool) {
+    if (!order.size || !order.location || !order.bonnet_color || !order.tools?.length) {
       return NextResponse.json({ error: "Each basket is missing a required field." }, { status: 400 });
+    }
+    const toolMax = TOOLS_INCLUDED[order.size as SizeId];
+    if (order.tools.length !== toolMax) {
+      return NextResponse.json({ error: `Each ${order.size} basket needs exactly ${toolMax} tools.` }, { status: 400 });
     }
     if (order.is_gift && !order.gift_recipient_name?.trim()) {
       return NextResponse.json({ error: "Gift orders need a recipient name." }, { status: 400 });
@@ -69,7 +73,7 @@ export async function POST(request: Request) {
       size_price_cents: order.size_price_cents,
       location: order.location,
       bonnet_color: order.bonnet_color,
-      tool: order.tool,
+      tools: order.tools,
       candy: order.candy,
       beanie: order.beanie,
       beanie_color: order.beanie ? order.beanie_color ?? null : null,

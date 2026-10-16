@@ -22,7 +22,7 @@ type BooOrder = {
   size_price_cents: number;
   location: BooLocationId;
   bonnet_color: string;
-  tool: ToolId;
+  tools: ToolId[];
   candy: boolean;
   beanie: boolean;
   beanie_color: string | null;
@@ -31,7 +31,9 @@ type BooOrder = {
   full_size_product: string | null;
   is_gift: boolean;
   gift_recipient_name: string | null;
-  payment_method: "auto_charge" | "tap_to_pay";
+  // "stripe_link" since the payment method switch - the old
+  // auto_charge/tap_to_pay values can still exist on pre-switch rows.
+  payment_method: "auto_charge" | "tap_to_pay" | "stripe_link";
   status: "reserved" | "ready" | "collected" | "cancelled";
   golden_ticket: boolean;
 };
@@ -140,7 +142,7 @@ export default function AdminBooPage() {
     return order.guest_email ?? "guest (no email)";
   }
 
-  const toolCounts = useMemo(() => count(orders.map((o) => o.tool)), [orders]);
+  const toolCounts = useMemo(() => count(orders.flatMap((o) => o.tools)), [orders]);
   const beanieColorCounts = useMemo(
     () => count(orders.filter((o) => o.beanie && o.beanie_color).map((o) => o.beanie_color as string)),
     [orders]
@@ -228,7 +230,7 @@ export default function AdminBooPage() {
                   <th className="py-2 pr-3 font-medium">Size</th>
                   <th className="py-2 pr-3 font-medium">Location</th>
                   <th className="py-2 pr-3 font-medium">Bonnet</th>
-                  <th className="py-2 pr-3 font-medium">Tool</th>
+                  <th className="py-2 pr-3 font-medium">Tools</th>
                   <th className="py-2 pr-3 font-medium">Beanie</th>
                   <th className="py-2 pr-3 font-medium">Candy</th>
                   <th className="py-2 pr-3 font-medium">Minis</th>
@@ -247,7 +249,9 @@ export default function AdminBooPage() {
                     <td className="py-3 pr-3 font-mono text-[10px] text-dark">{SIZES[order.size].label}</td>
                     <td className="py-3 pr-3 font-mono text-[10px] text-dark">{LOCATION_LABEL[order.location]}</td>
                     <td className="py-3 pr-3 font-mono text-[10px] text-dark">{order.bonnet_color}</td>
-                    <td className="py-3 pr-3 font-mono text-[10px] text-dark">{TOOL_LABEL[order.tool]}</td>
+                    <td className="py-3 pr-3 font-mono text-[10px] text-dark">
+                      {order.tools.map((t) => TOOL_LABEL[t] ?? t).join(", ")}
+                    </td>
                     <td className="py-3 pr-3 font-mono text-[10px] text-dark">
                       {order.beanie ? order.beanie_color ?? "yes" : "—"}
                     </td>
@@ -287,9 +291,9 @@ export default function AdminBooPage() {
           <div key={order.id} className="boo-label">
             <p className="boo-label-title">🎃 {SIZES[order.size].label} basket</p>
             <p>{nameFor(order)}{order.is_gift ? ` (gift for ${order.gift_recipient_name ?? "—"})` : ""}</p>
-            <p>{LOCATION_LABEL[order.location]} · {order.payment_method === "auto_charge" ? "auto-charge" : "tap to pay"}</p>
+            <p>{LOCATION_LABEL[order.location]}</p>
             <p>bonnet: {order.bonnet_color}</p>
-            <p>tool: {TOOL_LABEL[order.tool]}</p>
+            <p>tools: {order.tools.map((t) => TOOL_LABEL[t] ?? t).join(", ")}</p>
             <p>beanie: {order.beanie ? order.beanie_color ?? "yes" : "no"}</p>
             <p>candy: {order.candy ? "yes" : "no"}</p>
             <p>minis: {order.minis.join(", ")}{order.extra_minis > 0 ? ` (+${order.extra_minis} extra)` : ""}</p>

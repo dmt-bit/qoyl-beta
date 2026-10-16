@@ -20,6 +20,7 @@ import {
   MINIS_BY_HAIR_TYPE,
   SIZES,
   TOOLS,
+  TOOLS_INCLUDED,
   type BooLocationId,
   type GiftHairType,
   type GiftPorosity,
@@ -44,7 +45,7 @@ type OrderDraft = {
   extraMinis: number;
   fullSizeProduct: string | null;
   bonnetColor: string | null;
-  tool: ToolId | null;
+  tools: ToolId[];
   beanieAddon: boolean;
   beanieColor: string | null;
   candy: boolean;
@@ -63,7 +64,7 @@ function emptyDraft(): OrderDraft {
     extraMinis: 0,
     fullSizeProduct: null,
     bonnetColor: null,
-    tool: null,
+    tools: [],
     beanieAddon: false,
     beanieColor: null,
     candy: true,
@@ -117,6 +118,18 @@ function ProgressBar({ step }: { step: number }) {
   );
 }
 
+function RandomizeButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="mb-2 font-mono text-[9px] text-dark/40 underline underline-offset-2 hover:text-dark"
+    >
+      randomize for me
+    </button>
+  );
+}
+
 function OptionCard({
   selected,
   onClick,
@@ -166,6 +179,10 @@ export default function BooBuilder({
       : null
     : ownFamily;
   const minisForDraft = useMemo(() => minisInOrder(familyForDraft), [familyForDraft]);
+  // How many tools this size gets to pick - defaults to Boo's count
+  // (3) before a size is chosen, same fallback stepError() used to use
+  // for the old pick-1 check.
+  const toolMax = draft.size ? TOOLS_INCLUDED[draft.size] : 3;
 
   function set<K extends keyof OrderDraft>(key: K, value: OrderDraft[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -193,12 +210,42 @@ export default function BooBuilder({
     }
     if (step === 5) {
       if (!draft.bonnetColor) return "Pick a bonnet color.";
-      if (!draft.tool) return "Pick a tool.";
+      if (draft.tools.length !== toolMax) return `Pick exactly ${toolMax} tools.`;
       if (draft.size === "bigboo" && !draft.beanieColor) return "Pick a beanie color.";
       if (draft.size === "boo" && draft.beanieAddon && !draft.beanieColor) return "Pick a beanie color.";
       return null;
     }
     return null;
+  }
+
+  // "randomize for me" (steps 1-5) - picks randomly among the current
+  // step's options rather than requiring a real decision. Step 2 only
+  // randomizes to "for me" (there's no sensible random gift recipient
+  // name to generate). Step 5 covers bonnet/tools/candy, not the
+  // beanie add-on - that one's still a deliberate yes/no, not something
+  // to leave to chance.
+  function randomize() {
+    const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+    const pickN = <T,>(arr: T[], n: number): T[] => {
+      const shuffled = [...arr].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, n);
+    };
+
+    if (step === 1) set("location", pick(LOCATIONS).id);
+    if (step === 2) set("isGift", false);
+    if (step === 3) set("size", pick(Object.keys(SIZES) as SizeId[]));
+    if (step === 4) {
+      setDraft((d) => ({ ...d, minis: pickN(minisForDraft, 2) }));
+    }
+    if (step === 5) {
+      const pickedColor = pick(BONNET_COLORS);
+      setDraft((d) => ({
+        ...d,
+        bonnetColor: pickedColor.label,
+        tools: pickN(TOOLS.map((t) => t.val), toolMax),
+        candy: Math.random() > 0.5,
+      }));
+    }
   }
 
   function goNext() {
@@ -235,7 +282,7 @@ export default function BooBuilder({
       size_price_cents: priceForDraft(b),
       location: b.location as BooLocationId,
       bonnet_color: b.bonnetColor as string,
-      tool: b.tool as ToolId,
+      tools: b.tools,
       candy: b.candy,
       beanie: b.size === "bigboo" || b.beanieAddon,
       beanie_color: b.beanieColor,
@@ -295,6 +342,7 @@ export default function BooBuilder({
       {step === 1 && (
         <section className="mt-6 space-y-3">
           <p className={SECTION_LABEL_CLASS}>pickup location</p>
+          <RandomizeButton onClick={randomize} />
           {LOCATIONS.map((loc) => (
             <OptionCard key={loc.id} selected={draft.location === loc.id} onClick={() => set("location", loc.id)}>
               <p className="font-sans text-sm font-medium">{loc.label}</p>
@@ -312,6 +360,7 @@ export default function BooBuilder({
       {step === 2 && (
         <section className="mt-6 space-y-3">
           <p className={SECTION_LABEL_CLASS}>who is this for?</p>
+          <RandomizeButton onClick={randomize} />
           <div className="grid grid-cols-2 gap-3">
             <OptionCard selected={!draft.isGift} onClick={() => set("isGift", false)}>
               <p className="font-sans text-sm font-medium">for me</p>
@@ -366,6 +415,7 @@ export default function BooBuilder({
       {step === 3 && (
         <section className="mt-6 space-y-3">
           <p className={SECTION_LABEL_CLASS}>size</p>
+          <RandomizeButton onClick={randomize} />
           {(Object.keys(SIZES) as SizeId[]).map((id) => {
             const s = SIZES[id];
             return (
@@ -400,6 +450,7 @@ export default function BooBuilder({
           )}
           <div>
             <p className={SECTION_LABEL_CLASS}>pick 2 minis ({draft.minis.length}/2)</p>
+            <RandomizeButton onClick={randomize} />
             <div className="mt-2 grid grid-cols-1 gap-2">
               {minisForDraft.map((name) => (
                 <OptionCard key={name} selected={draft.minis.includes(name)} onClick={() => toggleMini(name)}>
@@ -456,6 +507,7 @@ export default function BooBuilder({
         <section className="mt-6 space-y-5">
           <div>
             <p className={SECTION_LABEL_CLASS}>bonnet color</p>
+            <RandomizeButton onClick={randomize} />
             <div className="mt-2 grid grid-cols-2 gap-3">
               <OptionCard
                 selected={draft.bonnetColor === "Black"}
@@ -497,14 +549,41 @@ export default function BooBuilder({
           </div>
 
           <div>
-            <p className={SECTION_LABEL_CLASS}>pick your tool</p>
+            <p className={SECTION_LABEL_CLASS}>
+              pick {toolMax} tool{toolMax > 1 ? "s" : ""} ({draft.tools.length}/{toolMax})
+            </p>
             <div className="mt-2 space-y-2">
-              {TOOLS.map((t) => (
-                <OptionCard key={t.val} selected={draft.tool === t.val} onClick={() => set("tool", t.val)}>
-                  <p className="font-sans text-sm font-medium">{t.label}</p>
-                  <p className="mt-0.5 font-mono text-[10px] opacity-70">{t.desc}</p>
-                </OptionCard>
-              ))}
+              {TOOLS.map((t) => {
+                const selected = draft.tools.includes(t.val);
+                const maxed = draft.tools.length >= toolMax && !selected;
+                return (
+                  <button
+                    key={t.val}
+                    type="button"
+                    disabled={maxed}
+                    onClick={() =>
+                      setDraft((d) => ({
+                        ...d,
+                        tools: selected
+                          ? d.tools.filter((v) => v !== t.val)
+                          : d.tools.length < toolMax
+                          ? [...d.tools, t.val]
+                          : d.tools,
+                      }))
+                    }
+                    className={`w-full rounded-xl border p-4 text-left transition-colors ${
+                      selected
+                        ? "border-dark bg-dark text-cream"
+                        : maxed
+                        ? "cursor-not-allowed border-bronze/20 text-dark/30"
+                        : "border-bronze/30 text-dark hover:border-bronze"
+                    }`}
+                  >
+                    <p className="font-sans text-sm font-medium">{t.label}</p>
+                    <p className="mt-0.5 font-mono text-[10px] opacity-70">{t.desc}</p>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -600,8 +679,12 @@ export default function BooBuilder({
                 {b.isGift ? `gift for ${b.giftRecipientName || "—"}` : "for me"}
               </p>
               <p className="mt-1 font-mono text-[10px] text-dark/60">
-                bonnet: {b.bonnetColor ?? "—"} · tool: {b.tool ?? "—"} · beanie:{" "}
-                {b.size === "bigboo" || b.beanieAddon ? b.beanieColor ?? "—" : "no"} · candy: {b.candy ? "yes" : "no"}
+                bonnet: {b.bonnetColor ?? "—"} · tools:{" "}
+                {b.tools.length > 0
+                  ? b.tools.map((id) => TOOLS.find((t) => t.val === id)?.label ?? id).join(", ")
+                  : "—"}{" "}
+                · beanie: {b.size === "bigboo" || b.beanieAddon ? b.beanieColor ?? "—" : "no"} · candy:{" "}
+                {b.candy ? "yes" : "no"}
               </p>
               <p className="mt-1 font-mono text-[10px] text-dark/60">
                 minis: {b.minis.join(", ") || "—"}
