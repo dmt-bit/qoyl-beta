@@ -9,7 +9,6 @@ import {
   BEANIE_COLORS,
   BONNET_COLORS,
   BOO_EVENT,
-  BOO_STRIPE_PAYMENT_LINK,
   EXTRA_MINI_MAX,
   EXTRA_MINI_PRICE_CENTS,
   GIFT_HAIR_TYPE_OPTIONS,
@@ -20,7 +19,6 @@ import {
   MINIS_BY_HAIR_TYPE,
   SIZES,
   TOOLS,
-  TOOLS_INCLUDED,
   type BooLocationId,
   type GiftHairType,
   type GiftPorosity,
@@ -45,7 +43,7 @@ type OrderDraft = {
   extraMinis: number;
   fullSizeProduct: string | null;
   bonnetColor: string | null;
-  tools: ToolId[];
+  tool: ToolId | null;
   beanieAddon: boolean;
   beanieColor: string | null;
   candy: boolean;
@@ -64,7 +62,7 @@ function emptyDraft(): OrderDraft {
     extraMinis: 0,
     fullSizeProduct: null,
     bonnetColor: null,
-    tools: [],
+    tool: null,
     beanieAddon: false,
     beanieColor: null,
     candy: true,
@@ -79,25 +77,29 @@ function priceForDraft(draft: OrderDraft): number {
   return cents;
 }
 
-// Each family's list is now its own tight, type-appropriate 5 (see
-// lib/boo/config.ts) rather than a shared cross-family pool - no more
-// padding with irrelevant products once a family is known. familyForSort
-// is the signed-in user's own family for a "for me" order, or the gift
-// recipient's stated hair type for a gift order - null (no profile/
-// not_sure/no selection yet) is the only case that still needs a
-// combined list, since there's no family to narrow to.
+// Full ordered mini catalog with the relevant hair-type family's picks
+// first. familyForSort is the signed-in user's own family for a "for me"
+// order, or the gift recipient's stated hair type for a gift order — null
+// falls back to the unsorted generic pool order.
 function minisInOrder(familyForSort: CurlFamily | null): string[] {
-  if (familyForSort) return MINIS_BY_HAIR_TYPE[familyForSort];
   const families: CurlFamily[] = ["straight", "wavy", "curly", "coily"];
+  const ordered = familyForSort
+    ? [familyForSort, ...families.filter((f) => f !== familyForSort)]
+    : families;
   const seen = new Set<string>();
-  const result: string[] = [...MINIS_BY_HAIR_TYPE.generic];
-  result.forEach((n) => seen.add(n));
-  for (const family of families) {
+  const result: string[] = [];
+  for (const family of ordered) {
     for (const name of MINIS_BY_HAIR_TYPE[family]) {
       if (!seen.has(name)) {
         seen.add(name);
         result.push(name);
       }
+    }
+  }
+  for (const name of MINIS_BY_HAIR_TYPE.generic) {
+    if (!seen.has(name)) {
+      seen.add(name);
+      result.push(name);
     }
   }
   return result;
@@ -115,18 +117,6 @@ function ProgressBar({ step }: { step: number }) {
         </div>
       ))}
     </div>
-  );
-}
-
-function RandomizeButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="mb-2 font-mono text-[9px] text-dark/40 underline underline-offset-2 hover:text-dark"
-    >
-      randomize for me
-    </button>
   );
 }
 
@@ -162,27 +152,24 @@ export default function BooBuilder({
   const [completedBaskets, setCompletedBaskets] = useState<OrderDraft[]>([]);
   const [draft, setDraft] = useState<OrderDraft>(emptyDraft());
   const [step, setStep] = useState(1);
+  const [paymentMethod, setPaymentMethod] = useState<"auto_charge" | "tap_to_pay" | null>(null);
+  const [guestEmail, setGuestEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Step 5's bonnet choice: whether the non-black swatches are expanded.
-  // Not part of OrderDraft - stepError only ever needs to know whether
-  // draft.bonnetColor is set, not which UI path got it there.
-  const [bonnetColorExpanded, setBonnetColorExpanded] = useState(false);
+  const [success, setSuccess] = useState<{ orderIds: string[] } | null>(null);
 
   const ownFamily = useMemo(() => curlFamily(profile?.curl_type ?? null), [profile]);
-  // The resolved family actually driving this basket's mini selection -
-  // the signed-in user's own for "for me", the stated recipient's for a
-  // gift. Used both to pick/sort minis and for step 4's contextual note.
-  const familyForDraft: CurlFamily | null = draft.isGift
-    ? draft.giftHairType !== "not_sure" && draft.giftHairType
-      ? (draft.giftHairType as CurlFamily)
-      : null
-    : ownFamily;
-  const minisForDraft = useMemo(() => minisInOrder(familyForDraft), [familyForDraft]);
-  // How many tools this size gets to pick - defaults to Boo's count
-  // (3) before a size is chosen, same fallback stepError() used to use
-  // for the old pick-1 check.
-  const toolMax = draft.size ? TOOLS_INCLUDED[draft.size] : 3;
+  const currentTotal = priceForDraft(draft);
+  const minisForDraft = useMemo(
+    () => minisInOrder(draft.isGift ? (draft.giftHairType === "not_sure" ? null : (draft.giftHairType as CurlFamily | null)) : ownFamily),
+    [draft.isGift, draft.giftHairType, ownFamily]
+  );
+
+  // Non-black bonnet colors for the "a color" option
+  const colorBonnets = BONNET_COLORS.filter((c) => c.label !== "Black");
+  // Whether user picked black or a color
+  const bonnetIsBlack = draft.bonnetColor === "Black";
+  const bonnetIsColor = draft.bonnetColor !== null && draft.bonnetColor !== "Black";
 
   function set<K extends keyof OrderDraft>(key: K, value: OrderDraft[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -210,42 +197,12 @@ export default function BooBuilder({
     }
     if (step === 5) {
       if (!draft.bonnetColor) return "Pick a bonnet color.";
-      if (draft.tools.length !== toolMax) return `Pick exactly ${toolMax} tools.`;
+      if (!draft.tool) return "Pick a tool.";
       if (draft.size === "bigboo" && !draft.beanieColor) return "Pick a beanie color.";
       if (draft.size === "boo" && draft.beanieAddon && !draft.beanieColor) return "Pick a beanie color.";
       return null;
     }
     return null;
-  }
-
-  // "randomize for me" (steps 1-5) - picks randomly among the current
-  // step's options rather than requiring a real decision. Step 2 only
-  // randomizes to "for me" (there's no sensible random gift recipient
-  // name to generate). Step 5 covers bonnet/tools/candy, not the
-  // beanie add-on - that one's still a deliberate yes/no, not something
-  // to leave to chance.
-  function randomize() {
-    const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-    const pickN = <T,>(arr: T[], n: number): T[] => {
-      const shuffled = [...arr].sort(() => Math.random() - 0.5);
-      return shuffled.slice(0, n);
-    };
-
-    if (step === 1) set("location", pick(LOCATIONS).id);
-    if (step === 2) set("isGift", false);
-    if (step === 3) set("size", pick(Object.keys(SIZES) as SizeId[]));
-    if (step === 4) {
-      setDraft((d) => ({ ...d, minis: pickN(minisForDraft, 2) }));
-    }
-    if (step === 5) {
-      const pickedColor = pick(BONNET_COLORS);
-      setDraft((d) => ({
-        ...d,
-        bonnetColor: pickedColor.label,
-        tools: pickN(TOOLS.map((t) => t.val), toolMax),
-        candy: Math.random() > 0.5,
-      }));
-    }
   }
 
   function goNext() {
@@ -264,13 +221,14 @@ export default function BooBuilder({
     if (err) return setError(err);
     setCompletedBaskets((b) => [...b, draft]);
     setDraft(emptyDraft());
-    setBonnetColorExpanded(false);
     setStep(1);
   }
 
   async function reserve() {
     const err = stepError();
     if (err) return setError(err);
+    if (!paymentMethod) return setError("Pick a payment method.");
+    if (!userId && !guestEmail.trim()) return setError("Enter an email so we can reach you about pickup.");
 
     setError(null);
     setSubmitting(true);
@@ -278,11 +236,12 @@ export default function BooBuilder({
     const allBaskets = [...completedBaskets, draft];
     const orders = allBaskets.map((b) => ({
       user_id: userId,
+      guest_email: userId ? null : guestEmail.trim(),
       size: b.size as SizeId,
       size_price_cents: priceForDraft(b),
       location: b.location as BooLocationId,
       bonnet_color: b.bonnetColor as string,
-      tools: b.tools,
+      tool: b.tool as ToolId,
       candy: b.candy,
       beanie: b.size === "bigboo" || b.beanieAddon,
       beanie_color: b.beanieColor,
@@ -299,31 +258,41 @@ export default function BooBuilder({
     const res = await fetch("/api/boo/reserve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orders }),
+      body: JSON.stringify({ orders, paymentMethod }),
     });
     const data = await res.json();
+    setSubmitting(false);
 
     if (!res.ok) {
-      setSubmitting(false);
       setError(data.error ?? "Failed to reserve. Try again.");
       return;
     }
-
-    // Hosted Stripe Payment Link, not a PaymentIntent - no client secret
-    // to confirm client-side, just a redirect. client_reference_id is a
-    // single opaque string Stripe echoes back on its webhook/session;
-    // joined with commas since one submission can cover up to
-    // MAX_BASKETS_PER_ORDER boo_orders rows at once.
-    const orderIds: string[] = data.orderIds ?? [];
-    window.location.href = `${BOO_STRIPE_PAYMENT_LINK}?client_reference_id=${encodeURIComponent(orderIds.join(","))}`;
+    setSuccess({ orderIds: data.orderIds ?? [] });
   }
 
   const allBasketsForReview = [...completedBaskets, draft];
   const totalCents = allBasketsForReview.reduce((sum, b) => sum + priceForDraft(b), 0);
+  const totalReservationCents = BOO_EVENT.reservationCents * allBasketsForReview.length;
+
+  if (success) {
+    return (
+      <div className="mx-auto max-w-lg py-16 text-center">
+        <p className="text-5xl">🎃</p>
+        <h1 className="mt-4 font-serif text-3xl font-semibold text-dark">reserved!</h1>
+        <p className="mt-2 font-sans text-sm text-dark/70">
+          {success.orderIds.length} basket{success.orderIds.length > 1 ? "s" : ""} reserved for{" "}
+          {BOO_EVENT.pickupDateLabel}. We&apos;ll text the exact address the night before.
+        </p>
+        <p className="mt-6 rounded-xl border border-amber/40 bg-amber/10 p-4 font-sans text-sm text-dark">
+          3 lucky bags hold a golden ticket to Find Your Stylist — you won&apos;t know until you open it.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-lg pb-16">
-      <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">🎃 build your boo basket</h1>
+      <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">build your boo basket</h1>
       <p className="mt-1 font-sans text-sm text-dark/60">pickup {BOO_EVENT.pickupDateLabel}</p>
 
       <div className="mt-6">
@@ -342,7 +311,6 @@ export default function BooBuilder({
       {step === 1 && (
         <section className="mt-6 space-y-3">
           <p className={SECTION_LABEL_CLASS}>pickup location</p>
-          <RandomizeButton onClick={randomize} />
           {LOCATIONS.map((loc) => (
             <OptionCard key={loc.id} selected={draft.location === loc.id} onClick={() => set("location", loc.id)}>
               <p className="font-sans text-sm font-medium">{loc.label}</p>
@@ -360,7 +328,6 @@ export default function BooBuilder({
       {step === 2 && (
         <section className="mt-6 space-y-3">
           <p className={SECTION_LABEL_CLASS}>who is this for?</p>
-          <RandomizeButton onClick={randomize} />
           <div className="grid grid-cols-2 gap-3">
             <OptionCard selected={!draft.isGift} onClick={() => set("isGift", false)}>
               <p className="font-sans text-sm font-medium">for me</p>
@@ -415,7 +382,6 @@ export default function BooBuilder({
       {step === 3 && (
         <section className="mt-6 space-y-3">
           <p className={SECTION_LABEL_CLASS}>size</p>
-          <RandomizeButton onClick={randomize} />
           {(Object.keys(SIZES) as SizeId[]).map((id) => {
             const s = SIZES[id];
             return (
@@ -443,14 +409,8 @@ export default function BooBuilder({
       {/* ---- STEP 4: products (minis / extra minis / full-size) ---- */}
       {step === 4 && (
         <section className="mt-6 space-y-4">
-          {familyForDraft && (
-            <p className="mb-3 font-sans text-xs text-dark/60">
-              showing products scored highest for {familyForDraft} hair — curated for Chicago&apos;s fall climate.
-            </p>
-          )}
           <div>
             <p className={SECTION_LABEL_CLASS}>pick 2 minis ({draft.minis.length}/2)</p>
-            <RandomizeButton onClick={randomize} />
             <div className="mt-2 grid grid-cols-1 gap-2">
               {minisForDraft.map((name) => (
                 <OptionCard key={name} selected={draft.minis.includes(name)} onClick={() => toggleMini(name)}>
@@ -505,32 +465,29 @@ export default function BooBuilder({
       {/* ---- STEP 5: details ---- */}
       {step === 5 && (
         <section className="mt-6 space-y-5">
+          {/* Bonnet: black OR a color */}
           <div>
-            <p className={SECTION_LABEL_CLASS}>bonnet color</p>
-            <RandomizeButton onClick={randomize} />
+            <p className={SECTION_LABEL_CLASS}>bonnet</p>
             <div className="mt-2 grid grid-cols-2 gap-3">
-              <OptionCard
-                selected={draft.bonnetColor === "Black"}
-                onClick={() => {
-                  setBonnetColorExpanded(false);
-                  set("bonnetColor", "Black");
-                }}
-              >
-                <p className="font-sans text-sm font-medium">Black</p>
+              <OptionCard selected={bonnetIsBlack} onClick={() => set("bonnetColor", "Black")}>
+                <div className="flex items-center gap-2">
+                  <span className="h-5 w-5 flex-shrink-0 rounded-full bg-[#0a0a0a]" />
+                  <p className="font-sans text-sm font-medium">Black</p>
+                </div>
               </OptionCard>
-              <OptionCard
-                selected={bonnetColorExpanded || Boolean(draft.bonnetColor && draft.bonnetColor !== "Black")}
-                onClick={() => {
-                  setBonnetColorExpanded(true);
-                  if (draft.bonnetColor === "Black") set("bonnetColor", null);
-                }}
-              >
-                <p className="font-sans text-sm font-medium">A color</p>
+              <OptionCard selected={bonnetIsColor} onClick={() => {
+                // Default to first non-black color if none already chosen
+                if (!bonnetIsColor) set("bonnetColor", colorBonnets[0].label);
+              }}>
+                <div className="flex items-center gap-2">
+                  <span className="h-5 w-5 flex-shrink-0 rounded-full bg-gradient-to-br from-[#E8A0B4] to-[#6B4E8E]" />
+                  <p className="font-sans text-sm font-medium">A color</p>
+                </div>
               </OptionCard>
             </div>
-            {(bonnetColorExpanded || (draft.bonnetColor && draft.bonnetColor !== "Black")) && (
+            {bonnetIsColor && (
               <div className="mt-3 flex flex-wrap gap-3">
-                {BONNET_COLORS.filter((c) => c.label !== "Black").map((c) => (
+                {colorBonnets.map((c) => (
                   <button
                     key={c.label}
                     type="button"
@@ -549,48 +506,21 @@ export default function BooBuilder({
           </div>
 
           <div>
-            <p className={SECTION_LABEL_CLASS}>
-              pick {toolMax} tool{toolMax > 1 ? "s" : ""} ({draft.tools.length}/{toolMax})
-            </p>
+            <p className={SECTION_LABEL_CLASS}>pick your tool</p>
             <div className="mt-2 space-y-2">
-              {TOOLS.map((t) => {
-                const selected = draft.tools.includes(t.val);
-                const maxed = draft.tools.length >= toolMax && !selected;
-                return (
-                  <button
-                    key={t.val}
-                    type="button"
-                    disabled={maxed}
-                    onClick={() =>
-                      setDraft((d) => ({
-                        ...d,
-                        tools: selected
-                          ? d.tools.filter((v) => v !== t.val)
-                          : d.tools.length < toolMax
-                          ? [...d.tools, t.val]
-                          : d.tools,
-                      }))
-                    }
-                    className={`w-full rounded-xl border p-4 text-left transition-colors ${
-                      selected
-                        ? "border-dark bg-dark text-cream"
-                        : maxed
-                        ? "cursor-not-allowed border-bronze/20 text-dark/30"
-                        : "border-bronze/30 text-dark hover:border-bronze"
-                    }`}
-                  >
-                    <p className="font-sans text-sm font-medium">{t.label}</p>
-                    <p className="mt-0.5 font-mono text-[10px] opacity-70">{t.desc}</p>
-                  </button>
-                );
-              })}
+              {TOOLS.map((t) => (
+                <OptionCard key={t.val} selected={draft.tool === t.val} onClick={() => set("tool", t.val)}>
+                  <p className="font-sans text-sm font-medium">{t.label}</p>
+                  <p className="mt-0.5 font-mono text-[10px] opacity-70">{t.desc}</p>
+                </OptionCard>
+              ))}
             </div>
           </div>
 
           <div>
             <p className={SECTION_LABEL_CLASS}>satin-lined beanie</p>
             {draft.size === "bigboo" ? (
-              <p className="mt-1 font-mono text-[10px] text-muted">included with Big Boo - pick a color:</p>
+              <p className="mt-1 font-mono text-[10px] text-muted">included with Big Boo — pick a color:</p>
             ) : (
               <label className="mt-2 flex items-center gap-2 font-sans text-sm text-dark">
                 <input
@@ -633,17 +563,13 @@ export default function BooBuilder({
             </div>
           </div>
 
-          <div className="rounded-xl border border-bronze/30 bg-bronze/5 p-4">
+          {/* Always-included extras — not selectable */}
+          <div className="rounded-xl border border-bronze/20 bg-bronze/5 px-4 py-3">
             <p className={SECTION_LABEL_CLASS}>in every basket</p>
             <ul className="mt-2 space-y-1">
-              {/* Replaces the old separate "Golden ticket notice"/
-                  "Stylist coupon" lines - this one line already names
-                  the prize the stylist coupon was referring to, so
-                  keeping both would just repeat "stylist" twice. */}
-              <li className="font-sans text-sm text-dark">
-                Wash Day on Us — 3 lucky baskets include a $75 stylist credit. You won&apos;t know until you open it.
-              </li>
-              <li className="font-sans text-sm text-dark">BOO5 discount card</li>
+              <li className="font-mono text-[10px] text-dark/70">· Golden ticket notice</li>
+              <li className="font-mono text-[10px] text-dark/70">· Stylist coupon</li>
+              <li className="font-mono text-[10px] text-dark/70">· BOO5 discount card</li>
             </ul>
           </div>
 
@@ -679,12 +605,8 @@ export default function BooBuilder({
                 {b.isGift ? `gift for ${b.giftRecipientName || "—"}` : "for me"}
               </p>
               <p className="mt-1 font-mono text-[10px] text-dark/60">
-                bonnet: {b.bonnetColor ?? "—"} · tools:{" "}
-                {b.tools.length > 0
-                  ? b.tools.map((id) => TOOLS.find((t) => t.val === id)?.label ?? id).join(", ")
-                  : "—"}{" "}
-                · beanie: {b.size === "bigboo" || b.beanieAddon ? b.beanieColor ?? "—" : "no"} · candy:{" "}
-                {b.candy ? "yes" : "no"}
+                bonnet: {b.bonnetColor ?? "—"} · tool: {b.tool ?? "—"} · beanie:{" "}
+                {b.size === "bigboo" || b.beanieAddon ? b.beanieColor ?? "—" : "no"} · candy: {b.candy ? "yes" : "no"}
               </p>
               <p className="mt-1 font-mono text-[10px] text-dark/60">
                 minis: {b.minis.join(", ") || "—"}
@@ -705,13 +627,41 @@ export default function BooBuilder({
             </button>
           )}
 
+          {!userId && (
+            <div>
+              <p className={SECTION_LABEL_CLASS}>your email</p>
+              <input
+                type="email"
+                value={guestEmail}
+                onChange={(e) => setGuestEmail(e.target.value)}
+                placeholder="you@email.com"
+                className={`mt-2 ${INPUT_CLASS}`}
+              />
+              <p className="mt-1 font-mono text-[9px] text-muted">for pickup details and the Oct 25 charge/reminder</p>
+            </div>
+          )}
+
+          <div>
+            <p className={SECTION_LABEL_CLASS}>payment method</p>
+            <div className="mt-2 space-y-2">
+              <OptionCard selected={paymentMethod === "auto_charge"} onClick={() => setPaymentMethod("auto_charge")}>
+                <p className="font-sans text-sm font-medium">auto-charge</p>
+                <p className="mt-0.5 font-mono text-[10px] opacity-70">{BOO_EVENT.autoChargeLabel}</p>
+              </OptionCard>
+              <OptionCard selected={paymentMethod === "tap_to_pay"} onClick={() => setPaymentMethod("tap_to_pay")}>
+                <p className="font-sans text-sm font-medium">tap to pay</p>
+                <p className="mt-0.5 font-mono text-[10px] opacity-70">pay the remainder in person at pickup</p>
+              </OptionCard>
+            </div>
+          </div>
+
           <div className="flex items-baseline justify-between border-t border-bronze/20 pt-4">
             <p className="font-sans text-sm text-dark/70">
               {allBasketsForReview.length} basket{allBasketsForReview.length > 1 ? "s" : ""} · total $
               {(totalCents / 100).toFixed(2)}
             </p>
             <p className="font-mono text-xs text-dark/60">
-              due now: ${(BOO_EVENT.reservationCents / 100).toFixed(0)}
+              due now: ${(totalReservationCents / 100).toFixed(2)}
             </p>
           </div>
 
@@ -721,7 +671,7 @@ export default function BooBuilder({
             disabled={submitting}
             className="w-full bg-bronze py-3.5 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
           >
-            {submitting ? "reserving..." : `reserve for $${(BOO_EVENT.reservationCents / 100).toFixed(0)} →`}
+            {submitting ? "reserving..." : `reserve for $${(totalReservationCents / 100).toFixed(2)} now →`}
           </button>
         </section>
       )}
@@ -749,7 +699,7 @@ export default function BooBuilder({
       )}
       {step === 6 && (
         <button type="button" onClick={goBack} className="mt-4 font-mono text-[10px] text-dark/50 underline underline-offset-2 hover:text-dark">
-          ← back
+          back
         </button>
       )}
     </div>

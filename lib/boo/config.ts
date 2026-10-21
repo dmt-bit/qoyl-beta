@@ -12,18 +12,8 @@ export const BOO_EVENT = {
   // the morning after pickup, Central time (Qoyl is Chicago-based).
   navCutoff: "2026-10-26T00:00:00-05:00",
   reservationCents: 1500,
-  // No longer used by the reserve flow (replaced by a hosted Stripe
-  // Payment Link, which has no auto-charge/tap-to-pay choice) - left
-  // in place rather than deleted since nothing asked for its removal.
   autoChargeLabel: "charged automatically the morning of pickup (Oct 25)",
 };
-
-// Hosted Stripe Payment Link for the flat $15 reservation deposit - one
-// fixed-price link, not a dynamically created PaymentIntent, so the
-// deposit is now flat per order regardless of basket count (previously
-// reservationCents * basket count). client_reference_id is appended by
-// the caller (see BooBuilder's reserve()).
-export const BOO_STRIPE_PAYMENT_LINK = "https://buy.stripe.com/28E28s3il5oX4Mo7Ug3ks0b";
 
 export type BooLocationId = "logan_square" | "hyde_park";
 
@@ -48,25 +38,27 @@ export const BEANIE_COLORS: SwatchColor[] = [
   { label: "Cream", hex: "#F0E6D2" },
 ];
 
-export type ToolId =
-  | "scalp_massager"
-  | "detangling_comb"
-  | "satin_headband"
-  | "mist_spray_bottle"
-  | "microfiber_towel"
-  | "heatless_curl_ribbon"
-  | "scalp_oil_applicator";
+export type ToolId = "scalp_massager" | "detangling_comb" | "satin_headband";
 
-// emoji field dropped - the UI stopped rendering it (step 5's tool
-// cards) a few commits back.
-export const TOOLS: { val: ToolId; label: string; desc: string }[] = [
-  { val: "scalp_massager", label: "Scalp massager", desc: "silicone bristles for a 2-minute scalp massage before wash day" },
-  { val: "detangling_comb", label: "Detangling comb", desc: "wide-tooth, for gentle detangling on wet or dry hair" },
-  { val: "satin_headband", label: "Satin headband", desc: "keeps hair off your face without creasing edges" },
-  { val: "mist_spray_bottle", label: "Continuous mist spray bottle", desc: "fine, even mist for refreshing and moisturizing between wash days" },
-  { val: "microfiber_towel", label: "Microfiber towel", desc: "reduces frizz and breakage vs. a regular towel" },
-  { val: "heatless_curl_ribbon", label: "Heatless curl ribbon", desc: "overnight curls with zero heat damage" },
-  { val: "scalp_oil_applicator", label: "Scalp oil applicator bottle", desc: "precision tip for applying oils directly to the scalp" },
+export const TOOLS: { val: ToolId; label: string; emoji: string; desc: string }[] = [
+  {
+    val: "scalp_massager",
+    label: "Scalp massager",
+    emoji: "🪮",
+    desc: "silicone bristles for a 2-minute scalp massage before wash day",
+  },
+  {
+    val: "detangling_comb",
+    label: "Detangling comb",
+    emoji: "🦷",
+    desc: "wide-tooth, for gentle detangling on wet or dry hair",
+  },
+  {
+    val: "satin_headband",
+    label: "Satin headband",
+    emoji: "🎀",
+    desc: "keeps hair off your face without creasing edges",
+  },
 ];
 
 export type SizeId = "boo" | "bigboo";
@@ -85,11 +77,11 @@ export const SIZES: Record<
     totalCents: 4500,
     remainderCents: 3000,
     includes: [
-      "satin bonnet — black or your color",
+      "satin bonnet - black or your color",
       "2 minis of your choice",
       "compact mirror + QR sticker",
-      "pick 3 tools: scalp massager, detangling comb, spray bottle, and more",
-      "golden ticket chance (Wash Day on Us) + BOO5 card",
+      "your pick: scalp massager, detangling comb, or satin headband",
+      "golden ticket notice + stylist coupon + BOO5 card",
     ],
   },
   bigboo: {
@@ -100,16 +92,8 @@ export const SIZES: Record<
       "everything in Boo",
       "satin-lined beanie - your color",
       "1 full-size product",
-      "pick 5 tools",
     ],
   },
-};
-
-// How many tools each size gets to pick (step 5) - was a flat pick-1
-// before this; see stepError()/the step 5 UI in BooBuilder.tsx.
-export const TOOLS_INCLUDED: Record<SizeId, number> = {
-  boo: 3,
-  bigboo: 5,
 };
 
 export const EXTRA_MINI_PRICE_CENTS = 600;
@@ -130,45 +114,42 @@ export const MAX_BASKETS_PER_ORDER = 3;
 // legacy "hair_type" column predates curl_type and isn't selected by
 // lib/hairProfile.ts). "generic" covers no-profile/not_sure users, whose
 // minis aren't re-sorted since there's no family to prefer.
-// Placeholder names - swap for real SKUs before launch. Exactly 5 per
-// family, type-appropriate only - no curl creams for straight/wavy, no
-// dry shampoo for coily, etc. Once a family is known, minisInOrder()
-// below returns just that family's 5 - no cross-family padding.
+// Placeholder names - swap for real SKUs before launch.
 export const MINIS_BY_HAIR_TYPE: Record<CurlFamily | "generic", string[]> = {
   straight: [
-    "Fine Hair Dry Shampoo",
     "Weightless Shine Serum",
     "Volumizing Root Lift Spray",
     "Silk Press Heat Protectant",
     "Clarifying Scalp Scrub",
+    "Fine Hair Dry Shampoo",
   ],
   wavy: [
-    "Sea Salt Texture Spray",
     "Wave Enhancing Mousse",
-    "Lightweight Leave-In Mist",
+    "Sea Salt Texture Spray",
     "Frizz-Free Curl Refresher",
+    "Lightweight Leave-In Mist",
     "Beach Wave Styling Cream",
   ],
   curly: [
     "Curl Defining Custard",
-    "Slip Detangling Conditioner",
     "Moisture Bomb Leave-In Conditioner",
-    "Anti-Frizz Styling Gel",
+    "Slip Detangling Conditioner",
     "Curl Refreshing Spray",
+    "Anti-Frizz Styling Gel",
   ],
   coily: [
     "Deep Moisture Hair Butter",
-    "Twist & Define Cream",
     "Edge Control & Hold Gel",
-    "Scalp Soothing Oil Blend",
     "Protective Style Refresher Spray",
+    "Scalp Soothing Oil Blend",
+    "Twist & Define Cream",
   ],
   generic: [
+    "Moisture Bomb Leave-In Conditioner",
+    "Lightweight Daily Conditioner",
+    "All-Hair-Types Styling Cream",
     "Nourishing Hair Oil Blend",
     "Gentle Clarifying Shampoo",
-    "Lightweight Daily Conditioner",
-    "Moisture Bomb Leave-In Conditioner",
-    "All-Hair-Types Styling Cream",
   ],
 };
 
