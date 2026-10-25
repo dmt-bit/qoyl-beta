@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { EventGridCard } from "@/components/EventCard";
@@ -13,6 +12,7 @@ import {
   getEventBySlug,
   getRelatedEvents,
 } from "@/lib/events";
+import EventCoverImage from "./EventCoverImage";
 import EventShareButton from "./EventShareButton";
 
 export const dynamic = "force-dynamic";
@@ -50,9 +50,7 @@ export default async function EventDetailPage({ params }: { params: { slug: stri
   return (
     <main className="min-h-screen bg-white font-sans text-dark">
       <div className="relative h-[400px] w-full bg-dark">
-        {event.cover_image_url && (
-          <Image src={event.cover_image_url} alt={event.title} fill sizes="100vw" className="object-cover" priority />
-        )}
+        {event.cover_image_url && <EventCoverImage src={event.cover_image_url} alt={event.title} />}
         <div className="absolute bottom-0 left-0 right-0 border-t-[1.5px] border-dark bg-white px-6 py-5">
           <h1 className="font-sans text-2xl font-bold lowercase tracking-[-0.8px] text-dark">{event.title}</h1>
         </div>

@@ -144,8 +144,21 @@ export function formatEventPrice(cents: number): string {
   return `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)}`;
 }
 
+// event_date/event_end_date are real timestamptz values (confirmed
+// correct in the DB - e.g. find-your-stylist stores 21:30 UTC for a
+// 3:30pm CST event, which is right). The bug was display-only: these
+// formatters ran with no `timeZone` option, so `toLocaleDateString`/
+// `toLocaleTimeString` used the server's runtime timezone (UTC on
+// Vercel), not Chicago - a published 3:30pm event rendered as 9:30pm
+// for every visitor, everywhere, regardless of their own timezone.
+// Qoyl's events are all in-person/Chicago-timed, so every formatter
+// below now pins to America/Chicago explicitly rather than falling
+// through to whatever the server happens to be running in.
+const EVENT_TIME_ZONE = "America/Chicago";
+
 export function formatEventDateLong(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
+    timeZone: EVENT_TIME_ZONE,
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -156,24 +169,31 @@ export function formatEventDateLong(iso: string): string {
 // "saturday, january 18 · 2:00 pm" - featured card format (no year).
 export function formatEventDateShort(iso: string): string {
   const d = new Date(iso);
-  const date = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase();
+  const date = d.toLocaleDateString("en-US", { timeZone: EVENT_TIME_ZONE, weekday: "long", month: "long", day: "numeric" });
+  const time = d.toLocaleTimeString("en-US", { timeZone: EVENT_TIME_ZONE, hour: "numeric", minute: "2-digit" }).toLowerCase();
   return `${date} · ${time}`;
 }
 
 // "jan 18 · 2pm" - grid card date chip.
 export function formatEventDateChip(iso: string): string {
   const d = new Date(iso);
-  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric" }).toLowerCase();
+  const date = d.toLocaleDateString("en-US", { timeZone: EVENT_TIME_ZONE, month: "short", day: "numeric" }).toLowerCase();
+  // d.getMinutes() reads the server's local time, not Chicago's - on a
+  // UTC server that could disagree with Chicago about whether the
+  // minute is :00 even when the hour itself happens to line up, so the
+  // "is this on the hour" check has to go through the same timezone,
+  // not raw Date accessors.
+  const chicagoMinute = new Intl.DateTimeFormat("en-US", { timeZone: EVENT_TIME_ZONE, minute: "numeric" }).format(d);
   const time = d
-    .toLocaleTimeString("en-US", { hour: "numeric", minute: d.getMinutes() === 0 ? undefined : "2-digit" })
+    .toLocaleTimeString("en-US", { timeZone: EVENT_TIME_ZONE, hour: "numeric", minute: chicagoMinute === "0" ? undefined : "2-digit" })
     .toLowerCase()
     .replace(" ", "");
   return `${date} · ${time}`;
 }
 
 export function formatEventTimeRange(startIso: string, endIso: string | null): string {
-  const fmt = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase();
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleTimeString("en-US", { timeZone: EVENT_TIME_ZONE, hour: "numeric", minute: "2-digit" }).toLowerCase();
   return endIso ? `${fmt(startIso)} – ${fmt(endIso)} ct` : fmt(startIso);
 }
 
