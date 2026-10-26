@@ -95,8 +95,17 @@ export type StyleShoppingList = {
 // fabricating a specific ASIN/product page that may not exist or may
 // go stale. Matches the same "never a dead link" principle ShopButton
 // already uses for catalog products with no brand match.
-function amazonSearch(query: string): string {
-  return `https://www.amazon.com/s?k=${encodeURIComponent(query)}`;
+//
+// Carries the Amazon Associates tag (NEXT_PUBLIC_AMAZON_AFFILIATE_TAG,
+// placeholder "qoyl-20" until a real account exists) on every Amazon
+// link this app builds, not just the new "complete your look" cart's -
+// one tagging point for all of them rather than a second, parallel
+// link-building function that would drift out of sync with this one.
+const AMAZON_AFFILIATE_TAG = process.env.NEXT_PUBLIC_AMAZON_AFFILIATE_TAG || "qoyl-20";
+// Exported so lib/styleCart.ts can build the exact same tagged link
+// rather than keeping a second copy of this tag/URL logic.
+export function amazonSearch(query: string): string {
+  return `https://www.amazon.com/s?k=${encodeURIComponent(query)}&tag=${AMAZON_AFFILIATE_TAG}`;
 }
 function targetSearch(query: string): string {
   return `https://www.target.com/s?searchTerm=${encodeURIComponent(query)}`;

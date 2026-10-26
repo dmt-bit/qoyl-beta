@@ -23,6 +23,9 @@ import {
   type HairAdditionPreference,
 } from "@/lib/hairAdditionPreference";
 import type { StyleTranslation } from "@/lib/styleTranslations";
+import { installOptionsFor, installTypeLabel, type InstallType } from "@/lib/installTypes";
+import type { CartItem } from "@/lib/styleCart";
+import CompleteYourLookCart from "@/components/CompleteYourLookCart";
 
 type BangLength = "above-eyebrow" | "at-eyebrow" | "below-eyebrow" | "cheekbone-length";
 type ApproximateLength = "twa" | "short" | "medium" | "long" | "waist" | "hip";
@@ -125,6 +128,9 @@ type StyleRow = {
   estimated_time: string | null;
   difficulty: string | null;
   image_url?: string | null;
+  // Install method(s) this style is actually done with (item 1/4) - null on
+  // a style that hasn't been backfilled yet, or one with no fixed method.
+  install_types?: string[] | null;
   // Soft ranking signal (see visibleInspoStyles) - empty/missing = universal.
   face_shapes_flattering?: string[] | null;
   // Resolved once in loadInspoStyles() for any row with no image_url -
@@ -145,6 +151,7 @@ type PageState =
   | "cutRouting"
   | "locWarning"
   | "confirm"
+  | "installType"
   | "results";
 type ResultTab = "tutorials" | "color" | "shopping" | "stylist";
 
@@ -581,6 +588,13 @@ function SelectableCard({
   );
 }
 
+// Pulls the video id out of any of the common YouTube URL shapes an admin
+// might paste into styles.tutorial_url (watch?v=, youtu.be/, /embed/).
+function extractYouTubeId(url: string): string | null {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{6,})/);
+  return match ? match[1] : null;
+}
+
 // Resizes to maxSize on the longest side and re-encodes as JPEG at 0.8
 // quality before the image ever leaves the browser - a smaller request
 // body is a direct, sizable chunk of the analyze route's total time
@@ -739,6 +753,65 @@ function StyleMatchContent() {
   const [savedStyleId, setSavedStyleId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
+  // Install type (item 1): which physical install method the user wants for
+  // this style, asked only when the style needs added hair. matchedCatalogStyle
+  // is the catalog styles row for this style name, if one exists - narrows the
+  // question to that style's real install_types and supplies tutorial_url for
+  // the tutorial card (item 3).
+  const [selectedInstallType, setSelectedInstallType] = useState<InstallType | null>(null);
+  const [matchedCatalogStyle, setMatchedCatalogStyle] = useState<{
+    install_types: string[] | null;
+    tutorial_url: string | null;
+    fake_hair_type: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!detected?.style_name) {
+      setMatchedCatalogStyle(null);
+      return;
+    }
+    let cancelled = false;
+    supabase
+      .from("styles")
+      .select("install_types, tutorial_url, fake_hair_type")
+      .ilike("name", detected.style_name)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setMatchedCatalogStyle(data ?? null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [detected?.style_name]);
+
+  // "Yes, this is it ->" on the confirm screen: ask the install-type question
+  // first when this style needs added hair and nothing's been picked yet,
+  // otherwise go straight to results (unchanged behavior for every style that
+  // doesn't need it).
+  function confirmAndContinue() {
+    if (detected?.requires_fake_hair && !selectedInstallType) {
+      setPageState("installType");
+    } else {
+      setPageState("results");
+    }
+  }
+
+  async function chooseInstallType(value: InstallType) {
+    setSelectedInstallType(value);
+    if (matchId) {
+      try {
+        await fetch("/api/style-match/install-type", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ match_id: matchId, install_type: value }),
+        });
+      } catch (err) {
+        console.error("[style-match] failed to save install type:", err);
+      }
+    }
+    setPageState("results");
+  }
+
   function showToast(message: string) {
     setToast(message);
     setTimeout(() => setToast(null), 2500);
@@ -754,6 +827,13 @@ function StyleMatchContent() {
   const [colorMapsUrl, setColorMapsUrl] = useState<string | null>(null);
   const [shoppingList, setShoppingList] = useState<StyleShoppingList | null>(null);
   const [shoppingLoading, setShoppingLoading] = useState(false);
+  // "Complete your look" cart (lib/styleCart.ts) - assembled once the
+  // shopping list is ready and (for styles that need added hair) an
+  // install type is picked. cartBuiltRef guards against re-creating a
+  // second cart if this effect's deps change again later in the session.
+  const [cartId, setCartId] = useState<string | null>(null);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const cartBuiltRef = useRef(false);
   // Hair-type-aware style translation (see lib/styleTranslations.ts) -
   // null whenever no style_translations row exists for this detected
   // style + the viewer's hair family, which is most styles/most users
@@ -1273,6 +1353,41 @@ function StyleMatchContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageState, detected, hairProfile]);
 
+  // "Complete your look" cart (lib/styleCart.ts) - assembles once per
+  // match, from the shopping list this same screen already built.
+  // Gated on an install type only for styles that need added hair,
+  // matching confirmAndContinue()'s own gating above; everything else
+  // (which never visits "installType") assembles as soon as the
+  // shopping list is ready. Sends the already-computed shoppingList/
+  // youtubeVideos rather than having the API route re-read
+  // style_matches.shopping_list, which isn't saved until handleComplete
+  // runs (sign-in required, a separate, later step).
+  useEffect(() => {
+    if (cartBuiltRef.current || !shoppingList || !matchId) return;
+    if (detected?.requires_fake_hair && !selectedInstallType) return;
+
+    cartBuiltRef.current = true;
+    fetch("/api/style-cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        match_id: matchId,
+        user_id: user?.id ?? null,
+        shopping_list: shoppingList,
+        tutorial: youtubeVideos[0] ?? null,
+        install_type: selectedInstallType,
+        requires_fake_hair: detected?.requires_fake_hair ?? false,
+      }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setCartId(data.cart_id);
+        setCartItems(data.items ?? []);
+      })
+      .catch((err) => console.error("[style-match] cart assembly failed:", err));
+  }, [shoppingList, matchId, detected, selectedInstallType, user, youtubeVideos]);
+
   async function handleComplete(choice: "diy" | "stylist", stylistId: string | null) {
     if (!user || !detected || !matchId || completedRef.current) return;
     completedRef.current = true;
@@ -1345,7 +1460,7 @@ function StyleMatchContent() {
       const { data, error: fetchError } = await supabase
         .from("styles")
         .select(
-          "id, name, slug, description, hair_types_compatible, requires_fake_hair, estimated_time, difficulty, image_url, face_shapes_flattering"
+          "id, name, slug, description, hair_types_compatible, requires_fake_hair, estimated_time, difficulty, image_url, install_types, face_shapes_flattering"
         )
         .order("name", { ascending: true });
 
@@ -1623,6 +1738,13 @@ function StyleMatchContent() {
                             </span>
                           )}
                         </div>
+                        {style.install_types?.[0] && (
+                          <div className="mt-1">
+                            <span className="border border-[#d0d0d0] px-[3px] py-0.5 font-mono lowercase text-muted" style={{ fontSize: "6px" }}>
+                              {installTypeLabel(style.install_types[0])}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </button>
                   );
@@ -2016,6 +2138,11 @@ function StyleMatchContent() {
                   {detected.fake_hair_type ?? "Fake hair needed"}
                 </span>
               )}
+              {(selectedInstallType || matchedCatalogStyle?.install_types?.[0]) && (
+                <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium capitalize text-bronze2">
+                  {installTypeLabel(selectedInstallType ?? matchedCatalogStyle?.install_types?.[0])}
+                </span>
+              )}
             </div>
 
             {/* Length gap (item 6) - lengthDifference is already collected
@@ -2091,7 +2218,7 @@ function StyleMatchContent() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <button
                 type="button"
-                onClick={() => setPageState("results")}
+                onClick={confirmAndContinue}
                 className="flex-1 bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
               >
                 Yes, this is it →
@@ -2107,7 +2234,36 @@ function StyleMatchContent() {
           </div>
         )}
 
+        {pageState === "installType" && detected && (
+          <div>
+            <h2 className="font-serif text-2xl font-semibold text-dark">How do you want to install this look?</h2>
+            <p className="mt-2 text-sm text-dark/60">
+              This style needs added hair - we&apos;ll match the right product and tutorial to how you&apos;re
+              installing it.
+            </p>
+            <div className="mt-6 space-y-3">
+              {installOptionsFor(matchedCatalogStyle?.install_types).map((option) => (
+                <SelectableCard
+                  key={option.value}
+                  label={option.label}
+                  selected={selectedInstallType === option.value}
+                  onClick={() => setSelectedInstallType(option.value)}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => selectedInstallType && chooseInstallType(selectedInstallType)}
+              disabled={!selectedInstallType}
+              className="mt-6 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-40"
+            >
+              Continue →
+            </button>
+          </div>
+        )}
+
         {pageState === "results" && detected && (
+          <>
           <div>
             <div className="flex items-start justify-between gap-4">
               <h2 className="font-serif text-2xl font-semibold text-dark">{detected.style_name}</h2>
@@ -2201,6 +2357,106 @@ function StyleMatchContent() {
                     {styleTranslation.key_difference}
                   </p>
                 </div>
+              </div>
+            )}
+
+            {detected.requires_fake_hair && (
+              <div className="mt-6 border-2 border-[#0a0a0a] bg-[#0a0a0a] p-4 text-white">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-bronze">
+                  this style needs fake hair
+                </p>
+                <p className="mt-1 text-lg font-bold lowercase">we found your match</p>
+                {shoppingLoading ? (
+                  <p className="mt-3 text-sm text-white/60">matching your texture...</p>
+                ) : (shoppingList?.fakeHairCatalogMatches?.length ?? 0) > 0 ? (
+                  (() => {
+                    const match = shoppingList!.fakeHairCatalogMatches[0];
+                    return (
+                      <a
+                        href={match.click_path}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-3 flex items-center justify-between gap-3 border border-white/30 bg-white/5 p-3 transition-colors hover:border-white/60"
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold">
+                            {match.brand_name} — {match.product_name}
+                          </span>
+                          <span className="mt-0.5 block text-xs text-white/60">
+                            {[match.hair_type, match.matched_color, match.packs_length_label]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
+                        </span>
+                        <span className="shrink-0 rounded-full bg-green/20 px-2.5 py-1 text-xs font-semibold text-green">
+                          {match.score}
+                        </span>
+                      </a>
+                    );
+                  })()
+                ) : (
+                  <div className="mt-3">
+                    <p className="text-sm text-white/70">we&apos;re sourcing this for your texture - check back soon</p>
+                    <a
+                      href={`mailto:hey@qoyl.live?subject=${encodeURIComponent(
+                        `Notify me: ${detected.style_name} hair product`
+                      )}&body=${encodeURIComponent(
+                        `Please let me know when a ${detected.fake_hair_type ?? detected.style_name} product match is available.`
+                      )}`}
+                      className="mt-2 inline-block border border-white/40 px-4 py-2 text-xs font-medium transition-colors hover:border-white"
+                    >
+                      notify me →
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(detected.requires_fake_hair || selectedInstallType) && (
+              <div className="mt-4 border border-dark bg-white p-4">
+                <p className="font-mono uppercase tracking-widest text-muted" style={{ fontSize: "9px" }}>
+                  best install tutorial for your hair type
+                </p>
+                {(() => {
+                  const overrideId = matchedCatalogStyle?.tutorial_url
+                    ? extractYouTubeId(matchedCatalogStyle.tutorial_url)
+                    : null;
+                  const video = overrideId
+                    ? { videoId: overrideId, title: "Recommended install tutorial" }
+                    : youtubeVideos[0]
+                    ? { videoId: youtubeVideos[0].videoId, title: youtubeVideos[0].title }
+                    : null;
+                  if (tutorialsLoading && !video) {
+                    return <p className="mt-2 text-sm text-dark/50">Loading tutorial...</p>;
+                  }
+                  if (!video) {
+                    return (
+                      <p className="mt-2 font-mono text-dark/40" style={{ fontSize: "11px" }}>
+                        tutorial coming soon
+                      </p>
+                    );
+                  }
+                  return (
+                    <a
+                      href={`https://www.youtube.com/watch?v=${video.videoId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-3 flex items-center gap-3"
+                    >
+                      <img
+                        src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
+                        alt={video.title}
+                        className="h-16 w-28 shrink-0 object-cover"
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium text-dark">{video.title}</span>
+                        <span className="mt-1 block text-xs font-semibold text-bronze2 underline underline-offset-2">
+                          watch on youtube →
+                        </span>
+                      </span>
+                    </a>
+                  );
+                })()}
               </div>
             )}
 
@@ -2787,6 +3043,13 @@ function StyleMatchContent() {
               </div>
             )}
           </div>
+
+          {cartId && cartItems.length > 0 && (
+            <div className="-mx-6">
+              <CompleteYourLookCart cartId={cartId} items={cartItems} />
+            </div>
+          )}
+          </>
         )}
       </div>
       </div>

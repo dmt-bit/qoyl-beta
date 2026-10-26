@@ -2,6 +2,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { lookupCityState } from "@/lib/zipLookup";
 import type { StyleShoppingList } from "@/lib/styleShoppingList";
 import { HAIR_ADDITION_PREFERENCE_LABELS, type HairAdditionPreference } from "@/lib/hairAdditionPreference";
+import { installTypeLabel } from "@/lib/installTypes";
 import { getStyleTranslation, resolveHairFamilyForTranslation } from "@/lib/styleTranslations";
 
 // Same CHECK-constraint values as components/HairJourneySection.tsx -
@@ -68,6 +69,10 @@ export type StyleMatchSummaryData = {
     hairAdditionPreference: string | null;
     hairAdditionPreferenceLabel: string | null;
     translatedForHairType: boolean;
+    // Item 1/5 - which physical method the client picked, when this style
+    // needed added hair. Null for a style that didn't ask (no fake hair).
+    installType: string | null;
+    installTypeLabel: string | null;
   };
   clientProfile: {
     curlType: string | null;
@@ -182,7 +187,7 @@ export async function buildStyleMatchSummary(
   const { data: match, error } = await admin
     .from("style_matches")
     .select(
-      "id, user_id, created_at, detected_style, detected_details, tutorials, shopping_list, stylist_id, color_match, length_difference, involves_extensions, hair_addition_preference, translated_for_hair_type, notes"
+      "id, user_id, created_at, detected_style, detected_details, tutorials, shopping_list, stylist_id, color_match, length_difference, involves_extensions, hair_addition_preference, translated_for_hair_type, notes, install_type"
     )
     .eq("id", matchId)
     .maybeSingle();
@@ -256,6 +261,8 @@ export async function buildStyleMatchSummary(
         ? HAIR_ADDITION_PREFERENCE_LABELS[match.hair_addition_preference as HairAdditionPreference] ?? null
         : null,
       translatedForHairType: Boolean(match.translated_for_hair_type),
+      installType: match.install_type ?? null,
+      installTypeLabel: installTypeLabel(match.install_type),
     },
     clientProfile: {
       curlType: profile?.curl_type ?? null,

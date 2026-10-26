@@ -180,6 +180,70 @@ function StyleMatchSummaryContent({ id }: { id: string }) {
           )}
         </section>
 
+        {/* SECTION 1.5 - Install Details (item 5) - only shown when this
+            style needed added hair, so a natural-hair style's brief stays
+            unchanged. */}
+        {details.requires_fake_hair && (
+          <section className="mt-10">
+            <SectionLabel>Install details</SectionLabel>
+            <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
+              <div className="flex justify-between border-b border-dark/10 py-1.5 sm:justify-start sm:gap-2">
+                <dt className="text-dark/50">Install method</dt>
+                <dd className="font-medium capitalize text-dark">
+                  {data.survey.installTypeLabel ?? "Not yet chosen"}
+                </dd>
+              </div>
+              <div className="flex justify-between border-b border-dark/10 py-1.5 sm:justify-start sm:gap-2">
+                <dt className="text-dark/50">Doing this</dt>
+                <dd className="font-medium text-dark">
+                  {data.matchedStylist
+                    ? `With ${data.matchedStylist.displayName}${data.matchedStylist.salonName ? ` (${data.matchedStylist.salonName})` : ""}`
+                    : "Themselves (DIY) or not yet decided"}
+                </dd>
+              </div>
+            </dl>
+
+            {(data.shoppingList?.fakeHairCatalogMatches?.length ?? 0) > 0 ? (
+              (() => {
+                const match = data.shoppingList!.fakeHairCatalogMatches[0];
+                return (
+                  <a
+                    href={match.click_path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-dark/10 p-3 transition-colors hover:border-dark/30"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-medium text-dark">
+                        {match.brand_name} — {match.product_name}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-dark/50">
+                        {[match.hair_type, match.matched_color, match.packs_length_label].filter(Boolean).join(" · ")}
+                      </span>
+                    </span>
+                    <span className="shrink-0 rounded-full bg-green/20 px-2.5 py-1 text-xs font-semibold text-green">
+                      {match.score}
+                    </span>
+                  </a>
+                );
+              })()
+            ) : (
+              <p className="mt-3 text-xs text-dark/50">No hair product matched yet for this client&apos;s texture.</p>
+            )}
+
+            {data.tutorials[0] && (
+              <a
+                href={`https://www.youtube.com/watch?v=${data.tutorials[0].videoId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 block text-xs font-medium text-dark/70 underline underline-offset-2 hover:text-dark"
+              >
+                Reference tutorial: {data.tutorials[0].title} →
+              </a>
+            )}
+          </section>
+        )}
+
         {/* SECTION 2 - Client Hair Profile */}
         <section className="mt-10">
           <SectionLabel>About this client&apos;s hair</SectionLabel>
