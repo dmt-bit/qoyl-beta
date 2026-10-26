@@ -15,7 +15,7 @@ const VIDEOS: VideoItem[] = [
     text: "i want a better hairstyle for my face shape.",
   },
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790791854/5891307-uhd_2160_4096_25fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7020172-hd_1080_1920_25fps.mp4",
     text: "i don't know how to style my hair at this length.",
   },
   {
@@ -31,7 +31,7 @@ const VIDEOS: VideoItem[] = [
     text: "i don't know how to care for my fake hair.",
   },
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790791837/12730569_3840_2160_60fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/blonde%20in%20bowl.mp4",
     text: "i need a stylist to achieve the look i want.",
   },
   {
@@ -51,7 +51,7 @@ const VIDEOS: VideoItem[] = [
     text: "i colored my hair and now my products don't work the same.",
   },
   {
-    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/videos/6599340-hd_1080_1920_25fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/blue%20braid%20for%20stylist%20page%20.mp4",
     text: "i want to try something new.",
   },
   {
