@@ -1,21 +1,15 @@
 "use client";
 
 // Extracted from EventDetailPage (a server component - no hooks
-// allowed there) purely to catch a failed external image load and
-// swap in a plain placeholder instead of a silently blank <Image>.
+// allowed there) purely to catch a failed image load and swap in a
+// plain placeholder instead of a silently blank <Image>.
 //
-// Diagnosed, not guessed: cover_image_url for find-your-stylist is a
-// real, well-formed, non-null Cloudinary URL - the <Image> was already
-// correctly wired to it, and res.cloudinary.com is already allowlisted
-// in next.config's remotePatterns. The actual cause is external: that
-// URL (and other Cloudinary assets under this same cloud that worked
-// earlier) now return a flat 401 from Cloudinary itself, not from this
-// app. That's a Cloudinary account/delivery-settings issue (most likely
-// "restricted media types" or strict/authenticated delivery turned on,
-// or the account/trial lapsing) - nothing here can fetch a 401'd image
-// successfully, so this component only keeps a failed load from
-// rendering as an empty dark box. Fix the actual photo by checking the
-// Cloudinary dashboard's delivery/access settings for this cloud name.
+// Originally added when cover_image_url pointed at Cloudinary, which
+// had gone account-wide 401 (free-tier limit exceeded). All Cloudinary
+// media has since been migrated to Supabase Storage (see the "media"
+// bucket) - find-your-stylist's cover_image_url now points there. Kept
+// this component anyway: a failed load (storage outage, a future bad
+// URL) should still degrade to this placeholder rather than a blank box.
 
 import { useState } from "react";
 import Image from "next/image";

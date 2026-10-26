@@ -7,11 +7,11 @@ type Placement = { x: number; y: number; w: number; h: number; r: number };
 
 const VIDEOS: VideoItem[] = [
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790792611/6940165-uhd_2560_1440_25fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/videos/6940165-uhd_2560_1440_25fps.mp4",
     text: "my hair is breaking off at the ends.",
   },
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790792304/8467535-hd_1080_1920_30fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/videos/8467535-hd_1080_1920_30fps.mp4",
     text: "i want a better hairstyle for my face shape.",
   },
   {
@@ -19,7 +19,7 @@ const VIDEOS: VideoItem[] = [
     text: "i don't know how to style my hair at this length.",
   },
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790791854/7306713-uhd_4096_2160_25fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/videos/7306713-uhd_4096_2160_25fps.mp4",
     text: "i need more volume.",
   },
   {
@@ -27,7 +27,7 @@ const VIDEOS: VideoItem[] = [
     text: "i don't know what products are right for my hair.",
   },
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790791845/6922998-uhd_2160_3840_24fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/videos/6922998-uhd_2160_3840_24fps.mp4",
     text: "i don't know how to care for my fake hair.",
   },
   {
@@ -35,27 +35,27 @@ const VIDEOS: VideoItem[] = [
     text: "i need a stylist to achieve the look i want.",
   },
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790791837/7710694-uhd_4096_2160_25fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/videos/7710694-uhd_4096_2160_25fps.mp4",
     text: "my hair feels thin.",
   },
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790791819/6502872-hd_1080_1920_30fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/videos/6502872-hd_1080_1920_30fps.mp4",
     text: "i'm looking for a new stylist.",
   },
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790791807/8343868-hd_1080_1920_25fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/videos/8343868-hd_1080_1920_25fps.mp4",
     text: "i don't know how to care for a loved one's hair.",
   },
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790791804/7020172-hd_1080_1920_25fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/videos/7020172-hd_1080_1920_25fps.mp4",
     text: "i colored my hair and now my products don't work the same.",
   },
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790791795/6599340-hd_1080_1920_25fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/videos/6599340-hd_1080_1920_25fps.mp4",
     text: "i want to try something new.",
   },
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790791796/6381013-uhd_2160_3840_24fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/videos/6381013-uhd_2160_3840_24fps.mp4",
     text: "i want to prioritize my hair health.",
   },
 ];

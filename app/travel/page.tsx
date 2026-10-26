@@ -236,7 +236,7 @@ function TravelKitProductCard({ item }: { item: TravelKitProduct }) {
 // layers (z-0, z-1); view content sits in a z-2 wrapper above both. The
 // bottom nav (z-[100]) stays above all of it.
 const TRAVEL_BACKGROUND_URL =
-  "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1791174170/pexels-mo-eid-1268975-12309587.jpg";
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/12309587.jpeg";
 
 function TravelShell({ children }: { children: React.ReactNode }) {
   return (

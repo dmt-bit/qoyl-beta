@@ -41,7 +41,7 @@ export async function sendWelcomeEmail(
 <body style="margin:0;padding:0;background:#ffffff;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
 <div style="max-width:560px;margin:0 auto;background:#ffffff;">
   <div style="position:relative;width:100%;overflow:hidden;">
-    <img src="https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-svet-svet-2156448907-35140064" alt="Natural hair" width="560" style="width:100%;height:380px;object-fit:cover;object-position:center 20%;display:block;"/>
+    <img src="https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/35140064.jpeg" alt="Natural hair" width="560" style="width:100%;height:380px;object-fit:cover;object-position:center 20%;display:block;"/>
     <div style="position:absolute;inset:0;background:linear-gradient(to bottom, rgba(14,12,10,0.35) 0%, rgba(14,12,10,0.55) 50%, rgba(14,12,10,0.92) 100%);"></div>
     <div style="position:absolute;top:28px;left:0;right:0;text-align:center;">
       <span style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:32px;font-weight:700;color:#ffffff;letter-spacing:0.5px;">qoyl</span>
@@ -87,7 +87,7 @@ export async function sendWelcomeEmail(
     </table>
   </div>
   <div style="width:100%;overflow:hidden;">
-    <img src="https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-pedrofurtadoo-29096365" alt="Hair care" width="560" style="width:100%;height:260px;object-fit:cover;object-position:center 30%;display:block;"/>
+    <img src="https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/29096365.jpeg" alt="Hair care" width="560" style="width:100%;height:260px;object-fit:cover;object-position:center 30%;display:block;"/>
   </div>
   <div style="background:#ffffff;padding:28px 32px;border-top:1px solid #e8e8e8;">
     <p style="font-size:12px;color:#888888;line-height:1.85;margin:0 0 6px;font-weight:300;">Questions or thoughts? Reply directly to this email. We read everything.</p>

@@ -47,28 +47,28 @@ INSERT INTO visual_library (image_url, hair_types, categories, mood, card_types)
   ARRAY['post','style']
 ),
 (
-  'https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-photo-4257489',
+  'https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/4257489.jpeg',
   ARRAY['3a','3b','3c'],
   ARRAY['lifestyle','texture'],
   'dark_editorial',
   ARRAY['post','product','style']
 ),
 (
-  'https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-svet-svet-2156448907-35140064',
+  'https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/35140064.jpeg',
   ARRAY['all'],
   ARRAY['lifestyle'],
   'dark_editorial',
   ARRAY['post','style']
 ),
 (
-  'https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/pexels-pedrofurtadoo-29096365',
+  'https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/29096365.jpeg',
   ARRAY['all'],
   ARRAY['lifestyle'],
   'light_clean',
   ARRAY['post','product']
 ),
 (
-  'https://res.cloudinary.com/kumxntij/image/upload/v1787276711/pexels-casa-rio-beauty-salon-2162626170-38421531.jpg',
+  'https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/38421531.jpeg',
   ARRAY['3c','4a','4b','4c'],
   ARRAY['style','lifestyle'],
   'warm_neutral',

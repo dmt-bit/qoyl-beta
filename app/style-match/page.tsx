@@ -329,7 +329,7 @@ function StyleMatchPromoHero() {
     <div className="relative">
       <div className="relative h-[470px] w-full overflow-hidden bg-white sm:h-[530px]">
         <Image
-          src="https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1791340492/copy_of_pexels-svet-svet-2156448907-35140064.jpg"
+          src="https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/35140064.jpeg"
           alt=""
           fill
           sizes="100vw"
