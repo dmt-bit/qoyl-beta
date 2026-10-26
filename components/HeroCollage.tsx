@@ -23,7 +23,7 @@ const VIDEOS: VideoItem[] = [
     text: "i need more volume.",
   },
   {
-    src: "https://res.cloudinary.com/kumxntij/video/upload/v1790791852/6663336-uhd_2160_3744_30fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/store%20shelf.mp4",
     text: "i don't know what products are right for my hair.",
   },
   {
