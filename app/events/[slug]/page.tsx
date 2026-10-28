@@ -82,7 +82,7 @@ export default async function EventDetailPage({ params }: { params: { slug: stri
               {eventLocationLabel(event)}
             </p>
 
-            <div className="mt-4">
+            <div className="mt-4 flex gap-2">
               {cta.kind === "cancelled" || cta.kind === "disabled" ? (
                 <span className="block w-full cursor-not-allowed border border-dark/30 py-3 text-center font-mono text-[12px] lowercase text-dark/40">
                   {cta.label}
@@ -92,9 +92,21 @@ export default async function EventDetailPage({ params }: { params: { slug: stri
                   href={cta.href}
                   target={cta.kind === "link" ? "_blank" : undefined}
                   rel={cta.kind === "link" ? "noopener noreferrer" : undefined}
-                  className="block w-full bg-dark py-3 text-center font-mono text-[12px] lowercase text-white transition-colors hover:bg-bronze2"
+                  className="block flex-1 bg-dark py-3 text-center font-mono text-[12px] lowercase text-white transition-colors hover:bg-bronze2"
                 >
                   {cta.label}
+                </a>
+              )}
+              {/* Find Your Stylist-specific - a hardcoded slug check
+                  rather than a new DB column, since this is a one-off
+                  recruiting CTA for a single event, not a general event
+                  feature. */}
+              {event.slug === "find-your-stylist" && cta.kind !== "cancelled" && cta.kind !== "disabled" && (
+                <a
+                  href="/events/stylist-rsvp"
+                  className="block flex-1 border border-dark py-3 text-center font-mono text-[12px] lowercase text-dark transition-colors hover:bg-dark hover:text-white"
+                >
+                  attend as a stylist — free
                 </a>
               )}
             </div>
