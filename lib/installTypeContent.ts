@@ -110,28 +110,42 @@ export function prioritizeCategoriesForInstallType(
   return [...front, ...rest];
 }
 
-// True "fully covered" installs only (wig variants + a sew-in weave) -
-// crochet/no_sew are braid-adjacent, with natural hair still exposed/
-// managed differently, so they're deliberately not included here even
-// though they're also "added hair." leave-in/curl-cream/gel are real
-// categories.slug values genuinely aimed at styling exposed natural
-// hair/curl pattern, which a wig/weave install doesn't expose - unlike
-// the priority reordering above, this actually removes them rather
-// than just ranking them lower, since the request specifically called
-// out not surfacing them at all for these install types.
-const INSTALL_TYPE_EXCLUDED_CATEGORIES: Partial<Record<InstallType, string[]>> = {
+// A real score penalty, not category exclusion - superseding this
+// file's previous excludeCategoriesForInstallType (removed), per this
+// turn's explicit correction: "deprioritize (score penalty, not just
+// reorder)." A deprioritized category's product can still surface if
+// nothing else is available, just ranked lower - this matters
+// concretely in lib/styleCart.ts's buildProductItems, which sorts
+// shoppingList.hairCare by score and takes the top 5, so a penalized
+// leave-in pick can get edged out of the cart by a non-penalized one
+// without ever being hard-removed from the shopping list itself.
+//
+// "wig"/"weave" -> true "fully covered" installs (wig variants + the
+// sew-in weave) - leave-in/curl-cream/gel are real categories.slug
+// values aimed at styling exposed natural hair/curl pattern, which
+// these installs don't expose.
+// "protective" (braids/twists) -> crochet/no_sew, the closest real
+// InstallType values to that bucket - deprioritizes wash-day-heavy
+// categories (the natural hair underneath still gets washed, just not
+// as the main event of a protective-style day).
+//
+// Same -30 magnitude as getWeightModifier's heavy/very_heavy penalties
+// in lib/compatibility.ts, big enough to reliably drop a deprioritized
+// pick below a same-category non-deprioritized one in a cross-category
+// sort, without ever being able to go negative (resolveScoreResult's
+// normalizedScore is already clamped to [0, 100]).
+const INSTALL_TYPE_CATEGORY_PENALTY = 30;
+
+const INSTALL_TYPE_DEPRIORITIZED_CATEGORIES: Partial<Record<InstallType, string[]>> = {
   glue_tape_wig: ["leave-in", "curl-cream", "gel"],
   u_part_wig: ["leave-in", "curl-cream", "gel"],
   closure_frontal_install: ["leave-in", "curl-cream", "gel"],
   sew_in: ["leave-in", "curl-cream", "gel"],
+  crochet: ["shampoo", "conditioner", "deep-conditioner", "hair-mask"],
+  no_sew: ["shampoo", "conditioner", "deep-conditioner", "hair-mask"],
 };
 
-export function excludeCategoriesForInstallType(
-  categories: string[],
-  installType: InstallType | null
-): string[] {
-  const excluded = installType ? INSTALL_TYPE_EXCLUDED_CATEGORIES[installType] : undefined;
-  if (!excluded || excluded.length === 0) return categories;
-  const excludedSet = new Set(excluded);
-  return categories.filter((c) => !excludedSet.has(c));
+export function installTypeCategoryPenalty(category: string, installType: InstallType | null): number {
+  const deprioritized = installType ? INSTALL_TYPE_DEPRIORITIZED_CATEGORIES[installType] : undefined;
+  return deprioritized?.includes(category) ? INSTALL_TYPE_CATEGORY_PENALTY : 0;
 }

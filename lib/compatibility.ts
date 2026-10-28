@@ -641,6 +641,10 @@ function applyWaterHardnessAdjustment(
 // double via midlifeModifier(), plus their own additional rules.
 
 const FRAGRANCE = new Set(["parfum"]);
+// For the sensitive-scalp irritant check only (applyIngredientFunctionAdjustment
+// below) - deliberately separate from FRAGRANCE above, see that call
+// site's comment.
+const SENSITIVE_SCALP_IRRITANTS = new Set(["parfum", "linalool"]);
 const YOUTH_ESSENTIAL_OILS = new Set([
   "mentha piperita oil", // Peppermint Oil
   "melaleuca alternifolia leaf oil", // Tea Tree Oil
@@ -1546,11 +1550,19 @@ function applyIngredientFunctionAdjustment(
   }
 
   // Sensitive scalp previously only penalized sulfates (surfactant-
-  // gated, above) - a real gap, since fragrance is one of the most
-  // common real-world scalp irritants and FRAGRANCE isn't tagged
-  // primary_function "surfactant" so that check never caught it.
-  if (scalpCondition === "sensitive" && FRAGRANCE.has(name)) {
-    delta -= 3;
+  // gated, above) - a real gap, since fragrance/linalool are among the
+  // most common real-world scalp irritants and neither is tagged
+  // primary_function "surfactant" so that check never caught them.
+  // Same -4 magnitude as the sulfate penalty, per this turn's
+  // correction (was -3). A dedicated set rather than reusing the
+  // shared FRAGRANCE constant (just "parfum," used elsewhere for
+  // unrelated age-based rules) - "linalool" is a real, separate
+  // ingredients.inci_name (confirmed live) and "fragrance" itself
+  // isn't (only "Parfum" is actually used in this catalog), so adding
+  // it to FRAGRANCE would've silently never matched anything while
+  // still risking an unintended side effect on those other rules.
+  if (scalpCondition === "sensitive" && SENSITIVE_SCALP_IRRITANTS.has(name)) {
+    delta -= 4;
   }
 
   if (delta === 0) return { score, rating };

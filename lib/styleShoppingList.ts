@@ -9,7 +9,7 @@ import type { HairAdditionPreference } from "@/lib/hairAdditionPreference";
 import { getToolsForProfile } from "@/lib/getToolsForProfile";
 import { TOOLS_CATALOG, type HairTool } from "@/lib/toolsData";
 import type { InstallType } from "@/lib/installTypes";
-import { excludeCategoriesForInstallType, prioritizeCategoriesForInstallType } from "@/lib/installTypeContent";
+import { installTypeCategoryPenalty, prioritizeCategoriesForInstallType } from "@/lib/installTypeContent";
 
 export type ScoredHairCareItem = {
   catalogProductId: string;
@@ -192,6 +192,15 @@ function matchReasonFor(result: ScoreResult | null, score: number): string {
     const badge = nameKeywordBadgeLabel(result);
     if (badge) return badge;
     if (!result.hasIngredientData) return "no ingredient data yet - shown as a fallback pick";
+    // No specific keyword match (nameKeywordModifier under the 6-point
+    // threshold badge needs) - name the single highest-scoring
+    // ingredient instead of a generic tier sentence, same idea as the
+    // badge: a concrete reason beats a vague one when there's a real
+    // one available.
+    const topIngredient = result.matches.slice().sort((a, b) => b.score - a.score)[0];
+    if (topIngredient && topIngredient.score >= 7) {
+      return `high compatibility: ${topIngredient.ingredient_name}`;
+    }
   }
   return TIER_FALLBACK_REASON[scoreTier(score)];
 }
@@ -238,7 +247,8 @@ export function pickCategoriesForStyle(
 }
 
 async function fetchScoredHairCareProducts(
-  categorySlugs: string[]
+  categorySlugs: string[],
+  installType: InstallType | null = null
 ): Promise<{ items: ScoredHairCareItem[]; uncoveredSlugs: string[] }> {
   const { data: categoryRows } = await supabase
     .from("categories")
@@ -297,13 +307,22 @@ async function fetchScoredHairCareProducts(
       (best.product.catalog_brands as unknown as { name: string } | null)?.name ??
       "Unknown brand";
 
+    // Install-type category deprioritization (lib/installTypeContent.ts) -
+    // a score penalty, not exclusion, applied after the category's own
+    // winner is picked (every candidate in this category shares the
+    // same penalty, so it never changes which product wins within the
+    // category - only how it ranks against OTHER categories, which is
+    // what actually matters once lib/styleCart.ts sorts hairCare by
+    // score across categories for its top-5 cut).
+    const penalizedScore = Math.max(0, best.score - installTypeCategoryPenalty(slug, installType));
+
     results.push({
       catalogProductId: best.product.id,
       name: best.product.name,
       brand: brandName,
       categoryLabel: categoryLabel(slug),
-      score: best.score,
-      matchReason: matchReasonFor(best.result, best.score),
+      score: penalizedScore,
+      matchReason: matchReasonFor(best.result, penalizedScore),
     });
   }
 
@@ -1073,10 +1092,7 @@ export async function buildStyleShoppingList(input: {
     input.styleDescription,
     input.translationProductsNeeded
   );
-  const categorySlugs = prioritizeCategoriesForInstallType(
-    excludeCategoriesForInstallType(baseCategorySlugs, input.installType ?? null),
-    input.installType ?? null
-  );
+  const categorySlugs = prioritizeCategoriesForInstallType(baseCategorySlugs, input.installType ?? null);
   const preference = input.hairAdditionPreference ?? null;
 
   const brandByCategory = await fetchBrandProducts(
@@ -1094,7 +1110,7 @@ export async function buildStyleShoppingList(input: {
   );
   const remainingSlugs = categorySlugs.filter((slug) => !brandCoveredSlugs.has(slug));
 
-  const { items: hairCare, uncoveredSlugs } = await fetchScoredHairCareProducts(remainingSlugs);
+  const { items: hairCare, uncoveredSlugs } = await fetchScoredHairCareProducts(remainingSlugs, input.installType ?? null);
   const amazonFallback = uncoveredSlugs.map((slug) => {
     const label = categoryLabel(slug);
     return {
