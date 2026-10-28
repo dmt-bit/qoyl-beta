@@ -172,7 +172,7 @@ function HomeDesktopNav({ user, showRoutineNudge }: { user: unknown; showRoutine
     // desktop, same as it does against the mobile top bar's real 52px.
     <div className="hidden h-16 border-b border-bronze/20 px-6 sm:flex sm:items-center">
       <div className="mx-auto flex w-full max-w-5xl items-center justify-between">
-        <Link href="/" className="shrink-0 font-serif text-xl font-bold lowercase text-dark">
+        <Link href="/" className="shrink-0 nav-brand font-serif text-xl font-bold lowercase text-dark">
           qoyl
         </Link>
         <div className="flex shrink-0 items-center gap-4 whitespace-nowrap text-sm">
@@ -447,7 +447,7 @@ export default function Nav() {
           BottomNav below; the hamburger here is secondary navigation
           (feed filters by hair type, account, learn). */}
       <div className="flex items-center justify-between px-4 sm:hidden" style={{ height: "calc(52px + env(safe-area-inset-top))", paddingTop: "env(safe-area-inset-top)" }}>
-        <Link href="/" className="font-serif text-xl font-bold lowercase text-dark">
+        <Link href="/" className="nav-brand font-serif text-xl font-bold lowercase text-dark">
           qoyl
         </Link>
         <button
@@ -467,7 +467,7 @@ export default function Nav() {
       {/* Desktop: wordmark, center text links, sign-in/account on the right. */}
       <div className="hidden border-b border-bronze/20 px-6 py-4 sm:block">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <Link href="/" className="shrink-0 font-serif text-xl font-bold lowercase text-dark">
+          <Link href="/" className="shrink-0 nav-brand font-serif text-xl font-bold lowercase text-dark">
             qoyl
           </Link>
 
@@ -557,7 +557,7 @@ export default function Nav() {
           }`}
         >
           <div className="flex items-center justify-between px-4" style={{ height: "calc(52px + env(safe-area-inset-top))", paddingTop: "env(safe-area-inset-top)" }}>
-            <Link href="/" onClick={closeMenu} className="font-serif text-xl font-bold lowercase text-dark">
+            <Link href="/" onClick={closeMenu} className="nav-brand font-serif text-xl font-bold lowercase text-dark">
               qoyl
             </Link>
             <button

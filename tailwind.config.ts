@@ -41,6 +41,7 @@ const config: Config = {
         serif: ["var(--font-space-grotesk)"],
         sans: ["var(--font-space-grotesk)"],
         mono: ["var(--font-space-mono)"],
+        display: ["var(--font-fredoka)", "cursive"],
       },
     },
   },

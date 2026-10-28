@@ -17,6 +17,28 @@
   --red: #b03030;
   --font-sans: "Space Grotesk", sans-serif;
   --font-mono: "Space Mono", monospace;
+  /* var(--font-fredoka) is the next/font-generated handle (set on <body>
+     in app/layout.tsx) for the actual self-hosted font file - a plain
+     'Fredoka' string here wouldn't load anything, since next/font never
+     registers a browser-global @font-face reachable by family name. */
+  --font-display: var(--font-fredoka), cursive;
+}
+
+/* Hand-drawn, bouncy display type for headings/hero/section titles and
+   the nav wordmark - everything else (body copy, UI labels, prices)
+   keeps --font-sans/--font-mono untouched. Letter-spacing is a touch
+   open (not tight) to match the reference logo's rounded bounce.
+   Doesn't touch text-transform: the lowercase rules above are scoped to
+   nav/button/footer chrome, not headings, so they're unaffected either
+   way. */
+h1,
+h2,
+h3,
+.hero-text,
+.section-title,
+.nav-brand {
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
 }
 
 /* Qoyl is a deliberate stark black-on-white brand look, not an

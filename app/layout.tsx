@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Space_Mono } from "next/font/google";
+import { Space_Grotesk, Space_Mono, Fredoka } from "next/font/google";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import FeedbackSurveyTrigger from "@/components/FeedbackSurveyTrigger";
@@ -17,6 +17,21 @@ const spaceMono = Space_Mono({
   subsets: ["latin"],
   weight: ["400", "700"],
   variable: "--font-space-mono",
+});
+
+// Display font for headings/hero text - hand-drawn, bouncy rounded feel
+// closest to the "Sunday Dinner Club" reference logo. Self-hosted via
+// next/font (this app has no <link> tags for fonts anywhere - Space
+// Grotesk/Mono both load this way), not the literal CSS2 <link> the
+// request specified. The requested family name "Fredoka One" isn't a
+// real next/font/google export (confirmed via a scratch tsc check) -
+// "Fredoka" is the current variable-weight family Google Fonts
+// replaced it with, and is the actual hand-drawn-rounded face behind
+// the old "Fredoka One" name.
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-fredoka",
 });
 
 // Installable as a home screen app (see public/manifest.json). The icon is
@@ -65,7 +80,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body
-        className={`${spaceGrotesk.variable} ${spaceMono.variable} antialiased`}
+        className={`${spaceGrotesk.variable} ${spaceMono.variable} ${fredoka.variable} antialiased`}
       >
         <AuthProvider>
           <Nav />
