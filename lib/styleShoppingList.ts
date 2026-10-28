@@ -8,6 +8,8 @@ import type { FakeHairMatch } from "@/lib/fakeHairMatcher";
 import type { HairAdditionPreference } from "@/lib/hairAdditionPreference";
 import { getToolsForProfile } from "@/lib/getToolsForProfile";
 import { TOOLS_CATALOG, type HairTool } from "@/lib/toolsData";
+import type { InstallType } from "@/lib/installTypes";
+import { prioritizeCategoriesForInstallType } from "@/lib/installTypeContent";
 
 export type ScoredHairCareItem = {
   catalogProductId: string;
@@ -1020,12 +1022,20 @@ export async function buildStyleShoppingList(input: {
   // was detected rather than whichever fallback produced detectedColor.
   naturalHairColor?: string | null;
   hairLength?: string | null;
+  // The user's own install-type answer (lib/installTypes.ts) - when
+  // set, reorders the category list so install-relevant categories
+  // (lib/installTypeContent.ts) are queried/shown first. Bug fix: this
+  // used to never reach here at all, so a wig install's recs were
+  // identical to whatever the detected style's own category guesses
+  // produced, regardless of what the user actually picked.
+  installType?: InstallType | null;
 }): Promise<StyleShoppingList> {
-  const categorySlugs = pickCategoriesForStyle(
+  const baseCategorySlugs = pickCategoriesForStyle(
     input.styleName,
     input.styleDescription,
     input.translationProductsNeeded
   );
+  const categorySlugs = prioritizeCategoriesForInstallType(baseCategorySlugs, input.installType ?? null);
   const preference = input.hairAdditionPreference ?? null;
 
   const brandByCategory = await fetchBrandProducts(

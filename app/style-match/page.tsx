@@ -24,6 +24,11 @@ import {
 } from "@/lib/hairAdditionPreference";
 import type { StyleTranslation } from "@/lib/styleTranslations";
 import { installOptionsFor, installTypeLabel, type InstallType } from "@/lib/installTypes";
+import {
+  resolveRequiresFakeHair,
+  tutorialSearchFallbackUrl,
+  tutorialSearchQuery,
+} from "@/lib/installTypeContent";
 import type { CartItem } from "@/lib/styleCart";
 import CompleteYourLookCart from "@/components/CompleteYourLookCart";
 
@@ -1218,7 +1223,14 @@ function StyleMatchContent() {
           style_name: detected!.style_name,
           curl_type: curlType,
         });
-        if (translation?.youtube_search_override) {
+        // Bug fix: the user's install-type pick now drives the tutorial
+        // search (lib/installTypeContent.ts) ahead of the style's own
+        // style_translations override, which itself used to be the only
+        // thing that could ever beat the generic style-name search -
+        // selectedInstallType never reached this query at all before.
+        if (selectedInstallType) {
+          ytParams.set("query_override", tutorialSearchQuery(selectedInstallType, curlType));
+        } else if (translation?.youtube_search_override) {
           ytParams.set("query_override", translation.youtube_search_override);
         }
 
@@ -1279,8 +1291,14 @@ function StyleMatchContent() {
         const list = await buildStyleShoppingList({
           styleName: detected!.style_name,
           styleDescription: detected!.style_description,
-          requiresFakeHair: detected!.requires_fake_hair,
+          // Bug fix: the user's own install-type pick now takes
+          // priority over the style's own default - picking "wig" on a
+          // style the detector didn't flag as needing fake hair still
+          // pulls in the fake hair section/matches, not just whatever
+          // the style's own requires_fake_hair said.
+          requiresFakeHair: resolveRequiresFakeHair(detected!.requires_fake_hair, selectedInstallType),
           fakeHairType: detected!.fake_hair_type,
+          installType: selectedInstallType,
           accessoriesVisible: detected!.accessories_visible ?? [],
           wantsLengthExtensions: lengthDifference === "longer" && wantsLengthExtensions,
           userId: user?.id ?? null,
@@ -1376,7 +1394,7 @@ function StyleMatchContent() {
         shopping_list: shoppingList,
         tutorial: youtubeVideos[0] ?? null,
         install_type: selectedInstallType,
-        requires_fake_hair: detected?.requires_fake_hair ?? false,
+        requires_fake_hair: resolveRequiresFakeHair(detected?.requires_fake_hair ?? false, selectedInstallType),
       }),
     })
       .then((res) => (res.ok ? res.json() : null))
@@ -2360,7 +2378,7 @@ function StyleMatchContent() {
               </div>
             )}
 
-            {detected.requires_fake_hair && (
+            {resolveRequiresFakeHair(detected.requires_fake_hair, selectedInstallType) && (
               <div className="mt-6 border-2 border-[#0a0a0a] bg-[#0a0a0a] p-4 text-white">
                 <p className="font-mono text-[10px] uppercase tracking-widest text-bronze">
                   this style needs fake hair
@@ -2418,9 +2436,20 @@ function StyleMatchContent() {
                   best install tutorial for your hair type
                 </p>
                 {(() => {
-                  const overrideId = matchedCatalogStyle?.tutorial_url
-                    ? extractYouTubeId(matchedCatalogStyle.tutorial_url)
-                    : null;
+                  // Bug fix: the style's own tutorial_url only wins when
+                  // the user either hasn't picked an install type yet, or
+                  // picked one the style's own catalog row actually lists -
+                  // picking "wig" on a style whose catalog default is a
+                  // wash-and-go tutorial no longer shows that wash-and-go
+                  // video. selectedInstallType's own search (ytParams
+                  // above, already live-fetched into youtubeVideos) wins
+                  // once the user has picked something off-catalog.
+                  const styleOwnTutorialApplies =
+                    !selectedInstallType || (matchedCatalogStyle?.install_types ?? []).includes(selectedInstallType);
+                  const overrideId =
+                    styleOwnTutorialApplies && matchedCatalogStyle?.tutorial_url
+                      ? extractYouTubeId(matchedCatalogStyle.tutorial_url)
+                      : null;
                   const video = overrideId
                     ? { videoId: overrideId, title: "Recommended install tutorial" }
                     : youtubeVideos[0]
@@ -2430,7 +2459,17 @@ function StyleMatchContent() {
                     return <p className="mt-2 text-sm text-dark/50">Loading tutorial...</p>;
                   }
                   if (!video) {
-                    return (
+                    return selectedInstallType ? (
+                      <a
+                        href={tutorialSearchFallbackUrl(selectedInstallType, hairProfile?.curl_type ?? null)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-block font-mono text-bronze2 underline underline-offset-2 hover:text-dark"
+                        style={{ fontSize: "11px" }}
+                      >
+                        search youtube for a {installTypeLabel(selectedInstallType)} tutorial →
+                      </a>
+                    ) : (
                       <p className="mt-2 font-mono text-dark/40" style={{ fontSize: "11px" }}>
                         tutorial coming soon
                       </p>
