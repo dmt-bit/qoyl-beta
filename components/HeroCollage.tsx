@@ -15,7 +15,7 @@ const VIDEOS: VideoItem[] = [
     text: "i want a better hairstyle for my face shape.",
   },
   {
-    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7020172-hd_1080_1920_25fps.mp4",
+    src: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7477170-uhd_2160_3840_24fps.mp4",
     text: "i don't know how to style my hair at this length.",
   },
   {
