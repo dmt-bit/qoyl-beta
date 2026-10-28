@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import { curlFamily, scoreCatalogProducts, scoreTier } from "@/lib/compatibility";
+import { curlFamily, nameKeywordBadgeLabel, scoreCatalogProducts, scoreTier, type ScoreResult } from "@/lib/compatibility";
 import { CATEGORY_LABEL_BY_SLUG } from "@/lib/productCategories";
 // Type-only import - erased at compile time, so the service-role code
 // in lib/brandCatalogProducts.ts never ends up in this client bundle.
@@ -9,7 +9,7 @@ import type { HairAdditionPreference } from "@/lib/hairAdditionPreference";
 import { getToolsForProfile } from "@/lib/getToolsForProfile";
 import { TOOLS_CATALOG, type HairTool } from "@/lib/toolsData";
 import type { InstallType } from "@/lib/installTypes";
-import { prioritizeCategoriesForInstallType } from "@/lib/installTypeContent";
+import { excludeCategoriesForInstallType, prioritizeCategoriesForInstallType } from "@/lib/installTypeContent";
 
 export type ScoredHairCareItem = {
   catalogProductId: string;
@@ -17,6 +17,13 @@ export type ScoredHairCareItem = {
   brand: string;
   categoryLabel: string;
   score: number;
+  // "why this was picked" for the UI - the real scoring engine already
+  // computes this (ScoreResult.nameKeywordMatch, from matching the
+  // product's own name against the profile's concerns/goals/porosity/
+  // family), it just never made it out of fetchScoredHairCareProducts
+  // before. Falls back to a plain score-tier sentence when no specific
+  // keyword match drove the score.
+  matchReason: string;
 };
 
 export type StaticShoppingItem = {
@@ -169,6 +176,26 @@ function categoryLabel(slug: string): string {
   return CATEGORY_LABEL_BY_SLUG[slug] ?? BRAND_CATEGORY_LABELS[slug] ?? slug;
 }
 
+const TIER_FALLBACK_REASON: Record<ReturnType<typeof scoreTier>, string> = {
+  green: "scored well for your hair profile",
+  amber: "a reasonable fit for your hair profile",
+  red: "the best available match, though not a strong one",
+};
+
+// Prefers the real keyword match the scoring engine already computed
+// (lib/compatibility.ts's nameKeywordBadgeLabel - "Matches your X" -
+// already used elsewhere for the exact same purpose) over a generic
+// tier sentence, so "why was this recommended" isn't always the same
+// three stock phrases when there's a more specific reason available.
+function matchReasonFor(result: ScoreResult | null, score: number): string {
+  if (result) {
+    const badge = nameKeywordBadgeLabel(result);
+    if (badge) return badge;
+    if (!result.hasIngredientData) return "no ingredient data yet - shown as a fallback pick";
+  }
+  return TIER_FALLBACK_REASON[scoreTier(score)];
+}
+
 export function pickCategoriesForStyle(
   styleName: string,
   styleDescription: string,
@@ -247,7 +274,17 @@ async function fetchScoredHairCareProducts(
       .map((c) => ({
         product: c,
         score: scores[c.id]?.result?.normalizedScore ?? -1,
+        result: scores[c.id]?.result ?? null,
       }))
+      // scoreCatalogProducts already reranks by the real,
+      // position-weighted, profile-aware score - a product with zero
+      // linked ingredients comes back as a flat 0 (ScoreResult.
+      // hasIngredientData: false) and sorts last here, same as any
+      // other poorly-scored product. Only ever picked when it's the
+      // single remaining candidate (the `continue` above already
+      // skipped any category with zero candidates at all), matching
+      // "returnable as a fallback if nothing else scores, but always
+      // below scored products."
       .sort((a, b) => b.score - a.score)[0];
 
     if (!best || best.score < 0) {
@@ -266,6 +303,7 @@ async function fetchScoredHairCareProducts(
       brand: brandName,
       categoryLabel: categoryLabel(slug),
       score: best.score,
+      matchReason: matchReasonFor(best.result, best.score),
     });
   }
 
@@ -1035,7 +1073,10 @@ export async function buildStyleShoppingList(input: {
     input.styleDescription,
     input.translationProductsNeeded
   );
-  const categorySlugs = prioritizeCategoriesForInstallType(baseCategorySlugs, input.installType ?? null);
+  const categorySlugs = prioritizeCategoriesForInstallType(
+    excludeCategoriesForInstallType(baseCategorySlugs, input.installType ?? null),
+    input.installType ?? null
+  );
   const preference = input.hairAdditionPreference ?? null;
 
   const brandByCategory = await fetchBrandProducts(

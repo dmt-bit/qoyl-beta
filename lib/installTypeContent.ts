@@ -85,10 +85,10 @@ export function tutorialSearchFallbackUrl(installType: InstallType, curlType: st
 // rather than hard-removing wash-day categories a wig wearer's real
 // hair underneath still periodically needs.
 export const INSTALL_TYPE_PRIORITY_CATEGORIES: Partial<Record<InstallType, string[]>> = {
-  glue_tape_wig: ["styler", "oil", "leave-in", "scalp-treatment"],
-  u_part_wig: ["styler", "leave-in", "scalp-treatment", "oil"],
-  closure_frontal_install: ["styler", "oil", "leave-in", "scalp-treatment"],
-  sew_in: ["scalp-treatment", "oil", "leave-in"],
+  glue_tape_wig: ["styler", "oil", "scalp-treatment"],
+  u_part_wig: ["styler", "scalp-treatment", "oil"],
+  closure_frontal_install: ["styler", "oil", "scalp-treatment"],
+  sew_in: ["scalp-treatment", "oil"],
   clip_ins: ["styler", "heat-protectant", "oil"],
   crochet: ["scalp-treatment", "oil", "leave-in"],
   no_sew: ["scalp-treatment", "oil", "gel"],
@@ -108,4 +108,30 @@ export function prioritizeCategoriesForInstallType(
   // getting.
   const front = priority.filter((c) => categories.includes(c));
   return [...front, ...rest];
+}
+
+// True "fully covered" installs only (wig variants + a sew-in weave) -
+// crochet/no_sew are braid-adjacent, with natural hair still exposed/
+// managed differently, so they're deliberately not included here even
+// though they're also "added hair." leave-in/curl-cream/gel are real
+// categories.slug values genuinely aimed at styling exposed natural
+// hair/curl pattern, which a wig/weave install doesn't expose - unlike
+// the priority reordering above, this actually removes them rather
+// than just ranking them lower, since the request specifically called
+// out not surfacing them at all for these install types.
+const INSTALL_TYPE_EXCLUDED_CATEGORIES: Partial<Record<InstallType, string[]>> = {
+  glue_tape_wig: ["leave-in", "curl-cream", "gel"],
+  u_part_wig: ["leave-in", "curl-cream", "gel"],
+  closure_frontal_install: ["leave-in", "curl-cream", "gel"],
+  sew_in: ["leave-in", "curl-cream", "gel"],
+};
+
+export function excludeCategoriesForInstallType(
+  categories: string[],
+  installType: InstallType | null
+): string[] {
+  const excluded = installType ? INSTALL_TYPE_EXCLUDED_CATEGORIES[installType] : undefined;
+  if (!excluded || excluded.length === 0) return categories;
+  const excludedSet = new Set(excluded);
+  return categories.filter((c) => !excludedSet.has(c));
 }

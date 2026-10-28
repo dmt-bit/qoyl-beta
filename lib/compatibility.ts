@@ -1073,11 +1073,16 @@ const NAME_KEYWORD_CAP = 15;
 
 type KeywordContext = {
   hairConcerns: string[];
+  hairGoals: string[];
   family: CurlFamily | null;
   porosity: string;
   scalpCondition: string | null;
   colorTreated: boolean;
 };
+
+function hasGoal(goals: string[], ...names: string[]): boolean {
+  return names.some((n) => goals.includes(n)) || goals.includes("all");
+}
 
 function hasAny(text: string, keywords: string[]): boolean {
   return keywords.some((k) => text.includes(k));
@@ -1115,10 +1120,14 @@ const NAME_KEYWORD_CATEGORIES: {
     category: "moisture",
     label: "moisture and hydration",
     keywords: ["moisture", "hydrat", "quench", "thirst", "drench", "replenish"],
-    score: ({ hairConcerns, porosity }) => {
+    score: ({ hairConcerns, hairGoals, porosity }) => {
       let d = 0;
       // "brittleness" isn't a real concern value here - "dryness" is.
       if (hasConcern(hairConcerns, "dryness")) d += 6;
+      // hair_profiles.hair_goals' "moisture_definition" covers both this
+      // category and curl_definition below - a single goal value for a
+      // combined real-world ask ("moisturized, defined curls").
+      if (hasGoal(hairGoals, "moisture_definition")) d += 5;
       if (porosity === "high") d += 4;
       if (porosity === "low") d -= 2;
       return d;
@@ -1128,11 +1137,12 @@ const NAME_KEYWORD_CATEGORIES: {
     category: "curl_definition",
     label: "curl definition",
     keywords: ["curl", "coil", "define", "definition", "pattern", "enhance"],
-    score: ({ family }) => {
+    score: ({ family, hairGoals }) => {
       let d = 0;
       if (family === "curly" || family === "coily") d += 6;
       if (family === "straight") d -= 8;
       if (family === "wavy") d += 2;
+      if (hasGoal(hairGoals, "moisture_definition")) d += 4;
       return d;
     },
   },
@@ -1142,8 +1152,10 @@ const NAME_KEYWORD_CATEGORIES: {
     keywords: ["scalp", "root", "follicle", "growth", "stimulat"],
     // "scalp" and "growth" (not "scalp_issues"/"slow_growth") are this
     // app's real concern values.
-    score: ({ hairConcerns }) =>
-      hasConcern(hairConcerns, "scalp", "thinning", "growth") ? 8 : 2,
+    score: ({ hairConcerns, hairGoals }) =>
+      hasConcern(hairConcerns, "scalp", "thinning", "growth") || hasGoal(hairGoals, "scalp_health", "hair_growth")
+        ? 8
+        : 2,
   },
   {
     category: "strengthening",
@@ -1154,8 +1166,8 @@ const NAME_KEYWORD_CATEGORIES: {
     ],
     // "damage" isn't a real concern value here - "breakage" is the real
     // analog.
-    score: ({ hairConcerns }) =>
-      hasConcern(hairConcerns, "breakage", "thinning") ? 8 : 3,
+    score: ({ hairConcerns, hairGoals }) =>
+      hasConcern(hairConcerns, "breakage", "thinning") || hasGoal(hairGoals, "hair_growth") ? 8 : 3,
   },
   {
     category: "frizz_control",
@@ -1343,10 +1355,18 @@ export function getNameKeywordModifiers(
   porosity: string,
   scalpCondition: string | null,
   colorTreated: boolean = false,
-  ingredientMatches: Match[] = []
+  ingredientMatches: Match[] = [],
+  hairGoals: string[] | null = []
 ): { modifier: number; topPositive: NameKeywordMatch | null; topNegative: NameKeywordMatch | null } {
   const name = productName.toLowerCase();
-  const ctx: KeywordContext = { hairConcerns: hairConcerns ?? [], family, porosity, scalpCondition, colorTreated };
+  const ctx: KeywordContext = {
+    hairConcerns: hairConcerns ?? [],
+    hairGoals: hairGoals ?? [],
+    family,
+    porosity,
+    scalpCondition,
+    colorTreated,
+  };
 
   let total = 0;
   let topPositive: NameKeywordMatch | null = null;
@@ -1525,6 +1545,14 @@ function applyIngredientFunctionAdjustment(
     }
   }
 
+  // Sensitive scalp previously only penalized sulfates (surfactant-
+  // gated, above) - a real gap, since fragrance is one of the most
+  // common real-world scalp irritants and FRAGRANCE isn't tagged
+  // primary_function "surfactant" so that check never caught it.
+  if (scalpCondition === "sensitive" && FRAGRANCE.has(name)) {
+    delta -= 3;
+  }
+
   if (delta === 0) return { score, rating };
   const adjusted = clampScore(score + delta);
   return { score: adjusted, rating: ratingForScore(adjusted) };
@@ -1538,6 +1566,14 @@ export type ScoringProfile = {
   family: CurlFamily | null;
   ageRange: string | null;
   hairConcerns: string[] | null;
+  // hair_profiles.hair_goals (real values: scalp_health, hair_growth,
+  // moisture_definition, beard_care, all - app/profile/page.tsx's
+  // HAIR_GOALS_OPTIONS) - collected on the profile form but never read
+  // anywhere in scoring until now. Folded into the same name-keyword
+  // boosts hairConcerns already drives (see getNameKeywordModifiers),
+  // not a separate scoring pass - a stated goal and a stated concern
+  // both just mean "this category matters more to this person."
+  hairGoals: string[] | null;
   colorTreated: boolean;
   // True only when color-treated AND the profile's own selected porosity
   // (before the one-level-up override below) was already "high" - used
@@ -1691,6 +1727,7 @@ type ProfileRow = {
   // requiring every caller to be updated.
   adult_age_range?: string | null;
   hair_concerns?: string[] | null;
+  hair_goals?: string[] | null;
   // Really a Postgres boolean in the DB, but the profile form's local
   // state passes "yes"/"no" strings - see isColorTreatedYes above.
   color_treated?: string | boolean | null;
@@ -1741,6 +1778,7 @@ export function buildScoringProfile(
     family: curlFamily(row.curl_type),
     ageRange: row.adult_age_range ?? null,
     hairConcerns: row.hair_concerns ?? null,
+    hairGoals: row.hair_goals ?? null,
     colorTreated,
     colorTreatedAlreadyHighPorosity: colorTreated && naturalPorosity === "high",
   };
@@ -1775,6 +1813,7 @@ export function buildBabyScoringProfile(row: BabyProfileRow): ScoringProfile {
     family,
     ageRange: null,
     hairConcerns: null,
+    hairGoals: null,
     colorTreated: false,
     colorTreatedAlreadyHighPorosity: false,
     babySafety: true,
@@ -1813,6 +1852,7 @@ export function buildChildScoringProfile(row: ChildProfileRow): ScoringProfile {
     family: curlFamily(row.curl_type),
     ageRange: null,
     hairConcerns: null,
+    hairGoals: null,
     colorTreated: false,
     colorTreatedAlreadyHighPorosity: false,
     childSafety: { ageRange: row.age_range, sensorySensitive: row.sensory_sensitive },
@@ -1832,7 +1872,7 @@ async function loadScoringProfile(): Promise<
   const { data: profile, error: profileError } = await supabase
     .from("hair_profiles")
     .select(
-      "curl_type, porosity, scalp_condition, strand_thickness, climate, water_hardness, adult_age_range, hair_concerns, color_treated"
+      "curl_type, porosity, scalp_condition, strand_thickness, climate, water_hardness, adult_age_range, hair_concerns, hair_goals, color_treated"
     )
     .eq("id", profileId)
     .single();
@@ -1898,6 +1938,7 @@ function resolveScoreResult(
     porosity,
     ageRange,
     hairConcerns,
+    hairGoals,
     colorTreated,
     colorTreatedAlreadyHighPorosity,
     babySafety,
@@ -2122,7 +2163,7 @@ function resolveScoreResult(
   // each matching category's delta is validated against the ingredients
   // that actually back up its claim (see computeIngredientEvidence).
   const { modifier: nameKeywordModifier, topPositive, topNegative } = productName
-    ? getNameKeywordModifiers(productName, hairConcerns, family, porosity, scalpCondition, colorTreated, matchList)
+    ? getNameKeywordModifiers(productName, hairConcerns, family, porosity, scalpCondition, colorTreated, matchList, hairGoals)
     : { modifier: 0, topPositive: null, topNegative: null };
   const scoreBeforeInteractions = Math.min(100, Math.max(0, scoreBeforeNameKeywords + nameKeywordModifier));
 
