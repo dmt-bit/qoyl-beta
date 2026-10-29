@@ -53,6 +53,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (sessionUser) {
         loadHairProfile(sessionUser.id);
+
+        // Magic link auth (supabase.auth.signInWithOtp) replaced
+        // signUp() as the account-creation path, so there's no longer a
+        // single call site to fire the welcome email / admin "new
+        // signup" alert from. created_at === last_sign_in_at is
+        // Supabase's own signal for "this session is this user's first
+        // ever sign-in" - it can only ever be true once per user,
+        // across their whole lifetime, since last_sign_in_at moves on
+        // every subsequent sign-in but created_at never does. Gating on
+        // SIGNED_IN (not INITIAL_SESSION/TOKEN_REFRESHED) keeps this
+        // from re-firing on every page load with a persisted session.
+        if (event === "SIGNED_IN" && sessionUser.created_at === sessionUser.last_sign_in_at) {
+          fetch("/api/notify/new-signup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: sessionUser.email }),
+          }).catch((err) =>
+            console.warn("[auth-context] Signup notification request failed:", err)
+          );
+        }
       } else {
         setHairProfile(null);
         if (event === "SIGNED_OUT") {

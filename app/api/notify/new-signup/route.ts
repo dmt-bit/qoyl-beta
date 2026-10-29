@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { sendWelcomeEmail } from "@/lib/sendWelcomeEmail";
 import { sendNotificationEmail } from "@/lib/notify";
 
-// /auth is a client component, so it can't import lib/sendWelcomeEmail.ts
-// or lib/notify.ts (and RESEND_API_KEY) directly - this route is the
-// server-side bridge, called fire-and-forget right after a successful
-// supabase.auth.signUp() with no error.
+// lib/auth-context.tsx is a client component, so it can't import
+// lib/sendWelcomeEmail.ts or lib/notify.ts (and RESEND_API_KEY)
+// directly - this route is the server-side bridge, called
+// fire-and-forget the first time a user's session shows
+// created_at === last_sign_in_at (their first-ever magic link sign-in).
 export async function POST(request: Request) {
   console.log("[notify/new-signup] route hit");
 
