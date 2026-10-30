@@ -250,7 +250,10 @@ async function main() {
         category_id: categoryId,
         is_verified: true,
         is_active: true,
-        source: "seed_script",
+        // catalog_products has a check constraint on source - every one
+        // of the existing 654 rows uses "manual" and nothing else, so
+        // that's the only value confirmed to pass it.
+        source: "manual",
         ingredient_list_raw: product.ingredients.join(", "),
         ingredient_list_normalized: product.ingredients.map(normalize),
       })
