@@ -45,7 +45,9 @@ function AuthPageContent() {
 
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin },
+      options: {
+        emailRedirectTo: process.env.NEXT_PUBLIC_SITE_URL || window.location.origin,
+      },
     });
     setSubmitting(false);
 
