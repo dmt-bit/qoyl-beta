@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { MAX_BASKETS_PER_ORDER, TOOLS_INCLUDED, type SizeId, type ToolId } from "@/lib/boo/config";
+import { MAX_BASKETS_PER_ORDER, type SizeId, type ToolId } from "@/lib/boo/config";
+
+// Every basket size includes exactly 1 tool pick
+const TOOLS_INCLUDED: Record<SizeId, number> = { boo: 1, bigboo: 1 };
 
 // Public-facing reservation route - no admin auth. isAuthorizedAdmin
 // doesn't apply here (see lib/adminAuth.ts's x-admin-password check,
