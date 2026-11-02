@@ -159,7 +159,6 @@ export default function BooBuilder({
   const [success, setSuccess] = useState<{ orderIds: string[] } | null>(null);
 
   const ownFamily = useMemo(() => curlFamily(profile?.curl_type ?? null), [profile]);
-  const currentTotal = priceForDraft(draft);
   const minisForDraft = useMemo(
     () => minisInOrder(draft.isGift ? (draft.giftHairType === "not_sure" ? null : (draft.giftHairType as CurlFamily | null)) : ownFamily),
     [draft.isGift, draft.giftHairType, ownFamily]
