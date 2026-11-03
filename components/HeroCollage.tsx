@@ -4,15 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 const BG_VIDEOS = [
-  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/6502872-hd_1080_1920_30fps.mp4",
-  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/6599340-hd_1080_1920_25fps.mp4",
-  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/6922998-uhd_2160_3840_24fps.mp4",
-  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/6940165-uhd_2560_1440_25fps.mp4",
-  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7020172-hd_1080_1920_25fps.mp4",
-  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7306713-uhd_4096_2160_25fps.mp4",
-  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7575519-uhd_2160_3840_24fps.mp4",
-  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7710694-uhd_4096_2160_25fps.mp4",
-  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/8343868-hd_1080_1920_25fps.mp4",
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/12322785-hd_1080_1920_30fps_1.mp4",
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/6501913-hd_1080_1920_30fps_1.mp4",
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/8343868-hd_1080_1920_25fps_1.mp4",
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/8628064-hd_1080_1920_25fps_1.mp4",
 ];
 
 const STATEMENTS = [
