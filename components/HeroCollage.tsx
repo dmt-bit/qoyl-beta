@@ -94,6 +94,7 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
       <video
         ref={videoRef}
         src={BG_VIDEOS[0]}
+        poster="https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/pexels-vlada-karpovich-4668513.jpg"
         autoPlay
         muted
         playsInline
