@@ -596,6 +596,16 @@ export default function Nav() {
           )}
 
           <MenuSectionLabel>The Feed</MenuSectionLabel>
+          <a
+            href="https://www.instagram.com/clubqoyl"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={closeMenu}
+            className="flex h-[52px] items-center gap-3 border-b border-[#e8e8e8] px-6 text-dark transition-colors hover:bg-[#f5f5f5]/50"
+          >
+            <span className="flex-1 truncate font-sans text-sm text-dark">Our Content</span>
+            <ChevronIcon />
+          </a>
           {TABS.map((tab) => (
             <MenuLink
               key={tab.key}

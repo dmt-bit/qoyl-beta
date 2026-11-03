@@ -152,7 +152,6 @@ function FooterLinksSection() {
 export default function HomeFooterSection() {
   return (
     <>
-      <InstagramEmbedSection />
       <NewsletterSection />
       <FooterLinksSection />
     </>
