@@ -49,18 +49,23 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
     });
   };
 
-  // Play the current video on mount. key={bgIdx} already remounts the element
-  // on each src change so autoPlay fires fresh — this is just a belt-and-suspenders
-  // nudge for browsers that need a programmatic push after mount.
+  // On mount: imperatively load + play the first video.
+  // iOS Safari requires a direct .play() call even with autoPlay attr.
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid) return;
-    const tryPlay = () => vid.play().catch(() => {});
-    if (vid.readyState >= 2) {
-      tryPlay();
-    } else {
-      vid.addEventListener("canplay", tryPlay, { once: true });
-    }
+    vid.muted = true;
+    vid.play().catch(() => {});
+  }, []);
+
+  // When bgIdx changes: swap src directly on the same element and replay.
+  // Avoids remounting (key trick) which can confuse iOS Safari's media session.
+  useEffect(() => {
+    const vid = videoRef.current;
+    if (!vid) return;
+    vid.src = BG_VIDEOS[bgIdx];
+    vid.load();
+    vid.play().catch(() => {});
   }, [bgIdx]);
 
   useEffect(() => {
@@ -85,12 +90,10 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
       }`}
       style={{ transform: "translateZ(0)" }}
     >
-      {/* Single video element — swap src to advance carousel */}
       {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video
         ref={videoRef}
-        key={bgIdx}
-        src={BG_VIDEOS[bgIdx]}
+        src={BG_VIDEOS[0]}
         autoPlay
         muted
         playsInline
