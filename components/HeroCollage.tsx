@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 const BG_VIDEOS = [
   "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/6502872-hd_1080_1920_30fps.mp4",
   "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/6599340-hd_1080_1920_25fps.mp4",
   "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/6922998-uhd_2160_3840_24fps.mp4",
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/6940165-uhd_2560_1440_25fps.mp4",
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7020172-hd_1080_1920_25fps.mp4",
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7306713-uhd_4096_2160_25fps.mp4",
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7575519-uhd_2160_3840_24fps.mp4",
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7710694-uhd_4096_2160_25fps.mp4",
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/8343868-hd_1080_1920_25fps.mp4",
 ];
 
 const STATEMENTS = [
@@ -46,7 +53,6 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
     });
   };
 
-  // Cycle statements
   useEffect(() => {
     runProgressBar();
     const timer = setInterval(() => {
@@ -69,7 +75,7 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
       }`}
       style={{ transform: "translateZ(0)" }}
     >
-      {/* Background videos — preload all, show only the active one */}
+      {/* Background videos */}
       {BG_VIDEOS.map((src, i) => (
         <video
           key={src}
@@ -78,20 +84,21 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
           muted
           loop
           playsInline
-          preload="auto"
-          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-700"
+          preload={i === 0 ? "auto" : "metadata"}
+          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-1000"
           style={{ opacity: i === bgIdx ? 1 : 0 }}
           onEnded={() => setBgIdx((prev) => (prev + 1) % BG_VIDEOS.length)}
         />
       ))}
 
       {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/45" />
+      <div className="absolute inset-0 bg-black/50" />
 
-      {/* Cycling statement */}
-      <div className="absolute inset-0 flex items-center justify-center px-6 z-10 pointer-events-none">
+      {/* Centered content */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-8 px-6 z-10">
+        {/* Cycling statement */}
         <p
-          className="lowercase text-center"
+          className="lowercase text-center pointer-events-none"
           style={{
             fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif",
             fontSize: "clamp(22px, 6vw, 48px)",
@@ -108,6 +115,36 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
         >
           {STATEMENTS[statementIdx]}
         </p>
+
+        {/* Start here CTA */}
+        <Link
+          href="/profile"
+          className="lowercase"
+          style={{
+            fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif",
+            fontSize: "clamp(13px, 2vw, 15px)",
+            fontWeight: 500,
+            letterSpacing: "0.08em",
+            color: "#ffffff",
+            background: "rgba(255,255,255,0.12)",
+            border: "1px solid rgba(255,255,255,0.35)",
+            borderRadius: "999px",
+            padding: "10px 28px",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
+            transition: "background 0.2s ease, border-color 0.2s ease",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.22)";
+            (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.6)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.12)";
+            (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.35)";
+          }}
+        >
+          start here
+        </Link>
       </div>
 
       {/* Progress bar */}
