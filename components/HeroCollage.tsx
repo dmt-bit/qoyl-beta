@@ -54,12 +54,18 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
     });
   };
 
-  // Play the current video whenever bgIdx changes (covers initial mount too)
+  // Play the current video on mount. key={bgIdx} already remounts the element
+  // on each src change so autoPlay fires fresh — this is just a belt-and-suspenders
+  // nudge for browsers that need a programmatic push after mount.
   useEffect(() => {
     const vid = videoRef.current;
     if (!vid) return;
-    vid.load();
-    vid.play().catch(() => {});
+    const tryPlay = () => vid.play().catch(() => {});
+    if (vid.readyState >= 2) {
+      tryPlay();
+    } else {
+      vid.addEventListener("canplay", tryPlay, { once: true });
+    }
   }, [bgIdx]);
 
   useEffect(() => {
@@ -85,6 +91,7 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
       style={{ transform: "translateZ(0)" }}
     >
       {/* Single video element — swap src to advance carousel */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
       <video
         ref={videoRef}
         key={bgIdx}
@@ -93,7 +100,10 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
         muted
         playsInline
         preload="auto"
+        controls={false}
+        disablePictureInPicture
         className="absolute inset-0 h-full w-full object-cover"
+        style={{ pointerEvents: "none" }}
         onEnded={() => setBgIdx((prev) => (prev + 1) % BG_VIDEOS.length)}
       />
 
