@@ -38,6 +38,7 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
   const [statementIdx, setStatementIdx] = useState(0);
   const [statementVisible, setStatementVisible] = useState(true);
   const progressBarRef = useRef<HTMLDivElement | null>(null);
+  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
   const runProgressBar = () => {
     const el = progressBarRef.current;
@@ -52,6 +53,17 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
       });
     });
   };
+
+  // Force-play the active video whenever bgIdx changes.
+  // iOS Safari often ignores autoPlay on elements that aren't the first in DOM,
+  // so we call .play() imperatively after each transition.
+  useEffect(() => {
+    const vid = videoRefs.current[bgIdx];
+    if (!vid) return;
+    vid.play().catch(() => {
+      // Autoplay blocked — silently ignore; poster/static frame will show
+    });
+  }, [bgIdx]);
 
   useEffect(() => {
     runProgressBar();
@@ -75,27 +87,32 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
       }`}
       style={{ transform: "translateZ(0)" }}
     >
-      {/* Background videos */}
-      {BG_VIDEOS.map((src, i) => (
-        <video
-          key={src}
-          src={src}
-          autoPlay
-          muted
-          loop
-          playsInline
-          preload={i === 0 ? "auto" : "metadata"}
-          className="absolute inset-0 h-full w-full object-cover transition-opacity duration-1000"
-          style={{ opacity: i === bgIdx ? 1 : 0 }}
-          onEnded={() => setBgIdx((prev) => (prev + 1) % BG_VIDEOS.length)}
-        />
-      ))}
+      {/* Background videos — only current + next are in DOM to save memory */}
+      {BG_VIDEOS.map((src, i) => {
+        const isActive = i === bgIdx;
+        const isNext = i === (bgIdx + 1) % BG_VIDEOS.length;
+        if (!isActive && !isNext) return null;
+        return (
+          <video
+            key={src}
+            ref={(el) => { videoRefs.current[i] = el; }}
+            src={src}
+            autoPlay
+            muted
+            playsInline
+            preload={isActive ? "auto" : "metadata"}
+            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-1000"
+            style={{ opacity: isActive ? 1 : 0 }}
+            onEnded={() => setBgIdx((prev) => (prev + 1) % BG_VIDEOS.length)}
+          />
+        );
+      })}
 
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/50" />
 
-      {/* Centered content */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-8 px-6 z-10">
+      {/* Content: statement centered, button near bottom */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center px-6 z-10">
         {/* Cycling statement */}
         <p
           className="lowercase text-center pointer-events-none"
@@ -115,8 +132,10 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
         >
           {STATEMENTS[statementIdx]}
         </p>
+      </div>
 
-        {/* Start here CTA */}
+      {/* Start here CTA — pinned near bottom */}
+      <div className="absolute bottom-12 left-0 right-0 flex justify-center z-10">
         <Link
           href="/profile"
           className="lowercase"
