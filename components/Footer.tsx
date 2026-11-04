@@ -36,16 +36,7 @@ export default function Footer() {
           >
             Privacy Policy
           </Link>
-          {/* Public but not prominently surfaced (see app/ai/page.tsx) -
-              one quiet link here, same weight as the others, nothing
-              that calls extra attention to it. */}
-          <Link
-            href="/ai"
-            className="text-dark/50 underline underline-offset-2 hover:text-dark/70"
-          >
-            built with ai →
-          </Link>
-          {/* Quietest possible link to the conflicts-of-interest section.
+{/* Quietest possible link to the conflicts-of-interest section.
               Wording is "scores can't be bought" rather than the spec's
               "scores are ..." claim - the spec forbids that claim word
               in user-facing copy. */}
