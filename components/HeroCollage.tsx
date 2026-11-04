@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 const BG_VIDEOS = [
-  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7451430-uhd_2160_4096_25fps.mp4",
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/7451430-compressed.mp4",
   "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/6501913-hd_1080_1920_30fps_1.mp4",
   "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/8343868-hd_1080_1920_25fps_1.mp4",
   "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/8628064-hd_1080_1920_25fps_1.mp4",
