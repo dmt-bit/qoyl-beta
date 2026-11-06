@@ -53,7 +53,15 @@ export type MlEventType =
   // Standalone (home screen) app launch - app/api/log-standalone.
   | "launched_standalone"
   // Time-based feedback survey (components/FeedbackSurveyTrigger.tsx).
-  | "feedback_survey_shown";
+  | "feedback_survey_shown"
+  // My Look Kit page (app/kit/[briefId]) - tracks the QR-to-purchase
+  // funnel from printed look cards at events. briefId is entity_id.
+  // src (event attribution e.g. "event-dec6") is in metadata.
+  | "kit_view"
+  | "kit_item_click"
+  | "kit_have_it_toggle"
+  | "kit_buy_all_click"
+  | "kit_book_stylist_click";
 
 export async function logMlEvent(
   eventType: MlEventType,
