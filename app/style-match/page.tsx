@@ -1082,8 +1082,13 @@ function StyleMatchContent() {
     proceedPastRouting(detected, pendingMatchInput.inputType, pendingMatchInput.text, "cut");
   }
   function declineCut() {
-    resetToLanding();
-    setError("Try uploading a photo of a style on hair closer to your own length.");
+    if (!detected || !pendingMatchInput) return;
+    // User wants to style their existing hair like this look - proceed
+    // as a normal style match with style_is_cut cleared so the rest of
+    // the flow treats it as a styling brief, not a cut recommendation.
+    const asStyle: DetectedStyle = { ...detected, style_is_cut: false };
+    setCutRoutingResolved(true);
+    proceedPastRouting(asStyle, pendingMatchInput.inputType, pendingMatchInput.text, "cut");
   }
 
   // ---- starter/traditional locs commitment warning (item 4) ----
