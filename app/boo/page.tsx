@@ -50,7 +50,7 @@ export default function BooPage() {
       {/* background */}
       <div
         className="fixed inset-0 -z-10 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/11742984.jpeg')" }}
+        style={{ backgroundImage: "url('https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/11742984.jpeg')" }}
       />
       {/* overlay */}
       <div className="fixed inset-0 -z-10 bg-white/70" />

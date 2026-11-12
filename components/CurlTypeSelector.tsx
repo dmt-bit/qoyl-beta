@@ -22,7 +22,7 @@ export const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Straight",
     type: "Straight",
     descriptor: "Very straight, fine and silky. No bend or wave at all.",
-    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/35267456.jpeg",
+    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/35267456.jpeg",
   },
   {
     value: "1b",
@@ -30,7 +30,7 @@ export const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Straight",
     type: "Straight",
     descriptor: "Straight with slight body. Minimal bend at ends only.",
-    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/2325807.jpeg",
+    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/2325807.jpeg",
   },
   {
     value: "1c",
@@ -38,7 +38,7 @@ export const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Straight",
     type: "Straight",
     descriptor: "Straight but coarse or thick. Resistant to any curl.",
-    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/3356211.jpeg",
+    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/3356211.jpeg",
   },
   {
     value: "2a",
@@ -46,7 +46,7 @@ export const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Wavy",
     type: "Wavy",
     descriptor: "Loose S-wave, fine texture. Slight wave through the length.",
-    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/16207701.jpeg",
+    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/16207701.jpeg",
   },
   {
     value: "2b",
@@ -54,7 +54,7 @@ export const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Wavy",
     type: "Wavy",
     descriptor: "Defined S-wave, medium texture. Wave pattern throughout.",
-    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/27679976.jpeg",
+    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/27679976.jpeg",
   },
   {
     value: "2c",
@@ -62,7 +62,7 @@ export const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Wavy",
     type: "Wavy",
     descriptor: "Strong wave, coarser texture. Thick, frizz-prone waves.",
-    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/17889750.jpeg",
+    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/17889750.jpeg",
   },
   {
     value: "3a",
@@ -70,7 +70,7 @@ export const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Curly",
     type: "Curly",
     descriptor: "Loose spiral curls. Big, bouncy, defined ringlets.",
-    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/4668513.jpeg",
+    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/4668513.jpeg",
   },
   {
     value: "3b",
@@ -78,7 +78,7 @@ export const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Curly",
     type: "Curly",
     descriptor: "Springy ringlets, medium-tight spiral. Lots of volume.",
-    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/34579409.jpeg",
+    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/34579409.jpeg",
   },
   {
     value: "3c",
@@ -86,7 +86,7 @@ export const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Curly",
     type: "Curly",
     descriptor: "Tight corkscrew curls. Dense, voluminous, well-defined.",
-    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/28172264.jpeg",
+    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/28172264.jpeg",
   },
   {
     value: "4a",
@@ -94,7 +94,7 @@ export const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Coily",
     type: "Coily",
     descriptor: "Defined S-coils. Tight but visible S-pattern when stretched.",
-    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/7382918.jpeg",
+    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/7382918.jpeg",
   },
   {
     value: "4b",
@@ -102,7 +102,7 @@ export const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Coily",
     type: "Coily",
     descriptor: "Z-pattern with sharp angles. Less definition, more shrinkage.",
-    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/27596675.jpeg",
+    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/27596675.jpeg",
   },
   {
     value: "4c",
@@ -110,7 +110,7 @@ export const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Coily",
     type: "Coily",
     descriptor: "Tightest coils, most shrinkage. Pattern less visible when dry.",
-    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/38284790.jpeg",
+    image: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/38284790.jpeg",
   },
 ];
 
