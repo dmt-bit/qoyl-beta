@@ -93,6 +93,12 @@ export default function AdminVisualsPage() {
   const [images, setImages] = useState<VisualImage[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Inline tag editing
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<{ hair_types: string[]; categories: string[]; alt_text: string } | null>(null);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
   const [form, setForm] = useState<AddFormValues>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
@@ -186,6 +192,51 @@ export default function AdminVisualsPage() {
       headers: { "Content-Type": "application/json", "x-admin-password": password },
       body: JSON.stringify({ is_active: !image.is_active }),
     });
+  }
+
+  function startEditing(image: VisualImage) {
+    setEditingId(image.id);
+    setEditDraft({ hair_types: [...image.hair_types], categories: [...image.categories], alt_text: image.alt_text ?? "" });
+    setEditError(null);
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+    setEditDraft(null);
+    setEditError(null);
+  }
+
+  async function handleSaveTags(image: VisualImage) {
+    if (!editDraft) return;
+    setEditSaving(true);
+    setEditError(null);
+
+    const res = await fetch(`/api/admin/visual-library/${image.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      body: JSON.stringify({
+        hair_types: editDraft.hair_types,
+        categories: editDraft.categories,
+        alt_text: editDraft.alt_text.trim() || null,
+      }),
+    });
+
+    setEditSaving(false);
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setEditError(data.error ?? "Failed to save.");
+      return;
+    }
+
+    setImages((prev) =>
+      prev.map((i) =>
+        i.id === image.id
+          ? { ...i, hair_types: editDraft.hair_types, categories: editDraft.categories, alt_text: editDraft.alt_text.trim() || null }
+          : i
+      )
+    );
+    cancelEditing();
   }
 
   async function handleDelete(image: VisualImage) {
@@ -325,36 +376,102 @@ export default function AdminVisualsPage() {
                   />
                 </div>
 
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {image.hair_types.map((t) => (
-                    <span key={t} className="border border-dark px-1.5 py-0.5 font-mono lowercase text-dark" style={{ fontSize: "9px" }}>
-                      {t}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {image.categories.map((c) => (
-                    <span key={c} className="bg-[#f5f5f5] px-1.5 py-0.5 font-mono lowercase text-muted" style={{ fontSize: "9px" }}>
-                      {c}
-                    </span>
-                  ))}
-                </div>
+                {editingId === image.id && editDraft ? (
+                  <div className="mt-2 space-y-3 border-t border-dark pt-3">
+                    <input
+                      type="text"
+                      value={editDraft.alt_text}
+                      onChange={(e) => setEditDraft({ ...editDraft, alt_text: e.target.value })}
+                      placeholder="Alt text"
+                      className="w-full border border-dark bg-white px-2 py-1.5 font-sans text-dark placeholder:text-dark/40 focus:outline-none"
+                      style={{ fontSize: "11px" }}
+                    />
+                    <CheckboxGrid
+                      label="hair types"
+                      options={HAIR_TYPE_OPTIONS}
+                      selected={editDraft.hair_types}
+                      onToggle={(v) => setEditDraft({ ...editDraft, hair_types: toggleInArray(editDraft.hair_types, v) })}
+                    />
+                    <CheckboxGrid
+                      label="categories"
+                      options={CATEGORY_OPTIONS}
+                      selected={editDraft.categories}
+                      onToggle={(v) => setEditDraft({ ...editDraft, categories: toggleInArray(editDraft.categories, v) })}
+                    />
+                    {editError && <p className="font-mono lowercase text-red" style={{ fontSize: "9px" }}>{editError}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSaveTags(image)}
+                        disabled={editSaving}
+                        className="border border-dark bg-dark px-2 py-1 font-mono lowercase text-white disabled:opacity-50"
+                        style={{ fontSize: "9px" }}
+                      >
+                        {editSaving ? "saving..." : "save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEditing}
+                        disabled={editSaving}
+                        className="border border-dark px-2 py-1 font-mono lowercase text-dark"
+                        style={{ fontSize: "9px" }}
+                      >
+                        cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {image.hair_types.map((t) => (
+                        <span key={t} className="border border-dark px-1.5 py-0.5 font-mono lowercase text-dark" style={{ fontSize: "9px" }}>
+                          {t}
+                        </span>
+                      ))}
+                      {image.hair_types.length === 0 && (
+                        <span className="font-mono lowercase text-dark/30" style={{ fontSize: "9px" }}>no hair types</span>
+                      )}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {image.categories.map((c) => (
+                        <span key={c} className="bg-[#f5f5f5] px-1.5 py-0.5 font-mono lowercase text-muted" style={{ fontSize: "9px" }}>
+                          {c}
+                        </span>
+                      ))}
+                      {image.categories.length === 0 && (
+                        <span className="font-mono lowercase text-dark/30" style={{ fontSize: "9px" }}>no categories</span>
+                      )}
+                    </div>
+                  </>
+                )}
 
                 <p className="mt-2 font-mono lowercase text-muted" style={{ fontSize: "9px" }}>
                   used {image.used_count} time{image.used_count === 1 ? "" : "s"}
                 </p>
 
                 <div className="mt-3 flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleActive(image)}
-                    className={`border border-dark px-2 py-1 font-mono lowercase ${
-                      image.is_active ? "bg-dark text-white" : "bg-white text-dark"
-                    }`}
-                    style={{ fontSize: "9px" }}
-                  >
-                    {image.is_active ? "active" : "inactive"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleActive(image)}
+                      className={`border border-dark px-2 py-1 font-mono lowercase ${
+                        image.is_active ? "bg-dark text-white" : "bg-white text-dark"
+                      }`}
+                      style={{ fontSize: "9px" }}
+                    >
+                      {image.is_active ? "active" : "inactive"}
+                    </button>
+                    {editingId !== image.id && (
+                      <button
+                        type="button"
+                        onClick={() => startEditing(image)}
+                        className="border border-dark px-2 py-1 font-mono lowercase text-dark hover:bg-[#f5f5f5]"
+                        style={{ fontSize: "9px" }}
+                      >
+                        edit tags
+                      </button>
+                    )}
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleDelete(image)}
