@@ -103,6 +103,9 @@ export default function AdminVisualsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
 
+  const [generatingAlt, setGeneratingAlt] = useState(false);
+  const [altGenResult, setAltGenResult] = useState<string | null>(null);
+
   async function loadImages(pw: string): Promise<boolean> {
     setLoading(true);
     setAuthError(null);
@@ -295,6 +298,37 @@ export default function AdminVisualsPage() {
         <p className="mt-1 font-mono lowercase text-muted" style={{ fontSize: "10px" }}>
           {images.length} images · {activeCount} active
         </p>
+
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            type="button"
+            disabled={generatingAlt}
+            onClick={async () => {
+              setGeneratingAlt(true);
+              setAltGenResult(null);
+              const res = await fetch("/api/admin/visual-library/generate-alt-text", {
+                method: "POST",
+                headers: { "x-admin-password": password },
+              });
+              const data = await res.json();
+              if (res.ok) {
+                setAltGenResult(`Done: ${data.updated} updated, ${data.failed} failed`);
+                // Reload images so alt text shows in edit panels
+                await loadImages(password);
+              } else {
+                setAltGenResult(data.error ?? "Failed.");
+              }
+              setGeneratingAlt(false);
+            }}
+            className="border border-dark px-3 py-1.5 font-mono lowercase text-dark hover:bg-[#f5f5f5] disabled:opacity-50"
+            style={{ fontSize: "10px" }}
+          >
+            {generatingAlt ? "generating..." : "auto-generate missing alt text"}
+          </button>
+          {altGenResult && (
+            <span className="font-mono lowercase text-muted" style={{ fontSize: "10px" }}>{altGenResult}</span>
+          )}
+        </div>
 
         <section className="mt-8 border border-dark p-6">
           <h2 className="font-sans font-bold lowercase text-dark" style={{ fontSize: "16px" }}>
