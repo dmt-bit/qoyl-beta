@@ -2368,6 +2368,19 @@ function StyleMatchContent() {
               <p className="mt-1 text-sm text-dark/60">{detected.maintenance_tips}</p>
             )}
 
+            {/* Wrong match button */}
+            <button
+              type="button"
+              onClick={resetToLanding}
+              className="mt-3 flex items-center gap-1.5 font-mono lowercase text-dark/40 transition-colors hover:text-dark/70"
+              style={{ fontSize: "11px" }}
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                <path d="M1 1l8 8M9 1L1 9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+              </svg>
+              this match is wrong
+            </button>
+
             {translateForHairType === true && detected.hair_type_translation && (
               <div className="mt-4 border-l-2 border-bronze bg-warm/10 px-4 py-3">
                 <p className="text-sm leading-relaxed text-dark/90">
