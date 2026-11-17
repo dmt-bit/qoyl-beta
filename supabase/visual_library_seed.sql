@@ -47,28 +47,28 @@ INSERT INTO visual_library (image_url, hair_types, categories, mood, card_types)
   ARRAY['post','style']
 ),
 (
-  'https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/4257489.jpeg',
+  'https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/4257489.jpeg',
   ARRAY['3a','3b','3c'],
   ARRAY['lifestyle','texture'],
   'dark_editorial',
   ARRAY['post','product','style']
 ),
 (
-  'https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/35140064.jpeg',
+  'https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/35140064.jpeg',
   ARRAY['all'],
   ARRAY['lifestyle'],
   'dark_editorial',
   ARRAY['post','style']
 ),
 (
-  'https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/29096365.jpeg',
+  'https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/29096365.jpeg',
   ARRAY['all'],
   ARRAY['lifestyle'],
   'light_clean',
   ARRAY['post','product']
 ),
 (
-  'https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/photos/38421531.jpeg',
+  'https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/38421531.jpeg',
   ARRAY['3c','4a','4b','4c'],
   ARRAY['style','lifestyle'],
   'warm_neutral',
