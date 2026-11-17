@@ -20,6 +20,10 @@ type FallbackParams = {
   category?: string;
   mood?: string;
   exclude_ids?: string[];
+  // Style slug (e.g. "box-braids") — used to keyword-search alt_text so
+  // each style card gets a photo that actually matches that style rather
+  // than a random hair-type pool pick.
+  slug?: string;
 };
 
 // Server-only - visual_library is read/written exclusively through the
@@ -55,7 +59,19 @@ export async function getFallbackImage(params: FallbackParams): Promise<string |
     return pick.image_url;
   }
 
-  // First try: match both hair type AND category.
+  // Tier 0: slug keyword match in alt_text — highest specificity.
+  // Converts "box-braids" → "box braids" and searches alt_text with ilike.
+  if (params.slug) {
+    const keyword = params.slug.replace(/-/g, " ");
+    const { data: bySlug } = await baseQuery()
+      .ilike("alt_text", `%${keyword}%`)
+      .order("used_count", { ascending: true })
+      .limit(5);
+    const picked = await pickAndIncrement(bySlug);
+    if (picked) return picked;
+  }
+
+  // Tier 1: match both hair type AND category.
   if (params.hair_types?.length && params.category) {
     const { data: exact } = await baseQuery()
       .overlaps("hair_types", params.hair_types)
@@ -66,7 +82,7 @@ export async function getFallbackImage(params: FallbackParams): Promise<string |
     if (picked) return picked;
   }
 
-  // Second try: match hair type only, or an image tagged for all types.
+  // Tier 2: match hair type only, or an image tagged for all types.
   if (params.hair_types?.length) {
     const { data: byHair } = await baseQuery()
       .or(`hair_types.ov.{${params.hair_types.join(",")}},hair_types.cs.{${ALL_STYLES_SENTINEL}}`)

@@ -1505,6 +1505,7 @@ function StyleMatchContent() {
         rows.map(async (style) => {
           if (style.image_url) return style;
           const params = new URLSearchParams({ category: "style" });
+          if (style.slug) params.set("slug", style.slug);
           if (style.hair_types_compatible?.length) {
             params.set("hair_types", style.hair_types_compatible.join(","));
           }

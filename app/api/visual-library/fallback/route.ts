@@ -11,10 +11,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const hairTypesParam = searchParams.get("hair_types");
   const category = searchParams.get("category") ?? undefined;
+  const slug = searchParams.get("slug") ?? undefined;
   const hair_types = hairTypesParam
     ? hairTypesParam.split(",").map((t) => t.trim()).filter(Boolean)
     : undefined;
 
-  const url = await getFallbackImage({ hair_types, category });
+  const url = await getFallbackImage({ hair_types, category, slug });
   return NextResponse.json({ url });
 }
