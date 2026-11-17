@@ -708,6 +708,11 @@ function StyleMatchContent() {
   // Visual browse strip modal
   const [browseModalImage, setBrowseModalImage] = useState<{ id: string; image_url: string; alt_text: string | null; hair_types: string[]; categories: string[]; mood: string | null } | null>(null);
 
+  // Reference photo shown on the confirm screen - set to either the
+  // user's uploaded image preview or the browse-strip library photo
+  // they tapped. Cleared on resetToLanding.
+  const [referenceImageUrl, setReferenceImageUrl] = useState<string | null>(null);
+
   // Landing input state
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -905,13 +910,16 @@ function StyleMatchContent() {
     setCutRoutingResolved(false);
     setLocRoutingResolved(false);
     setSelectedBraidType(null);
+    setReferenceImageUrl(null);
   }
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     setImageFile(file);
-    setImagePreviewUrl(URL.createObjectURL(file));
+    const objectUrl = URL.createObjectURL(file);
+    setImagePreviewUrl(objectUrl);
+    setReferenceImageUrl(objectUrl);
   }
 
   // Holds the inputType/text from the analyze() call that's currently
@@ -1598,6 +1606,7 @@ function StyleMatchContent() {
           onClose={() => setBrowseModalImage(null)}
           onMatch={(img) => {
             setBrowseModalImage(null);
+            setReferenceImageUrl(img.image_url);
             // Treat the library image as a text description prefill —
             // use the alt text if available, otherwise a generic prompt
             // that will go through the deep survey just like any other match.
@@ -2154,6 +2163,20 @@ function StyleMatchContent() {
 
         {pageState === "confirm" && detected && (
           <div>
+            {referenceImageUrl && (
+              <div className="relative mb-5 h-64 w-full overflow-hidden bg-[#f0ece8] sm:h-72">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={referenceImageUrl}
+                  alt="Your style reference"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-dark/50 to-transparent" />
+                <p className="absolute bottom-3 left-4 font-mono lowercase text-white/80" style={{ fontSize: "10px" }}>
+                  your reference photo
+                </p>
+              </div>
+            )}
             <div className="flex items-start justify-between gap-4">
               <h2 className="font-serif text-2xl font-semibold text-dark">{detected.style_name}</h2>
               <button
