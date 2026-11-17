@@ -1978,6 +1978,20 @@ function StyleMatchContent() {
 
         {pageState === "disambiguate" && detected && (
           <div>
+            {referenceImageUrl && (
+              <div className="relative mb-5 h-64 w-full overflow-hidden bg-[#f0ece8] sm:h-72">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={referenceImageUrl}
+                  alt="Your style reference"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-dark/50 to-transparent" />
+                <p className="absolute bottom-3 left-4 font-mono lowercase text-white/80" style={{ fontSize: "10px" }}>
+                  your reference photo
+                </p>
+              </div>
+            )}
             <h2 className="font-serif text-2xl font-semibold text-dark">
               We think this is {detected.style_name} — does one of these match better?
             </h2>
