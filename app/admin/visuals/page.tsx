@@ -299,25 +299,38 @@ export default function AdminVisualsPage() {
           {images.length} images · {activeCount} active
         </p>
 
-        <div className="mt-3 flex items-center gap-3">
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           <button
             type="button"
             disabled={generatingAlt}
             onClick={async () => {
               setGeneratingAlt(true);
-              setAltGenResult(null);
-              const res = await fetch("/api/admin/visual-library/generate-alt-text", {
-                method: "POST",
-                headers: { "x-admin-password": password },
-              });
-              const data = await res.json();
-              if (res.ok) {
-                setAltGenResult(`Done: ${data.updated} updated, ${data.failed} failed`);
-                // Reload images so alt text shows in edit panels
-                await loadImages(password);
-              } else {
-                setAltGenResult(data.error ?? "Failed.");
+              setAltGenResult("running batch...");
+              let totalUpdated = 0;
+              let totalFailed = 0;
+              // Keep running batches until nothing is left or we hit an error
+              for (let i = 0; i < 20; i++) {
+                const res = await fetch("/api/admin/visual-library/generate-alt-text", {
+                  method: "POST",
+                  headers: { "x-admin-password": password },
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                  setAltGenResult(`Error: ${data.error ?? "Failed."}`);
+                  break;
+                }
+                totalUpdated += data.updated ?? 0;
+                totalFailed += data.failed ?? 0;
+                const remaining = data.remaining ?? 0;
+                setAltGenResult(`Updated ${totalUpdated} · ${totalFailed} failed · ${remaining} remaining...`);
+                if (remaining === 0 || data.updated === 0) break;
               }
+              setAltGenResult((prev) => {
+                // Replace the trailing "..." with a done marker
+                return prev ? prev.replace("...", " done") : "done";
+              });
+              // Reload images so alt text shows in edit panels
+              await loadImages(password);
               setGeneratingAlt(false);
             }}
             className="border border-dark px-3 py-1.5 font-mono lowercase text-dark hover:bg-[#f5f5f5] disabled:opacity-50"

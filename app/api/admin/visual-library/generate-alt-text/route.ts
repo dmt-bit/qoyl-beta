@@ -3,15 +3,17 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAuthorizedAdmin } from "@/lib/adminAuth";
 
 export const dynamic = "force-dynamic";
-// Allow up to 60s for a full library pass — each image is one vision call.
+// 60s max — process up to BATCH_SIZE images per call, re-run to continue.
 export const maxDuration = 60;
 
-const ANTHROPIC_MODEL = "claude-haiku-4-5";
+// Match the model used elsewhere in the app.
+const ANTHROPIC_MODEL = "claude-sonnet-4-5";
+// Keep each invocation well under the timeout. Re-run to process more.
+const BATCH_SIZE = 10;
 
-// Fetches each image that has no alt_text, describes it with the vision
-// API, and writes the result back. Returns a summary of what changed.
-// Hit POST /api/admin/visual-library/generate-alt-text once to run.
-// Safe to re-run: only processes rows where alt_text IS NULL.
+// Describes images that have no alt_text using the vision API, then writes
+// the result back. Safe to re-run: only processes rows where alt_text IS NULL.
+// Processes up to BATCH_SIZE images per call to stay within the timeout.
 export async function POST(request: Request) {
   if (!isAuthorizedAdmin(request)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
@@ -24,12 +26,13 @@ export async function POST(request: Request) {
 
   const admin = getSupabaseAdmin();
 
-  // Fetch all active images missing alt text
+  // Fetch a batch of active images missing alt text
   const { data: rows, error: fetchError } = await admin
     .from("visual_library")
     .select("id, image_url, hair_types, categories")
     .is("alt_text", null)
-    .eq("is_active", true);
+    .eq("is_active", true)
+    .limit(BATCH_SIZE);
 
   if (fetchError) {
     return NextResponse.json({ error: fetchError.message }, { status: 500 });
@@ -37,25 +40,20 @@ export async function POST(request: Request) {
 
   const images = rows ?? [];
   if (images.length === 0) {
-    return NextResponse.json({ message: "All images already have alt text.", updated: 0 });
+    return NextResponse.json({ message: "All images already have alt text.", updated: 0, remaining: 0 });
   }
+
+  // Count total remaining so the UI can show "X more to process"
+  const { count: totalRemaining } = await admin
+    .from("visual_library")
+    .select("id", { count: "exact", head: true })
+    .is("alt_text", null)
+    .eq("is_active", true);
 
   const results: { id: string; alt_text: string | null; error?: string }[] = [];
 
   for (const image of images) {
     try {
-      // Fetch the image as a base64 blob so we can send it to the vision API
-      const imageRes = await fetch(image.image_url);
-      if (!imageRes.ok) {
-        results.push({ id: image.id, alt_text: null, error: `Could not fetch image (${imageRes.status})` });
-        continue;
-      }
-
-      const contentType = imageRes.headers.get("content-type") ?? "image/jpeg";
-      const mediaType = contentType.startsWith("image/") ? contentType : "image/jpeg";
-      const arrayBuffer = await imageRes.arrayBuffer();
-      const base64 = Buffer.from(arrayBuffer).toString("base64");
-
       // Build a context hint from the tags we do have
       const hairHint = image.hair_types?.length
         ? `Hair types in this image may include: ${image.hair_types.join(", ")}.`
@@ -82,7 +80,7 @@ export async function POST(request: Request) {
               content: [
                 {
                   type: "image",
-                  source: { type: "base64", media_type: mediaType, data: base64 },
+                  source: { type: "url", url: image.image_url },
                 },
                 { type: "text", text: prompt },
               ],
@@ -93,7 +91,7 @@ export async function POST(request: Request) {
 
       if (!anthropicRes.ok) {
         const errBody = await anthropicRes.text();
-        results.push({ id: image.id, alt_text: null, error: `Vision API error: ${errBody.slice(0, 100)}` });
+        results.push({ id: image.id, alt_text: null, error: `Vision API error: ${errBody.slice(0, 200)}` });
         continue;
       }
 
@@ -102,10 +100,14 @@ export async function POST(request: Request) {
       const altText = rawText.trim().slice(0, 200) || null;
 
       if (altText) {
-        await admin
+        const { error: updateError } = await admin
           .from("visual_library")
           .update({ alt_text: altText })
           .eq("id", image.id);
+        if (updateError) {
+          results.push({ id: image.id, alt_text: null, error: `DB update failed: ${updateError.message}` });
+          continue;
+        }
       }
 
       results.push({ id: image.id, alt_text: altText });
@@ -120,6 +122,8 @@ export async function POST(request: Request) {
 
   const updated = results.filter((r) => r.alt_text !== null).length;
   const failed = results.filter((r) => r.error).length;
+  // Remaining after this batch (totalRemaining was counted before we updated)
+  const remaining = Math.max(0, (totalRemaining ?? 0) - updated);
 
-  return NextResponse.json({ updated, failed, results });
+  return NextResponse.json({ updated, failed, remaining, results });
 }
