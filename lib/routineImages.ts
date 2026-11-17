@@ -11,20 +11,20 @@ const ROUTINE_IMAGES: Record<string, RoutineImagePair> = {
   // Coily 4a-4c
   "4a": {
     break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6940165.jpeg",
-    break2: "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1790791837/7710694-uhd_4096_2160_25fps.jpg",
+    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/8343868.jpeg",
   },
   "4b": {
     break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/8343868.jpeg",
     break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6381013.jpeg",
   },
   "4c": {
-    break1: "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1790791837/7710694-uhd_4096_2160_25fps.jpg",
+    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6940165.jpeg",
     break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6381013.jpeg",
   },
   // Curly 3a-3c
   "3a": {
     break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7020172.jpeg",
-    break2: "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1790791795/6599340-hd_1080_1920_25fps.jpg",
+    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6663336.jpeg",
   },
   "3b": {
     break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7020172.jpeg",
@@ -32,12 +32,12 @@ const ROUTINE_IMAGES: Record<string, RoutineImagePair> = {
   },
   "3c": {
     break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6663336.jpeg",
-    break2: "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1790791795/6599340-hd_1080_1920_25fps.jpg",
+    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7020172.jpeg",
   },
   // Wavy 2a-2c
   "2a": {
     break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7306713.jpeg",
-    break2: "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1790791795/6599340-hd_1080_1920_25fps.jpg",
+    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6663336.jpeg",
   },
   "2b": {
     break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7306713.jpeg",
@@ -45,12 +45,12 @@ const ROUTINE_IMAGES: Record<string, RoutineImagePair> = {
   },
   "2c": {
     break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6663336.jpeg",
-    break2: "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1790791795/6599340-hd_1080_1920_25fps.jpg",
+    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7306713.jpeg",
   },
   // Straight 1a-1c
   "1a": {
     break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6502872.jpeg",
-    break2: "https://res.cloudinary.com/kumxntij/image/upload/f_auto,q_auto/v1790791795/6599340-hd_1080_1920_25fps.jpg",
+    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7306713.jpeg",
   },
   "1b": {
     break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6502872.jpeg",

@@ -7,7 +7,7 @@ const nextConfig = {
       // redundant under this wildcard but documented anyway, since
       // "**" makes it easy to lose track of which hosts actually matter.
       { protocol: "https", hostname: "**" },
-      { protocol: "https", hostname: "res.cloudinary.com" },
+
       { protocol: "https", hostname: "cqpxiassldkmusngqorx.supabase.co" },
     ],
   },
