@@ -9,7 +9,6 @@ const nextConfig = {
       { protocol: "https", hostname: "**" },
 
       { protocol: "https", hostname: "cqpxiassldkmusngqorx.supabase.co" },
-      { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
   async redirects() {

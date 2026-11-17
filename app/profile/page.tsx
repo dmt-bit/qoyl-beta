@@ -244,7 +244,6 @@ type CurlTypeOption = {
   group: string;
   type: string;
   descriptor: string;
-  image: string;
 };
 
 const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
@@ -254,8 +253,6 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Straight",
     type: "Straight",
     descriptor: "Very straight, fine and silky. No bend or wave at all.",
-    image:
-      "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400&h=500&fit=crop&crop=top&auto=format&q=80",
   },
   {
     value: "1b",
@@ -263,8 +260,6 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Straight",
     type: "Straight",
     descriptor: "Straight with slight body. Minimal bend at ends only.",
-    image:
-      "https://images.unsplash.com/photo-1595959183082-7b570b7e08e2?w=400&h=500&fit=crop&crop=top&auto=format&q=80",
   },
   {
     value: "1c",
@@ -272,8 +267,6 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Straight",
     type: "Straight",
     descriptor: "Straight but coarse or thick. Resistant to any curl.",
-    image:
-      "https://images.unsplash.com/photo-1502823403499-6ccfcf4fb453?w=400&h=500&fit=crop&crop=top&auto=format&q=80",
   },
   {
     value: "2a",
@@ -281,8 +274,6 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Wavy",
     type: "Wavy",
     descriptor: "Loose S-wave, fine texture. Slight wave through the length.",
-    image:
-      "https://images.unsplash.com/photo-1519699047748-de8e457a634e?w=400&h=500&fit=crop&crop=top&auto=format&q=80",
   },
   {
     value: "2b",
@@ -290,8 +281,6 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Wavy",
     type: "Wavy",
     descriptor: "Defined S-wave, medium texture. Wave pattern throughout.",
-    image:
-      "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=400&h=500&fit=crop&crop=top&auto=format&q=80",
   },
   {
     value: "2c",
@@ -299,8 +288,6 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Wavy",
     type: "Wavy",
     descriptor: "Strong wave, coarser texture. Thick, frizz-prone waves.",
-    image:
-      "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=400&h=500&fit=crop&crop=top&auto=format&q=80",
   },
   {
     value: "3a",
@@ -308,8 +295,6 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Curly",
     type: "Curly",
     descriptor: "Loose spiral curls. Big, bouncy, defined ringlets.",
-    image:
-      "https://images.unsplash.com/photo-1554244933-d876deb6b2ff?w=400&h=500&fit=crop&crop=top&auto=format&q=80",
   },
   {
     value: "3b",
@@ -317,8 +302,6 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Curly",
     type: "Curly",
     descriptor: "Springy ringlets, medium-tight spiral. Lots of volume.",
-    image:
-      "https://images.unsplash.com/photo-1568409938619-12e139227838?w=400&h=500&fit=crop&crop=top&auto=format&q=80",
   },
   {
     value: "3c",
@@ -326,8 +309,6 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Curly",
     type: "Curly",
     descriptor: "Tight corkscrew curls. Dense, voluminous, well-defined.",
-    image:
-      "https://images.unsplash.com/photo-1590935216688-0e0ab049f938?w=400&h=500&fit=crop&crop=top&auto=format&q=80",
   },
   {
     value: "4a",
@@ -335,8 +316,6 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Coily",
     type: "Coily",
     descriptor: "Defined S-coils. Tight but visible S-pattern when stretched.",
-    image:
-      "https://images.unsplash.com/photo-1612344441107-ef12287e4872?w=400&h=500&fit=crop&crop=top&auto=format&q=80",
   },
   {
     value: "4b",
@@ -344,8 +323,6 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Coily",
     type: "Coily",
     descriptor: "Z-pattern with sharp angles. Less definition, more shrinkage.",
-    image:
-      "https://images.unsplash.com/photo-1593104547489-5cfb3839a3b5?w=400&h=500&fit=crop&crop=top&auto=format&q=80",
   },
   {
     value: "4c",
@@ -353,8 +330,6 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Coily",
     type: "Coily",
     descriptor: "Tightest coils, most shrinkage. Pattern less visible when dry.",
-    image:
-      "https://images.unsplash.com/photo-1573461160327-f450aca8e566?w=400&h=500&fit=crop&crop=top&auto=format&q=80",
   },
 ];
 
@@ -599,6 +574,17 @@ function CurlTypeCard({
   selected: boolean;
   onClick: () => void;
 }) {
+  const [imgUrl, setImgUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(
+      `/api/visual-library/fallback?hair_types=${option.value}&category=style`
+    )
+      .then((r) => r.json())
+      .then((d) => { if (d.url) setImgUrl(d.url); })
+      .catch(() => {});
+  }, [option.value]);
+
   return (
     <button
       type="button"
@@ -608,14 +594,18 @@ function CurlTypeCard({
         selected ? "border-2 border-bronze" : "border border-[#e8e8e8]"
       }`}
     >
-      <div className="relative aspect-[4/5] w-full shrink-0">
-        <Image
-          src={option.image}
-          alt={`${option.label} ${option.type} curl pattern`}
-          fill
-          sizes="(min-width: 640px) 33vw, 50vw"
-          className={`object-cover object-top ${selected ? "brightness-110" : ""}`}
-        />
+      <div className="relative aspect-[4/5] w-full shrink-0 bg-sand">
+        {imgUrl ? (
+          <Image
+            src={imgUrl}
+            alt={`${option.label} ${option.type} curl pattern`}
+            fill
+            sizes="(min-width: 640px) 33vw, 50vw"
+            className={`object-cover object-top ${selected ? "brightness-110" : ""}`}
+          />
+        ) : (
+          <div className="h-full w-full animate-pulse bg-sand" />
+        )}
         {selected && (
           <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-bronze">
             ✓
