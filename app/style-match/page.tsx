@@ -179,27 +179,40 @@ const VIBE_OPTIONS = [
 ];
 
 const VIBE_TAGS_BY_SLUG: Record<string, string[]> = {
+  // protective
   "box-braids": ["protective", "low maintenance"],
   "knotless-braids": ["protective", "low maintenance"],
   "faux-locs": ["protective", "low maintenance"],
   "passion-twists": ["protective", "low maintenance"],
   crochet: ["protective", "low maintenance"],
-  cornrows: ["protective", "low maintenance"],
+  cornrows: ["protective", "bold"],
   wigs: ["protective", "low maintenance"],
-  "wash-and-go": ["defined", "voluminous", "natural texture"],
+  // defined
+  "wash-and-go": ["defined", "natural texture"],
+  "diffused-waves": ["defined", "natural texture"],
   "twist-out": ["defined", "natural texture"],
-  "braid-out": ["defined", "voluminous"],
+  "braid-out": ["defined", "natural texture"],
   "flexi-rod-set": ["defined"],
   "flat-twist-out": ["defined"],
   "bantu-knots": ["defined", "bold"],
+  // sleek
   "silk-press": ["sleek"],
-  blowout: ["sleek"],
+  blowout: ["sleek", "voluminous"],
+  "textured-blowout": ["sleek", "voluminous"],
+  "sleek-straight": ["sleek"],
   "sleek-bun": ["sleek"],
+  "sleek-ponytail": ["sleek", "low maintenance"],
+  // voluminous
+  "beach-waves": ["voluminous", "natural texture"],
+  "half-up-wavy": ["voluminous", "natural texture"],
   "high-puff": ["voluminous", "low maintenance", "natural texture"],
+  "curtain-bangs": ["voluminous"],
+  // bold
+  "goddess-braids": ["bold", "protective"],
+  // low maintenance / natural texture
   "pineapple-updo": ["low maintenance", "natural texture"],
-  "goddess-braids": ["bold"],
   locs: ["low maintenance"],
-  twa: ["natural texture"],
+  twa: ["natural texture", "low maintenance"],
 };
 
 // Four curl-type families driving the inspo tabs (item 1-3) - reuses
@@ -232,18 +245,31 @@ const FAMILY_ORDER: CurlFamily[] = ["straight", "wavy", "curly", "coily"];
 // browse experience is identical whether or not the styles table has
 // data - this is only the true fallback if that table is ever emptied.
 const STATIC_STYLES: StyleRow[] = [
-  { id: "static-box-braids", name: "Box Braids", slug: "box-braids", description: "Classic protective braided style.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: true, estimated_time: "4-8 hours", difficulty: "intermediate" },
-  { id: "static-knotless-braids", name: "Knotless Braids", slug: "knotless-braids", description: "Braids without the tension of a knot base.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: true, estimated_time: "5-9 hours", difficulty: "intermediate" },
-  { id: "static-wash-and-go", name: "Wash and Go", slug: "wash-and-go", description: "Low-manipulation style enhancing natural curls.", hair_types_compatible: ["2c", "3a", "3b", "3c", "4a"], requires_fake_hair: false, estimated_time: "30-60 minutes", difficulty: "beginner" },
-  { id: "static-twist-out", name: "Twist Out", slug: "twist-out", description: "Defined curls from unraveled twists.", hair_types_compatible: ["3a", "3b", "3c", "4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "2-4 hours", difficulty: "beginner" },
-  { id: "static-braid-out", name: "Braid Out", slug: "braid-out", description: "Defined waves/curls from unraveled braids.", hair_types_compatible: ["3b", "3c", "4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "2-4 hours", difficulty: "beginner" },
-  { id: "static-bantu-knots", name: "Bantu Knots", slug: "bantu-knots", description: "Coiled knots, worn as-is or unraveled for curls.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "1-2 hours", difficulty: "beginner" },
+  // --- type 1 (straight) ---
+  { id: "static-sleek-straight", name: "Sleek Straight", slug: "sleek-straight", description: "Polished, smooth straight hair with shine.", hair_types_compatible: ["1a", "1b", "1c", "2a"], requires_fake_hair: false, estimated_time: "30-60 minutes", difficulty: "beginner" },
+  { id: "static-blowout", name: "Blowout", slug: "blowout", description: "Voluminous, smooth blowout finish.", hair_types_compatible: ["1a", "1b", "1c", "2a", "2b", "3a", "3b", "3c", "4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "30-60 minutes", difficulty: "beginner" },
+  { id: "static-curtain-bangs", name: "Curtain Bangs", slug: "curtain-bangs", description: "Soft, face-framing bangs parted in the center.", hair_types_compatible: ["1a", "1b", "1c", "2a", "2b"], requires_fake_hair: false, estimated_time: "15-30 minutes", difficulty: "beginner" },
+  { id: "static-sleek-ponytail", name: "Sleek Ponytail", slug: "sleek-ponytail", description: "Smooth, high or low ponytail pulled tight.", hair_types_compatible: ["1a", "1b", "1c", "2a", "2b", "2c", "3a"], requires_fake_hair: false, estimated_time: "10-20 minutes", difficulty: "beginner" },
+  { id: "static-beachy-blowout", name: "Textured Blowout", slug: "textured-blowout", description: "Lived-in blowout with movement and body.", hair_types_compatible: ["1b", "1c", "2a", "2b"], requires_fake_hair: false, estimated_time: "30-45 minutes", difficulty: "beginner" },
+  // --- type 2 (wavy) ---
+  { id: "static-beach-waves", name: "Beach Waves", slug: "beach-waves", description: "Effortless, tousled waves with a sun-dried feel.", hair_types_compatible: ["2a", "2b", "2c", "1c"], requires_fake_hair: false, estimated_time: "20-45 minutes", difficulty: "beginner" },
+  { id: "static-wash-and-go", name: "Wash and Go", slug: "wash-and-go", description: "Low-manipulation style that enhances natural curl pattern.", hair_types_compatible: ["2b", "2c", "3a", "3b", "3c", "4a"], requires_fake_hair: false, estimated_time: "30-60 minutes", difficulty: "beginner" },
+  { id: "static-diffused-waves", name: "Diffused Waves", slug: "diffused-waves", description: "Defined, frizz-free waves using a diffuser attachment.", hair_types_compatible: ["2a", "2b", "2c", "3a"], requires_fake_hair: false, estimated_time: "20-40 minutes", difficulty: "beginner" },
+  { id: "static-half-up-wavy", name: "Half-Up Style", slug: "half-up-wavy", description: "Top section pulled back while waves fall free.", hair_types_compatible: ["2a", "2b", "2c", "3a", "3b"], requires_fake_hair: false, estimated_time: "10-15 minutes", difficulty: "beginner" },
+  // --- type 3 (curly) ---
+  { id: "static-twist-out", name: "Twist Out", slug: "twist-out", description: "Defined curls from unraveled two-strand twists.", hair_types_compatible: ["3a", "3b", "3c", "4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "2-4 hours", difficulty: "beginner" },
+  { id: "static-braid-out", name: "Braid Out", slug: "braid-out", description: "Stretched, defined waves from unraveled braids.", hair_types_compatible: ["3a", "3b", "3c", "4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "2-4 hours", difficulty: "beginner" },
+  { id: "static-box-braids", name: "Box Braids", slug: "box-braids", description: "Classic three-strand protective braided style.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: true, estimated_time: "4-8 hours", difficulty: "intermediate" },
+  { id: "static-knotless-braids", name: "Knotless Braids", slug: "knotless-braids", description: "Lightweight braids without the tension of a knot base.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: true, estimated_time: "5-9 hours", difficulty: "intermediate" },
+  { id: "static-silk-press", name: "Silk Press", slug: "silk-press", description: "Heat-straightened natural hair with a silky finish.", hair_types_compatible: ["3a", "3b", "3c", "4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "1-3 hours", difficulty: "intermediate" },
+  { id: "static-high-puff", name: "High Puff", slug: "high-puff", description: "Sleek gathered puff sitting at the crown.", hair_types_compatible: ["3b", "3c", "4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "15-30 minutes", difficulty: "beginner" },
+  // --- type 4 (coily) ---
+  { id: "static-bantu-knots", name: "Bantu Knots", slug: "bantu-knots", description: "Coiled knots worn as-is or unraveled for curls.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "1-2 hours", difficulty: "beginner" },
   { id: "static-faux-locs", name: "Faux Locs", slug: "faux-locs", description: "Temporary locs wrapped over natural hair.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: true, estimated_time: "6-10 hours", difficulty: "advanced" },
-  { id: "static-passion-twists", name: "Passion Twists", slug: "passion-twists", description: "Bohemian-textured protective twists.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: true, estimated_time: "4-7 hours", difficulty: "intermediate" },
-  { id: "static-goddess-braids", name: "Goddess Braids", slug: "goddess-braids", description: "Thick, raised cornrow-style braids.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: true, estimated_time: "2-4 hours", difficulty: "intermediate" },
-  { id: "static-high-puff", name: "High Puff", slug: "high-puff", description: "Sleek gathered puff at the crown.", hair_types_compatible: ["3b", "3c", "4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "15-30 minutes", difficulty: "beginner" },
-  { id: "static-locs", name: "Locs", slug: "locs", description: "Permanent coiled/matted rope-like strands.", hair_types_compatible: ["4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "Months to years", difficulty: "advanced" },
-  { id: "static-silk-press", name: "Silk Press", slug: "silk-press", description: "Heat-straightened natural hair.", hair_types_compatible: ["3a", "3b", "3c", "4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "1-3 hours", difficulty: "intermediate" },
+  { id: "static-passion-twists", name: "Passion Twists", slug: "passion-twists", description: "Bohemian-textured spring curls in a protective twist.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: true, estimated_time: "4-7 hours", difficulty: "intermediate" },
+  { id: "static-goddess-braids", name: "Goddess Braids", slug: "goddess-braids", description: "Thick, raised cornrow-style braids with a regal look.", hair_types_compatible: ["3c", "4a", "4b", "4c"], requires_fake_hair: true, estimated_time: "2-4 hours", difficulty: "intermediate" },
+  { id: "static-locs", name: "Locs", slug: "locs", description: "Permanent coiled rope-like strands over time.", hair_types_compatible: ["4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "Months to years", difficulty: "advanced" },
+  { id: "static-twa", name: "TWA", slug: "twa", description: "Teeny weeny afro — close-cropped natural style.", hair_types_compatible: ["4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "15-30 minutes", difficulty: "beginner" },
 ];
 
 function CameraIcon() {

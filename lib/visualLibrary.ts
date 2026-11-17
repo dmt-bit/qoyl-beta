@@ -60,15 +60,41 @@ export async function getFallbackImage(params: FallbackParams): Promise<string |
   }
 
   // Tier 0: slug keyword match in alt_text — highest specificity.
-  // Converts "box-braids" → "box braids" and searches alt_text with ilike.
+  // Tries each keyword variant in turn until one finds a photo.
   if (params.slug) {
-    const keyword = params.slug.replace(/-/g, " ");
-    const { data: bySlug } = await baseQuery()
-      .ilike("alt_text", `%${keyword}%`)
-      .order("used_count", { ascending: true })
-      .limit(5);
-    const picked = await pickAndIncrement(bySlug);
-    if (picked) return picked;
+    // Map slugs to alt_text search terms. First match wins.
+    const SLUG_KEYWORDS: Record<string, string[]> = {
+      "wash-and-go":      ["wash and go", "wash & go", "wash n go", "natural curl"],
+      "braid-out":        ["braid out", "braid-out", "braided out"],
+      "twist-out":        ["twist out", "twist-out"],
+      "faux-locs":        ["faux loc", "faux-loc", "goddess loc", "distressed loc"],
+      "passion-twists":   ["passion twist", "spring twist", "bohemian twist"],
+      "box-braids":       ["box braid"],
+      "knotless-braids":  ["knotless"],
+      "bantu-knots":      ["bantu knot"],
+      "goddess-braids":   ["goddess braid", "jumbo braid", "cornrow"],
+      "silk-press":       ["silk press", "silk-press", "straighten"],
+      blowout:            ["blowout", "blow out", "blow-out"],
+      "textured-blowout": ["blowout", "blow out", "blow-out"],
+      "sleek-straight":   ["sleek", "straight hair"],
+      "beach-waves":      ["beach wave", "wave", "wavy"],
+      "diffused-waves":   ["diffus", "wave", "wavy curl"],
+      "high-puff":        ["puff", "afro puff"],
+      "sleek-ponytail":   ["ponytail", "pony tail"],
+      "curtain-bangs":    ["bang", "curtain"],
+      "half-up-wavy":     ["half up", "half-up"],
+      locs:               ["loc", "dreadlock"],
+      twa:                ["twa", "teeny weeny", "afro", "natural afro"],
+    };
+    const keywords = SLUG_KEYWORDS[params.slug] ?? [params.slug.replace(/-/g, " ")];
+    for (const kw of keywords) {
+      const { data: byKw } = await baseQuery()
+        .ilike("alt_text", `%${kw}%`)
+        .order("used_count", { ascending: true })
+        .limit(5);
+      const picked = await pickAndIncrement(byKw);
+      if (picked) return picked;
+    }
   }
 
   // Tier 1: match both hair type AND category.
