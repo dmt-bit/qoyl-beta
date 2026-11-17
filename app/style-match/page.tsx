@@ -31,6 +31,7 @@ import {
 } from "@/lib/installTypeContent";
 import type { CartItem } from "@/lib/styleCart";
 import CompleteYourLookCart from "@/components/CompleteYourLookCart";
+import VisualBrowseStrip, { BrowseImageModal } from "@/components/VisualBrowseStrip";
 
 type BangLength = "above-eyebrow" | "at-eyebrow" | "below-eyebrow" | "cheekbone-length";
 type ApproximateLength = "twa" | "short" | "medium" | "long" | "waist" | "hip";
@@ -703,6 +704,9 @@ function StyleMatchContent() {
 
   const [pageState, setPageState] = useState<PageState>("landing");
   const [error, setError] = useState<string | null>(null);
+
+  // Visual browse strip modal
+  const [browseModalImage, setBrowseModalImage] = useState<{ id: string; image_url: string; alt_text: string | null; hair_types: string[]; categories: string[]; mood: string | null } | null>(null);
 
   // Landing input state
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -1580,6 +1584,29 @@ function StyleMatchContent() {
   return (
     <main className="min-h-screen bg-white font-sans text-dark">
       {pageState === "landing" && <StyleMatchPromoHero />}
+
+      {pageState === "landing" && (
+        <VisualBrowseStrip
+          gender={hairProfile?.gender ?? null}
+          onSelectImage={(img) => setBrowseModalImage(img)}
+        />
+      )}
+
+      {browseModalImage && (
+        <BrowseImageModal
+          image={browseModalImage}
+          onClose={() => setBrowseModalImage(null)}
+          onMatch={(img) => {
+            setBrowseModalImage(null);
+            // Treat the library image as a text description prefill —
+            // use the alt text if available, otherwise a generic prompt
+            // that will go through the deep survey just like any other match.
+            setTextDescription(img.alt_text ?? "this hairstyle look");
+            setDeepStep(1);
+            setPageState("deepSurvey");
+          }}
+        />
+      )}
 
       <div className="px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-2xl">
