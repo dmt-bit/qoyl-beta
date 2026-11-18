@@ -9,9 +9,11 @@ type Product = {
   name: string;
   brand: string | null;
   barcode: string | null;
+  image_url: string | null;
 };
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
+type Tab = "missing" | "all";
 
 function ProductCard({
   product,
@@ -20,15 +22,18 @@ function ProductCard({
 }: {
   product: Product;
   password: string;
-  onSaved: () => void;
+  onSaved: (id: string, newUrl: string) => void;
 }) {
-  const [url, setUrl] = useState("");
+  const hasImage = !!product.image_url;
+  const [editing, setEditing] = useState(!hasImage);
+  const [url, setUrl] = useState(product.image_url ?? "");
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [previewError, setPreviewError] = useState(false);
 
   const trimmedUrl = url.trim();
   const isValidUrl = trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://");
-  const showPreview = isValidUrl && !previewError;
+  const previewUrl = editing ? trimmedUrl : (product.image_url ?? "");
+  const showPreview = (previewUrl.startsWith("http://") || previewUrl.startsWith("https://")) && !previewError;
 
   async function save() {
     if (!isValidUrl || status === "saving") return;
@@ -40,7 +45,9 @@ function ProductCard({
     });
     if (res.ok) {
       setStatus("saved");
-      onSaved();
+      setEditing(false);
+      onSaved(product.id, trimmedUrl);
+      setTimeout(() => setStatus("idle"), 2000);
     } else {
       setStatus("error");
       setTimeout(() => setStatus("idle"), 2000);
@@ -49,30 +56,24 @@ function ProductCard({
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") save();
+    if (e.key === "Escape" && hasImage) { setEditing(false); setUrl(product.image_url ?? ""); }
   }
 
-  if (status === "saved") {
-    return (
-      <div className="flex items-center gap-3 border border-dark/10 bg-white p-3">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={trimmedUrl} alt={product.name} className="h-14 w-14 flex-shrink-0 object-contain" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-sans text-[12px] font-medium text-dark">{product.name}</p>
-          <p className="font-mono text-[10px] text-green-600">✓ saved</p>
-        </div>
-      </div>
-    );
+  function startEdit() {
+    setUrl(product.image_url ?? "");
+    setPreviewError(false);
+    setEditing(true);
   }
 
   return (
     <div className="border border-dark/10 bg-white p-3">
       <div className="flex gap-3">
-        {/* Image preview or placeholder */}
+        {/* Image preview */}
         <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center border border-dark/10 bg-cream">
           {showPreview ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={trimmedUrl}
+              src={previewUrl}
               alt={product.name}
               className="h-full w-full object-contain"
               onError={() => setPreviewError(true)}
@@ -82,28 +83,52 @@ function ProductCard({
           )}
         </div>
 
-        {/* Product info + input */}
+        {/* Product info */}
         <div className="min-w-0 flex-1">
           <p className="font-sans text-[13px] font-medium leading-tight text-dark">{product.name}</p>
           <p className="mb-2 font-sans text-[11px] text-dark/50">{product.brand ?? "—"}</p>
-          <div className="flex gap-2">
-            <input
-              type="url"
-              placeholder="Paste image URL…"
-              value={url}
-              onChange={(e) => { setUrl(e.target.value); setPreviewError(false); }}
-              onKeyDown={handleKeyDown}
-              className="min-w-0 flex-1 rounded-none border border-dark/20 bg-transparent px-2.5 py-1.5 font-mono text-[11px] text-dark placeholder:text-dark/30 focus:border-dark focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={save}
-              disabled={!isValidUrl || status === "saving"}
-              className="flex-shrink-0 bg-dark px-3 py-1.5 font-sans text-[11px] font-semibold text-cream transition-colors hover:bg-dark/80 disabled:opacity-30"
-            >
-              {status === "saving" ? "…" : status === "error" ? "error" : "Save"}
-            </button>
-          </div>
+
+          {editing ? (
+            <div className="flex gap-2">
+              <input
+                type="url"
+                placeholder="Paste image URL…"
+                value={url}
+                autoFocus
+                onChange={(e) => { setUrl(e.target.value); setPreviewError(false); }}
+                onKeyDown={handleKeyDown}
+                className="min-w-0 flex-1 rounded-none border border-dark/20 bg-transparent px-2.5 py-1.5 font-mono text-[11px] text-dark placeholder:text-dark/30 focus:border-dark focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={save}
+                disabled={!isValidUrl || status === "saving"}
+                className="flex-shrink-0 bg-dark px-3 py-1.5 font-sans text-[11px] font-semibold text-cream transition-colors hover:bg-dark/80 disabled:opacity-30"
+              >
+                {status === "saving" ? "…" : status === "error" ? "error" : status === "saved" ? "✓" : "Save"}
+              </button>
+              {hasImage && (
+                <button
+                  type="button"
+                  onClick={() => { setEditing(false); setUrl(product.image_url ?? ""); }}
+                  className="flex-shrink-0 border border-dark/20 px-2.5 py-1.5 font-sans text-[11px] text-dark/50 hover:border-dark/40"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 flex-1 truncate font-mono text-[10px] text-dark/30">{product.image_url}</p>
+              <button
+                type="button"
+                onClick={startEdit}
+                className="flex-shrink-0 border border-dark/20 px-2.5 py-1 font-sans text-[11px] text-dark/60 hover:border-dark hover:text-dark"
+              >
+                Edit
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -119,14 +144,15 @@ export default function AdminImagesPage() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [savedCount, setSavedCount] = useState(0);
+  const [tab, setTab] = useState<Tab>("missing");
 
-  const loadData = useCallback(async (pw: string) => {
+  const loadData = useCallback(async (pw: string, mode: Tab) => {
     if (!pw) return;
     setLoading(true);
     try {
       const [statsRes, productsRes] = await Promise.all([
         fetch("/api/admin/images", { headers: { "x-admin-password": pw } }),
-        fetch("/api/admin/images/missing", { headers: { "x-admin-password": pw } }),
+        fetch(`/api/admin/images/missing?mode=${mode === "all" ? "all" : "missing"}`, { headers: { "x-admin-password": pw } }),
       ]);
       const statsData = await statsRes.json();
       const productsData = await productsRes.json();
@@ -139,12 +165,14 @@ export default function AdminImagesPage() {
   useEffect(() => {
     if (!password) return;
     sessionStorage.setItem("admin_password", password);
-    loadData(password);
-  }, [password, loadData]);
+    loadData(password, tab);
+  }, [password, tab, loadData]);
 
-  function handleSaved() {
+  function handleSaved(id: string, newUrl: string) {
     setSavedCount((n) => n + 1);
     setStats((s) => s ? { ...s, missingImages: Math.max(0, s.missingImages - 1), hasImages: s.hasImages + 1 } : s);
+    // Update the product in the list so it shows the new image
+    setProducts((ps) => ps.map((p) => p.id === id ? { ...p, image_url: newUrl } : p));
   }
 
   const filtered = products.filter((p) => {
@@ -161,7 +189,7 @@ export default function AdminImagesPage() {
         <div className="mb-6">
           <h1 className="font-serif text-2xl font-bold text-dark">Product Images</h1>
           <p className="mt-1 text-sm text-dark/50">
-            Find an image URL anywhere on the web, paste it, save. Press Enter to save quickly.
+            Paste an image URL to assign it. Press Enter to save quickly.
           </p>
         </div>
 
@@ -180,9 +208,9 @@ export default function AdminImagesPage() {
 
         {/* Stats */}
         {stats && (
-          <div className="mb-6 flex gap-6 border-b border-dark/10 pb-6">
+          <div className="mb-6 flex gap-6 border-b border-dark/10 pb-5">
             <div>
-              <p className="font-mono text-[22px] font-bold text-dark">{stats.missingImages - savedCount}</p>
+              <p className="font-mono text-[22px] font-bold text-dark">{Math.max(0, stats.missingImages - savedCount)}</p>
               <p className="font-sans text-[11px] text-dark/50">missing</p>
             </div>
             <div>
@@ -199,6 +227,22 @@ export default function AdminImagesPage() {
                 <p className="font-sans text-[11px] text-dark/50">this session</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Tabs */}
+        {password && (
+          <div className="mb-4 flex gap-0 border-b border-dark/10">
+            {([["missing", "Missing images"], ["all", "All products"]] as [Tab, string][]).map(([t, label]) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => { setTab(t); setSearch(""); }}
+                className={`px-4 py-2 font-sans text-[12px] transition-colors ${tab === t ? "border-b-2 border-dark font-semibold text-dark" : "text-dark/40 hover:text-dark/70"}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         )}
 
@@ -222,11 +266,13 @@ export default function AdminImagesPage() {
 
         {/* Product list */}
         {loading && (
-          <p className="font-mono text-[11px] text-dark/40">Loading products…</p>
+          <p className="font-mono text-[11px] text-dark/40">Loading…</p>
         )}
 
         {!loading && products.length === 0 && password && (
-          <p className="font-sans text-sm text-dark/50">All products have images.</p>
+          <p className="font-sans text-sm text-dark/50">
+            {tab === "missing" ? "All products have images." : "No products found."}
+          </p>
         )}
 
         <div className="flex flex-col gap-2">

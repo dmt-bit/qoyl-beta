@@ -2,19 +2,29 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { isAuthorizedAdmin } from "@/lib/adminAuth";
 
-// Returns all catalog_products that are missing image_url, for manual entry UI.
+// Returns catalog_products for manual image entry UI.
+// ?mode=missing (default) — only products without image_url
+// ?mode=all — all products including those with image_url
 export async function GET(request: Request) {
   if (!isAuthorizedAdmin(request)) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
+  const url = new URL(request.url);
+  const mode = url.searchParams.get("mode") ?? "missing";
+
   const admin = getSupabaseAdmin();
 
-  const { data, error } = await admin
+  let query = admin
     .from("catalog_products")
-    .select("id, name, barcode, catalog_brands(name)")
-    .is("image_url", null)
+    .select("id, name, barcode, image_url, catalog_brands(name)")
     .order("name", { ascending: true });
+
+  if (mode === "missing") {
+    query = query.is("image_url", null);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -24,6 +34,7 @@ export async function GET(request: Request) {
     id: string;
     name: string;
     barcode: string | null;
+    image_url: string | null;
     catalog_brands: { name: string } | null;
   };
 
@@ -32,6 +43,7 @@ export async function GET(request: Request) {
     name: row.name,
     brand: row.catalog_brands?.name ?? null,
     barcode: row.barcode ?? null,
+    image_url: row.image_url ?? null,
   }));
 
   return NextResponse.json({ products });
