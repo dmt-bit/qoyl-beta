@@ -238,12 +238,16 @@ function MyPurchases({ userId }: { userId: string }) {
   );
 }
 
+const SUPABASE_CURL_BASE =
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/curl-type-photos";
+
 type CurlTypeOption = {
   value: string;
   label: string;
   group: string;
   type: string;
   descriptor: string;
+  image: string;
 };
 
 const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
@@ -253,6 +257,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Straight",
     type: "Straight",
     descriptor: "Very straight, fine and silky. No bend or wave at all.",
+    image: `${SUPABASE_CURL_BASE}/1a.jpg`,
   },
   {
     value: "1b",
@@ -260,6 +265,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Straight",
     type: "Straight",
     descriptor: "Straight with slight body. Minimal bend at ends only.",
+    image: `${SUPABASE_CURL_BASE}/1b.jpg`,
   },
   {
     value: "1c",
@@ -267,6 +273,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Straight",
     type: "Straight",
     descriptor: "Straight but coarse or thick. Resistant to any curl.",
+    image: `${SUPABASE_CURL_BASE}/1c.jpg`,
   },
   {
     value: "2a",
@@ -274,6 +281,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Wavy",
     type: "Wavy",
     descriptor: "Loose S-wave, fine texture. Slight wave through the length.",
+    image: `${SUPABASE_CURL_BASE}/2a.jpg`,
   },
   {
     value: "2b",
@@ -281,6 +289,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Wavy",
     type: "Wavy",
     descriptor: "Defined S-wave, medium texture. Wave pattern throughout.",
+    image: `${SUPABASE_CURL_BASE}/2b.jpg`,
   },
   {
     value: "2c",
@@ -288,6 +297,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Wavy",
     type: "Wavy",
     descriptor: "Strong wave, coarser texture. Thick, frizz-prone waves.",
+    image: `${SUPABASE_CURL_BASE}/2c.jpg`,
   },
   {
     value: "3a",
@@ -295,6 +305,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Curly",
     type: "Curly",
     descriptor: "Loose spiral curls. Big, bouncy, defined ringlets.",
+    image: `${SUPABASE_CURL_BASE}/3a.jpg`,
   },
   {
     value: "3b",
@@ -302,6 +313,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Curly",
     type: "Curly",
     descriptor: "Springy ringlets, medium-tight spiral. Lots of volume.",
+    image: `${SUPABASE_CURL_BASE}/3b.jpg`,
   },
   {
     value: "3c",
@@ -309,6 +321,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Curly",
     type: "Curly",
     descriptor: "Tight corkscrew curls. Dense, voluminous, well-defined.",
+    image: `${SUPABASE_CURL_BASE}/3c.jpg`,
   },
   {
     value: "4a",
@@ -316,6 +329,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Coily",
     type: "Coily",
     descriptor: "Defined S-coils. Tight but visible S-pattern when stretched.",
+    image: `${SUPABASE_CURL_BASE}/4a.jpg`,
   },
   {
     value: "4b",
@@ -323,6 +337,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Coily",
     type: "Coily",
     descriptor: "Z-pattern with sharp angles. Less definition, more shrinkage.",
+    image: `${SUPABASE_CURL_BASE}/4b.jpg`,
   },
   {
     value: "4c",
@@ -330,6 +345,7 @@ const CURL_TYPE_OPTIONS: CurlTypeOption[] = [
     group: "Coily",
     type: "Coily",
     descriptor: "Tightest coils, most shrinkage. Pattern less visible when dry.",
+    image: `${SUPABASE_CURL_BASE}/4c.jpg`,
   },
 ];
 
@@ -574,17 +590,6 @@ function CurlTypeCard({
   selected: boolean;
   onClick: () => void;
 }) {
-  const [imgUrl, setImgUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch(
-      `/api/visual-library/fallback?hair_types=${option.value}&category=style`
-    )
-      .then((r) => r.json())
-      .then((d) => { if (d.url) setImgUrl(d.url); })
-      .catch(() => {});
-  }, [option.value]);
-
   return (
     <button
       type="button"
@@ -595,17 +600,13 @@ function CurlTypeCard({
       }`}
     >
       <div className="relative aspect-[4/5] w-full shrink-0 bg-sand">
-        {imgUrl ? (
-          <Image
-            src={imgUrl}
-            alt={`${option.label} ${option.type} curl pattern`}
-            fill
-            sizes="(min-width: 640px) 33vw, 50vw"
-            className={`object-cover object-top ${selected ? "brightness-110" : ""}`}
-          />
-        ) : (
-          <div className="h-full w-full animate-pulse bg-sand" />
-        )}
+        <Image
+          src={option.image}
+          alt={`${option.label} ${option.type} curl pattern`}
+          fill
+          sizes="(min-width: 640px) 33vw, 50vw"
+          className={`object-cover object-top ${selected ? "brightness-110" : ""}`}
+        />
         {selected && (
           <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-white text-[11px] font-semibold text-bronze">
             ✓
