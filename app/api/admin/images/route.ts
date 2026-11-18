@@ -114,7 +114,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // OBF missed — try retailer search (Ulta → Sephora → Target → Walmart)
+    // OBF missed — try Google image search
+    const hasGoogleKeys = !!(process.env.GOOGLE_CSE_API_KEY && process.env.GOOGLE_CSE_ID);
+    console.log(`[images] OBF miss for "${product.name}" — Google keys present: ${hasGoogleKeys}`);
     const retailerMatch = await searchRetailersForImage(product.name, brandName);
     if (!retailerMatch) continue;
 
