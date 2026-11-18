@@ -20,6 +20,8 @@ export default function VisualBrowseStrip({ gender, onSelectImage }: Props) {
   const [images, setImages] = useState<BrowseImage[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pausedRef = useRef(false);
+  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams({ limit: "40" });
@@ -31,6 +33,35 @@ export default function VisualBrowseStrip({ gender, onSelectImage }: Props) {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [gender]);
+
+  // Auto-scroll: slow continuous drift, pauses on hover/touch
+  useEffect(() => {
+    if (images.length === 0) return;
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const SPEED = 0.6; // px per frame (~36px/s at 60fps)
+    let lastTime: number | null = null;
+
+    function step(ts: number) {
+      if (!el) return;
+      if (!pausedRef.current) {
+        const delta = lastTime == null ? 0 : ts - lastTime;
+        el.scrollLeft += SPEED * (delta / 16.67);
+        // Loop back to start when we reach the end
+        if (el.scrollLeft >= el.scrollWidth - el.clientWidth - 1) {
+          el.scrollLeft = 0;
+        }
+      }
+      lastTime = ts;
+      rafRef.current = requestAnimationFrame(step);
+    }
+
+    rafRef.current = requestAnimationFrame(step);
+    return () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [images]);
 
   if (loading) {
     // Skeleton: same height as real strip, shimmer cards
@@ -68,6 +99,10 @@ export default function VisualBrowseStrip({ gender, onSelectImage }: Props) {
         ref={scrollRef}
         className="no-scrollbar flex gap-2 overflow-x-auto px-4 pb-5"
         style={{ WebkitOverflowScrolling: "touch" }}
+        onMouseEnter={() => { pausedRef.current = true; }}
+        onMouseLeave={() => { pausedRef.current = false; }}
+        onTouchStart={() => { pausedRef.current = true; }}
+        onTouchEnd={() => { pausedRef.current = false; }}
       >
         {images.map((image) => (
           <button
