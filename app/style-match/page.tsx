@@ -1024,6 +1024,12 @@ function StyleMatchContent() {
   async function finalizeMatch(finalStyle: DetectedStyle, inputType: "photo" | "text", bodyText?: string) {
     setDetected(finalStyle);
 
+    // If no reference image was set by a user photo upload, use the catalog
+    // image for this style so the confirm/results screens show something.
+    if (!referenceImageUrl && finalStyle.image_url) {
+      setReferenceImageUrl(finalStyle.image_url);
+    }
+
     // Fired after the fast, image-only analyze call above resolves -
     // not awaited, so it never delays showing results. Only when a
     // hair photo is on file, since that's the only thing this
