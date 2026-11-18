@@ -183,6 +183,7 @@ export default function AdminImagesPage() {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   function handleResolved(_id: string) {
     setResolved((n) => n + 1);
     setStats((s) => s ? { ...s, missingImages: Math.max(0, s.missingImages - 1), hasImages: s.hasImages + 1 } : s);
