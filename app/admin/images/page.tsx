@@ -1,152 +1,112 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 type Stats = { totalProducts: number; missingImages: number; hasImages: number };
 
-type Confidence = "high" | "medium" | "low";
-
-type ImageResult = {
-  product_id: string;
-  product_name: string;
-  brand: string;
+type Product = {
+  id: string;
+  name: string;
+  brand: string | null;
   barcode: string | null;
-  obf_product_name: string;
-  obf_brand: string;
-  image_url: string;
-  confidence: Confidence;
-  source?: string;
 };
 
-type RowStatus = "pending" | "accepted" | "rejected";
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-function ConfidenceBadge({ confidence }: { confidence: Confidence }) {
-  if (confidence === "high") {
-    return (
-      <span className="inline-block rounded-full bg-dark px-2 py-0.5 font-mono text-[9px] font-medium text-white">
-        high
-      </span>
-    );
-  }
-  if (confidence === "medium") {
-    return (
-      <span className="inline-block rounded-full border border-dark/40 px-2 py-0.5 font-mono text-[9px] font-medium text-dark/70">
-        medium
-      </span>
-    );
-  }
-  return (
-    <span className="inline-block rounded-full border border-amber px-2 py-0.5 font-mono text-[9px] font-medium text-amber">
-      low
-    </span>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="border border-dark bg-white p-4">
-      <p className="font-mono text-[28px] font-bold text-dark">{value}</p>
-      <p className="mt-1 font-sans text-[11px] font-light text-dark/50">{label}</p>
-    </div>
-  );
-}
-
-function ImageResultRow({
-  result,
+function ProductCard({
+  product,
   password,
-  onResolved,
+  onSaved,
 }: {
-  result: ImageResult;
+  product: Product;
   password: string;
-  onResolved: (id: string) => void;
+  onSaved: () => void;
 }) {
-  const [status, setStatus] = useState<RowStatus>("pending");
-  const [busy, setBusy] = useState(false);
+  const [url, setUrl] = useState("");
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const [previewError, setPreviewError] = useState(false);
 
-  async function accept() {
-    setBusy(true);
+  const trimmedUrl = url.trim();
+  const isValidUrl = trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://");
+  const showPreview = isValidUrl && !previewError;
+
+  async function save() {
+    if (!isValidUrl || status === "saving") return;
+    setStatus("saving");
     const res = await fetch("/api/admin/images", {
       method: "PUT",
       headers: { "Content-Type": "application/json", "x-admin-password": password },
-      body: JSON.stringify({ product_id: result.product_id, image_url: result.image_url }),
+      body: JSON.stringify({ product_id: product.id, image_url: trimmedUrl }),
     });
-    setBusy(false);
-    if (!res.ok) return;
-    setStatus("accepted");
-    onResolved(result.product_id);
+    if (res.ok) {
+      setStatus("saved");
+      onSaved();
+    } else {
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 2000);
+    }
   }
 
-  function reject() {
-    setStatus("rejected");
-    onResolved(result.product_id);
+  function handleKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") save();
   }
 
-  if (status === "accepted") {
+  if (status === "saved") {
     return (
-      <tr className="border-b border-dark/10">
-        <td colSpan={5} className="py-3">
-          <p className="font-mono text-[10px] text-green">✓ Image saved for {result.product_name}</p>
-        </td>
-      </tr>
+      <div className="flex items-center gap-3 border border-dark/10 bg-white p-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={trimmedUrl} alt={product.name} className="h-14 w-14 flex-shrink-0 object-contain" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate font-sans text-[12px] font-medium text-dark">{product.name}</p>
+          <p className="font-mono text-[10px] text-green-600">✓ saved</p>
+        </div>
+      </div>
     );
   }
-  if (status === "rejected") return null;
 
   return (
-    <tr className="border-b border-dark/10 align-top">
-      {/* Product image preview */}
-      <td className="py-3 pr-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={result.image_url}
-          alt={result.obf_product_name}
-          className="h-20 w-20 rounded border border-dark/10 object-contain bg-white"
-        />
-      </td>
-      {/* Our product */}
-      <td className="py-3 pr-4">
-        <p className="font-sans text-[12px] font-medium text-dark">{result.product_name}</p>
-        <p className="font-sans text-[11px] text-dark/50">{result.brand}</p>
-        {result.barcode && (
-          <p className="font-mono text-[9px] text-dark/30">{result.barcode}</p>
-        )}
-      </td>
-      {/* Match source */}
-      <td className="py-3 pr-4">
-        <div className="flex items-center gap-1.5 mb-1">
-          <span className="inline-block rounded-full bg-dark/8 px-2 py-0.5 font-mono text-[9px] text-dark/60 capitalize">
-            {result.source ?? "obf"}
-          </span>
+    <div className="border border-dark/10 bg-white p-3">
+      <div className="flex gap-3">
+        {/* Image preview or placeholder */}
+        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center border border-dark/10 bg-cream">
+          {showPreview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={trimmedUrl}
+              alt={product.name}
+              className="h-full w-full object-contain"
+              onError={() => setPreviewError(true)}
+            />
+          ) : (
+            <span className="font-mono text-[9px] text-dark/20">no img</span>
+          )}
         </div>
-        <p className="font-sans text-[12px] text-dark">{result.obf_product_name}</p>
-        <p className="font-sans text-[11px] text-dark/50">{result.obf_brand}</p>
-        <p className="mt-1 font-mono text-[9px] text-dark/30 break-all max-w-[200px]">{result.image_url}</p>
-      </td>
-      {/* Confidence */}
-      <td className="py-3 pr-4">
-        <ConfidenceBadge confidence={result.confidence} />
-      </td>
-      {/* Actions */}
-      <td className="py-3">
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={accept}
-            disabled={busy}
-            className="bg-bronze px-3 py-1.5 font-sans text-[11px] font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={reject}
-            className="border border-bronze/40 px-3 py-1.5 font-sans text-[11px] text-dark transition-colors hover:border-bronze"
-          >
-            Skip
-          </button>
+
+        {/* Product info + input */}
+        <div className="min-w-0 flex-1">
+          <p className="font-sans text-[13px] font-medium leading-tight text-dark">{product.name}</p>
+          <p className="mb-2 font-sans text-[11px] text-dark/50">{product.brand ?? "—"}</p>
+          <div className="flex gap-2">
+            <input
+              type="url"
+              placeholder="Paste image URL…"
+              value={url}
+              onChange={(e) => { setUrl(e.target.value); setPreviewError(false); }}
+              onKeyDown={handleKeyDown}
+              className="min-w-0 flex-1 rounded-none border border-dark/20 bg-transparent px-2.5 py-1.5 font-mono text-[11px] text-dark placeholder:text-dark/30 focus:border-dark focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={save}
+              disabled={!isValidUrl || status === "saving"}
+              className="flex-shrink-0 bg-dark px-3 py-1.5 font-sans text-[11px] font-semibold text-cream transition-colors hover:bg-dark/80 disabled:opacity-30"
+            >
+              {status === "saving" ? "…" : status === "error" ? "error" : "Save"}
+            </button>
+          </div>
         </div>
-      </td>
-    </tr>
+      </div>
+    </div>
   );
 }
 
@@ -155,139 +115,131 @@ export default function AdminImagesPage() {
     typeof window !== "undefined" ? sessionStorage.getItem("admin_password") ?? "" : ""
   );
   const [stats, setStats] = useState<Stats | null>(null);
-  const [results, setResults] = useState<ImageResult[]>([]);
-  const [scanning, setScanning] = useState(false);
-  const [scanned, setScanned] = useState<number | null>(null);
-  const [resolved, setResolved] = useState(0);
-  const [limit, setLimit] = useState(15);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [savedCount, setSavedCount] = useState(0);
+
+  const loadData = useCallback(async (pw: string) => {
+    if (!pw) return;
+    setLoading(true);
+    try {
+      const [statsRes, productsRes] = await Promise.all([
+        fetch("/api/admin/images", { headers: { "x-admin-password": pw } }),
+        fetch("/api/admin/images/missing", { headers: { "x-admin-password": pw } }),
+      ]);
+      const statsData = await statsRes.json();
+      const productsData = await productsRes.json();
+      if (!statsData.error) setStats(statsData);
+      if (productsData.products) setProducts(productsData.products);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     if (!password) return;
     sessionStorage.setItem("admin_password", password);
-    fetch("/api/admin/images", { headers: { "x-admin-password": password } })
-      .then((r) => r.json())
-      .then((d) => { if (!d.error) setStats(d); })
-      .catch(() => {});
-  }, [password]);
+    loadData(password);
+  }, [password, loadData]);
 
-  async function handleScan() {
-    if (!password) return;
-    setScanning(true);
-    setResults([]);
-    setScanned(null);
-    setResolved(0);
-    const res = await fetch("/api/admin/images", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-admin-password": password },
-      body: JSON.stringify({ limit }),
-    });
-    const data = await res.json();
-    setScanning(false);
-    if (data.results) {
-      setResults(data.results);
-      setScanned(data.scanned);
-    }
-  }
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  function handleResolved(_id: string) {
-    setResolved((n) => n + 1);
+  function handleSaved() {
+    setSavedCount((n) => n + 1);
     setStats((s) => s ? { ...s, missingImages: Math.max(0, s.missingImages - 1), hasImages: s.hasImages + 1 } : s);
   }
 
+  const filtered = products.filter((p) => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return p.name.toLowerCase().includes(q) || (p.brand ?? "").toLowerCase().includes(q);
+  });
+
   return (
     <div className="min-h-screen bg-cream p-6 font-sans text-dark">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-3xl">
+
+        {/* Header */}
         <div className="mb-6">
-          <h1 className="font-serif text-2xl font-bold text-dark">Product Image Backfill</h1>
-          <p className="mt-1 text-sm text-dark/60">
-            Finds catalog products with no image, matches them on Open Beauty Facts, and
-            lets you approve each photo before it&apos;s saved.
+          <h1 className="font-serif text-2xl font-bold text-dark">Product Images</h1>
+          <p className="mt-1 text-sm text-dark/50">
+            Find an image URL anywhere on the web, paste it, save. Press Enter to save quickly.
           </p>
         </div>
 
         {/* Password */}
-        <div className="mb-6">
-          <input
-            type="password"
-            placeholder="Admin password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-72 rounded-none border border-dark/30 bg-transparent px-4 py-2 text-sm text-dark placeholder:text-dark/40 focus:border-dark focus:outline-none"
-          />
-        </div>
+        {!password && (
+          <div className="mb-6">
+            <input
+              type="password"
+              placeholder="Admin password"
+              onBlur={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") setPassword((e.target as HTMLInputElement).value); }}
+              className="w-72 rounded-none border border-dark/30 bg-transparent px-4 py-2 text-sm text-dark placeholder:text-dark/40 focus:border-dark focus:outline-none"
+            />
+          </div>
+        )}
 
         {/* Stats */}
         {stats && (
-          <div className="mb-8 grid grid-cols-3 gap-3">
-            <StatCard label="Total products" value={stats.totalProducts} />
-            <StatCard label="Have an image" value={stats.hasImages} />
-            <StatCard label="Missing image" value={stats.missingImages} />
+          <div className="mb-6 flex gap-6 border-b border-dark/10 pb-6">
+            <div>
+              <p className="font-mono text-[22px] font-bold text-dark">{stats.missingImages - savedCount}</p>
+              <p className="font-sans text-[11px] text-dark/50">missing</p>
+            </div>
+            <div>
+              <p className="font-mono text-[22px] font-bold text-dark">{stats.hasImages + savedCount}</p>
+              <p className="font-sans text-[11px] text-dark/50">have image</p>
+            </div>
+            <div>
+              <p className="font-mono text-[22px] font-bold text-dark">{stats.totalProducts}</p>
+              <p className="font-sans text-[11px] text-dark/50">total</p>
+            </div>
+            {savedCount > 0 && (
+              <div>
+                <p className="font-mono text-[22px] font-bold text-green-600">+{savedCount}</p>
+                <p className="font-sans text-[11px] text-dark/50">this session</p>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Scan controls */}
-        <div className="mb-6 flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label className="font-mono text-[11px] text-dark/60">Batch size</label>
-            <select
-              value={limit}
-              onChange={(e) => setLimit(Number(e.target.value))}
-              className="rounded-none border border-dark/30 bg-transparent px-2 py-1 text-sm text-dark focus:border-dark focus:outline-none"
-            >
-              {[5, 10, 15, 20, 30, 50].map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
+        {/* Search */}
+        {products.length > 0 && (
+          <div className="mb-4">
+            <input
+              type="text"
+              placeholder="Search by name or brand…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-none border border-dark/20 bg-transparent px-4 py-2.5 text-sm text-dark placeholder:text-dark/30 focus:border-dark focus:outline-none"
+            />
+            {search && (
+              <p className="mt-1.5 font-mono text-[10px] text-dark/40">
+                {filtered.length} of {products.length} products
+              </p>
+            )}
           </div>
-          <button
-            type="button"
-            onClick={handleScan}
-            disabled={!password || scanning}
-            className="bg-dark px-5 py-2.5 font-sans text-sm font-semibold text-cream transition-colors hover:bg-dark/80 disabled:opacity-50"
-          >
-            {scanning ? "Scanning OBF..." : "Find images →"}
-          </button>
-          {scanned !== null && (
-            <p className="font-mono text-[11px] text-dark/50">
-              Scanned {scanned} products &middot; found {results.length} with images
-              {resolved > 0 && ` · ${resolved} resolved`}
-            </p>
-          )}
+        )}
+
+        {/* Product list */}
+        {loading && (
+          <p className="font-mono text-[11px] text-dark/40">Loading products…</p>
+        )}
+
+        {!loading && products.length === 0 && password && (
+          <p className="font-sans text-sm text-dark/50">All products have images.</p>
+        )}
+
+        <div className="flex flex-col gap-2">
+          {filtered.map((p) => (
+            <ProductCard
+              key={p.id}
+              product={p}
+              password={password}
+              onSaved={handleSaved}
+            />
+          ))}
         </div>
 
-        {/* Results table */}
-        {results.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="border-b-2 border-dark text-left">
-                  <th className="pb-2 pr-4 font-mono text-[9px] font-medium uppercase tracking-widest text-dark/50">Preview</th>
-                  <th className="pb-2 pr-4 font-mono text-[9px] font-medium uppercase tracking-widest text-dark/50">Our Product</th>
-                  <th className="pb-2 pr-4 font-mono text-[9px] font-medium uppercase tracking-widest text-dark/50">Match</th>
-                  <th className="pb-2 pr-4 font-mono text-[9px] font-medium uppercase tracking-widest text-dark/50">Confidence</th>
-                  <th className="pb-2 font-mono text-[9px] font-medium uppercase tracking-widest text-dark/50">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {results.map((r) => (
-                  <ImageResultRow
-                    key={r.product_id}
-                    result={r}
-                    password={password}
-                    onResolved={handleResolved}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {scanned !== null && results.length === 0 && !scanning && (
-          <p className="font-sans text-sm text-dark/50">
-            No OBF image matches found in this batch. Try scanning again to check the next batch.
-          </p>
-        )}
       </div>
     </div>
   );
