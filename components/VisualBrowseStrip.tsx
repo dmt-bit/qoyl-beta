@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import TryOnModal from "./TryOnModal";
 
 type BrowseImage = {
   id: string;
@@ -139,6 +140,8 @@ export function BrowseImageModal({
   onClose: () => void;
   onMatch: (image: BrowseImage) => void;
 }) {
+  const [tryOnOpen, setTryOnOpen] = useState(false);
+
   // Close on backdrop click
   function handleBackdrop(e: React.MouseEvent<HTMLDivElement>) {
     if (e.target === e.currentTarget) onClose();
@@ -214,10 +217,30 @@ export function BrowseImageModal({
             </span>
           </div>
 
+          {/* Try-on button */}
+          <button
+            type="button"
+            onClick={() => setTryOnOpen(true)}
+            className="mt-4 flex w-full items-center justify-between border border-bronze bg-warm/20 px-4 py-3 transition-colors hover:bg-warm/40"
+          >
+            <span className="flex items-center gap-2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                <circle cx="12" cy="8" r="4" />
+                <path strokeLinecap="round" d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+              </svg>
+              <span className="font-sans font-semibold lowercase text-dark" style={{ fontSize: "13px" }}>
+                see it on you
+              </span>
+            </span>
+            <span className="font-mono lowercase text-dark/40" style={{ fontSize: "10px" }}>
+              AI preview
+            </span>
+          </button>
+
           <button
             type="button"
             onClick={() => onMatch(image)}
-            className="mt-5 w-full bg-dark py-4 font-sans font-bold lowercase text-white transition-colors hover:bg-[#333]"
+            className="mt-3 w-full bg-dark py-4 font-sans font-bold lowercase text-white transition-colors hover:bg-[#333]"
             style={{ fontSize: "15px" }}
           >
             match this style →
@@ -233,6 +256,13 @@ export function BrowseImageModal({
           </button>
         </div>
       </div>
+
+      {tryOnOpen && (
+        <TryOnModal
+          referenceImageUrl={image.image_url}
+          onClose={() => setTryOnOpen(false)}
+        />
+      )}
     </div>
   );
 }
