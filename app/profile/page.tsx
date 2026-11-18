@@ -239,7 +239,7 @@ function MyPurchases({ userId }: { userId: string }) {
 }
 
 const SUPABASE_CURL_BASE =
-  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/curl-type-photos";
+  "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media";
 
 type CurlTypeOption = {
   value: string;
