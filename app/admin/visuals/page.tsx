@@ -108,6 +108,12 @@ function CheckboxGrid({
 // Product Photos tab
 // ---------------------------------------------------------------------------
 
+type BatchLine =
+  | { type: "progress"; done: number; total: number; product_id: string; name: string; ok: true; processed_image_url: string }
+  | { type: "progress"; done: number; total: number; product_id: string; name: string; ok: false; error: string }
+  | { type: "done"; done: number; total: number; failed: number }
+  | { type: "error"; error: string };
+
 function ProductPhotosTab({ password }: { password: string }) {
   const [products, setProducts] = useState<ProductPhoto[]>([]);
   const [total, setTotal] = useState(0);
@@ -116,6 +122,14 @@ function ProductPhotosTab({ password }: { password: string }) {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState<"all" | "done" | "pending">("all");
+
+  // Batch state
+  const [batching, setBatching] = useState(false);
+  const [batchProgress, setBatchProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
+  const [batchLog, setBatchLog] = useState<string[]>([]);
+  const [batchDone, setBatchDone] = useState(false);
+  const abortRef = useCallback(() => {}, []); // placeholder; real abort via AbortController below
+  const abortCtrlRef = useState<AbortController | null>(null);
 
   const PAGE_SIZE = 30;
 
@@ -163,6 +177,92 @@ function ProductPhotosTab({ password }: { password: string }) {
     );
   }
 
+  async function handleBatch(redo = false) {
+    setBatching(true);
+    setBatchProgress(null);
+    setBatchLog([]);
+    setBatchDone(false);
+
+    const ctrl = new AbortController();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (abortCtrlRef as any)[0] = ctrl;
+
+    try {
+      const res = await fetch(
+        `/api/admin/product-photos/batch${redo ? "?redo=1" : ""}`,
+        {
+          method: "POST",
+          headers: { "x-admin-password": password },
+          signal: ctrl.signal,
+        }
+      );
+
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
+        setBatchLog([(data as { error?: string }).error ?? "Batch failed."]);
+        setBatching(false);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const msg: BatchLine = JSON.parse(line);
+            if (msg.type === "progress") {
+              setBatchProgress({ done: msg.done, total: msg.total, failed: 0 });
+              if (!msg.ok) {
+                setBatchLog((l) => [`✗ ${msg.name}: ${msg.error}`, ...l].slice(0, 50));
+              }
+              // Update processed_image_url in grid if product is on current page
+              if (msg.ok) {
+                setProducts((prev) =>
+                  prev.map((p) =>
+                    p.id === msg.product_id
+                      ? { ...p, processed_image_url: msg.processed_image_url }
+                      : p
+                  )
+                );
+              }
+            } else if (msg.type === "done") {
+              setBatchProgress({ done: msg.done, total: msg.total, failed: msg.failed });
+              setBatchDone(true);
+              setBatching(false);
+              // Reload current page to reflect any new done counts
+              load(page);
+            } else if (msg.type === "error") {
+              setBatchLog((l) => [msg.error, ...l]);
+              setBatching(false);
+            }
+          } catch {
+            // malformed line, skip
+          }
+        }
+      }
+    } catch (err) {
+      if ((err as Error).name !== "AbortError") {
+        setBatchLog((l) => ["Connection lost. Refresh and check progress.", ...l]);
+      }
+      setBatching(false);
+    }
+  }
+
+  function handleStopBatch() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (abortCtrlRef as any)[0]?.abort();
+    setBatching(false);
+  }
+
   const doneCount = products.filter((p) => p.processed_image_url).length;
 
   const visible = products.filter((p) => {
@@ -173,8 +273,98 @@ function ProductPhotosTab({ password }: { password: string }) {
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
+  // Progress bar pct
+  const pct = batchProgress
+    ? Math.round((batchProgress.done / Math.max(batchProgress.total, 1)) * 100)
+    : 0;
+
   return (
     <div>
+      {/* ── Batch controls ── */}
+      <div className="mb-6 border border-dark p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <div>
+            <p className="font-sans font-bold lowercase text-dark" style={{ fontSize: "13px" }}>
+              process all
+            </p>
+            <p className="font-mono lowercase text-dark/50" style={{ fontSize: "9px" }}>
+              removes bg from every product that has an image but no processed version yet
+            </p>
+          </div>
+          <div className="ml-auto flex gap-2">
+            {batching ? (
+              <button
+                type="button"
+                onClick={handleStopBatch}
+                className="border border-dark px-3 py-1.5 font-mono lowercase text-dark hover:bg-[#f5f5f5]"
+                style={{ fontSize: "10px" }}
+              >
+                stop
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleBatch(false)}
+                  disabled={batching}
+                  className="bg-dark px-4 py-1.5 font-mono lowercase text-white hover:bg-[#444444] disabled:opacity-50"
+                  style={{ fontSize: "10px" }}
+                >
+                  process pending →
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleBatch(true)}
+                  disabled={batching}
+                  className="border border-dark px-3 py-1.5 font-mono lowercase text-dark hover:bg-[#f5f5f5] disabled:opacity-50"
+                  style={{ fontSize: "10px" }}
+                >
+                  redo all
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        {batchProgress && (
+          <div className="mt-3">
+            <div className="flex items-center justify-between">
+              <span className="font-mono lowercase text-dark/60" style={{ fontSize: "9px" }}>
+                {batchProgress.done} / {batchProgress.total}
+                {batchProgress.failed > 0 && ` · ${batchProgress.failed} failed`}
+                {batchDone && " · done"}
+              </span>
+              <span className="font-mono text-dark/60" style={{ fontSize: "9px" }}>{pct}%</span>
+            </div>
+            <div className="mt-1 h-1.5 w-full bg-[#f0f0f0]">
+              <div
+                className="h-full bg-dark transition-all duration-300"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Error log */}
+        {batchLog.length > 0 && (
+          <div className="mt-3 max-h-24 overflow-y-auto">
+            {batchLog.map((line, i) => (
+              <p key={i} className="font-mono lowercase text-red/80" style={{ fontSize: "8px" }}>
+                {line}
+              </p>
+            ))}
+          </div>
+        )}
+
+        {!batching && !batchProgress && (
+          <p className="mt-2 font-mono lowercase text-dark/30" style={{ fontSize: "9px" }}>
+            also runs automatically every night at 3 AM UTC to catch new products
+          </p>
+        )}
+      </div>
+
+      {/* ── Grid header ── */}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <p className="font-mono lowercase text-muted" style={{ fontSize: "10px" }}>
           {total} products with images · {doneCount} bg removed this page
@@ -224,8 +414,10 @@ function ProductPhotosTab({ password }: { password: string }) {
                 {/* Processed */}
                 <div>
                   <p className="mb-1 font-mono lowercase text-dark/40" style={{ fontSize: "8px" }}>no bg</p>
-                  <div className="relative aspect-square w-full overflow-hidden bg-[#f5f5f5]"
-                    style={{ backgroundImage: "repeating-conic-gradient(#e5e5e5 0% 25%, white 0% 50%) 0 0 / 12px 12px" }}>
+                  <div
+                    className="relative aspect-square w-full overflow-hidden"
+                    style={{ backgroundImage: "repeating-conic-gradient(#e5e5e5 0% 25%, white 0% 50%) 0 0 / 12px 12px" }}
+                  >
                     {product.processed_image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -264,7 +456,7 @@ function ProductPhotosTab({ password }: { password: string }) {
               <button
                 type="button"
                 onClick={() => handleRemoveBg(product)}
-                disabled={processingId === product.id}
+                disabled={processingId === product.id || batching}
                 className={`mt-2 w-full py-1.5 font-mono lowercase disabled:opacity-50 ${
                   product.processed_image_url
                     ? "border border-dark text-dark hover:bg-[#f5f5f5]"
