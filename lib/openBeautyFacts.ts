@@ -30,6 +30,12 @@ export interface OBFProduct {
     rank: number;
   }>;
   code: string;
+  // Product image fields - present when OBF has a photo for this product.
+  // image_front_url is the front-facing packshot; image_url is the generic
+  // "best" image. Both are HTTPS URLs hosted on images.openfoodfacts.org.
+  image_front_url?: string | null;
+  image_url?: string | null;
+  image_front_small_url?: string | null;
 }
 
 export async function searchOBFByName(
@@ -124,6 +130,13 @@ export function parseOBFIngredients(product: OBFProduct): string[] {
   }
 
   return [];
+}
+
+// Returns the best available packshot URL from an OBF product - prefers
+// the front-facing image, falls back to the generic image. Returns null
+// when OBF has no image for this product.
+export function getOBFImageUrl(product: OBFProduct): string | null {
+  return product.image_front_url || product.image_url || null;
 }
 
 export function calculateMatchConfidence(
