@@ -144,6 +144,7 @@ export default function AdminImagesPage() {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [savedCount, setSavedCount] = useState(0);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<Tab>("missing");
 
   const loadData = useCallback(async (pw: string, mode: Tab) => {
@@ -170,12 +171,14 @@ export default function AdminImagesPage() {
 
   function handleSaved(id: string, newUrl: string) {
     setSavedCount((n) => n + 1);
+    setSavedIds((s) => new Set([...s, id]));
     setStats((s) => s ? { ...s, missingImages: Math.max(0, s.missingImages - 1), hasImages: s.hasImages + 1 } : s);
-    // Update the product in the list so it shows the new image
     setProducts((ps) => ps.map((p) => p.id === id ? { ...p, image_url: newUrl } : p));
   }
 
   const filtered = products.filter((p) => {
+    // On missing tab: show products that either have no image OR were saved this session
+    if (tab === "missing" && p.image_url && !savedIds.has(p.id)) return false;
     if (!search) return true;
     const q = search.toLowerCase();
     return p.name.toLowerCase().includes(q) || (p.brand ?? "").toLowerCase().includes(q);
@@ -237,7 +240,7 @@ export default function AdminImagesPage() {
               <button
                 key={t}
                 type="button"
-                onClick={() => { setTab(t); setSearch(""); }}
+                onClick={() => { setTab(t); setSearch(""); setProducts([]); }}
                 className={`px-4 py-2 font-sans text-[12px] transition-colors ${tab === t ? "border-b-2 border-dark font-semibold text-dark" : "text-dark/40 hover:text-dark/70"}`}
               >
                 {label}
