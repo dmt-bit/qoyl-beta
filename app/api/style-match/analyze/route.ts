@@ -167,7 +167,7 @@ function buildAnalysisInstructions(opts: {
     `"alternative_style": "if confidence is medium or low, the other specific style this could be instead - else null"`,
     `"hair_length": "short/medium/long"`,
     `"approximate_length": "twa/short/medium/long/waist/hip"`,
-    `"bang_length": "above-eyebrow/at-eyebrow/below-eyebrow/cheekbone-length - only if bangs are visible, else null"`,
+    `"bang_length": "above-eyebrow/at-eyebrow/below-eyebrow/cheekbone-length - SET ONLY when the style_name itself is a bang style (baby-bangs, curtain-bangs, micro-bangs, blunt-bangs, side-swept-bangs, wispy-bangs). For ANY other style — braids, locs, afros, wash-and-go, silk press, buns, etc. — this MUST be null even if the person has bangs in the photo. null in all ambiguous cases."`,
     `"style_is_cut": true/false - true only if this is a haircut (pixie/bob/lob/shag/wolf cut), not a styling technique on existing length`,
     `"has_color_treatment": true/false`,
     `"color_type": "balayage/highlights/ombre/sombre/single_process/color_melt/money_piece/vivid_color/natural - natural if has_color_treatment is false"`,

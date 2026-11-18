@@ -2281,7 +2281,7 @@ function StyleMatchContent() {
               </span>
             )}
 
-            {detected.bang_length && (
+            {detected.bang_length && detected.style_name?.toLowerCase().includes("bang") && (
               <div className="mt-6 flex items-center gap-4 rounded-xl border border-bronze/30 p-4">
                 <BangLengthDiagram bangLength={detected.bang_length} />
                 <div className="min-w-0">
