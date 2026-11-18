@@ -229,7 +229,7 @@ export default function AdminImagesPage() {
               onChange={(e) => setLimit(Number(e.target.value))}
               className="rounded-none border border-dark/30 bg-transparent px-2 py-1 text-sm text-dark focus:border-dark focus:outline-none"
             >
-              {[5, 10, 15, 20, 30].map((n) => (
+              {[5, 10, 15, 20, 30, 50].map((n) => (
                 <option key={n} value={n}>{n}</option>
               ))}
             </select>
