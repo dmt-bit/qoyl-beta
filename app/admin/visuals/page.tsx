@@ -24,7 +24,7 @@ const HAIR_TYPE_OPTIONS = [
   "extensions", "mens", "baby",
 ];
 
-const CATEGORY_OPTIONS = ["ingredients", "product", "lifestyle", "texture", "style", "scalp", "routine"];
+const CATEGORY_OPTIONS = ["ingredients", "product", "product_category", "lifestyle", "texture", "style", "scalp", "routine"];
 
 const MOOD_OPTIONS = ["dark_editorial", "light_clean", "warm_neutral", "bold_contrast", "texture_closeup"];
 
