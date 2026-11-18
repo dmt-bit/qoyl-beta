@@ -1405,11 +1405,6 @@ function ProfileForm() {
               className="flex items-center gap-2 font-serif text-lg text-bronze2"
             >
               Curl Type
-              <InfoTooltip
-                label="Curl Type"
-                illustrationSrc="/illustrations/curl_type_guide.svg"
-                description="Look at your natural hair when dry with no products. Match your pattern to the image above."
-              />
             </p>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {CURL_TYPE_GROUPS.map((group) => (
