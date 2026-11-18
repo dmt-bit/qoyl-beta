@@ -1852,29 +1852,34 @@ function StyleMatchContent() {
             >
               ← Back
             </button>
-            <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-bronze">Step {deepStep} of 4</p>
+            <p className="mt-3 text-xs font-semibold uppercase tracking-widest text-bronze">Step {deepStep} of 3</p>
 
             {deepStep === 1 && (
               <div className="mt-4">
                 <h2 className="font-serif text-2xl font-semibold text-dark">
-                  Are you trying to achieve the hair color in this photo too?
+                  How do you want your results?
                 </h2>
+                <p className="mt-2 text-sm text-dark/60">
+                  We can adapt this look for your specific hair type, or show you how to recreate it as-is.
+                </p>
                 <div className="mt-4 space-y-3">
-                  <SelectableCard label="Yes - include color tutorials" selected={colorMatch === true} onClick={() => setColorMatch(true)} />
-                  <SelectableCard label="No - just the style" selected={colorMatch === false} onClick={() => setColorMatch(false)} />
+                  <SelectableCard
+                    label="Adapt it for my hair type"
+                    subtext="Show me how to get this look on MY hair"
+                    selected={translateForHairType === true}
+                    onClick={() => setTranslateForHairType(true)}
+                  />
+                  <SelectableCard
+                    label="Show it as-is"
+                    subtext="I understand it may look different on my hair"
+                    selected={translateForHairType === false}
+                    onClick={() => setTranslateForHairType(false)}
+                  />
                 </div>
-                {colorMatch === true && (
-                  <p className="mt-4 border-l-2 border-bronze bg-amber/10 px-4 py-3 text-sm leading-relaxed text-dark/90">
-                    Color work - especially bleaching or significant color changes - can cause
-                    serious damage without professional help. We will include color tutorial
-                    videos in your results, but we strongly recommend consulting a licensed
-                    colorist for any chemical color services.
-                  </p>
-                )}
                 <button
                   type="button"
                   onClick={() => setDeepStep(2)}
-                  disabled={colorMatch === null}
+                  disabled={translateForHairType === null}
                   className="mt-6 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-40"
                 >
                   Continue →
@@ -1885,45 +1890,23 @@ function StyleMatchContent() {
             {deepStep === 2 && (
               <div className="mt-4">
                 <h2 className="font-serif text-2xl font-semibold text-dark">
-                  How does this length compare to your current hair?
+                  Are you going for the color too?
                 </h2>
                 <div className="mt-4 space-y-3">
-                  <SelectableCard label="About the same length" selected={lengthDifference === "same"} onClick={() => setLengthDifference("same")} />
-                  <SelectableCard label="Longer than my current hair" selected={lengthDifference === "longer"} onClick={() => setLengthDifference("longer")} />
-                  <SelectableCard label="Shorter than my current hair" selected={lengthDifference === "shorter"} onClick={() => setLengthDifference("shorter")} />
+                  <SelectableCard label="Yes - include color tutorials" selected={colorMatch === true} onClick={() => setColorMatch(true)} />
+                  <SelectableCard label="No - just the style" selected={colorMatch === false} onClick={() => setColorMatch(false)} />
                 </div>
-                {lengthDifference === "longer" && (
-                  <div className="mt-4 border-l-2 border-bronze bg-warm/10 px-4 py-3">
-                    <p className="text-sm leading-relaxed text-dark/90">
-                      Achieving this length on your natural hair takes time. We can include
-                      extension options to achieve this look now.
-                    </p>
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setWantsLengthExtensions(true)}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                          wantsLengthExtensions ? "border-bronze bg-bronze text-cream" : "border-bronze/40 text-bronze2"
-                        }`}
-                      >
-                        Yes, include extension options
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setWantsLengthExtensions(false)}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                          !wantsLengthExtensions ? "border-bronze bg-bronze text-cream" : "border-bronze/40 text-bronze2"
-                        }`}
-                      >
-                        No, I want to grow my hair to this length
-                      </button>
-                    </div>
-                  </div>
+                {colorMatch === true && (
+                  <p className="mt-4 border-l-2 border-bronze bg-amber/10 px-4 py-3 text-sm leading-relaxed text-dark/90">
+                    Color work - especially bleaching or significant changes - can cause serious
+                    damage without professional help. We will include color tutorials, but strongly
+                    recommend consulting a licensed colorist for any chemical services.
+                  </p>
                 )}
                 <button
                   type="button"
                   onClick={() => setDeepStep(3)}
-                  disabled={lengthDifference === null}
+                  disabled={colorMatch === null}
                   className="mt-6 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-40"
                 >
                   Continue →
@@ -1933,67 +1916,45 @@ function StyleMatchContent() {
 
             {deepStep === 3 && (
               <div className="mt-4">
-                <h2 className="font-serif text-2xl font-semibold text-dark">Does this style involve added hair?</h2>
+                <h2 className="font-serif text-2xl font-semibold text-dark">
+                  How does this length compare to your current hair?
+                </h2>
                 <div className="mt-4 space-y-3">
-                  <SelectableCard label="No - natural hair only" selected={involvesExtensions === "none"} onClick={() => setInvolvesExtensions("none")} />
-                  <SelectableCard label="Braiding hair" selected={involvesExtensions === "braiding_hair"} onClick={() => setInvolvesExtensions("braiding_hair")} />
-                  <SelectableCard label="Sew-in or weave" selected={involvesExtensions === "sew_in"} onClick={() => setInvolvesExtensions("sew_in")} />
-                  <SelectableCard label="Wig" selected={involvesExtensions === "wig"} onClick={() => setInvolvesExtensions("wig")} />
-                  <SelectableCard label="Not sure - help me figure it out" selected={involvesExtensions === "not_sure"} onClick={() => setInvolvesExtensions("not_sure")} />
+                  <SelectableCard label="About the same" selected={lengthDifference === "same"} onClick={() => setLengthDifference("same")} />
+                  <SelectableCard label="Longer than mine" selected={lengthDifference === "longer"} onClick={() => setLengthDifference("longer")} />
+                  <SelectableCard label="Shorter than mine" selected={lengthDifference === "shorter"} onClick={() => setLengthDifference("shorter")} />
                 </div>
-
-                {involvesExtensions && involvesExtensions !== "none" && (
-                  <div className="mt-6">
-                    <h3 className="font-serif text-lg font-semibold text-dark">What type of added hair do you prefer?</h3>
-                    <div className="mt-3 space-y-3">
-                      {DEEP_MATCH_HAIR_ADDITION_OPTIONS.map((option) => (
-                        <SelectableCard
-                          key={option.value}
-                          label={option.label}
-                          subtext={option.description}
-                          selected={deepMatchHairPreference === option.value}
-                          onClick={() => setDeepMatchHairPreference(option.value)}
-                        />
-                      ))}
+                {lengthDifference === "longer" && (
+                  <div className="mt-4 border-l-2 border-bronze bg-warm/10 px-4 py-3">
+                    <p className="text-sm leading-relaxed text-dark/90">
+                      Growing to this length takes time. Want us to include extension options to get the look now?
+                    </p>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setWantsLengthExtensions(true)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                          wantsLengthExtensions ? "border-bronze bg-bronze text-cream" : "border-bronze/40 text-bronze2"
+                        }`}
+                      >
+                        Yes, include extensions
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setWantsLengthExtensions(false)}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                          !wantsLengthExtensions ? "border-bronze bg-bronze text-cream" : "border-bronze/40 text-bronze2"
+                        }`}
+                      >
+                        No, I want to grow it out
+                      </button>
                     </div>
                   </div>
                 )}
-
-                <button
-                  type="button"
-                  onClick={() => setDeepStep(4)}
-                  disabled={
-                    involvesExtensions === null ||
-                    (involvesExtensions !== "none" && deepMatchHairPreference === null)
-                  }
-                  className="mt-6 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-40"
-                >
-                  Continue →
-                </button>
-              </div>
-            )}
-
-            {deepStep === 4 && (
-              <div className="mt-4">
-                <h2 className="font-serif text-2xl font-semibold text-dark">
-                  The hair in this photo may look different from yours. How would you like your results?
-                </h2>
-                <div className="mt-4 space-y-3">
-                  <SelectableCard
-                    label="Show me exactly how to achieve this on MY hair type"
-                    selected={translateForHairType === true}
-                    onClick={() => setTranslateForHairType(true)}
-                  />
-                  <SelectableCard
-                    label="Show me this style as it is - I understand it may look different on my hair"
-                    selected={translateForHairType === false}
-                    onClick={() => setTranslateForHairType(false)}
-                  />
-                </div>
                 <button
                   type="button"
                   onClick={handleDeepSurveyFinish}
-                  disabled={translateForHairType === null}
+                  disabled={lengthDifference === null}
                   className="mt-6 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-40"
                 >
                   See my results →
