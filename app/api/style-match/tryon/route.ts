@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
   try {
     // Upload selfie to fal storage first (required for image inputs)
-    const uploadRes = await fetch("https://fal.run/fal-ai/fast-sdxl/upload", {
+    await fetch("https://fal.run/fal-ai/fast-sdxl/upload", {
       method: "POST",
       headers: {
         Authorization: `Key ${falKey}`,

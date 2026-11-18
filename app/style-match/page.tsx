@@ -20,7 +20,6 @@ import { supabase } from "@/lib/supabase";
 import { logMlEvent } from "@/lib/mlEvents";
 import { lookupCityState } from "@/lib/zipLookup";
 import {
-  DEEP_MATCH_HAIR_ADDITION_OPTIONS,
   type DeepMatchHairAdditionPreference,
   type HairAdditionPreference,
 } from "@/lib/hairAdditionPreference";

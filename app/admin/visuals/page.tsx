@@ -128,7 +128,6 @@ function ProductPhotosTab({ password }: { password: string }) {
   const [batchProgress, setBatchProgress] = useState<{ done: number; total: number; failed: number } | null>(null);
   const [batchLog, setBatchLog] = useState<string[]>([]);
   const [batchDone, setBatchDone] = useState(false);
-  const abortRef = useCallback(() => {}, []); // placeholder; real abort via AbortController below
   const abortCtrlRef = useState<AbortController | null>(null);
 
   const PAGE_SIZE = 30;
