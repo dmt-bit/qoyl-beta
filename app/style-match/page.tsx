@@ -318,6 +318,20 @@ function HeartIcon({ filled }: { filled: boolean }) {
 // outline with a horizontal line at the detected position, so the user
 // can confirm at a glance rather than parsing the "above-eyebrow"/
 // "at-eyebrow" label alone. Positions are illustrative, not to scale.
+// Bang style names that should show the bang-length note.
+// Only pure bang styles qualify -- compound names like "X with Blunt Bangs"
+// are excluded because bang_length on those is almost always a hallucination.
+const BANG_STYLE_SLUGS = new Set([
+  "baby bangs", "micro bangs", "curtain bangs", "blunt bangs",
+  "side swept bangs", "wispy bangs", "side-swept bangs",
+  "baby-bangs", "micro-bangs", "curtain-bangs", "blunt-bangs",
+  "side-swept-bangs", "wispy-bangs",
+]);
+function isBangStyle(styleName: string | undefined | null): boolean {
+  if (!styleName) return false;
+  return BANG_STYLE_SLUGS.has(styleName.toLowerCase().trim());
+}
+
 const BANG_LENGTH_Y: Record<BangLength, number> = {
   "above-eyebrow": 50,
   "at-eyebrow": 68,
@@ -2281,7 +2295,7 @@ function StyleMatchContent() {
               </span>
             )}
 
-            {detected.bang_length && detected.style_name?.toLowerCase().includes("bang") && (
+            {detected.bang_length && isBangStyle(detected.style_name) && (
               <div className="mt-6 flex items-center gap-4 rounded-xl border border-bronze/30 p-4">
                 <BangLengthDiagram bangLength={detected.bang_length} />
                 <div className="min-w-0">

@@ -79,10 +79,18 @@ BANG STYLES - distinguish carefully:
 - baby bangs: very short, sitting AT or ABOVE the eyebrow, typically 1-2 inches long
 - micro bangs: extremely short, sitting WELL ABOVE the eyebrow, forehead mostly visible
 - curtain bangs: LONGER bangs, parted in the MIDDLE, swept to the SIDES of the face, eyebrows fully visible
-- blunt bangs: straight ACROSS at eyebrow level, uniform length, not swept to sides
+- blunt bangs: straight ACROSS at eyebrow level, uniform length, NOT swept to either side — the entire front section falls straight down in one uniform curtain
 - side swept bangs: swept to ONE side only
 - wispy bangs: soft, feathery, not blunt
 Before identifying any bang style, check: where does the bang end relative to the eyebrow? Is it parted in the middle (curtain)? Swept to one side (side swept)? Very short and blunt (baby)? Soft and feathery (wispy)?
+
+CRITICAL — DO NOT confuse these with bangs:
+- A side part where hair falls across the forehead is NOT bangs — it is just a side part
+- A money piece / face-framing highlight near the front is NOT bangs
+- A skunk stripe or two-tone color at the front is NOT bangs — it is a color treatment
+- Hair that is longer than cheekbone length at the front is NOT a bang style
+- If the defining feature of the style is COLOR (ombre, two-tone, skunk stripe, money piece), name the COLOR style, not a bang style. Do NOT append "with Blunt Bangs" or similar to a color style name unless blunt bangs are genuinely the SECOND defining feature AND the front section clearly falls straight down uniformly at eyebrow level.
+- When in doubt: null for bang_length, and do not include any bang descriptor in style_name.
 
 TWIST AND CURL STYLES - distinguish carefully:
 - twist out: unraveled two-strand twists, defined stretched curl pattern with visible twist lines
@@ -160,7 +168,7 @@ function buildAnalysisInstructions(opts: {
   curlType: string | null;
 }): string {
   const fields = [
-    `"style_name": "specific style name - use the precise subtype, not the general category"`,
+    `"style_name": "specific style name - use the precise subtype, not the general category. Name the PRIMARY defining feature only. Do NOT append secondary features like 'with Blunt Bangs', 'with Highlights', 'with Layers' — if bangs are genuinely the defining style (baby bangs, curtain bangs, etc.) name ONLY the bang style; if color is the defining feature name ONLY the color style."`,
     `"style_description": "one sentence only"`,
     `"confidence": "high/medium/low"`,
     `"confidence_reason": "one sentence on what visual features confirmed this identification"`,
