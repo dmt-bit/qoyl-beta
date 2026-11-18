@@ -15,6 +15,7 @@ type ImageResult = {
   obf_brand: string;
   image_url: string;
   confidence: Confidence;
+  source?: string;
 };
 
 type RowStatus = "pending" | "accepted" | "rejected";
@@ -110,8 +111,13 @@ function ImageResultRow({
           <p className="font-mono text-[9px] text-dark/30">{result.barcode}</p>
         )}
       </td>
-      {/* OBF match */}
+      {/* Match source */}
       <td className="py-3 pr-4">
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="inline-block rounded-full bg-dark/8 px-2 py-0.5 font-mono text-[9px] text-dark/60 capitalize">
+            {result.source ?? "obf"}
+          </span>
+        </div>
         <p className="font-sans text-[12px] text-dark">{result.obf_product_name}</p>
         <p className="font-sans text-[11px] text-dark/50">{result.obf_brand}</p>
         <p className="mt-1 font-mono text-[9px] text-dark/30 break-all max-w-[200px]">{result.image_url}</p>
@@ -258,7 +264,7 @@ export default function AdminImagesPage() {
                 <tr className="border-b-2 border-dark text-left">
                   <th className="pb-2 pr-4 font-mono text-[9px] font-medium uppercase tracking-widest text-dark/50">Preview</th>
                   <th className="pb-2 pr-4 font-mono text-[9px] font-medium uppercase tracking-widest text-dark/50">Our Product</th>
-                  <th className="pb-2 pr-4 font-mono text-[9px] font-medium uppercase tracking-widest text-dark/50">OBF Match</th>
+                  <th className="pb-2 pr-4 font-mono text-[9px] font-medium uppercase tracking-widest text-dark/50">Match</th>
                   <th className="pb-2 pr-4 font-mono text-[9px] font-medium uppercase tracking-widest text-dark/50">Confidence</th>
                   <th className="pb-2 font-mono text-[9px] font-medium uppercase tracking-widest text-dark/50">Action</th>
                 </tr>

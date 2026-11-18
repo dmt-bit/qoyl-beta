@@ -7,6 +7,7 @@ import {
   getOBFImageUrl,
   searchOBFByName,
 } from "@/lib/openBeautyFacts";
+import { searchRetailersForImage } from "@/lib/retailerImageSearch";
 
 // Admin image backfill tool.
 // GET  -- returns stats: how many products are missing image_url
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}));
-  const limit = typeof body.limit === "number" && body.limit > 0 ? Math.min(body.limit, 30) : 15;
+  const limit = typeof body.limit === "number" && body.limit > 0 ? Math.min(body.limit, 50) : 15;
   const useBarcode = body.useBarcode !== false; // default true
 
   const products = await fetchProductsMissingImages();
@@ -90,25 +91,43 @@ export async function POST(request: Request) {
       obfMatch = await searchOBFByName(product.name, brandName);
     }
 
-    if (!obfMatch) continue;
+    // OBF matched — use it
+    if (obfMatch) {
+      const imageUrl = getOBFImageUrl(obfMatch);
+      if (imageUrl) {
+        const confidence = calculateMatchConfidence(
+          { name: product.name, brand: brandName },
+          obfMatch
+        );
+        results.push({
+          product_id: product.id,
+          product_name: product.name,
+          brand: brandName,
+          barcode: product.barcode,
+          obf_product_name: obfMatch.product_name,
+          obf_brand: obfMatch.brands,
+          image_url: imageUrl,
+          confidence,
+          source: "obf",
+        });
+        continue;
+      }
+    }
 
-    const imageUrl = getOBFImageUrl(obfMatch);
-    if (!imageUrl) continue;
-
-    const confidence = calculateMatchConfidence(
-      { name: product.name, brand: brandName },
-      obfMatch
-    );
+    // OBF missed — try retailer search (Ulta → Sephora → Target → Walmart)
+    const retailerMatch = await searchRetailersForImage(product.name, brandName);
+    if (!retailerMatch) continue;
 
     results.push({
       product_id: product.id,
       product_name: product.name,
       brand: brandName,
       barcode: product.barcode,
-      obf_product_name: obfMatch.product_name,
-      obf_brand: obfMatch.brands,
-      image_url: imageUrl,
-      confidence,
+      obf_product_name: retailerMatch.product_name,
+      obf_brand: retailerMatch.brand,
+      image_url: retailerMatch.image_url,
+      confidence: "medium" as const,
+      source: retailerMatch.source,
     });
   }
 
