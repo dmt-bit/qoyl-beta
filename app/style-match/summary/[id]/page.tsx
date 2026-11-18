@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import StylistRecommendationBlock from "@/components/StylistRecommendationBlock";
 import type { StyleMatchSummaryData } from "@/lib/styleMatchSummary";
 
@@ -66,6 +67,8 @@ function StyleMatchSummaryContent({ id }: { id: string }) {
   const [notes, setNotes] = useState("");
   const [notesSaved, setNotesSaved] = useState(true);
   const [savingNotes, setSavingNotes] = useState(false);
+  const searchParams = useSearchParams();
+  const autoPrintFiredRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +90,20 @@ function StyleMatchSummaryContent({ id }: { id: string }) {
       cancelled = true;
     };
   }, [id]);
+
+  // Auto-print when ?autoprint=1 is in the URL -- triggered by the
+  // "Download as PDF" button in ShareWithStylistCard, which opens this
+  // page in a new tab with that param. We wait until content is ready
+  // so the full summary is included, and fire only once.
+  useEffect(() => {
+    if (status !== "ready") return;
+    if (!searchParams.get("autoprint")) return;
+    if (autoPrintFiredRef.current) return;
+    autoPrintFiredRef.current = true;
+    // Small delay so images and fonts have a moment to settle.
+    const t = setTimeout(() => window.print(), 600);
+    return () => clearTimeout(t);
+  }, [status, searchParams]);
 
   async function handleSaveNotes() {
     setSavingNotes(true);
@@ -527,5 +544,13 @@ function StyleMatchSummaryContent({ id }: { id: string }) {
 }
 
 export default function StyleMatchSummaryPage({ params }: { params: { id: string } }) {
-  return <StyleMatchSummaryContent id={params.id} />;
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen items-center justify-center bg-cream font-sans">
+        <p className="text-sm text-dark/50">Loading summary...</p>
+      </main>
+    }>
+      <StyleMatchSummaryContent id={params.id} />
+    </Suspense>
+  );
 }

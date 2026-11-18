@@ -1,6 +1,7 @@
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { scoreCatalogProductsForProfile, type ScoringProfile } from "@/lib/compatibility";
 import { matchesHairTypeCategory, type HairAdditionPreference } from "@/lib/hairAdditionPreference";
+import { brandNameToDomain } from "@/lib/brandDomains";
 
 // brand_catalog_products/brand_accounts are shared with qoyl-business
 // (the indie brand dashboard at business.qoyl.live lives there, not in
@@ -21,6 +22,7 @@ export type BrandCatalogItem = {
   category: string;
   isFeatured: boolean;
   brandName: string;
+  brandDomain: string | null;
   subscriptionTier: string | null;
   score: number | null;
 };
@@ -96,6 +98,7 @@ async function scoreBrandProductsByName(
 }
 
 function toItem(row: BrandProductRow, score: number | null): BrandCatalogItem {
+  const brandName = row.brand_accounts?.company_name ?? "Qoyl Partner Brand";
   return {
     id: row.id,
     name: row.name,
@@ -106,7 +109,8 @@ function toItem(row: BrandProductRow, score: number | null): BrandCatalogItem {
     shopperUrl: row.shopper_url,
     category: row.category,
     isFeatured: isFeaturedTier(row),
-    brandName: row.brand_accounts?.company_name ?? "Qoyl Partner Brand",
+    brandName,
+    brandDomain: brandNameToDomain(brandName),
     subscriptionTier: row.brand_accounts?.subscription_tier ?? null,
     score,
   };

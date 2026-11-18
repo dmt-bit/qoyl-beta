@@ -8,6 +8,7 @@ import { COMMUNITY_PREFILL_KEY } from "@/components/CommunityGrid";
 import TryOnModal from "@/components/TryOnModal";
 import PostCard, { Post } from "@/components/PostCard";
 import ShopButton from "@/components/ShopButton";
+import BrandLogo from "@/components/BrandLogo";
 import StylistRecommendationBlock from "@/components/StylistRecommendationBlock";
 import { useAuth } from "@/lib/auth-context";
 import { TIER_CLASSES, curlFamily, scoreTier, type CurlFamily } from "@/lib/compatibility";
@@ -539,13 +540,12 @@ function ShareWithStylistCard({
   }
 
   function handleDownloadPdf() {
-    // Opens the print-optimized public summary in a new tab and lets
-    // the browser's own print dialog (with our print CSS) handle
-    // "save as PDF" - no separate PDF-generation infra in this app yet.
-    const win = window.open(`/style-match/summary/${matchId}`, "_blank", "noopener,noreferrer");
-    if (win) {
-      win.addEventListener("load", () => win.print());
-    }
+    // Opens the print-optimized public summary with ?autoprint=1, which
+    // tells the summary page to call window.print() automatically once
+    // the content has loaded. This is more reliable than attaching a
+    // "load" listener to the opened window from here, which browsers
+    // block in several cross-origin and popup contexts.
+    window.open(`/style-match/summary/${matchId}?autoprint=1`, "_blank", "noopener,noreferrer");
   }
 
   async function handleShareText() {
@@ -2909,12 +2909,19 @@ function StyleMatchContent() {
                               className="border border-bronze/40 bg-cream px-4 py-3 shadow-sm"
                             >
                               <div className="flex items-start gap-3">
-                                {item.imageUrl && (
+                                {item.imageUrl ? (
                                   // eslint-disable-next-line @next/next/no-img-element
                                   <img
                                     src={item.imageUrl}
                                     alt={item.name}
                                     className="h-14 w-14 shrink-0 rounded-md border border-bronze/20 object-cover"
+                                  />
+                                ) : (
+                                  <BrandLogo
+                                    brandName={item.brandName}
+                                    domain={item.brandDomain}
+                                    size={56}
+                                    className="shrink-0"
                                   />
                                 )}
                                 <div className="min-w-0 flex-1">
@@ -2976,18 +2983,26 @@ function StyleMatchContent() {
                       <ul className="mt-3 space-y-2">
                         {shoppingList.hairCare.map((item) => (
                           <li key={item.catalogProductId} className="border border-bronze/30 px-4 py-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="min-w-0">
-                                <p className="text-sm text-dark">{item.name}</p>
+                            <div className="flex items-start gap-3">
+                              <BrandLogo
+                                brandName={item.brand}
+                                domain={item.brandDomain}
+                                size={40}
+                                className="mt-0.5 shrink-0"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-sm text-dark">{item.name}</p>
+                                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${TIER_CLASSES[scoreTier(item.score)]}`}>
+                                    {item.score}
+                                  </span>
+                                </div>
                                 <p className="text-xs text-dark/50">
                                   {item.brand} · {item.categoryLabel}
                                 </p>
+                                <ShopButton productName={item.name} brandName={item.brand} className="mt-2 inline-block text-xs text-bronze2 underline" />
                               </div>
-                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${TIER_CLASSES[scoreTier(item.score)]}`}>
-                                {item.score}
-                              </span>
                             </div>
-                            <ShopButton productName={item.name} brandName={item.brand} className="mt-2 inline-block text-xs text-bronze2 underline" />
                           </li>
                         ))}
                         {shoppingList.hairCare.length === 0 && shoppingList.brandProducts.length === 0 && (

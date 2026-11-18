@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { curlFamily, nameKeywordBadgeLabel, scoreCatalogProducts, scoreTier, type ScoreResult } from "@/lib/compatibility";
 import { CATEGORY_LABEL_BY_SLUG } from "@/lib/productCategories";
+import { brandNameToDomain } from "@/lib/brandDomains";
 // Type-only import - erased at compile time, so the service-role code
 // in lib/brandCatalogProducts.ts never ends up in this client bundle.
 import type { BrandCatalogItem } from "@/lib/brandCatalogProducts";
@@ -15,6 +16,7 @@ export type ScoredHairCareItem = {
   catalogProductId: string;
   name: string;
   brand: string;
+  brandDomain: string | null;
   categoryLabel: string;
   score: number;
   // "why this was picked" for the UI - the real scoring engine already
@@ -320,6 +322,7 @@ async function fetchScoredHairCareProducts(
       catalogProductId: best.product.id,
       name: best.product.name,
       brand: brandName,
+      brandDomain: brandNameToDomain(brandName),
       categoryLabel: categoryLabel(slug),
       score: penalizedScore,
       matchReason: matchReasonFor(best.result, penalizedScore),
