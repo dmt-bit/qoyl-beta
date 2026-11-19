@@ -11,6 +11,7 @@ import { BOO_EVENT } from "@/lib/boo/config";
 
 const DESKTOP_CENTER_LINKS_BASE = [
   { href: "/style-match", label: "Style Match" },
+  { href: "/store", label: "Shop" },
   { href: "/travel", label: "Travel" },
   { href: "/posts", label: "Posts" },
   { href: "/how-we-score", label: "How We Score" },
@@ -111,6 +112,14 @@ function SparkleIcon({ size = 14, className = "text-bronze" }: { size?: number; 
       className={`shrink-0 ${className}`}
     >
       <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2zM19 14l.9 2.6L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.4L19 14zM5 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z" />
+    </svg>
+  );
+}
+
+function ShopBagIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
     </svg>
   );
 }
@@ -590,6 +599,7 @@ export default function Nav() {
             badge="New"
             onNavigate={closeMenu}
           />
+          <MenuLink href="/store" label="The Qoyl Store" icon={<ShopBagIcon size={20} />} onNavigate={closeMenu} />
           <MenuLink href="/travel" label="Travel Kit" icon={<SuitcaseIcon size={20} />} onNavigate={closeMenu} />
           {isBooBasketLive() && (
             <MenuLink href="/boo" label="🎃 Boo Basket" onNavigate={closeMenu} />

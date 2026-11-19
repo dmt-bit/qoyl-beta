@@ -171,7 +171,7 @@ export default function AdminImagesPage() {
 
   function handleSaved(id: string, newUrl: string) {
     setSavedCount((n) => n + 1);
-    setSavedIds((s) => new Set([...s, id]));
+    setSavedIds((s) => { const next = new Set(s); next.add(id); return next; });
     setStats((s) => s ? { ...s, missingImages: Math.max(0, s.missingImages - 1), hasImages: s.hasImages + 1 } : s);
     setProducts((ps) => ps.map((p) => p.id === id ? { ...p, image_url: newUrl } : p));
   }
