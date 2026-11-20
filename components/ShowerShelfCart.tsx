@@ -26,9 +26,13 @@ function ShelfItem({ item, onToggle }: { item: CartItem; onToggle: () => void })
   const isFakeHair = item.product_type === "fake_hair";
   const isTool = item.product_type === "tool";
   const buyUrl = item.affiliate_url ?? item.seller_url;
+  const [imgFailed, setImgFailed] = useState(false);
 
   // Bottle icon varies by type
   const BottleShape = isTool ? ToolIcon : isFakeHair ? FakeHairIcon : BottleIcon;
+
+  // Use the catalog product photo when available; fall back to the SVG bottle
+  const hasPhoto = !!item.image_url && !imgFailed;
 
   return (
     <div
@@ -44,7 +48,20 @@ function ShelfItem({ item, onToggle }: { item: CartItem; onToggle: () => void })
         className="flex flex-col items-center"
         aria-label={`Buy ${item.product_name}`}
       >
-        <BottleShape score={item.compat_score} purchased={isPurchased} />
+        {hasPhoto ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={item.image_url!}
+            alt={item.product_name}
+            width={52}
+            height={52}
+            onError={() => setImgFailed(true)}
+            className="h-[52px] w-[52px] object-contain"
+            style={{ opacity: isPurchased ? 0.4 : 1 }}
+          />
+        ) : (
+          <BottleShape score={item.compat_score} purchased={isPurchased} />
+        )}
         <div className="mt-1.5 w-16 text-center">
           <p
             className="product-label leading-tight"

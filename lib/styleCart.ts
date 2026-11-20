@@ -37,6 +37,9 @@ export type CartItem = {
   compat_score: number | null;
   quantity: number;
   status: CartItemStatus;
+  // Product photo from catalog_products (processed_image_url preferred).
+  // null for tools, tutorials, and fake-hair items (different tables).
+  image_url?: string | null;
   // Item 6 - future-proofing for an internal video vault. null for
   // every tutorial item today; once a real internal_video_id is
   // backfilled, the UI should prefer it over tutorial_url.
@@ -127,6 +130,7 @@ function buildProductItems(shoppingList: StyleShoppingList, priceByProductId: Ma
         compat_score: item.score,
         quantity: 1,
         status: "pending",
+        image_url: item.image_url ?? null,
       } satisfies CartItem;
     });
 }

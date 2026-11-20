@@ -26,6 +26,9 @@ export type ScoredHairCareItem = {
   // before. Falls back to a plain score-tier sentence when no specific
   // keyword match drove the score.
   matchReason: string;
+  // Product photo from the catalog (processed_image_url preferred,
+  // falls back to image_url). Used in the ShowerShelfCart display.
+  image_url: string | null;
 };
 
 export type StaticShoppingItem = {
@@ -270,7 +273,7 @@ async function fetchScoredHairCareProducts(
 
     const { data: candidates } = await supabase
       .from("catalog_products")
-      .select("id, name, catalog_brands(name)")
+      .select("id, name, image_url, processed_image_url, catalog_brands(name)")
       .eq("category_id", categoryId)
       .limit(15);
 
@@ -326,6 +329,9 @@ async function fetchScoredHairCareProducts(
       categoryLabel: categoryLabel(slug),
       score: penalizedScore,
       matchReason: matchReasonFor(best.result, penalizedScore),
+      image_url: (best.product as { processed_image_url?: string | null; image_url?: string | null }).processed_image_url
+        ?? (best.product as { image_url?: string | null }).image_url
+        ?? null,
     });
   }
 
