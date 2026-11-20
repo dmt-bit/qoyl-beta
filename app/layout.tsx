@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Space_Mono, Fredoka } from "next/font/google";
+import { Space_Grotesk, Space_Mono, Fredoka, Lora, DM_Sans } from "next/font/google";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import FeedbackSurveyTrigger from "@/components/FeedbackSurveyTrigger";
@@ -32,6 +32,19 @@ const fredoka = Fredoka({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-fredoka",
+});
+
+// Lora and DM Sans used by the ShowerShelfCart checkout page.
+const lora = Lora({
+  subsets: ["latin"],
+  weight: ["400", "600"],
+  variable: "--font-lora",
+});
+
+const dmSans = DM_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-dm-sans",
 });
 
 // Installable as a home screen app (see public/manifest.json). The icon is
@@ -80,7 +93,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body
-        className={`${spaceGrotesk.variable} ${spaceMono.variable} ${fredoka.variable} antialiased`}
+        className={`${spaceGrotesk.variable} ${spaceMono.variable} ${fredoka.variable} ${lora.variable} ${dmSans.variable} antialiased`}
       >
         <AuthProvider>
           <Nav />

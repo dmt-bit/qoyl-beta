@@ -385,6 +385,12 @@ export default function MyLookKit({
             </p>
           </div>
           <div className="flex gap-2">
+            <a
+              href="/store"
+              className="border border-dark/30 px-3 py-2 font-mono text-[10px] lowercase text-dark/60 hover:border-dark hover:text-dark"
+            >
+              store
+            </a>
             <button
               type="button"
               onClick={handleShare}

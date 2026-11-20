@@ -24,18 +24,16 @@ export default function ShopButton({
     );
   }
 
-  // No brand site to link to - always give the user a working path to
-  // find the product rather than a dead end.
+  // No brand site on file — route to the qoyl store so the user stays
+  // in the ecosystem rather than bouncing to Google.
   const searchQuery = [productName, brandName].filter(Boolean).join(" ");
 
   return (
     <a
-      href={`https://www.google.com/search?q=${encodeURIComponent(searchQuery)}`}
-      target="_blank"
-      rel="noopener noreferrer"
+      href={`/store?q=${encodeURIComponent(searchQuery)}`}
       className={className}
     >
-      Search for this product →
+      Find in store →
     </a>
   );
 }

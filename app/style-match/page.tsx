@@ -3069,6 +3069,15 @@ function StyleMatchContent() {
                       </div>
                     )}
 
+                    {/* Store CTA */}
+                    <a
+                      href="/store"
+                      className="flex items-center justify-between border border-bronze/30 bg-cream/60 px-4 py-3 text-sm text-dark hover:bg-cream"
+                    >
+                      <span>Browse the qoyl store for all recommended products</span>
+                      <span className="font-mono text-[11px] text-bronze2">shop →</span>
+                    </a>
+
                     <button
                       type="button"
                       onClick={() => handleComplete("diy", null)}

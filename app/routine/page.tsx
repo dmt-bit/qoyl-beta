@@ -2311,14 +2311,22 @@ function RoutineToolCard({ tool, highlighted }: { tool: HairTool; highlighted: b
 
           <div className="mt-3 flex items-center justify-between">
             <span className="font-mono text-[13px] font-bold text-dark">{tool.price_range}</span>
-            <a
-              href={`https://www.amazon.com/s?k=${encodeURIComponent(tool.amazon_search)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-[9px] text-muted"
-            >
-              shop on amazon →
-            </a>
+            <div className="flex items-center gap-3">
+              <a
+                href={`/store?q=${encodeURIComponent(tool.amazon_search)}`}
+                className="font-mono text-[9px] text-dark/70 underline underline-offset-2 hover:text-dark"
+              >
+                qoyl store →
+              </a>
+              <a
+                href={`https://www.amazon.com/s?k=${encodeURIComponent(tool.amazon_search)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-[9px] text-muted"
+              >
+                amazon →
+              </a>
+            </div>
           </div>
 
           {tool.avoid_if && (

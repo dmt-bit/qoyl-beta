@@ -111,7 +111,7 @@ export default function CompleteYourLookCart({ cartId, items }: { cartId: string
   }
 
   async function shareThisLook() {
-    const url = `${window.location.origin}/look/${cartId}`;
+    const url = `${window.location.origin}/cart/${cartId}`;
     try {
       await navigator.clipboard.writeText(url);
       setShareState("copied");
@@ -171,6 +171,14 @@ export default function CompleteYourLookCart({ cartId, items }: { cartId: string
           {shareState === "copied" ? "link copied ✓" : "share this look →"}
         </button>
       </div>
+
+      <a
+        href="/store"
+        className="mt-3 flex w-full items-center justify-center gap-2 border border-dark/20 py-2.5 font-mono text-[11px] lowercase text-dark/60 transition-colors hover:border-dark/40 hover:text-dark"
+      >
+        <span>browse the qoyl store</span>
+        <span className="text-dark/30">→</span>
+      </a>
     </section>
   );
 }
