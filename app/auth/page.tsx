@@ -43,6 +43,28 @@ function AuthPageContent() {
     setError(null);
     setSubmitting(true);
 
+    // Check if this email can bypass email confirmation (admin accounts).
+    // The server returns a confirmUrl we redirect to directly instead of
+    // waiting for the user to click a link in their inbox.
+    try {
+      const bypassRes = await fetch("/api/auth/admin-signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (bypassRes.ok) {
+        const bypassData = await bypassRes.json();
+        if (bypassData.bypass && bypassData.confirmUrl) {
+          // Redirect to Supabase's verify endpoint — this confirms the
+          // session and redirects back to the app without any email step.
+          window.location.href = bypassData.confirmUrl;
+          return; // submitting stays true; navigation takes over
+        }
+      }
+    } catch {
+      // If the bypass check fails for any reason, fall through to normal OTP.
+    }
+
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
       options: {
