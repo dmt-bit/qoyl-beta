@@ -580,9 +580,32 @@ function DashboardContent() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    // First fetch the shelf. If it's empty, seed it with routine products,
+    // then re-fetch so the shelf always shows something on first visit.
     fetch(`/api/shelf?user_id=${user.id}`)
       .then((res) => res.json())
-      .then((json) => {
+      .then(async (json) => {
+        if (cancelled) return;
+        const hasItems = Array.isArray(json.items) && json.items.length > 0;
+        if (!hasItems) {
+          // Seed the shelf with routine picks for this user's hair profile
+          try {
+            const seedRes = await fetch("/api/shelf/seed", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ user_id: user.id }),
+            });
+            if (seedRes.ok && !cancelled) {
+              const seeded = await seedRes.json();
+              setShelfCartId(seeded.cart_id ?? null);
+              setShelfItems(seeded.items ?? []);
+              setShelfLoaded(true);
+              return;
+            }
+          } catch {
+            // Seed failed — fall through to show the empty shelf state
+          }
+        }
         if (!cancelled) {
           setShelfCartId(json.cart_id ?? null);
           setShelfItems(json.items ?? []);
