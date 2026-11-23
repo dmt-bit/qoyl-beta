@@ -1005,6 +1005,378 @@ function BrandsTab({ password }: { password: string }) {
   );
 }
 
+// ─── Shared product row (used in both flat and grouped views) ───────────────
+
+function ProductRow({
+  product,
+  brands,
+  categories,
+  password,
+  isEditing,
+  editForm,
+  editSubmitting,
+  editError,
+  editSummary,
+  onStartEdit,
+  onCancelEdit,
+  onEditFormChange,
+  onEditSubmit,
+  onMarkVerified,
+}: {
+  product: AdminProduct;
+  brands: Brand[];
+  categories: Category[];
+  password: string;
+  isEditing: boolean;
+  editForm: ProductFormValues;
+  editSubmitting: boolean;
+  editError: string | null;
+  editSummary: MatchSummary | null;
+  onStartEdit: (p: AdminProduct) => void;
+  onCancelEdit: () => void;
+  onEditFormChange: (v: ProductFormValues) => void;
+  onEditSubmit: (e: React.FormEvent) => void;
+  onMarkVerified: (id: string, e: React.MouseEvent) => void;
+}) {
+  const ingredientCount = product.ingredient_list_normalized?.length ?? 0;
+
+  return (
+    <li className="rounded-lg border border-bronze/30 p-4">
+      {isEditing ? (
+        <>
+          <ProductForm
+            values={editForm}
+            brands={brands}
+            categories={categories}
+            submitting={editSubmitting}
+            submitLabel="Save changes"
+            password={password}
+            onChange={onEditFormChange}
+            onSubmit={onEditSubmit}
+            onCancel={onCancelEdit}
+          />
+          {editError && <p className="mt-3 text-sm text-red">{editError}</p>}
+          {editSummary && (
+            <MatchSummaryBox title="Product updated." summary={editSummary} />
+          )}
+        </>
+      ) : (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onStartEdit(product)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onStartEdit(product);
+            }
+          }}
+          className="flex cursor-pointer items-start justify-between gap-4"
+        >
+          <div>
+            <div className="flex items-center gap-2">
+              <p className="font-serif text-base text-dark">{product.name}</p>
+              {product.is_verified && (
+                <span className="inline-block rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium text-bronze2">
+                  Verified
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-bronze2">
+              {product.brand_name ?? "No brand"}
+              {product.category_name ? ` · ${product.category_name}` : ""}
+            </p>
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-dark/50">
+              <IngredientCountBadge count={ingredientCount} />
+              <span>
+                · Match rate:{" "}
+                {product.match_rate === null ? "-" : `${product.match_rate}%`} · Added{" "}
+                {formatDate(product.created_at)}
+              </span>
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            {!product.is_verified && (
+              <button
+                type="button"
+                onClick={(e) => onMarkVerified(product.id, e)}
+                className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
+              >
+                Mark verified
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+    </li>
+  );
+}
+
+// ─── Brand group accordion ────────────────────────────────────────────────────
+
+function BrandGroup({
+  brandName,
+  products,
+  brands,
+  categories,
+  password,
+  editingId,
+  editForm,
+  editSubmitting,
+  editError,
+  editSummary,
+  onStartEdit,
+  onCancelEdit,
+  onEditFormChange,
+  onEditSubmit,
+  onMarkVerified,
+}: {
+  brandName: string;
+  products: AdminProduct[];
+  brands: Brand[];
+  categories: Category[];
+  password: string;
+  editingId: string | null;
+  editForm: ProductFormValues;
+  editSubmitting: boolean;
+  editError: string | null;
+  editSummary: MatchSummary | null;
+  onStartEdit: (p: AdminProduct) => void;
+  onCancelEdit: () => void;
+  onEditFormChange: (v: ProductFormValues) => void;
+  onEditSubmit: (e: React.FormEvent) => void;
+  onMarkVerified: (id: string, e: React.MouseEvent) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  // Auto-expand if a product in this group is being edited
+  const hasEditing = products.some((p) => p.id === editingId);
+  const isOpen = open || hasEditing;
+
+  return (
+    <div className="rounded-lg border border-bronze/30">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-bronze/5"
+      >
+        <span className="font-serif text-base font-semibold text-dark">
+          {brandName}
+        </span>
+        <span className="flex items-center gap-3">
+          <span className="font-mono text-[10px] lowercase text-muted">
+            {products.length} product{products.length !== 1 ? "s" : ""}
+          </span>
+          <span className="text-xs text-dark/40">{isOpen ? "▲" : "▼"}</span>
+        </span>
+      </button>
+
+      {isOpen && (
+        <div className="border-t border-bronze/20 px-4 pb-4 pt-3">
+          <ul className="space-y-3">
+            {products.map((product) => (
+              <ProductRow
+                key={product.id}
+                product={product}
+                brands={brands}
+                categories={categories}
+                password={password}
+                isEditing={editingId === product.id}
+                editForm={editForm}
+                editSubmitting={editSubmitting}
+                editError={editError}
+                editSummary={editSummary}
+                onStartEdit={onStartEdit}
+                onCancelEdit={onCancelEdit}
+                onEditFormChange={onEditFormChange}
+                onEditSubmit={onEditSubmit}
+                onMarkVerified={onMarkVerified}
+              />
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Product list section (flat or by-brand) ─────────────────────────────────
+
+type ProductListSectionProps = {
+  products: AdminProduct[];
+  brands: Brand[];
+  categories: Category[];
+  loading: boolean;
+  password: string;
+  editingId: string | null;
+  editForm: ProductFormValues;
+  editSubmitting: boolean;
+  editError: string | null;
+  editSummary: MatchSummary | null;
+  onStartEdit: (p: AdminProduct) => void;
+  onCancelEdit: () => void;
+  onEditFormChange: (v: ProductFormValues) => void;
+  onEditSubmit: (e: React.FormEvent) => void;
+  onMarkVerified: (id: string, e: React.MouseEvent) => void;
+};
+
+function ProductListSection({
+  products,
+  brands,
+  categories,
+  loading,
+  password,
+  editingId,
+  editForm,
+  editSubmitting,
+  editError,
+  editSummary,
+  onStartEdit,
+  onCancelEdit,
+  onEditFormChange,
+  onEditSubmit,
+  onMarkVerified,
+}: ProductListSectionProps) {
+  const [viewMode, setViewMode] = useState<"flat" | "by-brand">("flat");
+  const [brandFilter, setBrandFilter] = useState("");
+
+  // Build brand groups (sorted alphabetically; "No brand" always last)
+  const brandGroups: { name: string; products: AdminProduct[] }[] =
+    viewMode === "by-brand"
+      ? (() => {
+          const map = new Map<string, AdminProduct[]>();
+          for (const p of products) {
+            const key = p.brand_name ?? "No brand";
+            if (!map.has(key)) map.set(key, []);
+            map.get(key)!.push(p);
+          }
+          return Array.from(map.entries())
+            .sort(([a], [b]) => {
+              if (a === "No brand") return 1;
+              if (b === "No brand") return -1;
+              return a.localeCompare(b);
+            })
+            .map(([name, prods]) => ({ name, products: prods }));
+        })()
+      : [];
+
+  // Filter for flat view
+  const filteredFlat = brandFilter
+    ? products.filter(
+        (p) =>
+          (p.brand_name ?? "No brand")
+            .toLowerCase()
+            .includes(brandFilter.toLowerCase())
+      )
+    : products;
+
+  // Filter groups for by-brand view
+  const filteredGroups = brandFilter
+    ? brandGroups.filter((g) =>
+        g.name.toLowerCase().includes(brandFilter.toLowerCase())
+      )
+    : brandGroups;
+
+  return (
+    <section className="mt-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="font-serif text-xl font-semibold text-dark">
+          All products ({products.length})
+        </h2>
+
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={brandFilter}
+            onChange={(e) => setBrandFilter(e.target.value)}
+            placeholder="Filter by brand..."
+            className="rounded-lg border border-bronze/40 bg-transparent px-3 py-1.5 text-sm text-dark placeholder:text-dark/40 focus:border-bronze focus:outline-none"
+          />
+
+          <div className="flex overflow-hidden rounded-lg border border-bronze/40">
+            <button
+              type="button"
+              onClick={() => setViewMode("flat")}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                viewMode === "flat"
+                  ? "bg-bronze text-cream"
+                  : "text-dark/60 hover:text-dark"
+              }`}
+            >
+              List
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("by-brand")}
+              className={`border-l border-bronze/40 px-3 py-1.5 text-xs font-medium transition-colors ${
+                viewMode === "by-brand"
+                  ? "bg-bronze text-cream"
+                  : "text-dark/60 hover:text-dark"
+              }`}
+            >
+              By brand
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {loading && <p className="mt-4 text-sm text-dark/50">Loading...</p>}
+
+      {viewMode === "flat" && (
+        <ul className="mt-4 space-y-3">
+          {filteredFlat.map((product) => (
+            <ProductRow
+              key={product.id}
+              product={product}
+              brands={brands}
+              categories={categories}
+              password={password}
+              isEditing={editingId === product.id}
+              editForm={editForm}
+              editSubmitting={editSubmitting}
+              editError={editError}
+              editSummary={editSummary}
+              onStartEdit={onStartEdit}
+              onCancelEdit={onCancelEdit}
+              onEditFormChange={onEditFormChange}
+              onEditSubmit={onEditSubmit}
+              onMarkVerified={onMarkVerified}
+            />
+          ))}
+        </ul>
+      )}
+
+      {viewMode === "by-brand" && (
+        <div className="mt-4 space-y-3">
+          {filteredGroups.map((group) => (
+            <BrandGroup
+              key={group.name}
+              brandName={group.name}
+              products={group.products}
+              brands={brands}
+              categories={categories}
+              password={password}
+              editingId={editingId}
+              editForm={editForm}
+              editSubmitting={editSubmitting}
+              editError={editError}
+              editSummary={editSummary}
+              onStartEdit={onStartEdit}
+              onCancelEdit={onCancelEdit}
+              onEditFormChange={onEditFormChange}
+              onEditSubmit={onEditSubmit}
+              onMarkVerified={onMarkVerified}
+            />
+          ))}
+          {filteredGroups.length === 0 && !loading && (
+            <p className="text-sm text-dark/50">No brands match that filter.</p>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default function AdminProductsPage() {
   const [activeTab, setActiveTab] = useState<"products" | "coverage" | "brands">("products");
   const [password, setPassword] = useState("");
@@ -1306,105 +1678,23 @@ export default function AdminProductsPage() {
           )}
         </section>
 
-        <section className="mt-8">
-          <h2 className="font-serif text-xl font-semibold text-dark">
-            All products ({products.length})
-          </h2>
-
-          {loading && (
-            <p className="mt-4 text-sm text-dark/50">Loading...</p>
-          )}
-
-          <ul className="mt-4 space-y-3">
-            {products.map((product) => {
-              const isEditing = editingId === product.id;
-              const ingredientCount = product.ingredient_list_normalized?.length ?? 0;
-
-              return (
-                <li
-                  key={product.id}
-                  className="rounded-lg border border-bronze/30 p-4"
-                >
-                  {isEditing ? (
-                    <>
-                      <ProductForm
-                        values={editForm}
-                        brands={brands}
-                        categories={categories}
-                        submitting={editSubmitting}
-                        submitLabel="Save changes"
-                        password={password}
-                        onChange={setEditForm}
-                        onSubmit={handleEditSubmit}
-                        onCancel={() => setEditingId(null)}
-                      />
-                      {editError && (
-                        <p className="mt-3 text-sm text-red">{editError}</p>
-                      )}
-                      {editSummary && (
-                        <MatchSummaryBox
-                          title="Product updated."
-                          summary={editSummary}
-                        />
-                      )}
-                    </>
-                  ) : (
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => startEdit(product)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          startEdit(product);
-                        }
-                      }}
-                      className="flex cursor-pointer items-start justify-between gap-4"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-serif text-base text-dark">
-                            {product.name}
-                          </p>
-                          {product.is_verified && (
-                            <span className="inline-block rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium text-bronze2">
-                              Verified
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-xs text-bronze2">
-                          {product.brand_name ?? "No brand"}
-                          {product.category_name
-                            ? ` · ${product.category_name}`
-                            : ""}
-                        </p>
-                        <p className="mt-1 flex items-center gap-1.5 text-xs text-dark/50">
-                          <IngredientCountBadge count={ingredientCount} />
-                          <span>
-                            · Match rate:{" "}
-                            {product.match_rate === null ? "-" : `${product.match_rate}%`} · Added{" "}
-                            {formatDate(product.created_at)}
-                          </span>
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 flex-col items-end gap-2">
-                        {!product.is_verified && (
-                          <button
-                            type="button"
-                            onClick={(e) => markVerified(product.id, e)}
-                            className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
-                          >
-                            Mark verified
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+        <ProductListSection
+          products={products}
+          brands={brands}
+          categories={categories}
+          loading={loading}
+          password={password}
+          editingId={editingId}
+          editForm={editForm}
+          editSubmitting={editSubmitting}
+          editError={editError}
+          editSummary={editSummary}
+          onStartEdit={startEdit}
+          onCancelEdit={() => setEditingId(null)}
+          onEditFormChange={setEditForm}
+          onEditSubmit={handleEditSubmit}
+          onMarkVerified={markVerified}
+        />
         </>
         )}
       </div>
