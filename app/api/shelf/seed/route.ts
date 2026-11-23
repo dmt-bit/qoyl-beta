@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { getRoutineProductPicks } from "@/lib/routineProducts";
 import { amazonSearch } from "@/lib/styleShoppingList";
 import type { CartItem } from "@/lib/styleCart";
 
@@ -8,21 +7,18 @@ import type { CartItem } from "@/lib/styleCart";
 // Called on first visit to /dashboard when the shelf is empty.
 // Idempotent: if the shelf already has items, this is a no-op.
 //
-// Two-pass strategy:
-//  1. Run getRoutineProductPicks (scored, profile-personalised).
-//     Collect product names for every pick that has a primary.
-//  2. For any routine category whose scored pick returned no primary
-//     (noProductsYet), fall back to the top-rated catalog product in
-//     that category by average_score.
-//  This guarantees the shelf always populates for a complete profile.
+// Strategy: query catalog_products directly for each core category,
+// ordered by average_score DESC (NULLs last). This is fast, reliable,
+// and guaranteed to return products as long as the catalog has them.
+// No dependency on the scoring pipeline (which can time out on cold starts).
 
 const CORE_SLUGS = [
-  { slug: "shampoo",        label: "Shampoo" },
-  { slug: "conditioner",    label: "Conditioner" },
+  { slug: "shampoo",          label: "Shampoo" },
+  { slug: "conditioner",      label: "Conditioner" },
   { slug: "deep-conditioner", label: "Deep Conditioner" },
-  { slug: "leave-in",       label: "Leave-In" },
-  { slug: "styler",         label: "Styler" },
-  { slug: "oil",            label: "Oil" },
+  { slug: "leave-in",         label: "Leave-In" },
+  { slug: "styler",           label: "Styler" },
+  { slug: "oil",              label: "Oil" },
 ];
 
 type CatalogRow = {
@@ -33,7 +29,7 @@ type CatalogRow = {
   image_url: string | null;
   price_usd: number | null;
   average_score: number | null;
-  catalog_brands: { name: string } | null;
+  catalog_brands: { name: string } | { name: string }[] | null;
 };
 
 export async function POST(request: Request) {
@@ -46,7 +42,7 @@ export async function POST(request: Request) {
 
   const admin = getSupabaseAdmin();
 
-  // If the shelf already has items, return them immediately
+  // If the shelf already has items, return them immediately (idempotent)
   const { data: existing } = await admin
     .from("style_cart")
     .select("id, items")
@@ -57,176 +53,119 @@ export async function POST(request: Request) {
     .maybeSingle();
 
   if (existing && Array.isArray(existing.items) && (existing.items as unknown[]).length > 0) {
+    console.log(`[shelf/seed] Shelf already populated for user ${userId}: ${(existing.items as unknown[]).length} items`);
     return NextResponse.json({ cart_id: existing.id, items: existing.items, seeded: false });
   }
 
-  // Fetch the user's hair profile
-  const { data: profile } = await admin
-    .from("hair_profiles")
-    .select("porosity, curl_type, hair_concerns, color_treated, budget_range")
-    .eq("user_id", userId)
-    .maybeSingle();
+  // Look up all core category IDs in one query
+  const coreSlugs = CORE_SLUGS.map((s) => s.slug);
+  const { data: catRows, error: catError } = await admin
+    .from("categories")
+    .select("id, slug")
+    .in("slug", coreSlugs);
 
-  // ── Pass 1: scored picks ──────────────────────────────────────────────────
-  // Run for any profile; falls back gracefully to null picks when scoring
-  // has no data. We always run pass 1 so scored picks show when available.
-  let scoredPicks: Awaited<ReturnType<typeof getRoutineProductPicks>> = [];
-  if (profile) {
-    const colorTreated =
-      profile.color_treated === true || profile.color_treated === "yes";
-    try {
-      scoredPicks = await getRoutineProductPicks(
-        profile.porosity ?? null,
-        profile.curl_type ?? null,
-        profile.hair_concerns ?? null,
-        colorTreated,
-        profile.budget_range ?? null
-      );
-    } catch {
-      // scoring pipeline failed — fall through to direct catalog query
-    }
+  if (catError) {
+    console.error("[shelf/seed] Failed to fetch categories:", catError.message);
+    return NextResponse.json({ cart_id: null, items: [], seeded: false });
   }
 
-  // Collect product names from picks that have a primary
-  const scoredNames = scoredPicks
-    .filter((p) => p.primary !== null)
-    .map((p) => ({ name: p.primary!.productName, label: p.categoryLabel }));
-
-  // Track which category slugs are already covered by a scored pick
-  const coveredSlugs = new Set(
-    scoredPicks.filter((p) => p.primary !== null).map((p) => p.searchCategorySlug)
+  const catIdBySlug = new Map<string, string>(
+    (catRows ?? []).map((r) => [r.slug as string, r.id as string])
   );
 
-  // ── Pass 2: direct fallback for uncovered categories ─────────────────────
-  const uncoveredSlugs = CORE_SLUGS.filter((s) => !coveredSlugs.has(s.slug));
+  console.log(`[shelf/seed] Found ${catIdBySlug.size}/${coreSlugs.length} core categories`);
 
-  let fallbackRows: CatalogRow[] = [];
-  if (uncoveredSlugs.length > 0) {
-    const { data: catRows } = await admin
-      .from("categories")
-      .select("id, slug")
-      .in("slug", uncoveredSlugs.map((s) => s.slug));
-
-    const catIdBySlug = new Map<string, string>(
-      (catRows ?? []).map((r) => [r.slug as string, r.id as string])
-    );
-    const categoryIds = Array.from(catIdBySlug.values());
-
-    if (categoryIds.length > 0) {
-      const { data: directProducts } = await admin
-        .from("catalog_products")
-        .select("id, name, category_id, processed_image_url, image_url, price_usd, average_score, catalog_brands(name)")
-        .in("category_id", categoryIds)
-        .order("average_score", { ascending: false, nullsFirst: false })
-        .limit(30);
-
-      // Pick the best product per category in slug order
-      const slugToCatId = catIdBySlug;
-      const seenCats = new Set<string>();
-      for (const slugEntry of uncoveredSlugs) {
-        const catId = slugToCatId.get(slugEntry.slug);
-        if (!catId || seenCats.has(catId)) continue;
-        const best = (directProducts ?? []).find((p) => p.category_id === catId);
-        if (best) {
-          fallbackRows.push({
-            ...best,
-            catalog_brands: best.catalog_brands && !Array.isArray(best.catalog_brands)
-              ? best.catalog_brands as { name: string }
-              : null,
-          });
-          seenCats.add(catId);
-        }
-      }
-    }
+  if (catIdBySlug.size === 0) {
+    console.error("[shelf/seed] No categories found — catalog may be empty");
+    return NextResponse.json({ cart_id: null, items: [], seeded: false });
   }
 
-  // ── Build CartItems ───────────────────────────────────────────────────────
-  // Only need catalog lookup for scored picks (fallback rows already have full data)
-  let catalogByName = new Map<string, CatalogRow>();
-  if (scoredNames.length > 0) {
-    const { data: catalogRows } = await admin
-      .from("catalog_products")
-      .select("id, name, category_id, processed_image_url, image_url, price_usd, average_score, catalog_brands(name)")
-      .in("name", scoredNames.map((n) => n.name));
+  const categoryIds = Array.from(catIdBySlug.values());
 
-    for (const row of catalogRows ?? []) {
-      catalogByName.set(row.name, {
-        ...row,
-        catalog_brands: row.catalog_brands && !Array.isArray(row.catalog_brands)
-          ? row.catalog_brands as { name: string }
-          : null,
-      });
-    }
+  // Fetch the top products per category in one query.
+  // Order: products with average_score first (descending), then NULLs.
+  // Fetch up to 5 per category so we always get at least one per slot.
+  const { data: products, error: prodError } = await admin
+    .from("catalog_products")
+    .select("id, name, category_id, processed_image_url, image_url, price_usd, average_score, catalog_brands(name)")
+    .in("category_id", categoryIds)
+    .order("average_score", { ascending: false, nullsFirst: false })
+    .limit(50);
+
+  if (prodError) {
+    console.error("[shelf/seed] Failed to fetch catalog products:", prodError.message);
+    return NextResponse.json({ cart_id: null, items: [], seeded: false });
   }
 
+  console.log(`[shelf/seed] Fetched ${products?.length ?? 0} catalog products across ${categoryIds.length} categories`);
+
+  if (!products || products.length === 0) {
+    console.error("[shelf/seed] Catalog returned 0 products");
+    return NextResponse.json({ cart_id: null, items: [], seeded: false });
+  }
+
+  // Pick the best product per category slug (in CORE_SLUGS order for consistent ordering)
+  const usedProductIds = new Set<string>();
   const items: CartItem[] = [];
 
-  // Add scored picks first (they're personalised)
-  for (const pick of scoredPicks) {
-    if (!pick.primary) continue;
-    const candidate = pick.primary;
-    const catalogRow = catalogByName.get(candidate.productName);
-    if (!catalogRow) continue;
-
-    const amazonUrl = amazonSearch(`${candidate.brandName} ${candidate.productName}`.trim());
-    items.push({
-      product_id: catalogRow.id,
-      product_name: candidate.productName,
-      product_type: "product",
-      seller_type: "amazon",
-      seller_url: candidate.affiliateLink ?? amazonUrl,
-      affiliate_url: candidate.affiliateLink ?? amazonUrl,
-      price_estimate: catalogRow.price_usd ?? candidate.priceUsd ?? null,
-      compat_score: candidate.score ?? null,
-      quantity: 1,
-      status: "pending",
-      image_url: catalogRow.processed_image_url ?? catalogRow.image_url ?? null,
-      secondary_category_labels: [pick.categoryLabel],
-    });
-  }
-
-  // Build a map from category_id → CORE_SLUGS label for fallback rows
-  const catIdToLabel = new Map<string, string>();
-  if (uncoveredSlugs.length > 0) {
-    const { data: catRows2 } = await admin
-      .from("categories")
-      .select("id, slug")
-      .in("slug", uncoveredSlugs.map((s) => s.slug));
-    for (const r of catRows2 ?? []) {
-      const entry = CORE_SLUGS.find((s) => s.slug === r.slug);
-      if (entry) catIdToLabel.set(r.id as string, entry.label);
+  for (const slugEntry of CORE_SLUGS) {
+    const catId = catIdBySlug.get(slugEntry.slug);
+    if (!catId) {
+      console.log(`[shelf/seed] No category ID found for slug: ${slugEntry.slug}`);
+      continue;
     }
-  }
 
-  // Add fallback picks for uncovered categories
-  for (const row of fallbackRows) {
-    const brandName = row.catalog_brands?.name ?? "";
-    const label = catIdToLabel.get(row.category_id) ?? "Product";
-    const amazonUrl = amazonSearch(`${brandName} ${row.name}`.trim());
+    // Find first product in this category that hasn't been used yet
+    const best = (products as CatalogRow[]).find(
+      (p) => p.category_id === catId && !usedProductIds.has(p.id)
+    );
+
+    if (!best) {
+      console.log(`[shelf/seed] No product found for category: ${slugEntry.slug}`);
+      continue;
+    }
+
+    usedProductIds.add(best.id);
+    const brandObj = Array.isArray(best.catalog_brands)
+      ? best.catalog_brands[0]
+      : best.catalog_brands;
+    const brandName = brandObj?.name ?? "";
+    const amazonUrl = amazonSearch(`${brandName} ${best.name}`.trim());
+
     items.push({
-      product_id: row.id,
-      product_name: row.name,
+      product_id: best.id,
+      product_name: best.name,
       product_type: "product",
       seller_type: "amazon",
       seller_url: amazonUrl,
       affiliate_url: amazonUrl,
-      price_estimate: row.price_usd ?? null,
-      compat_score: row.average_score ?? null,
+      price_estimate: best.price_usd ?? null,
+      compat_score: best.average_score ?? null,
       quantity: 1,
       status: "pending",
-      image_url: row.processed_image_url ?? row.image_url ?? null,
-      secondary_category_labels: [label],
+      image_url: best.processed_image_url ?? best.image_url ?? null,
+      secondary_category_labels: [slugEntry.label],
     });
   }
 
+  console.log(`[shelf/seed] Built ${items.length} shelf items for user ${userId}`);
 
   if (items.length === 0) {
+    console.error("[shelf/seed] No items produced despite having catalog products — category ID mismatch?");
     return NextResponse.json({ cart_id: null, items: [], seeded: false });
   }
 
-  // Create or fill the shelf
+  // Update existing empty shelf or create a new one
   if (existing) {
-    await admin.from("style_cart").update({ items }).eq("id", existing.id);
+    const { error: updateError } = await admin
+      .from("style_cart")
+      .update({ items })
+      .eq("id", existing.id);
+    if (updateError) {
+      console.error("[shelf/seed] Failed to update existing shelf:", updateError.message);
+      return NextResponse.json({ cart_id: null, items: [], seeded: false });
+    }
+    console.log(`[shelf/seed] Updated existing shelf ${existing.id} with ${items.length} items`);
     return NextResponse.json({ cart_id: existing.id, items, seeded: true });
   }
 
@@ -242,11 +181,13 @@ export async function POST(request: Request) {
     .single();
 
   if (createError || !created) {
+    console.error("[shelf/seed] Failed to create shelf:", createError?.message);
     return NextResponse.json(
       { error: createError?.message ?? "Failed to create shelf." },
       { status: 500 }
     );
   }
 
+  console.log(`[shelf/seed] Created new shelf ${created.id} with ${items.length} items`);
   return NextResponse.json({ cart_id: created.id, items, seeded: true });
 }
