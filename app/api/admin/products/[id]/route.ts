@@ -109,3 +109,31 @@ export async function PATCH(
 
   return NextResponse.json({ product, ...matchSummary });
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  if (!isAuthorizedAdmin(request)) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
+  const admin = getSupabaseAdmin();
+
+  // Remove ingredient links first (FK constraint)
+  await admin.from("catalog_product_ingredients").delete().eq("product_id", params.id);
+
+  const { error } = await admin
+    .from("catalog_products")
+    .delete()
+    .eq("id", params.id);
+
+  if (error) {
+    return NextResponse.json(
+      { error: error.message ?? "Failed to delete product." },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ deleted: true });
+}

@@ -1022,6 +1022,7 @@ function ProductRow({
   onEditFormChange,
   onEditSubmit,
   onMarkVerified,
+  onDelete,
 }: {
   product: AdminProduct;
   brands: Brand[];
@@ -1037,8 +1038,10 @@ function ProductRow({
   onEditFormChange: (v: ProductFormValues) => void;
   onEditSubmit: (e: React.FormEvent) => void;
   onMarkVerified: (id: string, e: React.MouseEvent) => void;
+  onDelete: (id: string) => void;
 }) {
   const ingredientCount = product.ingredient_list_normalized?.length ?? 0;
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
     <li className="rounded-lg border border-bronze/30 p-4">
@@ -1059,6 +1062,35 @@ function ProductRow({
           {editSummary && (
             <MatchSummaryBox title="Product updated." summary={editSummary} />
           )}
+          <div className="mt-4 border-t border-dark/10 pt-4">
+            {confirmDelete ? (
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-dark/70">Delete &ldquo;{product.name}&rdquo;? This cannot be undone.</p>
+                <button
+                  type="button"
+                  onClick={() => onDelete(product.id)}
+                  className="rounded bg-red px-3 py-1.5 text-xs font-semibold text-white hover:opacity-80"
+                >
+                  Yes, delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete(false)}
+                  className="text-xs text-dark/50 underline underline-offset-2 hover:text-dark"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(true)}
+                className="text-xs text-dark/40 underline underline-offset-2 hover:text-red"
+              >
+                Delete product
+              </button>
+            )}
+          </div>
         </>
       ) : (
         <div
@@ -1130,6 +1162,7 @@ function BrandGroup({
   onEditFormChange,
   onEditSubmit,
   onMarkVerified,
+  onDelete,
 }: {
   brandName: string;
   products: AdminProduct[];
@@ -1146,6 +1179,7 @@ function BrandGroup({
   onEditFormChange: (v: ProductFormValues) => void;
   onEditSubmit: (e: React.FormEvent) => void;
   onMarkVerified: (id: string, e: React.MouseEvent) => void;
+  onDelete: (id: string) => void;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -1191,6 +1225,7 @@ function BrandGroup({
                 onEditFormChange={onEditFormChange}
                 onEditSubmit={onEditSubmit}
                 onMarkVerified={onMarkVerified}
+                onDelete={onDelete}
               />
             ))}
           </ul>
@@ -1218,6 +1253,7 @@ type ProductListSectionProps = {
   onEditFormChange: (v: ProductFormValues) => void;
   onEditSubmit: (e: React.FormEvent) => void;
   onMarkVerified: (id: string, e: React.MouseEvent) => void;
+  onDelete: (id: string) => void;
 };
 
 function ProductListSection({
@@ -1236,6 +1272,7 @@ function ProductListSection({
   onEditFormChange,
   onEditSubmit,
   onMarkVerified,
+  onDelete,
 }: ProductListSectionProps) {
   const [viewMode, setViewMode] = useState<"flat" | "by-brand">("flat");
   const [brandFilter, setBrandFilter] = useState("");
@@ -1341,6 +1378,7 @@ function ProductListSection({
               onEditFormChange={onEditFormChange}
               onEditSubmit={onEditSubmit}
               onMarkVerified={onMarkVerified}
+              onDelete={onDelete}
             />
           ))}
         </ul>
@@ -1366,6 +1404,7 @@ function ProductListSection({
               onEditFormChange={onEditFormChange}
               onEditSubmit={onEditSubmit}
               onMarkVerified={onMarkVerified}
+              onDelete={onDelete}
             />
           ))}
           {filteredGroups.length === 0 && !loading && (
@@ -1585,6 +1624,15 @@ export default function AdminProductsPage() {
     loadProducts(password);
   }
 
+  async function handleDelete(productId: string) {
+    await fetch(`/api/admin/products/${productId}`, {
+      method: "DELETE",
+      headers: { "x-admin-password": password },
+    });
+    setEditingId(null);
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
+  }
+
   if (checkingStoredAuth) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-white font-sans">
@@ -1694,6 +1742,7 @@ export default function AdminProductsPage() {
           onEditFormChange={setEditForm}
           onEditSubmit={handleEditSubmit}
           onMarkVerified={markVerified}
+          onDelete={handleDelete}
         />
         </>
         )}
