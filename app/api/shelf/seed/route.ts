@@ -28,7 +28,7 @@ type CatalogRow = {
   processed_image_url: string | null;
   image_url: string | null;
   price_usd: number | null;
-  average_score: number | null;
+  average_score?: number | null;
   catalog_brands: { name: string } | { name: string }[] | null;
 };
 
@@ -82,15 +82,37 @@ export async function POST(request: Request) {
 
   const categoryIds = Array.from(catIdBySlug.values());
 
+  // Check whether average_score column exists (it was added in a migration
+  // and may not exist in all environments yet - mirrors the same guard in
+  // app/search/page.tsx to avoid a hard failure on the select).
+  const { error: scoreColCheckErr } = await admin
+    .from("catalog_products")
+    .select("average_score")
+    .limit(1);
+  const hasAverageScore = !scoreColCheckErr;
+
+  console.log(`[shelf/seed] average_score column exists: ${hasAverageScore}`);
+
   // Fetch the top products per category in one query.
   // Order: products with average_score first (descending), then NULLs.
   // Fetch up to 5 per category so we always get at least one per slot.
-  const { data: products, error: prodError } = await admin
+  const selectFields = hasAverageScore
+    ? "id, name, category_id, processed_image_url, image_url, price_usd, average_score, catalog_brands(name)"
+    : "id, name, category_id, processed_image_url, image_url, price_usd, catalog_brands(name)";
+
+  let productQuery = admin
     .from("catalog_products")
-    .select("id, name, category_id, processed_image_url, image_url, price_usd, average_score, catalog_brands(name)")
+    .select(selectFields)
     .in("category_id", categoryIds)
-    .order("average_score", { ascending: false, nullsFirst: false })
     .limit(50);
+
+  if (hasAverageScore) {
+    productQuery = productQuery.order("average_score", { ascending: false, nullsFirst: false });
+  } else {
+    productQuery = productQuery.order("created_at", { ascending: false });
+  }
+
+  const { data: products, error: prodError } = await productQuery;
 
   if (prodError) {
     console.error("[shelf/seed] Failed to fetch catalog products:", prodError.message);
