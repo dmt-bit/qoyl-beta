@@ -168,6 +168,21 @@ function GridIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: numb
   );
 }
 
+function ShelfIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
+      {/* Top shelf board */}
+      <rect x="2" y="6" width="20" height="2.5" rx="1" fill="currentColor" stroke="none" />
+      {/* Bottom shelf board */}
+      <rect x="2" y="15.5" width="20" height="2.5" rx="1" fill="currentColor" stroke="none" />
+      {/* Left bracket */}
+      <line x1="5" y1="6" x2="5" y2="18" strokeLinecap="round" />
+      {/* Right bracket */}
+      <line x1="19" y1="6" x2="19" y2="18" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // Home ("/") has its own search-first hero now (see app/page.tsx,
 // components/HomeHero.tsx) - the desktop nav there is intentionally
 // minimal per that redesign: wordmark, sign in (or Dashboard once
@@ -514,7 +529,7 @@ export default function Nav() {
                     isLinkActive(pathname, "/dashboard") ? "text-bronze2" : "text-dark/70 hover:text-dark"
                   }`}
                 >
-                  Dashboard
+                  My Shelf
                 </Link>
                 <Link
                   href="/profile"
@@ -587,6 +602,7 @@ export default function Nav() {
             badge={!hairProfile ? "Start here" : undefined}
             onNavigate={closeMenu}
           />
+          <MenuLink href="/dashboard" label="My Shelf" icon={<ShelfIcon size={20} />} onNavigate={closeMenu} />
           <MenuLink href="/dashboard" label="My Dashboard" icon={<GridIcon size={20} />} onNavigate={closeMenu} />
           <RoutineMenuLink onNavigate={closeMenu} />
 

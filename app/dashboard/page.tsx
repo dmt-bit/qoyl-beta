@@ -4,7 +4,9 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PostCard, { Post } from "@/components/PostCard";
+import ShowerShelfCart from "@/components/ShowerShelfCart";
 import { useAuth } from "@/lib/auth-context";
+import type { CartItem } from "@/lib/styleCart";
 import { formatAdultAgeRange } from "@/lib/ageRange";
 import { getChildSafetyNote } from "@/lib/childSafety";
 import { scoreTier, TIER_CLASSES } from "@/lib/compatibility";
@@ -570,6 +572,29 @@ function DashboardContent() {
     }
   }
 
+  // Standalone shelf (style_cart rows where style_match_id IS NULL)
+  const [shelfCartId, setShelfCartId] = useState<string | null>(null);
+  const [shelfItems, setShelfItems] = useState<CartItem[]>([]);
+  const [shelfLoaded, setShelfLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    fetch(`/api/shelf?user_id=${user.id}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (!cancelled) {
+          setShelfCartId(json.cart_id ?? null);
+          setShelfItems(json.items ?? []);
+          setShelfLoaded(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setShelfLoaded(true);
+      });
+    return () => { cancelled = true; };
+  }, [user]);
+
   if (!checkedAccess) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-white font-sans">
@@ -636,7 +661,28 @@ function DashboardContent() {
           </p>
         )}
 
-        <div className="print-hide">
+        {/* My Shelf — hero section */}
+        {shelfLoaded && shelfItems.length > 0 && shelfCartId && (
+          <div className="print-hide mt-8">
+            <ShowerShelfCart cartId={shelfCartId} items={shelfItems} />
+          </div>
+        )}
+        {shelfLoaded && shelfItems.length === 0 && (
+          <div className="print-hide mt-8 rounded-xl border border-bronze/30 px-5 py-6">
+            <p className="font-serif text-lg font-semibold text-dark">My Shelf</p>
+            <p className="mt-1 text-sm text-dark/60">
+              Add products from search to build your shelf.
+            </p>
+            <Link
+              href="/search"
+              className="mt-3 inline-block text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
+            >
+              Search products →
+            </Link>
+          </div>
+        )}
+
+        <div className="print-hide mt-8">
           <QuickActions />
         </div>
 

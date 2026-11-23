@@ -299,6 +299,8 @@ function ResultCard({
   isProfiled,
   isBrandPartner,
   onScoreRevealed,
+  userId,
+  onAddToShelf,
 }: {
   product: Product;
   scoreState: ScoreState | undefined;
@@ -324,6 +326,9 @@ function ResultCard({
   // Fires when a card's score is revealed (opened, and the score is ready) -
   // the parent logs score_revealed. See the reveal block below.
   onScoreRevealed?: (score: number) => void;
+  // Shelf - only provided for logged-in users; undefined means anonymous
+  userId?: string | null;
+  onAddToShelf?: (product: Product) => void;
 }) {
   const matches = scoreState?.status === "done" ? scoreState.result.matches : [];
   const preview = matches.slice(0, 4);
@@ -340,6 +345,7 @@ function ResultCard({
   // hard-excludes these before they'd ever be picked.
   const showWeightWarning = productWeight ? isWeightWarningTier(productWeight, family) : false;
   const budgetActive = isBudgetActive(budgetRange);
+  const [shelfState, setShelfState] = useState<"idle" | "adding" | "added">("idle");
   const priceTier = product.priceUsd != null ? priceTierFor(product.priceUsd) : null;
   const containsSulfates =
     scoreState?.status === "done" ? matches.some((m) => isSulfate(m.ingredient_name)) : false;
@@ -568,11 +574,31 @@ function ResultCard({
             )}
 
             <div className="pt-1" onClick={(e) => e.stopPropagation()}>
-              <ShopButton
-                productName={product.name}
-                brandName={product.brand}
-                className="font-sans text-[11px] text-bronze2 hover:text-dark"
-              />
+              {userId && onAddToShelf ? (
+                <button
+                  type="button"
+                  disabled={shelfState !== "idle"}
+                  onClick={async () => {
+                    if (shelfState !== "idle") return;
+                    setShelfState("adding");
+                    try {
+                      await onAddToShelf(product);
+                      setShelfState("added");
+                    } catch {
+                      setShelfState("idle");
+                    }
+                  }}
+                  className="font-sans text-[11px] text-bronze2 hover:text-dark disabled:opacity-60"
+                >
+                  {shelfState === "adding" ? "adding…" : shelfState === "added" ? "✓ on shelf" : "+ add to shelf"}
+                </button>
+              ) : (
+                <ShopButton
+                  productName={product.name}
+                  brandName={product.brand}
+                  className="font-sans text-[11px] text-bronze2 hover:text-dark"
+                />
+              )}
             </div>
           </div>
         )}
@@ -597,6 +623,8 @@ function TrendingProductsSection({
   budgetRange,
   colorTreated,
   partnerBrandNames,
+  userId,
+  onAddToShelf,
 }: {
   isProfiled: boolean;
   curlType: string | null;
@@ -604,6 +632,8 @@ function TrendingProductsSection({
   budgetRange: string | null;
   colorTreated: boolean;
   partnerBrandNames: Set<string>;
+  userId?: string | null;
+  onAddToShelf?: (product: Product) => void;
 }) {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
@@ -684,6 +714,8 @@ function TrendingProductsSection({
             colorTreated={colorTreated}
             isProfiled={isProfiled}
             isBrandPartner={isBrandPartner(partnerBrandNames, product.brand)}
+            userId={userId}
+            onAddToShelf={onAddToShelf}
           />
         ))}
       </ul>
@@ -1154,6 +1186,7 @@ function BrandCatalogView({
   colorTreated,
   partnerBrandNames,
   onBack,
+  onAddToShelf,
 }: {
   slug: string;
   user: { id: string } | null;
@@ -1164,6 +1197,7 @@ function BrandCatalogView({
   colorTreated: boolean;
   partnerBrandNames: Set<string>;
   onBack: () => void;
+  onAddToShelf?: (product: Product) => void;
 }) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -1407,6 +1441,8 @@ function BrandCatalogView({
                     colorTreated={colorTreated}
                     isProfiled={isProfiled}
                     isBrandPartner={isBrandPartner(partnerBrandNames, product.brand)}
+                    userId={user?.id}
+                    onAddToShelf={onAddToShelf}
                   />
                 ))}
               </ul>
@@ -1498,6 +1534,22 @@ function SearchPageContent() {
     };
   }, []);
 
+  // Shelf - add a catalog product to the user's standalone shelf
+  async function addProductToShelf(product: Product) {
+    if (!user) return;
+    await fetch("/api/shelf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: user.id,
+        catalog_product_id: product.catalogProductId,
+        product_name: product.name,
+        brand_name: product.brand,
+        image_url: product.imageUrl,
+        price_usd: product.priceUsd,
+      }),
+    });
+  }
 
   // Anonymous visitors who built a profile without an account (no login,
   // just a hair_profile_id in localStorage) keep the existing "no account
@@ -2043,6 +2095,7 @@ function SearchPageContent() {
         )}
         partnerBrandNames={partnerBrandNames}
         onBack={backToBrandsDirectory}
+        onAddToShelf={user ? addProductToShelf : undefined}
       />
     );
   }
@@ -2272,6 +2325,8 @@ function SearchPageContent() {
               user ? hairProfile?.color_treated : localProfileHairInfo?.color_treated
             )}
             partnerBrandNames={partnerBrandNames}
+            userId={user?.id}
+            onAddToShelf={user ? addProductToShelf : undefined}
           />
         )}
 
@@ -2375,6 +2430,8 @@ function SearchPageContent() {
                   )}
                   isProfiled={canSearch}
                   isBrandPartner={isBrandPartner(partnerBrandNames, product.brand)}
+                  userId={user?.id}
+                  onAddToShelf={user ? addProductToShelf : undefined}
                 />
               ))}
             </ul>
