@@ -40,6 +40,10 @@ export type CartItem = {
   // Product photo from catalog_products (processed_image_url preferred).
   // null for tools, tutorials, and fake-hair items (different tables).
   image_url?: string | null;
+  // Human-readable labels for secondary categories this product covers
+  // (e.g. ["Heat Protectant", "Shine & Finishing"]). Empty for most items.
+  // Rendered as an "also covers X · Y" badge in ShowerShelfCart.
+  secondary_category_labels?: string[];
   // Item 6 - future-proofing for an internal video vault. null for
   // every tutorial item today; once a real internal_video_id is
   // backfilled, the UI should prefer it over tutorial_url.
@@ -131,6 +135,9 @@ function buildProductItems(shoppingList: StyleShoppingList, priceByProductId: Ma
         quantity: 1,
         status: "pending",
         image_url: item.image_url ?? null,
+        secondary_category_labels: item.secondary_category_labels.length > 0
+          ? item.secondary_category_labels
+          : undefined,
       } satisfies CartItem;
     });
 }

@@ -29,6 +29,11 @@ export type ScoredHairCareItem = {
   // Product photo from the catalog (processed_image_url preferred,
   // falls back to image_url). Used in the ShowerShelfCart display.
   image_url: string | null;
+  // Human-readable labels for secondary categories this product also
+  // covers (up to 3). Empty array for single-category products.
+  // When non-empty, the ShowerShelfCart shows an "also covers X · Y · Z"
+  // badge and the scorer skips those categories entirely.
+  secondary_category_labels: string[];
 };
 
 export type StaticShoppingItem = {
@@ -260,12 +265,26 @@ async function fetchScoredHairCareProducts(
     .select("id, slug")
     .in("slug", categorySlugs);
 
+  // Build slug→id and id→slug maps for secondary category resolution
+  const slugToId = new Map<string, string>(
+    (categoryRows ?? []).map((c) => [c.slug, c.id])
+  );
+  const idToSlug = new Map<string, string>(
+    (categoryRows ?? []).map((c) => [c.id, c.slug])
+  );
+
   const results: ScoredHairCareItem[] = [];
   const uncoveredSlugs: string[] = [];
   const usedProductIds = new Set<string>();
+  // Tracks which category slugs have already been covered by a
+  // multi-function product's secondary_category_ids so the loop skips them.
+  const coveredByConsolidator = new Set<string>();
 
   for (const slug of categorySlugs) {
-    const categoryId = categoryRows?.find((c) => c.slug === slug)?.id;
+    // Skip this category if a previously picked consolidator already covers it
+    if (coveredByConsolidator.has(slug)) continue;
+
+    const categoryId = slugToId.get(slug);
     if (!categoryId) {
       uncoveredSlugs.push(slug);
       continue;
@@ -273,7 +292,7 @@ async function fetchScoredHairCareProducts(
 
     const { data: candidates } = await supabase
       .from("catalog_products")
-      .select("id, name, image_url, processed_image_url, catalog_brands(name)")
+      .select("id, name, image_url, processed_image_url, secondary_category_ids, catalog_brands(name)")
       .eq("category_id", categoryId)
       .limit(15);
 
@@ -321,6 +340,18 @@ async function fetchScoredHairCareProducts(
     // score across categories for its top-5 cut).
     const penalizedScore = Math.max(0, best.score - installTypeCategoryPenalty(slug, installType));
 
+    // Resolve secondary categories: mark them as covered and build
+    // human-readable labels (capped at 3 for display).
+    const secondaryIds: string[] =
+      (best.product as { secondary_category_ids?: string[] | null }).secondary_category_ids ?? [];
+    const secondarySlugs = secondaryIds
+      .map((id) => idToSlug.get(id))
+      .filter((s): s is string => !!s);
+    for (const s of secondarySlugs) coveredByConsolidator.add(s);
+    const secondary_category_labels = secondarySlugs
+      .slice(0, 3)
+      .map((s) => CATEGORY_LABEL_BY_SLUG[s] ?? s);
+
     results.push({
       catalogProductId: best.product.id,
       name: best.product.name,
@@ -332,6 +363,7 @@ async function fetchScoredHairCareProducts(
       image_url: (best.product as { processed_image_url?: string | null; image_url?: string | null }).processed_image_url
         ?? (best.product as { image_url?: string | null }).image_url
         ?? null,
+      secondary_category_labels,
     });
   }
 

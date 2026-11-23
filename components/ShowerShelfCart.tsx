@@ -71,6 +71,15 @@ function ShelfItem({ item, onToggle }: { item: CartItem; onToggle: () => void })
               ? item.product_name.slice(0, 20) + "…"
               : item.product_name}
           </p>
+          {item.secondary_category_labels && item.secondary_category_labels.length > 0 && (
+            <p
+              className="mt-0.5 leading-tight text-[#7BA7BC]"
+              style={{ fontSize: "7px", letterSpacing: "0.02em" }}
+              title={`also covers: ${item.secondary_category_labels.join(", ")}`}
+            >
+              +{item.secondary_category_labels.join(" · ")}
+            </p>
+          )}
           {item.price_estimate != null && (
             <p className="price-label mt-0.5" style={{ fontSize: "8px" }}>
               ${item.price_estimate.toFixed(2)}
