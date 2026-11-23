@@ -684,24 +684,13 @@ function DashboardContent() {
           </p>
         )}
 
-        {/* My Shelf — hero section */}
-        {shelfLoaded && shelfItems.length > 0 && shelfCartId && (
+        {/* My Shelf — always shown once loaded; ShowerShelfCart handles empty state */}
+        {shelfLoaded && (
           <div className="print-hide mt-8">
-            <ShowerShelfCart cartId={shelfCartId} items={shelfItems} />
-          </div>
-        )}
-        {shelfLoaded && shelfItems.length === 0 && (
-          <div className="print-hide mt-8 rounded-xl border border-bronze/30 px-5 py-6">
-            <p className="font-serif text-lg font-semibold text-dark">My Shelf</p>
-            <p className="mt-1 text-sm text-dark/60">
-              Add products from search to build your shelf.
-            </p>
-            <Link
-              href="/search"
-              className="mt-3 inline-block text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
-            >
-              Search products →
-            </Link>
+            <ShowerShelfCart
+              cartId={shelfCartId ?? ""}
+              items={shelfItems}
+            />
           </div>
         )}
 

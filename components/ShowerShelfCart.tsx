@@ -137,12 +137,12 @@ function PhotoShelf({
   shelfOffsets: number[]; // one per shelf row, 0-100 (percent from top of image)
   onToggle: (key: string) => void;
 }) {
-  if (items.length === 0) return null;
+  const isEmpty = items.length === 0;
 
   // Distribute items across the available shelf rows
-  const itemsPerRow = Math.ceil(items.length / shelfOffsets.length);
+  const itemsPerRow = isEmpty ? 0 : Math.ceil(items.length / shelfOffsets.length);
   const rows: CartItem[][] = shelfOffsets.map((_, rowIdx) =>
-    items.slice(rowIdx * itemsPerRow, (rowIdx + 1) * itemsPerRow)
+    isEmpty ? [] : items.slice(rowIdx * itemsPerRow, (rowIdx + 1) * itemsPerRow)
   );
 
   return (
@@ -155,6 +155,12 @@ function PhotoShelf({
         {/* Background shelf photograph */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={image} alt="" aria-hidden className="ssc-shelf-bg" />
+        {/* Empty-shelf overlay — shown when no products are assigned yet */}
+        {isEmpty && (
+          <div className="ssc-empty-overlay">
+            <span className="ssc-empty-text">let&apos;s fill your shelf</span>
+          </div>
+        )}
         {/* Product rows sitting on each shelf */}
         {shelfOffsets.map((topPct, rowIdx) => {
           const rowItems = rows[rowIdx] ?? [];
@@ -333,6 +339,26 @@ export default function ShowerShelfCart({
           border-radius: 6px;
           overflow: hidden;
           box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        }
+        /* Empty shelf overlay */
+        .ssc-empty-overlay {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255,255,255,0.45);
+          backdrop-filter: blur(1px);
+          pointer-events: none;
+        }
+        .ssc-empty-text {
+          font-family: Georgia, serif;
+          font-size: 15px;
+          font-style: italic;
+          color: rgba(0,0,0,0.55);
+          letter-spacing: 0.01em;
+          text-align: center;
+          padding: 0 16px;
         }
         .ssc-shelf-bg {
           display: block;
@@ -548,28 +574,24 @@ export default function ShowerShelfCart({
       {/* Shelf zones */}
       <div className="ssc-zones">
         {/* In-shower — white cabinet photo */}
-        {inItems.length > 0 && (
-          <PhotoShelf
-            label="in the shower"
-            sublabel="shampoo · conditioner · treatments"
-            image={CABINET_IMG}
-            items={inItems}
-            shelfOffsets={[50, 76]}
-            onToggle={toggleItem}
-          />
-        )}
+        <PhotoShelf
+          label="in the shower"
+          sublabel="shampoo · conditioner · treatments"
+          image={CABINET_IMG}
+          items={inItems}
+          shelfOffsets={[50, 76]}
+          onToggle={toggleItem}
+        />
 
         {/* Out-of-shower — beige niche photo */}
-        {outItems.length > 0 && (
-          <PhotoShelf
-            label="outside the shower"
-            sublabel="leave-in · stylers · oils"
-            image={NICHE_IMG}
-            items={outItems}
-            shelfOffsets={[48, 88]}
-            onToggle={toggleItem}
-          />
-        )}
+        <PhotoShelf
+          label="outside the shower"
+          sublabel="leave-in · stylers · oils"
+          image={NICHE_IMG}
+          items={outItems}
+          shelfOffsets={[48, 88]}
+          onToggle={toggleItem}
+        />
       </div>
 
       {/* Tutorials */}
@@ -590,16 +612,24 @@ export default function ShowerShelfCart({
 
       {/* Fixed footer */}
       <div className="ssc-footer">
-        <div className="ssc-footer-price">
-          {hasPrice ? "$" + total.toFixed(2) : "—"}
-          <span className="ssc-footer-note">estimated · varies</span>
-        </div>
-        <button type="button" className="ssc-btn-secondary" onClick={handleShare}>
-          {shareState === "copied" ? "copied ✓" : "share"}
-        </button>
-        <button type="button" className="ssc-btn-primary" onClick={handleGetEverything}>
-          get remaining →
-        </button>
+        {items.length === 0 ? (
+          <a href="/search" className="ssc-btn-primary" style={{ flex: 1, textAlign: "center" }}>
+            search products to fill your shelf →
+          </a>
+        ) : (
+          <>
+            <div className="ssc-footer-price">
+              {hasPrice ? "$" + total.toFixed(2) : "—"}
+              <span className="ssc-footer-note">estimated · varies</span>
+            </div>
+            <button type="button" className="ssc-btn-secondary" onClick={handleShare}>
+              {shareState === "copied" ? "copied ✓" : "share"}
+            </button>
+            <button type="button" className="ssc-btn-primary" onClick={handleGetEverything}>
+              get remaining →
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
