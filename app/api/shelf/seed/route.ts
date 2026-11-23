@@ -1,12 +1,25 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
-import { getRoutineProducts } from "@/lib/routineProducts";
 import { amazonSearch } from "@/lib/styleShoppingList";
 import type { CartItem } from "@/lib/styleCart";
 
-// Seeds the user's standalone shelf with their top routine product picks.
+// Seeds the user's standalone shelf with their routine product picks.
 // Called on first visit to /dashboard when the shelf is empty.
 // Idempotent: if the shelf already has items, this is a no-op.
+//
+// Strategy: query catalog_products directly for each routine category slug,
+// ordered by average_score DESC, pick the top product per category.
+// This guarantees real products appear on the shelf even when ingredient-
+// scoring data is sparse — no dependency on the full scoring pipeline.
+
+const CORE_ROUTINE_SLUGS = [
+  "shampoo",
+  "conditioner",
+  "deep-conditioner",
+  "leave-in",
+  "styler",
+  "oil",
+];
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
@@ -28,87 +41,90 @@ export async function POST(request: Request) {
     .limit(1)
     .maybeSingle();
 
-  if (existing && Array.isArray(existing.items) && existing.items.length > 0) {
+  if (existing && Array.isArray(existing.items) && (existing.items as unknown[]).length > 0) {
     return NextResponse.json({ cart_id: existing.id, items: existing.items, seeded: false });
   }
 
-  // Fetch the user's hair profile
-  const { data: profile } = await admin
-    .from("hair_profiles")
-    .select("porosity, curl_type, hair_concerns, color_treated, budget_range")
-    .eq("user_id", userId)
-    .maybeSingle();
+  // Look up category IDs for the core routine slugs
+  const { data: catRows } = await admin
+    .from("categories")
+    .select("id, slug")
+    .in("slug", CORE_ROUTINE_SLUGS);
 
-  if (!profile) {
-    return NextResponse.json({ error: "Hair profile not found." }, { status: 404 });
-  }
-
-  const colorTreated =
-    profile.color_treated === true ||
-    profile.color_treated === "yes";
-
-  // Get top routine picks for this user's hair profile
-  const picks = await getRoutineProducts(
-    profile.porosity ?? null,
-    profile.curl_type ?? null,
-    profile.hair_concerns ?? null,
-    colorTreated,
-    profile.budget_range ?? null
-  );
-
-  // Collect the product names we want to look up
-  const productNames: string[] = [];
-  for (const pick of picks) {
-    if (pick.primary) productNames.push(pick.primary.productName);
-  }
-
-  if (productNames.length === 0) {
+  if (!catRows || catRows.length === 0) {
     return NextResponse.json({ cart_id: null, items: [], seeded: false });
   }
 
-  // Look up catalog_product_id by name (name is the unique identifier we have)
-  const { data: catalogRows } = await admin
-    .from("catalog_products")
-    .select("id, name, processed_image_url, image_url, price_usd, catalog_brands(name)")
-    .in("name", productNames);
+  const catIdBySlug = new Map<string, string>(
+    catRows.map((r) => [r.slug as string, r.id as string])
+  );
+  const categoryIds = Array.from(catIdBySlug.values());
 
-  const catalogByName = new Map<string, { id: string; image_url: string | null; processed_image_url: string | null; price_usd: number | null; brand: string | null }>();
-  for (const row of catalogRows ?? []) {
-    const brand =
-      row.catalog_brands && !Array.isArray(row.catalog_brands)
-        ? (row.catalog_brands as { name: string }).name
-        : null;
-    catalogByName.set(row.name, {
-      id: row.id,
-      image_url: row.image_url ?? null,
-      processed_image_url: row.processed_image_url ?? null,
-      price_usd: row.price_usd ?? null,
-      brand,
-    });
+  // Fetch top 3 products per category in one query, ordered by average_score
+  const { data: products } = await admin
+    .from("catalog_products")
+    .select("id, name, category_id, processed_image_url, image_url, price_usd, average_score, catalog_brands(name)")
+    .in("category_id", categoryIds)
+    .order("average_score", { ascending: false })
+    .limit(50);
+
+  if (!products || products.length === 0) {
+    return NextResponse.json({ cart_id: null, items: [], seeded: false });
   }
 
-  // Build CartItem array from matched picks
-  const items: CartItem[] = [];
-  for (const pick of picks) {
-    if (!pick.primary) continue;
-    const candidate = pick.primary;
-    const catalogRow = catalogByName.get(candidate.productName);
-    if (!catalogRow) continue; // name didn't match anything in DB (shouldn't happen)
+  // Pick the top product per category (preserving routine order)
+  const seenCategories = new Set<string>();
+  const slugOrder = CORE_ROUTINE_SLUGS.filter((s) => catIdBySlug.has(s));
+  const slugById = new Map<string, string>(
+    Array.from(catIdBySlug.entries()).map(([slug, id]) => [id, slug])
+  );
+  const categoryLabels: Record<string, string> = {
+    shampoo: "Shampoo",
+    conditioner: "Conditioner",
+    "deep-conditioner": "Deep Conditioner",
+    "leave-in": "Leave-In",
+    styler: "Styler",
+    oil: "Sealant Oil",
+  };
 
-    const amazonUrl = amazonSearch(`${candidate.brandName} ${candidate.productName}`.trim());
+  // Build a map: categoryId → best product
+  const bestPerCategory = new Map<string, typeof products[0]>();
+  for (const p of products) {
+    if (!bestPerCategory.has(p.category_id)) {
+      bestPerCategory.set(p.category_id, p);
+    }
+  }
+
+  const items: CartItem[] = [];
+  for (const slug of slugOrder) {
+    const catId = catIdBySlug.get(slug);
+    if (!catId) continue;
+    if (seenCategories.has(catId)) continue;
+    seenCategories.add(catId);
+
+    const product = bestPerCategory.get(catId);
+    if (!product) continue;
+
+    const brandName =
+      product.catalog_brands && !Array.isArray(product.catalog_brands)
+        ? (product.catalog_brands as { name: string }).name
+        : "";
+
+    const amazonUrl = amazonSearch(`${brandName} ${product.name}`.trim());
+
     items.push({
-      product_id: catalogRow.id,
-      product_name: candidate.productName,
+      product_id: product.id,
+      product_name: product.name,
       product_type: "product",
       seller_type: "amazon",
-      seller_url: candidate.affiliateLink ?? amazonUrl,
-      affiliate_url: candidate.affiliateLink ?? amazonUrl,
-      price_estimate: catalogRow.price_usd ?? candidate.priceUsd ?? null,
-      compat_score: candidate.score ?? null,
+      seller_url: amazonUrl,
+      affiliate_url: amazonUrl,
+      price_estimate: product.price_usd ?? null,
+      compat_score: product.average_score ?? null,
       quantity: 1,
       status: "pending",
-      image_url: catalogRow.processed_image_url ?? catalogRow.image_url ?? null,
-      secondary_category_labels: [pick.categoryLabel],
+      image_url: product.processed_image_url ?? product.image_url ?? null,
+      secondary_category_labels: [categoryLabels[slug] ?? slug],
     });
   }
 
@@ -116,17 +132,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ cart_id: null, items: [], seeded: false });
   }
 
-  // Create or update the shelf
+  // Create or fill the shelf
   if (existing) {
-    // Shelf row exists but was empty — update it
-    await admin
-      .from("style_cart")
-      .update({ items })
-      .eq("id", existing.id);
+    await admin.from("style_cart").update({ items }).eq("id", existing.id);
     return NextResponse.json({ cart_id: existing.id, items, seeded: true });
   }
 
-  // Create a new standalone shelf
   const { data: created, error: createError } = await admin
     .from("style_cart")
     .insert({
