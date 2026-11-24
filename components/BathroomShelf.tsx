@@ -3,188 +3,208 @@
 import { useState } from "react";
 import type { CartItem } from "@/lib/styleCart";
 
-// ─── Zone classification (mirrors ShowerShelfCart logic) ───────────────────
-function getShelfZone(item: CartItem): "in" | "out" | "other" {
-  if (item.product_type === "fake_hair") return "out";
-  if (item.product_type === "tool") return "out";
-  if (item.product_type === "tutorial") return "other";
+// ─── Zone classification ───────────────────────────────────────────────────
+const IN_SHOWER_SET  = new Set(["shampoo","conditioner","deep-conditioner","deep conditioner","co-wash","cleanser"]);
+const OUT_SHOWER_SET = new Set(["leave-in","styler","oil","serum","cream","gel","mousse","spray"]);
+
+function getShelfZone(item: CartItem): "shower" | "vanity" {
+  if (item.product_type === "fake_hair" || item.product_type === "tool") return "vanity";
   const labels = (item.secondary_category_labels ?? []).map((l) => l.toLowerCase());
-  if (labels.some((l) => ["shampoo", "conditioner", "deep-conditioner", "deep conditioner", "co-wash"].includes(l))) return "in";
-  if (labels.some((l) => ["leave-in", "styler", "oil", "serum", "cream", "gel", "mousse", "spray"].includes(l))) return "out";
+  for (const l of labels) {
+    if (IN_SHOWER_SET.has(l))  return "shower";
+    if (OUT_SHOWER_SET.has(l)) return "vanity";
+  }
   const name = item.product_name.toLowerCase();
-  if (name.includes("shampoo") || name.includes("wash") || name.includes("cleanser")) return "in";
-  if (name.includes("conditioner") || name.includes("mask") || name.includes("treatment")) return "in";
-  return "out";
+  if (/shampoo|wash|cleanser/.test(name))       return "shower";
+  if (/conditioner|mask|treatment/.test(name))  return "shower";
+  return "vanity";
 }
 
-// ─── Fallback bottle colors by category ───────────────────────────────────
+// ─── Fallback bottle colors ────────────────────────────────────────────────
 const BOTTLE_PALETTE: Record<string, [string, string]> = {
-  shampoo:            ["#B4CAD0", "#8BADB5"],
-  conditioner:        ["#D4B8D0", "#B089AA"],
-  "deep-conditioner": ["#C8D4B0", "#9AB580"],
-  "deep conditioner": ["#C8D4B0", "#9AB580"],
-  treatment:          ["#D0C4A8", "#B0A07A"],
-  "co-wash":          ["#C5D5D8", "#8DADB2"],
-  "leave-in":         ["#D0BFC0", "#B09098"],
-  styler:             ["#B8C8D8", "#7898B0"],
-  oil:                ["#D8C8A8", "#B0A070"],
-  serum:              ["#C8D0D8", "#90A0B0"],
-  gel:                ["#B8D0C0", "#7AADA0"],
-  mousse:             ["#D8C8D0", "#B0909A"],
-  default:            ["#C8C0B8", "#A09890"],
+  "shampoo":            ["#B4CAD0","#8BADB5"],
+  "conditioner":        ["#D4B8D0","#B089AA"],
+  "deep-conditioner":   ["#C8D4B0","#9AB580"],
+  "deep conditioner":   ["#C8D4B0","#9AB580"],
+  "treatment":          ["#D0C4A8","#B0A07A"],
+  "co-wash":            ["#C5D5D8","#8DADB2"],
+  "leave-in":           ["#D0BFC0","#B09098"],
+  "styler":             ["#B8C8D8","#7898B0"],
+  "oil":                ["#D8C8A8","#B0A070"],
+  "serum":              ["#C8D0D8","#90A0B0"],
+  "gel":                ["#B8D0C0","#7AADA0"],
+  "mousse":             ["#D8C8D0","#B0909A"],
+  "default":            ["#C8C0B8","#A09890"],
 };
-
 function getBottleColor(labels: string[] = []): [string, string] {
-  for (const lbl of labels) {
-    const key = lbl.toLowerCase();
-    if (BOTTLE_PALETTE[key]) return BOTTLE_PALETTE[key];
+  for (const l of labels) {
+    const c = BOTTLE_PALETTE[l.toLowerCase()];
+    if (c) return c;
   }
   return BOTTLE_PALETTE.default;
 }
 
-// ─── Sub-components ────────────────────────────────────────────────────────
-
-function BottleShape({ item }: { item: CartItem }) {
-  const [top, bot] = getBottleColor(item.secondary_category_labels);
-  if (item.image_url) {
-    return (
-      /* eslint-disable-next-line @next/next/no-img-element */
-      <img
-        src={item.image_url}
-        alt={item.product_name}
-        style={{ maxWidth: 44, maxHeight: 60, objectFit: "contain", filter: "drop-shadow(0 4px 8px rgba(0,0,0,0.2))" }}
-        loading="lazy"
-      />
-    );
-  }
-  return (
-    <div style={{
-      width: 32, height: 56,
-      background: `linear-gradient(160deg, ${top} 0%, ${bot} 100%)`,
-      borderRadius: "4px 4px 3px 3px",
-      position: "relative",
-      boxShadow: "2px 3px 8px rgba(0,0,0,0.2)",
-    }}>
-      {/* cap */}
-      <div style={{
-        position: "absolute", top: -6, left: "50%", transform: "translateX(-50%)",
-        width: 12, height: 10,
-        background: `linear-gradient(160deg, ${top} 0%, ${bot} 100%)`,
-        borderRadius: "2px 2px 0 0",
-        filter: "brightness(1.1)",
-      }} />
-      {/* highlight */}
-      <div style={{
-        position: "absolute", inset: 0,
-        background: "linear-gradient(135deg, rgba(255,255,255,0.3) 0%, transparent 60%)",
-        borderRadius: "inherit",
-      }} />
-    </div>
-  );
-}
-
-function ProductBottle({
+// ─── Product card in panel ────────────────────────────────────────────────
+function ProductCard({
   item,
-  onClick,
-  purchased,
+  checked,
+  onToggle,
 }: {
   item: CartItem;
-  onClick: () => void;
-  purchased: boolean;
+  checked: boolean;
+  onToggle: () => void;
 }) {
-  const itemKey = item.product_id ?? item.product_name;
-  void itemKey; // used externally as key
-  const shortName = item.product_name.length > 18
-    ? item.product_name.slice(0, 16) + "…"
-    : item.product_name;
+  const catLabel = (() => {
+    const l = item.secondary_category_labels?.[0];
+    if (!l) return "Hair Care";
+    return l.charAt(0).toUpperCase() + l.slice(1).replace(/-/g, " ");
+  })();
+  const [t, b] = getBottleColor(item.secondary_category_labels);
+  const shopUrl = item.affiliate_url ?? item.seller_url;
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onToggle}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); }}}
       style={{
+        background: "white",
+        borderRadius: 14,
+        padding: "14px 10px 12px",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 4,
+        gap: 7,
         cursor: "pointer",
-        background: "none",
-        border: "none",
-        padding: "0 4px",
-        flexShrink: 0,
+        border: `1.5px solid ${checked ? "rgba(126,155,138,0.5)" : "transparent"}`,
+        transition: "border-color 0.2s, box-shadow 0.2s, transform 0.2s",
         position: "relative",
-        transition: "transform 0.25s cubic-bezier(0.34,1.56,0.64,1)",
-        transformOrigin: "bottom center",
-        opacity: purchased ? 0.55 : 1,
+        boxShadow: "0 2px 10px rgba(42,36,32,0.06)",
+        opacity: checked ? 0.6 : 1,
       }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform = "translateY(-6px) scale(1.05)"; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform = "none"; }}
-      aria-label={`${item.product_name} — tap for details`}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.transform = "translateY(-3px)";
+        (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(42,36,32,0.12)";
+        (e.currentTarget as HTMLElement).style.borderColor = "#C8A86A";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.transform = "";
+        (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 10px rgba(42,36,32,0.06)";
+        (e.currentTarget as HTMLElement).style.borderColor = checked ? "rgba(126,155,138,0.5)" : "transparent";
+      }}
     >
-      {purchased && (
+      {checked && (
         <span style={{
-          position: "absolute", top: 0, right: 0,
-          width: 16, height: 16,
-          background: "#7E9B8A",
-          color: "white",
-          borderRadius: "50%",
-          fontSize: 9, lineHeight: "16px", textAlign: "center",
-          fontFamily: "inherit",
-          zIndex: 1,
+          position: "absolute", top: 8, right: 8,
+          width: 18, height: 18,
+          background: "#7E9B8A", color: "white",
+          borderRadius: "50%", fontSize: 10,
+          lineHeight: "18px", textAlign: "center",
+          fontFamily: "inherit", fontWeight: 500,
         }}>✓</span>
       )}
-      <div style={{ width: 44, height: 60, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-        <BottleShape item={item} />
-      </div>
-      <div style={{
-        fontSize: 9, color: "#7A6E66",
-        textAlign: "center", maxWidth: 50,
-        lineHeight: 1.2,
-        overflow: "hidden",
-        display: "-webkit-box",
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: "vertical",
-      }}>
-        {shortName}
-      </div>
-    </button>
-  );
-}
 
-function ShelfRow({ items, onClick, purchasedIds }: {
-  items: CartItem[];
-  onClick: (item: CartItem) => void;
-  purchasedIds: Set<string>;
-}) {
-  if (!items.length) return null;
-  return (
-    <div style={{
-      position: "absolute", left: 0, right: 0,
-      display: "flex", alignItems: "flex-end", justifyContent: "center",
-      gap: 6, padding: "0 8%",
-    }}>
-      {items.map((item, idx) => (
-        <ProductBottle
-          key={item.product_id ?? `item-${idx}`}
-          item={item}
-          onClick={() => onClick(item)}
-          purchased={item.product_id != null && purchasedIds.has(item.product_id)}
-        />
-      ))}
+      {/* Bottle */}
+      <div style={{ width: 56, height: 72, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+        {item.image_url ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={item.image_url} alt={item.product_name}
+            style={{ maxWidth: 56, maxHeight: 72, objectFit: "contain", filter: "drop-shadow(0 4px 8px rgba(42,36,32,0.2))" }}
+            loading="lazy"
+          />
+        ) : (
+          <div style={{
+            width: 40, height: 64,
+            background: `linear-gradient(165deg, ${t} 0%, ${b} 100%)`,
+            borderRadius: "5px 5px 4px 4px",
+            position: "relative",
+            boxShadow: "2px 4px 10px rgba(42,36,32,0.2)",
+          }}>
+            {/* Cap */}
+            <div style={{
+              position: "absolute", top: -8, left: "50%", transform: "translateX(-50%)",
+              width: 14, height: 12,
+              background: `linear-gradient(165deg, ${t} 0%, ${b} 100%)`,
+              borderRadius: "3px 3px 0 0", filter: "brightness(1.08)",
+            }} />
+            {/* Highlight */}
+            <div style={{
+              position: "absolute", inset: 0,
+              background: "linear-gradient(135deg, rgba(255,255,255,0.35) 0%, transparent 55%)",
+              borderRadius: "inherit",
+            }} />
+          </div>
+        )}
+      </div>
+
+      {/* Category label */}
+      <div style={{ fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "#C8A86A" }}>
+        {catLabel}
+      </div>
+
+      {/* Product name */}
+      <div style={{
+        fontSize: 11, fontWeight: 400, textAlign: "center",
+        lineHeight: 1.3, color: "#2A2420",
+        display: "-webkit-box",
+        WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
+        overflow: "hidden",
+      }}>
+        {item.product_name}
+      </div>
+
+      {/* Price */}
+      {item.price_estimate != null && (
+        <div style={{ fontSize: 12, fontWeight: 500, color: "#7A6E64", fontVariantNumeric: "tabular-nums" }}>
+          ${item.price_estimate.toFixed(2)}
+        </div>
+      )}
+
+      {/* Shop link */}
+      {shopUrl && (
+        <a href={shopUrl} target="_blank" rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 5,
+            fontSize: 10, fontWeight: 500, letterSpacing: "0.05em",
+            color: "#2A2420", background: "#F0EBE4",
+            border: "none", borderRadius: 100,
+            padding: "5px 10px", cursor: "pointer",
+            fontFamily: "inherit", textDecoration: "none",
+            marginTop: 2,
+          }}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <path d="M1.5 5h7M5 1.5l3.5 3.5L5 8.5"/>
+          </svg>
+          Shop
+        </a>
+      )}
     </div>
   );
 }
 
-// ─── Product Detail Drawer ─────────────────────────────────────────────────
-function ProductDrawer({ item, onClose }: { item: CartItem | null; onClose: () => void }) {
-  const open = item !== null;
-
-  const catLabel = (() => {
-    const lbl = item?.secondary_category_labels?.[0];
-    if (!lbl) return "Hair Care";
-    return lbl.charAt(0).toUpperCase() + lbl.slice(1).replace(/-/g, " ");
-  })();
-
+// ─── Slide-up panel ───────────────────────────────────────────────────────
+function ShelfPanel({
+  open,
+  title,
+  subtitle,
+  icon,
+  items,
+  purchasedIds,
+  onToggle,
+  onClose,
+}: {
+  open: boolean;
+  title: string;
+  subtitle: string;
+  icon: React.ReactNode;
+  items: CartItem[];
+  purchasedIds: Set<string>;
+  onToggle: (productId: string | null) => void;
+  onClose: () => void;
+}) {
   return (
     <>
       {/* Backdrop */}
@@ -192,395 +212,120 @@ function ProductDrawer({ item, onClose }: { item: CartItem | null; onClose: () =
         onClick={onClose}
         style={{
           position: "fixed", inset: 0,
-          background: open ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0)",
-          zIndex: 100,
+          background: open ? "rgba(42,36,32,0.55)" : "rgba(42,36,32,0)",
+          backdropFilter: open ? "blur(4px)" : "none",
+          zIndex: 200,
           pointerEvents: open ? "all" : "none",
-          transition: "background 0.3s",
+          transition: "background 0.4s, backdrop-filter 0.4s",
         }}
         aria-hidden="true"
       />
-      {/* Sheet */}
+      {/* Panel */}
       <div
         role="dialog"
         aria-modal="true"
-        aria-label={item?.product_name ?? "Product detail"}
+        aria-label={title}
         style={{
-          position: "fixed", bottom: 0, left: 0, right: 0,
-          maxWidth: 520, margin: "0 auto",
-          background: "var(--bs-surface, #fff)",
-          borderRadius: "20px 20px 0 0",
-          padding: "0 24px 32px",
+          position: "fixed", left: 0, right: 0, bottom: 0,
+          maxHeight: "85vh",
+          background: "#F8F5F0",
+          borderRadius: "24px 24px 0 0",
+          display: "flex", flexDirection: "column",
           transform: open ? "translateY(0)" : "translateY(100%)",
-          transition: "transform 0.35s cubic-bezier(0.32,0.72,0,1)",
-          zIndex: 101,
-          boxShadow: "0 -8px 40px rgba(0,0,0,0.15)",
+          transition: "transform 0.45s cubic-bezier(0.32,0.72,0,1)",
+          zIndex: 201,
+          boxShadow: "0 -12px 60px rgba(42,36,32,0.2)",
+          maxWidth: 640, margin: "0 auto",
+          overflow: "hidden",
         }}
-        onKeyDown={e => { if (e.key === "Escape") onClose(); }}
+        onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
         tabIndex={-1}
       >
         {/* Handle */}
         <div style={{
-          width: 36, height: 4,
-          background: "rgba(100,90,80,0.3)",
-          borderRadius: 2,
-          margin: "14px auto 20px",
+          width: 36, height: 4, background: "rgba(180,168,152,0.5)",
+          borderRadius: 2, margin: "14px auto 0", flexShrink: 0,
         }} />
-
-        {item && (
-          <div style={{ display: "flex", gap: 18, alignItems: "flex-start" }}>
-            {/* Product image / fallback */}
-            <div style={{
-              width: 80, height: 100, flexShrink: 0,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(0,0,0,0.04)", borderRadius: 10, overflow: "hidden",
-            }}>
-              {item.image_url
-                ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={item.image_url} alt={item.product_name} style={{ maxWidth: 80, maxHeight: 100, objectFit: "contain" }} />
-                : <BottleShape item={item} />
-              }
-            </div>
-
-            {/* Info */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#7E9B8A", marginBottom: 4 }}>
-                {catLabel}
-              </div>
-              <div style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 22, fontWeight: 400, lineHeight: 1.2, marginBottom: 4 }}>
-                {item.product_name}
-              </div>
-              {/* brand_name not on CartItem; skip */}
-              {item.price_estimate != null && (
-                <div style={{ fontSize: 20, fontWeight: 500, marginBottom: 16 }}>
-                  ${item.price_estimate.toFixed(2)}
-                </div>
-              )}
-              {(item.affiliate_url ?? item.seller_url) && (
-                <a
-                  href={item.affiliate_url ?? item.seller_url ?? "#"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    display: "inline-flex", alignItems: "center", gap: 8,
-                    background: "#2C2825", color: "#F7F4F0",
-                    border: "none", borderRadius: 100,
-                    padding: "12px 22px",
-                    fontSize: 13, fontWeight: 500,
-                    textDecoration: "none",
-                    cursor: "pointer",
-                    letterSpacing: "0.03em",
-                    fontFamily: "'DM Sans', system-ui, sans-serif",
-                  }}
-                >
-                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M2 7h10M7 2l5 5-5 5"/>
-                  </svg>
-                  Shop on Amazon
-                </a>
-              )}
-            </div>
+        {/* Header */}
+        <div style={{
+          padding: "16px 24px 12px",
+          borderBottom: "1px solid rgba(220,210,195,0.6)",
+          flexShrink: 0,
+        }}>
+          <div style={{
+            fontFamily: "'Cormorant Garamond', Georgia, serif",
+            fontSize: 24, fontWeight: 400, fontStyle: "italic",
+            color: "#2A2420",
+            display: "flex", alignItems: "center", gap: 10,
+          }}>
+            {icon}
+            {title}
           </div>
-        )}
+          <div style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "#B4A898", marginTop: 2 }}>
+            {subtitle}
+          </div>
+        </div>
+        {/* Scroll content */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "20px 24px 32px", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"] }}>
+          {items.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "48px 20px", color: "#B4A898" }}>
+              <p style={{ fontSize: 14, lineHeight: 1.6 }}>
+                Your {title.toLowerCase()} products<br />will appear here
+              </p>
+            </div>
+          ) : (
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+              gap: 14,
+            }}>
+              {items.map((item) => (
+                <ProductCard
+                  key={item.product_id ?? item.product_name}
+                  item={item}
+                  checked={item.product_id != null && purchasedIds.has(item.product_id)}
+                  onToggle={() => onToggle(item.product_id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </>
   );
 }
 
-// ─── Marble Niche (shower) ────────────────────────────────────────────────
-function ShowerNiche({ items, onProductClick, purchasedIds }: {
-  items: CartItem[];
-  onProductClick: (item: CartItem) => void;
-  purchasedIds: Set<string>;
-}) {
-  const row1 = items.slice(0, 2);
-  const row2 = items.slice(2, 4);
-
+// ─── Hotspot pulse ring ───────────────────────────────────────────────────
+function HotspotRing({ label }: { label: string }) {
   return (
-    <div style={{
-      position: "absolute", left: "50%", top: "16%",
-      transform: "translateX(-50%)",
-      width: "62%", height: "66%",
-      background: "linear-gradient(180deg, #F2EDE6 0%, #EDE5DC 100%)",
-      borderRadius: "4px 4px 2px 2px",
-      boxShadow: [
-        "inset 0 1px 0 rgba(255,255,255,0.8)",
-        "inset 2px 0 6px rgba(0,0,0,0.06)",
-        "inset -2px 0 6px rgba(0,0,0,0.06)",
-        "inset 0 -3px 8px rgba(0,0,0,0.08)",
-        "0 2px 16px rgba(0,0,0,0.12)",
-      ].join(","),
-      overflow: "visible",
-    }}>
-      {/* Marble vein texture overlay */}
+    <div style={{ position: "relative", display: "inline-flex", flexDirection: "column", alignItems: "center" }}>
       <div style={{
-        position: "absolute", inset: 0, overflow: "hidden", borderRadius: "inherit",
-        background: [
-          "repeating-linear-gradient(170deg, transparent 0, transparent 20px, rgba(180,160,135,0.1) 20px, rgba(180,160,135,0.1) 21px)",
-          "repeating-linear-gradient(80deg, transparent 0, transparent 35px, rgba(160,140,120,0.08) 35px, rgba(160,140,120,0.08) 36px)",
-        ].join(","),
-        pointerEvents: "none",
+        width: 36, height: 36, borderRadius: "50%",
+        background: "rgba(200,168,106,0.2)",
+        border: "1.5px solid #C8A86A",
+        animation: "bs-ring-pulse 2.4s ease-in-out infinite",
       }} />
-      {/* Niche outer frame */}
       <div style={{
-        position: "absolute", inset: -4,
-        border: "4px solid",
-        borderColor: "#D8D0C4 #BFB5A6 #BFB5A6 #D8D0C4",
-        borderRadius: 5, pointerEvents: "none",
-      }} />
-
-      {/* Top shelf bar */}
-      <div style={{ position: "absolute", top: "35%", left: 0, right: 0, height: 3,
-        background: "linear-gradient(90deg, rgba(185,170,148,0.6), rgba(220,205,180,1) 50%, rgba(185,170,148,0.6))",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.12), 0 1px 0 rgba(255,255,255,0.4)",
-      }} />
-      {/* Bottom shelf bar */}
-      <div style={{ position: "absolute", top: "68%", left: 0, right: 0, height: 3,
-        background: "linear-gradient(90deg, rgba(185,170,148,0.6), rgba(220,205,180,1) 50%, rgba(185,170,148,0.6))",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.12), 0 1px 0 rgba(255,255,255,0.4)",
-      }} />
-
-      {/* Products */}
-      {row1.length > 0 && (
-        <div style={{ position: "absolute", top: "35%", left: 0, right: 0, transform: "translateY(-100%)" }}>
-          <ShelfRow items={row1} onClick={onProductClick} purchasedIds={purchasedIds} />
-        </div>
-      )}
-      {row2.length > 0 && (
-        <div style={{ position: "absolute", top: "68%", left: 0, right: 0, transform: "translateY(-100%)" }}>
-          <ShelfRow items={row2} onClick={onProductClick} purchasedIds={purchasedIds} />
-        </div>
-      )}
-
-      {/* Empty state */}
-      {items.length === 0 && (
-        <div style={{
-          position: "absolute", inset: 0,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          pointerEvents: "none",
-        }}>
-          <p style={{ fontSize: 11, color: "#B0A89E", textAlign: "center", maxWidth: 100, lineHeight: 1.4 }}>
-            Your in-shower products will appear here
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Vanity Unit (out-of-shower) ───────────────────────────────────────────
-function VanityUnit({ items, onProductClick, purchasedIds }: {
-  items: CartItem[];
-  onProductClick: (item: CartItem) => void;
-  purchasedIds: Set<string>;
-}) {
-  return (
-    <div style={{
-      position: "absolute", left: "10%", right: "10%", bottom: 0, height: "72%",
-      background: "linear-gradient(180deg, #F5F0E8 0%, #EEE7DC 100%)",
-      borderRadius: "8px 8px 0 0",
-      boxShadow: "0 -2px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)",
-    }}>
-      {/* Counter edge */}
-      <div style={{
-        position: "absolute", top: 0, left: -4, right: -4, height: 10,
-        background: "linear-gradient(90deg, #E8E0D2, #EDE5D8, #E8E0D2)",
-        borderRadius: "3px 3px 0 0",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-      }} />
-      {/* Mirror */}
-      <div style={{
-        position: "absolute", top: "-53%", left: "15%", right: "15%", height: "50%",
-        background: "linear-gradient(135deg, rgba(230,235,240,0.5) 0%, rgba(210,218,225,0.3) 50%, rgba(225,230,235,0.4) 100%)",
-        border: "2px solid rgba(200,185,165,0.5)",
-        borderRadius: 2,
-        boxShadow: "0 4px 20px rgba(0,0,0,0.08), inset 0 0 40px rgba(255,255,255,0.1)",
-        overflow: "hidden",
+        fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase",
+        color: "#C8A86A", whiteSpace: "nowrap", fontWeight: 500,
+        marginTop: 6,
+        textShadow: "0 1px 4px rgba(255,255,255,0.8)",
       }}>
-        {/* Mirror gold outer frame */}
-        <div style={{
-          position: "absolute", inset: -4,
-          border: "1px solid rgba(200,169,110,0.4)",
-          borderRadius: 3, pointerEvents: "none",
-        }} />
-        {/* Mirror highlight */}
-        <div style={{
-          position: "absolute", top: "8%", left: "6%",
-          width: "25%", height: "70%",
-          background: "linear-gradient(135deg, rgba(255,255,255,0.3), transparent)",
-          borderRadius: 1,
-        }} />
-      </div>
-      {/* Gold accent line */}
-      <div style={{
-        position: "absolute", top: 10, left: 16, right: 16, height: 1,
-        background: "linear-gradient(90deg, transparent, rgba(200,169,110,0.5), transparent)",
-        pointerEvents: "none",
-      }} />
-      {/* Shelf bar */}
-      <div style={{
-        position: "absolute", top: "20%", left: 0, right: 0, height: 3,
-        background: "linear-gradient(90deg, rgba(185,170,148,0.6), rgba(220,205,180,1) 50%, rgba(185,170,148,0.6))",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.12), 0 1px 0 rgba(255,255,255,0.4)",
-      }} />
-
-      {/* Products */}
-      {items.length > 0 && (
-        <div style={{ position: "absolute", top: "20%", left: 0, right: 0, transform: "translateY(-100%)",
-          paddingLeft: "12%", paddingRight: "12%" }}>
-          <ShelfRow items={items} onClick={onProductClick} purchasedIds={purchasedIds} />
-        </div>
-      )}
-
-      {/* Empty state */}
-      {items.length === 0 && (
-        <div style={{
-          position: "absolute", top: "15%", left: 0, right: 0, height: "25%",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          pointerEvents: "none",
-        }}>
-          <p style={{ fontSize: 11, color: "#B0A89E", textAlign: "center", maxWidth: 110, lineHeight: 1.4 }}>
-            Your styling products will appear here
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Shelf Zone scene wrapper ──────────────────────────────────────────────
-function ZoneScene({ zone, children }: { zone: "shower" | "vanity"; children: React.ReactNode }) {
-  const isShower = zone === "shower";
-  const bg = isShower
-    ? [
-        "linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%)",
-        "repeating-linear-gradient(0deg, rgba(180,160,140,0.25) 0, rgba(180,160,140,0.25) 1px, transparent 1px, transparent 60px)",
-        "repeating-linear-gradient(90deg, rgba(180,160,140,0.25) 0, rgba(180,160,140,0.25) 1px, transparent 1px, transparent 80px)",
-        "linear-gradient(180deg, #E8E2DA 0%, #DDD5CA 40%, #D5CCC0 100%)",
-      ].join(",")
-    : [
-        "repeating-linear-gradient(0deg, rgba(200,185,165,0.15) 0, rgba(200,185,165,0.15) 1px, transparent 1px, transparent 50px)",
-        "repeating-linear-gradient(90deg, rgba(200,185,165,0.15) 0, rgba(200,185,165,0.15) 1px, transparent 1px, transparent 60px)",
-        "linear-gradient(180deg, #EDE5DA 0%, #E5DBCE 50%, #DDD0C2 100%)",
-      ].join(",");
-
-  return (
-    <div style={{
-      position: "relative", width: "100%", aspectRatio: "3/4",
-      overflow: "hidden", background: bg,
-    }}>
-      {isShower && (
-        /* Steam particles — pure CSS animation via inline keyframes in global style */
-        <div aria-hidden="true" style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
-          {[0, 2.5, 5].map((delay, i) => (
-            <div key={i} style={{
-              position: "absolute",
-              width: 80, height: 80,
-              borderRadius: "50%",
-              background: "rgba(200,215,225,0.18)",
-              filter: "blur(20px)",
-              left: `${[20, 55, 35][i]}%`,
-              top: `${[60, 70, 50][i]}%`,
-              animation: `bs-steam 8s ease-in-out infinite`,
-              animationDelay: `${delay}s`,
-            }} />
-          ))}
-        </div>
-      )}
-      {children}
-    </div>
-  );
-}
-
-// ─── Summary bar (bottom) ─────────────────────────────────────────────────
-function SummaryBar({
-  items,
-  cartId,
-}: {
-  items: CartItem[];
-  cartId: string;
-}) {
-  const [shareState, setShareState] = useState<"idle" | "copied">("idle");
-  const purchasable = items.filter((i) => i.product_type !== "tutorial");
-  const purchased = purchasable.filter((i) => i.status === "purchased");
-  const total = purchasable.reduce((s, i) => s + (i.price_estimate ?? 0) * i.quantity, 0);
-  const hasPrice = purchasable.some((i) => i.price_estimate != null);
-
-  function handleGetEverything() {
-    const remaining = purchasable.filter((i) => i.status !== "purchased");
-    for (const item of remaining) {
-      window.open(item.affiliate_url ?? item.seller_url, "_blank", "noopener,noreferrer");
-    }
-  }
-
-  async function handleShare() {
-    const url = window.location.origin + "/cart/" + cartId;
-    try { await navigator.clipboard.writeText(url); } catch { /* denied */ }
-    setShareState("copied");
-    setTimeout(() => setShareState("idle"), 2200);
-  }
-
-  if (purchasable.length === 0) return null;
-
-  return (
-    <div style={{
-      marginTop: 24,
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      flexWrap: "wrap", gap: 12,
-      padding: "16px 20px",
-      background: "rgba(0,0,0,0.03)",
-      borderRadius: 14,
-    }}>
-      <div>
-        {hasPrice && (
-          <div style={{ fontSize: 20, fontWeight: 500 }}>
-            ${total.toFixed(2)}
-          </div>
-        )}
-        <div style={{ fontSize: 12, color: "#7A6E66" }}>
-          {purchased.length} of {purchasable.length} products checked off
-        </div>
-      </div>
-      <div style={{ display: "flex", gap: 10 }}>
-        <button
-          type="button"
-          onClick={handleShare}
-          style={{
-            padding: "10px 18px", borderRadius: 100,
-            border: "1px solid rgba(0,0,0,0.12)",
-            background: "none", cursor: "pointer",
-            fontSize: 13, fontWeight: 500, fontFamily: "inherit",
-            color: "inherit",
-          }}
-        >
-          {shareState === "copied" ? "Copied!" : "Share shelf"}
-        </button>
-        <button
-          type="button"
-          onClick={handleGetEverything}
-          style={{
-            padding: "10px 18px", borderRadius: 100,
-            border: "none",
-            background: "#2C2825", color: "#F7F4F0",
-            cursor: "pointer", fontSize: 13, fontWeight: 500, fontFamily: "inherit",
-          }}
-        >
-          Shop all
-        </button>
+        {label}
       </div>
     </div>
   );
 }
 
-// ─── Global keyframes (injected once) ─────────────────────────────────────
-const GLOBAL_STYLES = `
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap');
-@keyframes bs-steam {
-  0%   { transform: translateY(0) scale(1);     opacity: 0; }
-  20%  { opacity: 1; }
-  80%  { opacity: 0.7; }
-  100% { transform: translateY(-60px) scale(1.4); opacity: 0; }
+// ─── Global styles (keyframes etc.) ──────────────────────────────────────
+const GLOBAL_CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
+@keyframes bs-ring-pulse {
+  0%,100% { transform: scale(1);   opacity: 0.9; }
+  50%      { transform: scale(1.2); opacity: 0.5; }
 }
 @media (prefers-reduced-motion: reduce) {
-  [style*="bs-steam"] { animation: none !important; opacity: 0.3; }
+  [style*="bs-ring-pulse"] { animation: none !important; }
 }
 `;
 
@@ -592,21 +337,10 @@ export default function BathroomShelf({
   cartId: string;
   items: CartItem[];
 }) {
-  const [items, setItems] = useState(initialItems);
-  const [activeProduct, setActiveProduct] = useState<CartItem | null>(null);
-
-  function toggleItem(productId: string | null) {
-    if (!productId) return;
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.product_id !== productId) return item;
-        return { ...item, status: item.status === "purchased" ? "pending" : "purchased" };
-      })
-    );
-  }
-
-  const inItems  = items.filter((i) => getShelfZone(i) === "in"  && i.product_type !== "tutorial");
-  const outItems = items.filter((i) => getShelfZone(i) === "out" && i.product_type !== "tutorial");
+  const [items, setItems]           = useState(initialItems);
+  const [openPanel, setOpenPanel]   = useState<"shower" | "vanity" | null>(null);
+  const [showerHover, setShowerHover] = useState(false);
+  const [vanityHover, setVanityHover] = useState(false);
 
   const purchasedIds = new Set<string>(
     items
@@ -614,92 +348,365 @@ export default function BathroomShelf({
       .map((i) => i.product_id as string)
   );
 
-  function handleProductClick(item: CartItem) {
-    setActiveProduct(item);
+  function toggleItem(productId: string | null) {
+    if (!productId) return;
+    setItems((prev) =>
+      prev.map((item) =>
+        item.product_id === productId
+          ? { ...item, status: item.status === "purchased" ? "pending" : "purchased" }
+          : item
+      )
+    );
   }
 
-  function handleDrawerClose() {
-    setActiveProduct(null);
+  async function handleShare() {
+    const url = `${window.location.origin}/cart/${cartId}`;
+    try { await navigator.clipboard.writeText(url); } catch {}
   }
+
+  function handleShopAll() {
+    const remaining = items.filter(
+      (i) => i.product_type !== "tutorial" && i.product_id != null && !purchasedIds.has(i.product_id as string)
+    );
+    for (const item of remaining) {
+      const url = item.affiliate_url ?? item.seller_url;
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }
+
+  const showerItems = items.filter((i) => getShelfZone(i) === "shower" && i.product_type !== "tutorial");
+  const vanityItems = items.filter((i) => getShelfZone(i) === "vanity" && i.product_type !== "tutorial");
+  const purchasable = items.filter((i) => i.product_type !== "tutorial");
+  const total = purchasable.reduce((s, i) => s + (i.price_estimate ?? 0) * (i.quantity ?? 1), 0);
+  const hasPrice = purchasable.some((i) => i.price_estimate != null);
 
   return (
     <>
-      {/* Inject global keyframes once */}
-      <style dangerouslySetInnerHTML={{ __html: GLOBAL_STYLES }} />
+      <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
 
-      {/* Room scene */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-        gap: 20,
-      }}>
-        {/* ── Shower zone ── */}
-        <div style={{
-          borderRadius: 20, overflow: "hidden",
-          background: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-        }}>
-          <ZoneScene zone="shower">
-            <ShowerNiche
-              items={inItems}
-              onProductClick={handleProductClick}
-              purchasedIds={purchasedIds}
-            />
-          </ZoneScene>
-          <div style={{
-            padding: "16px 20px 14px",
-            borderTop: "1px solid rgba(0,0,0,0.06)",
-            display: "flex", alignItems: "baseline", gap: 10,
-          }}>
-            <h2 style={{
-              fontFamily: "'Cormorant Garamond', Georgia, serif",
-              fontSize: 20, fontWeight: 400, fontStyle: "italic",
-            }}>
-              in the shower
-            </h2>
-            <span style={{ fontSize: 11, color: "#B0A89E", letterSpacing: "0.06em" }}>
-              shampoo · conditioner · treatments
-            </span>
-          </div>
-        </div>
+      {/* ═══ ROOM SCENE ═══ */}
+      <div style={{ position: "relative", width: "100%", maxWidth: 900, margin: "0 auto", userSelect: "none" }}>
+        <svg
+          viewBox="0 0 900 560"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{ display: "block", width: "100%", height: "auto" }}
+          aria-hidden="true"
+        >
+          <defs>
+            <pattern id="bs-marble-floor" patternUnits="userSpaceOnUse" width="120" height="120" patternTransform="skewX(-8)">
+              <rect width="120" height="120" fill="#F0EBE2"/>
+              <path d="M0 40 Q30 35 60 50 Q90 65 120 55" stroke="rgba(190,175,155,0.4)" strokeWidth="0.8" fill="none"/>
+              <path d="M0 80 Q40 72 80 85 Q100 90 120 80" stroke="rgba(170,155,135,0.3)" strokeWidth="0.5" fill="none"/>
+              <path d="M20 0 Q25 40 15 80 Q12 100 20 120" stroke="rgba(185,170,148,0.25)" strokeWidth="0.6" fill="none"/>
+              <rect x="0" y="0" width="120" height="120" fill="none" stroke="rgba(220,210,195,0.6)" strokeWidth="0.5"/>
+            </pattern>
+            <pattern id="bs-marble-wall" patternUnits="userSpaceOnUse" width="200" height="160">
+              <rect width="200" height="160" fill="#F5F1EC"/>
+              <path d="M0 50 Q50 42 100 60 Q150 78 200 65" stroke="rgba(185,165,140,0.4)" strokeWidth="1" fill="none"/>
+              <path d="M0 110 Q60 100 120 115 Q160 125 200 110" stroke="rgba(175,155,130,0.3)" strokeWidth="0.7" fill="none"/>
+              <path d="M30 0 Q35 60 25 120 Q20 145 30 160" stroke="rgba(190,170,145,0.2)" strokeWidth="0.8" fill="none"/>
+              <line x1="0" y1="80" x2="200" y2="80" stroke="rgba(210,200,185,0.5)" strokeWidth="0.5"/>
+              <line x1="100" y1="0" x2="100" y2="160" stroke="rgba(210,200,185,0.4)" strokeWidth="0.5"/>
+            </pattern>
+            <radialGradient id="bs-floor-light" cx="50%" cy="30%" r="70%">
+              <stop offset="0%" stopColor="rgba(255,252,245,0.5)"/>
+              <stop offset="100%" stopColor="rgba(220,210,195,0)"/>
+            </radialGradient>
+            <radialGradient id="bs-chandelier-glow" cx="50%" cy="0%" r="60%">
+              <stop offset="0%" stopColor="rgba(255,248,225,0.6)"/>
+              <stop offset="100%" stopColor="rgba(255,248,225,0)"/>
+            </radialGradient>
+            <linearGradient id="bs-brass-h" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stopColor="#8A6830"/>
+              <stop offset="30%"  stopColor="#C8A86A"/>
+              <stop offset="60%"  stopColor="#E4C98A"/>
+              <stop offset="100%" stopColor="#A07840"/>
+            </linearGradient>
+            <linearGradient id="bs-brass-v" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stopColor="#E4C98A"/>
+              <stop offset="50%"  stopColor="#C8A86A"/>
+              <stop offset="100%" stopColor="#8A6830"/>
+            </linearGradient>
+            <linearGradient id="bs-tub" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stopColor="#FFFFFF"/>
+              <stop offset="60%"  stopColor="#F0EDE8"/>
+              <stop offset="100%" stopColor="#DDD8D0"/>
+            </linearGradient>
+            <linearGradient id="bs-mirror" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"  stopColor="rgba(220,230,238,0.5)"/>
+              <stop offset="40%" stopColor="rgba(200,215,225,0.2)"/>
+              <stop offset="100%" stopColor="rgba(215,225,232,0.4)"/>
+            </linearGradient>
+            <linearGradient id="bs-glass" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stopColor="rgba(215,230,235,0.12)"/>
+              <stop offset="50%"  stopColor="rgba(230,240,245,0.22)"/>
+              <stop offset="100%" stopColor="rgba(205,220,228,0.1)"/>
+            </linearGradient>
+            <linearGradient id="bs-cabinet" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stopColor="#E8E2D8"/>
+              <stop offset="100%" stopColor="#D0C8BC"/>
+            </linearGradient>
+            <pattern id="bs-flute" patternUnits="userSpaceOnUse" width="10" height="1">
+              <rect width="10" height="1" fill="#D8D0C4"/>
+              <rect x="0" width="1" height="1" fill="rgba(255,255,255,0.3)"/>
+              <rect x="4" width="2" height="1" fill="rgba(0,0,0,0.06)"/>
+            </pattern>
+            <filter id="bs-shadow">
+              <feDropShadow dx="0" dy="6" stdDeviation="12" floodColor="rgba(42,36,32,0.18)"/>
+            </filter>
+            <filter id="bs-brass-glow">
+              <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor="rgba(228,201,138,0.5)"/>
+            </filter>
+          </defs>
 
-        {/* ── Vanity zone ── */}
-        <div style={{
-          borderRadius: 20, overflow: "hidden",
-          background: "white", boxShadow: "0 8px 32px rgba(0,0,0,0.1)",
-        }}>
-          <ZoneScene zone="vanity">
-            <VanityUnit
-              items={outItems}
-              onProductClick={handleProductClick}
-              purchasedIds={purchasedIds}
-            />
-          </ZoneScene>
-          <div style={{
-            padding: "16px 20px 14px",
-            borderTop: "1px solid rgba(0,0,0,0.06)",
-            display: "flex", alignItems: "baseline", gap: 10,
-          }}>
-            <h2 style={{
-              fontFamily: "'Cormorant Garamond', Georgia, serif",
-              fontSize: 20, fontWeight: 400, fontStyle: "italic",
-            }}>
-              outside the shower
-            </h2>
-            <span style={{ fontSize: 11, color: "#B0A89E", letterSpacing: "0.06em" }}>
-              leave-in · stylers · oils
-            </span>
-          </div>
+          {/* Ceiling */}
+          <rect x="0" y="0" width="900" height="140" fill="#FDFAF6"/>
+          <rect x="0" y="0" width="900" height="4" fill="rgba(255,250,235,0.8)"/>
+          {/* Back wall */}
+          <rect x="0" y="0" width="900" height="400" fill="url(#bs-marble-wall)"/>
+          <ellipse cx="450" cy="0" rx="350" ry="180" fill="url(#bs-chandelier-glow)"/>
+          {/* Floor */}
+          <polygon points="0,350 900,350 900,560 0,560" fill="url(#bs-marble-floor)"/>
+          <ellipse cx="450" cy="440" rx="420" ry="120" fill="url(#bs-floor-light)"/>
+          <line x1="0" y1="350" x2="900" y2="350" stroke="rgba(200,185,165,0.5)" strokeWidth="1"/>
+          <rect x="0" y="346" width="900" height="6" fill="url(#bs-brass-h)" opacity="0.6"/>
+
+          {/* Chandelier */}
+          <rect x="446" y="0" width="8" height="40" fill="url(#bs-brass-v)"/>
+          <ellipse cx="450" cy="42" rx="18" ry="8" fill="url(#bs-brass-h)" filter="url(#bs-brass-glow)"/>
+          <line x1="450" y1="42" x2="310" y2="75" stroke="url(#bs-brass-h)" strokeWidth="4"/>
+          <line x1="450" y1="42" x2="590" y2="75" stroke="url(#bs-brass-h)" strokeWidth="4"/>
+          <line x1="450" y1="42" x2="380" y2="88" stroke="url(#bs-brass-h)" strokeWidth="3"/>
+          <line x1="450" y1="42" x2="520" y2="88" stroke="url(#bs-brass-h)" strokeWidth="3"/>
+          <line x1="450" y1="42" x2="450" y2="82" stroke="url(#bs-brass-v)" strokeWidth="4"/>
+          <g filter="url(#bs-brass-glow)">
+            <circle cx="310" cy="82" r="10" fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
+            <circle cx="590" cy="82" r="10" fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
+            <circle cx="380" cy="96" r="8"  fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
+            <circle cx="520" cy="96" r="8"  fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
+            <circle cx="450" cy="90" r="9"  fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
+          </g>
+
+          {/* Artwork */}
+          <rect x="30" y="80" width="160" height="210" fill="#2A2420" rx="2"/>
+          <rect x="34" y="84" width="152" height="202" fill="#D4B8A8"/>
+          <path d="M34 84 Q80 110 110 90 Q140 70 186 100 L186 180 Q150 160 110 185 Q70 210 34 190 Z" fill="#C4A898" opacity="0.7"/>
+          <path d="M60 130 Q95 115 130 135 Q160 150 186 140 L186 240 Q155 225 120 245 Q80 260 34 240 L34 180 Z" fill="#B89888" opacity="0.5"/>
+          <ellipse cx="100" cy="150" rx="45" ry="60" fill="rgba(220,180,170,0.4)"/>
+          <path d="M85 110 Q95 105 110 115 Q118 130 112 155 Q105 175 95 180 Q85 175 80 155 Q75 135 85 110" fill="rgba(210,175,165,0.5)"/>
+          <ellipse cx="160" cy="100" rx="20" ry="15" fill="rgba(100,130,100,0.3)" transform="rotate(-20,160,100)"/>
+          <rect x="30" y="80" width="160" height="210" fill="none" stroke="url(#bs-brass-h)" strokeWidth="4" rx="2"/>
+
+          {/* Shower alcove */}
+          <rect x="240" y="100" width="300" height="260" fill="#EDE8DF"/>
+          <rect x="244" y="104" width="292" height="252" fill="url(#bs-marble-wall)" opacity="0.8"/>
+          {/* Shower glass doors */}
+          <rect x="244" y="104" width="96" height="250" fill="url(#bs-glass)"/>
+          <rect x="244" y="104" width="96" height="250" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2.5"/>
+          <rect x="246" y="104" width="4" height="250" fill="rgba(255,255,255,0.15)"/>
+          <rect x="342" y="104" width="96" height="250" fill="url(#bs-glass)"/>
+          <rect x="342" y="104" width="96" height="250" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2.5"/>
+          <rect x="344" y="104" width="4" height="250" fill="rgba(255,255,255,0.15)"/>
+          <rect x="440" y="104" width="96" height="250" fill="url(#bs-glass)"/>
+          <rect x="440" y="104" width="96" height="250" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2.5"/>
+          <rect x="442" y="104" width="4" height="250" fill="rgba(255,255,255,0.15)"/>
+          {/* Hover highlight on shower */}
+          <rect x="244" y="104" width="292" height="250"
+            fill={showerHover ? "rgba(200,168,106,0.07)" : "rgba(200,168,106,0)"}
+            style={{ transition: "fill 0.3s", pointerEvents: "none" }}
+          />
+          {/* Door handles */}
+          <rect x="332" y="210" width="12" height="40" rx="4" fill="url(#bs-brass-v)" filter="url(#bs-brass-glow)"/>
+          <rect x="430" y="210" width="12" height="40" rx="4" fill="url(#bs-brass-v)" filter="url(#bs-brass-glow)"/>
+          {/* Plants behind glass */}
+          <ellipse cx="300" cy="230" rx="28" ry="55" fill="rgba(85,110,80,0.18)" transform="rotate(5,300,230)"/>
+          <ellipse cx="320" cy="210" rx="18" ry="40" fill="rgba(80,100,75,0.14)" transform="rotate(-5,320,210)"/>
+          <ellipse cx="460" cy="225" rx="24" ry="50" fill="rgba(85,110,80,0.16)" transform="rotate(-8,460,225)"/>
+          {/* Niche shelf inside */}
+          <rect x="358" y="155" width="62" height="85" fill="#EAE4DC"/>
+          <rect x="358" y="155" width="62" height="85" fill="none" stroke="rgba(200,168,106,0.5)" strokeWidth="1.5"/>
+          <rect x="358" y="195" width="62" height="2" fill="url(#bs-brass-h)" opacity="0.8"/>
+          <rect x="358" y="225" width="62" height="2" fill="url(#bs-brass-h)" opacity="0.8"/>
+          {/* Rain shower head */}
+          <rect x="378" y="104" width="24" height="6" rx="2" fill="url(#bs-brass-h)"/>
+          <rect x="384" y="110" width="2" height="20" fill="url(#bs-brass-v)"/>
+          <ellipse cx="385" cy="134" rx="14" ry="4" fill="url(#bs-brass-h)" opacity="0.9"/>
+
+          {/* Bathtub */}
+          <ellipse cx="390" cy="425" rx="175" ry="20" fill="rgba(42,36,32,0.08)"/>
+          <ellipse cx="390" cy="390" rx="168" ry="52" fill="#D8D2C8"/>
+          <ellipse cx="390" cy="385" rx="165" ry="48" fill="url(#bs-tub)" filter="url(#bs-shadow)"/>
+          <ellipse cx="390" cy="385" rx="165" ry="48" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2"/>
+          <ellipse cx="225" cy="390" rx="22" ry="50" fill="url(#bs-tub)"/>
+          <ellipse cx="555" cy="390" rx="22" ry="50" fill="url(#bs-tub)"/>
+          <path d="M460 370 Q475 368 490 374 Q500 380 495 395 Q490 408 475 410 Q462 408 458 396 Q455 384 460 370" fill="#C0A898" opacity="0.8"/>
+          <rect x="550" y="345" width="10" height="52" rx="4" fill="#2A2420"/>
+          <rect x="545" y="345" width="20" height="6" rx="3" fill="#2A2420"/>
+          <path d="M560 348 Q570 348 572 360 Q574 372 565 378" stroke="#2A2420" strokeWidth="6" fill="none" strokeLinecap="round"/>
+
+          {/* Vanity */}
+          <rect x="618" y="280" width="282" height="18" rx="2" fill="url(#bs-marble-wall)"/>
+          <rect x="616" y="278" width="284" height="6" rx="1" fill="#E8E0D4"/>
+          <rect x="618" y="295" width="278" height="58" fill="url(#bs-cabinet)"/>
+          <rect x="618" y="295" width="278" height="58" fill="url(#bs-flute)"/>
+          {/* Hover highlight on cabinet */}
+          <rect x="616" y="278" width="284" height="80"
+            fill={vanityHover ? "rgba(200,168,106,0.07)" : "rgba(200,168,106,0)"}
+            style={{ transition: "fill 0.3s", pointerEvents: "none" }}
+          />
+          <rect x="618" y="350" width="282" height="4" rx="1" fill="url(#bs-brass-h)" opacity="0.6"/>
+          <rect x="630" y="354" width="8" height="22" rx="3" fill="url(#bs-brass-v)"/>
+          <rect x="882" y="354" width="8" height="22" rx="3" fill="url(#bs-brass-v)"/>
+          <line x1="760" y1="295" x2="760" y2="354" stroke="rgba(200,185,165,0.6)" strokeWidth="1"/>
+          <rect x="744" y="318" width="12" height="4" rx="2" fill="url(#bs-brass-h)"/>
+          <rect x="762" y="318" width="12" height="4" rx="2" fill="url(#bs-brass-h)"/>
+          <ellipse cx="720" cy="285" rx="52" ry="10" fill="url(#bs-marble-wall)"/>
+          <ellipse cx="720" cy="285" rx="50" ry="8" fill="#E8E0D4"/>
+          <rect x="716" y="262" width="8" height="24" rx="3" fill="url(#bs-brass-v)"/>
+          <rect x="710" y="262" width="20" height="4" rx="2" fill="url(#bs-brass-h)"/>
+          {/* Mirror */}
+          <rect x="626" y="80" width="260" height="195" fill="url(#bs-mirror)"/>
+          <rect x="626" y="80" width="260" height="195" fill="none" stroke="url(#bs-brass-h)" strokeWidth="4"/>
+          <path d="M636 85 L660 85 L648 220" stroke="rgba(255,255,255,0.25)" strokeWidth="2" fill="none"/>
+          {/* Accessories on counter */}
+          <rect x="840" y="260" width="16" height="22" rx="3" fill="#2A3832"/>
+          <rect x="843" y="254" width="10" height="8" rx="2" fill="#2A3832"/>
+          <rect x="844" y="253" width="8" height="3" rx="1" fill="#C8A86A"/>
+          <rect x="862" y="263" width="14" height="19" rx="3" fill="#2A3832" opacity="0.9"/>
+          <circle cx="885" cy="270" r="12" fill="#E8E0D4" stroke="#C8A86A" strokeWidth="2"/>
+          <rect x="834" y="276" width="60" height="6" rx="2" fill="url(#bs-brass-h)" opacity="0.7"/>
+          {/* Sconce */}
+          <rect x="746" y="62" width="4" height="20" fill="url(#bs-brass-v)"/>
+          <ellipse cx="748" cy="58" rx="8" ry="10" fill="rgba(255,250,225,0.6)" stroke="#C8A86A" strokeWidth="1"/>
+          <ellipse cx="748" cy="58" rx="6" ry="8" fill="rgba(255,252,235,0.9)" filter="url(#bs-brass-glow)"/>
+          {/* Plant */}
+          <path d="M590 390 Q600 410 580 420 Q570 425 560 420 Q545 410 555 390 Z" fill="#C8C0B0"/>
+          <line x1="572" y1="390" x2="572" y2="310" stroke="#6A7858" strokeWidth="3"/>
+          <ellipse cx="558" cy="320" rx="22" ry="10" fill="#7A9068" transform="rotate(-25,558,320)"/>
+          <ellipse cx="590" cy="335" rx="24" ry="11" fill="#6A8458" transform="rotate(20,590,335)"/>
+          <ellipse cx="555" cy="355" rx="20" ry="9" fill="#8A9C72" transform="rotate(-30,555,355)"/>
+          <ellipse cx="592" cy="368" rx="22" ry="10" fill="#7A8C60" transform="rotate(15,592,368)"/>
+        </svg>
+
+        {/* ═══ HOTSPOT BUTTONS ═══ */}
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
+          {/* Shower hotspot */}
+          <button
+            type="button"
+            aria-label="Open shower shelf"
+            onClick={() => setOpenPanel("shower")}
+            onMouseEnter={() => setShowerHover(true)}
+            onMouseLeave={() => setShowerHover(false)}
+            style={{
+              position: "absolute",
+              left: "27%", top: "22%", width: "20%", height: "46%",
+              pointerEvents: "all", cursor: "pointer",
+              background: "none", border: "none", padding: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <HotspotRing label="tap to open" />
+          </button>
+          {/* Vanity hotspot */}
+          <button
+            type="button"
+            aria-label="Open vanity cabinet"
+            onClick={() => setOpenPanel("vanity")}
+            onMouseEnter={() => setVanityHover(true)}
+            onMouseLeave={() => setVanityHover(false)}
+            style={{
+              position: "absolute",
+              right: "2%", top: "38%", width: "22%", height: "38%",
+              pointerEvents: "all", cursor: "pointer",
+              background: "none", border: "none", padding: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+          >
+            <HotspotRing label="tap to open" />
+          </button>
         </div>
       </div>
 
-      {/* Summary bar */}
-      <SummaryBar items={items} cartId={cartId} />
-
-      {/* Product detail drawer */}
-      <ProductDrawer
-        item={activeProduct}
-        onClose={handleDrawerClose}
+      {/* ═══ PANELS ═══ */}
+      <ShelfPanel
+        open={openPanel === "shower"}
+        title="In the shower"
+        subtitle="shampoo · conditioner · treatments"
+        icon={
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.3">
+            <path d="M4 16 Q4 8 10 6 Q16 4 16 10"/>
+            <line x1="4" y1="16" x2="16" y2="16"/>
+            <circle cx="10" cy="4" r="1.5"/>
+          </svg>
+        }
+        items={showerItems}
+        purchasedIds={purchasedIds}
+        onToggle={toggleItem}
+        onClose={() => setOpenPanel(null)}
       />
+      <ShelfPanel
+        open={openPanel === "vanity"}
+        title="At the vanity"
+        subtitle="leave-in · stylers · oils"
+        icon={
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.3">
+            <rect x="3" y="10" width="14" height="7" rx="1"/>
+            <rect x="6" y="3" width="8" height="7" rx="0.5"/>
+          </svg>
+        }
+        items={vanityItems}
+        purchasedIds={purchasedIds}
+        onToggle={toggleItem}
+        onClose={() => setOpenPanel(null)}
+      />
+
+      {/* ═══ FOOTER ═══ */}
+      {purchasable.length > 0 && (
+        <div style={{
+          marginTop: 20,
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          flexWrap: "wrap", gap: 12,
+          padding: "16px 20px",
+          background: "rgba(42,36,32,0.03)",
+          borderRadius: 14,
+        }}>
+          <div>
+            {hasPrice && (
+              <div style={{ fontSize: 20, fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>
+                ${total.toFixed(2)}
+              </div>
+            )}
+            <div style={{ fontSize: 12, color: "#7A6E64" }}>
+              {purchasedIds.size} of {purchasable.length} products checked off
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              type="button" onClick={handleShare}
+              style={{
+                padding: "10px 20px", borderRadius: 100,
+                border: "1.5px solid rgba(120,110,100,0.3)",
+                background: "none", cursor: "pointer",
+                fontSize: 13, fontWeight: 500, fontFamily: "inherit",
+                color: "inherit",
+              }}
+            >
+              Share shelf
+            </button>
+            <button
+              type="button" onClick={handleShopAll}
+              style={{
+                padding: "10px 20px", borderRadius: 100,
+                border: "none",
+                background: "#2A2420", color: "#F8F5F0",
+                cursor: "pointer", fontSize: 13, fontWeight: 500, fontFamily: "inherit",
+              }}
+            >
+              Shop all
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
