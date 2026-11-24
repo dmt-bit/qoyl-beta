@@ -515,9 +515,9 @@ export default function BathroomShelf({
             <filter id="bs-brass-glow">
               <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="rgba(228,201,138,0.6)"/>
             </filter>
-            {/* Clip path for shower alcove interior */}
+            {/* Clip path for shower glass interior */}
             <clipPath id="bs-shower-clip">
-              <rect x="244" y="104" width="292" height="250"/>
+              <rect x="244" y="110" width="292" height="232"/>
             </clipPath>
           </defs>
 
@@ -551,9 +551,11 @@ export default function BathroomShelf({
           <line x1="0" y1="500" x2="900" y2="500" stroke="rgba(205,195,178,0.4)" strokeWidth="0.8"/>
           {/* Floor light pool from chandelier */}
           <ellipse cx="450" cy="455" rx="380" ry="100" fill="url(#bs-floor-light)"/>
-          {/* Baseboard */}
-          <rect x="0" y="348" width="900" height="8" fill="#E0D8CE"/>
-          <rect x="0" y="354" width="900" height="3" fill="url(#bs-brass-h)" opacity="0.45"/>
+          {/* Baseboard — split either side of shower opening so it doesn't overdraw the glass */}
+          <rect x="0"   y="348" width="244" height="8" fill="#E0D8CE"/>
+          <rect x="536" y="348" width="364" height="8" fill="#E0D8CE"/>
+          <rect x="0"   y="354" width="244" height="3" fill="url(#bs-brass-h)" opacity="0.45"/>
+          <rect x="536" y="354" width="364" height="3" fill="url(#bs-brass-h)" opacity="0.45"/>
 
           {/* Chandelier */}
           <rect x="446" y="0" width="8" height="40" fill="url(#bs-brass-v)"/>
@@ -583,44 +585,45 @@ export default function BathroomShelf({
 
           {/* ── Shower alcove ── */}
           {/* Alcove recess shadow around opening */}
-          <rect x="238" y="98" width="306" height="268" fill="rgba(42,36,32,0.12)" rx="2"/>
-          <rect x="242" y="102" width="298" height="260" fill="#EDE8DF"/>
-          {/* Interior marble wall */}
-          <rect x="244" y="104" width="292" height="254" fill="url(#bs-marble-wall)" opacity="0.85"/>
-          {/* Steam / humidity haze inside shower */}
-          <rect x="244" y="104" width="292" height="254" fill="rgba(228,238,245,0.08)" clipPath="url(#bs-shower-clip)"/>
+          <rect x="238" y="98" width="306" height="258" fill="rgba(42,36,32,0.14)" rx="2"/>
+          <rect x="242" y="102" width="298" height="250" fill="#EDE8DF"/>
+          {/* Interior marble wall — ends at floor track y=342 */}
+          <rect x="244" y="104" width="292" height="238" fill="url(#bs-marble-wall)" opacity="0.85"/>
+          {/* Steam / humidity haze */}
+          <rect x="244" y="110" width="292" height="232" fill="rgba(228,238,245,0.08)"/>
 
           {/* ── Shower glass panels (3 panes) ── */}
+          {/* Glass height: from rail bottom (y=110) to floor track top (y=342) = 232px */}
           {/* Panel 1 */}
-          <rect x="244" y="104" width="96" height="254" fill="url(#bs-glass)"/>
-          <rect x="244" y="104" width="96" height="254" fill="url(#bs-glass-sheen)"/>
-          {/* Glass edge highlight (refraction line) */}
-          <line x1="338" y1="104" x2="338" y2="358" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5"/>
-          <rect x="244" y="104" width="96" height="254" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2.5"/>
+          <rect x="244" y="110" width="96" height="232" fill="url(#bs-glass)"/>
+          <rect x="244" y="110" width="96" height="232" fill="url(#bs-glass-sheen)"/>
+          {/* Glass edge refraction line */}
+          <line x1="339" y1="110" x2="339" y2="342" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+          <rect x="244" y="110" width="96" height="232" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2"/>
           {/* Panel 2 */}
-          <rect x="342" y="104" width="96" height="254" fill="url(#bs-glass)"/>
-          <rect x="342" y="104" width="96" height="254" fill="url(#bs-glass-sheen)"/>
-          <line x1="436" y1="104" x2="436" y2="358" stroke="rgba(255,255,255,0.55)" strokeWidth="1.5"/>
-          <rect x="342" y="104" width="96" height="254" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2.5"/>
+          <rect x="342" y="110" width="96" height="232" fill="url(#bs-glass)"/>
+          <rect x="342" y="110" width="96" height="232" fill="url(#bs-glass-sheen)"/>
+          <line x1="437" y1="110" x2="437" y2="342" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
+          <rect x="342" y="110" width="96" height="232" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2"/>
           {/* Panel 3 */}
-          <rect x="440" y="104" width="96" height="254" fill="url(#bs-glass)"/>
-          <rect x="440" y="104" width="96" height="254" fill="url(#bs-glass-sheen)"/>
-          <line x1="534" y1="104" x2="534" y2="358" stroke="rgba(255,255,255,0.45)" strokeWidth="1.2"/>
-          <rect x="440" y="104" width="96" height="254" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2.5"/>
-          {/* Top horizontal brass rail */}
-          <rect x="244" y="104" width="292" height="6" fill="url(#bs-brass-h)" opacity="0.9"/>
-          {/* Bottom floor track */}
-          <rect x="244" y="352" width="292" height="6" fill="url(#bs-brass-h)" opacity="0.8"/>
+          <rect x="440" y="110" width="96" height="232" fill="url(#bs-glass)"/>
+          <rect x="440" y="110" width="96" height="232" fill="url(#bs-glass-sheen)"/>
+          <line x1="535" y1="110" x2="535" y2="342" stroke="rgba(255,255,255,0.5)" strokeWidth="1.2"/>
+          <rect x="440" y="110" width="96" height="232" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2"/>
+          {/* Top horizontal brass rail — sits above glass */}
+          <rect x="242" y="104" width="296" height="8" fill="url(#bs-brass-h)" opacity="0.95" rx="1"/>
+          {/* Bottom floor track — sits below glass, above floor */}
+          <rect x="242" y="342" width="296" height="8" fill="url(#bs-brass-h)" opacity="0.9" rx="1"/>
 
           {/* Hover highlight on shower */}
-          <rect x="244" y="104" width="292" height="254"
+          <rect x="244" y="110" width="292" height="232"
             fill={showerHover ? "rgba(200,168,106,0.09)" : "rgba(200,168,106,0)"}
             style={{ transition: "fill 0.3s", pointerEvents: "none" }}
           />
 
           {/* ── Door handles (recessed pull bars) ── */}
-          <rect x="334" y="205" width="10" height="50" rx="5" fill="url(#bs-brass-v)" filter="url(#bs-brass-glow)"/>
-          <rect x="432" y="205" width="10" height="50" rx="5" fill="url(#bs-brass-v)" filter="url(#bs-brass-glow)"/>
+          <rect x="334" y="210" width="9" height="44" rx="4" fill="url(#bs-brass-v)" filter="url(#bs-brass-glow)"/>
+          <rect x="432" y="210" width="9" height="44" rx="4" fill="url(#bs-brass-v)" filter="url(#bs-brass-glow)"/>
 
           {/* ── Plants inside shower (visible through glass) ── */}
           <g opacity="0.5" clipPath="url(#bs-shower-clip)">
@@ -629,8 +632,8 @@ export default function BathroomShelf({
             <ellipse cx="460" cy="228" rx="22" ry="48" fill="#648050" transform="rotate(-10,460,228)"/>
             <ellipse cx="478" cy="248" rx="14" ry="30" fill="#587248" transform="rotate(5,478,248)"/>
             {/* Plant stems */}
-            <line x1="302" y1="358" x2="302" y2="260" stroke="#4A6038" strokeWidth="2.5"/>
-            <line x1="460" y1="358" x2="460" y2="265" stroke="#4A6038" strokeWidth="2"/>
+            <line x1="302" y1="342" x2="302" y2="255" stroke="#4A6038" strokeWidth="2.5"/>
+            <line x1="460" y1="342" x2="460" y2="262" stroke="#4A6038" strokeWidth="2"/>
           </g>
 
           {/* ── Marble niche shelf inside ── */}
@@ -649,13 +652,13 @@ export default function BathroomShelf({
           <rect x="380" y="204" width="10" height="24" rx="2" fill="rgba(180,196,205,0.7)"/>
           <rect x="396" y="208" width="8" height="20" rx="2" fill="rgba(195,180,205,0.7)"/>
 
-          {/* ── Rain shower head ── */}
-          <rect x="375" y="104" width="30" height="8" rx="3" fill="url(#bs-brass-h)" filter="url(#bs-soft-shadow)"/>
-          <rect x="388" y="112" width="4" height="22" rx="2" fill="url(#bs-brass-v)"/>
-          <ellipse cx="390" cy="138" rx="16" ry="5" fill="url(#bs-brass-h)" opacity="0.95" filter="url(#bs-brass-glow)"/>
+          {/* ── Rain shower head (ceiling-mount, sits at top rail level) ── */}
+          <rect x="375" y="112" width="30" height="8" rx="3" fill="url(#bs-brass-h)" filter="url(#bs-soft-shadow)"/>
+          <rect x="388" y="120" width="4" height="20" rx="2" fill="url(#bs-brass-v)"/>
+          <ellipse cx="390" cy="143" rx="16" ry="5" fill="url(#bs-brass-h)" opacity="0.95" filter="url(#bs-brass-glow)"/>
           {/* Rain drops */}
           {[0,1,2,3,4,5,6,7].map(i => (
-            <line key={i} x1={380+i*4} y1="143" x2={380+i*4} y2="150"
+            <line key={i} x1={380+i*4} y1="148" x2={380+i*4} y2="156"
               stroke="rgba(195,218,228,0.4)" strokeWidth="0.8"/>
           ))}
 
@@ -764,7 +767,7 @@ export default function BathroomShelf({
             onMouseLeave={() => setShowerHover(false)}
             style={{
               position: "absolute",
-              left: "27%", top: "22%", width: "20%", height: "46%",
+              left: "27%", top: "20%", width: "32%", height: "41%",
               pointerEvents: "all", cursor: "pointer",
               background: "none", border: "none", padding: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
