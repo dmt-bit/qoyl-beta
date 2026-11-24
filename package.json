@@ -12,13 +12,15 @@
     "@fal-ai/client": "^1.11.0",
     "@stripe/stripe-js": "^9.9.0",
     "@supabase/supabase-js": "^2.108.2",
+    "@types/three": "^0.187.0",
     "next": "14.2.35",
     "qrcode": "^1.5.4",
     "react": "^18",
     "react-dom": "^18",
     "react-markdown": "^10.1.0",
     "resend": "^6.17.2",
-    "stripe": "^22.3.0"
+    "stripe": "^22.3.0",
+    "three": "^0.187.0"
   },
   "devDependencies": {
     "@types/node": "^20",
