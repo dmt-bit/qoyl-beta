@@ -227,7 +227,7 @@ export default function StorePage() {
         {!loading && products.length === 0 && (
           <div className="py-20 text-center">
             <p className="font-sans text-sm text-dark/40">
-              {search || category ? "No products match your filters." : "No products with images yet."}
+              {search || category ? "No products match your filters." : "No products yet."}
             </p>
             {(search || category) && (
               <button

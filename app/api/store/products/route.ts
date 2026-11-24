@@ -63,7 +63,6 @@ export async function GET(request: Request) {
   let query = admin
     .from("catalog_products")
     .select(selectFields)
-    .not("image_url", "is", null) // only show products with images in the store
     .range(offset, offset + limit - 1);
 
   if (hasAverageScore) {
