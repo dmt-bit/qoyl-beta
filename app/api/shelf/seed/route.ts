@@ -95,7 +95,7 @@ export async function POST(request: Request) {
 
   // Fetch the top products per category in one query.
   // Order: products with average_score first (descending), then NULLs.
-  // Fetch up to 5 per category so we always get at least one per slot.
+  // Fetch enough to guarantee coverage across all 6 core categories.
   const selectFields = hasAverageScore
     ? "id, name, category_id, processed_image_url, image_url, price_usd, average_score, catalog_brands(name)"
     : "id, name, category_id, processed_image_url, image_url, price_usd, catalog_brands(name)";
@@ -104,7 +104,7 @@ export async function POST(request: Request) {
     .from("catalog_products")
     .select(selectFields)
     .in("category_id", categoryIds)
-    .limit(50);
+    .limit(300);
 
   if (hasAverageScore) {
     productQuery = productQuery.order("average_score", { ascending: false, nullsFirst: false });
@@ -126,25 +126,51 @@ export async function POST(request: Request) {
     return NextResponse.json({ cart_id: null, items: [], seeded: false });
   }
 
+  // Also fetch a fallback pool of any catalog products (not restricted to core
+  // categories) so slots that have no matching category can still be filled.
+  const fallbackSelectFields = hasAverageScore
+    ? "id, name, category_id, processed_image_url, image_url, price_usd, average_score, catalog_brands(name)"
+    : "id, name, category_id, processed_image_url, image_url, price_usd, catalog_brands(name)";
+
+  let fallbackQuery = admin
+    .from("catalog_products")
+    .select(fallbackSelectFields)
+    .limit(50);
+
+  if (hasAverageScore) {
+    fallbackQuery = fallbackQuery.order("average_score", { ascending: false, nullsFirst: false });
+  } else {
+    fallbackQuery = fallbackQuery.order("created_at", { ascending: false });
+  }
+
+  const { data: fallbackProducts } = await fallbackQuery;
+  const allProducts = (products as unknown as CatalogRow[]).concat(
+    ((fallbackProducts ?? []) as unknown as CatalogRow[]).filter(
+      (fp) => !(products as unknown as CatalogRow[]).some((p) => p.id === fp.id)
+    )
+  );
+
   // Pick the best product per category slug (in CORE_SLUGS order for consistent ordering)
   const usedProductIds = new Set<string>();
   const items: CartItem[] = [];
 
   for (const slugEntry of CORE_SLUGS) {
     const catId = catIdBySlug.get(slugEntry.slug);
-    if (!catId) {
-      console.log(`[shelf/seed] No category ID found for slug: ${slugEntry.slug}`);
-      continue;
-    }
 
-    // Find first product in this category that hasn't been used yet
-    const best = (products as unknown as CatalogRow[]).find(
+    // Find best product in this category, or fall back to any unused product
+    const best = allProducts.find(
       (p) => p.category_id === catId && !usedProductIds.has(p.id)
+    ) ?? allProducts.find(
+      (p) => !usedProductIds.has(p.id)
     );
 
     if (!best) {
-      console.log(`[shelf/seed] No product found for category: ${slugEntry.slug}`);
+      console.log(`[shelf/seed] No product available for slot: ${slugEntry.slug}`);
       continue;
+    }
+
+    if (!catId) {
+      console.log(`[shelf/seed] No category ID for slug ${slugEntry.slug} — using fallback product ${best.id}`);
     }
 
     usedProductIds.add(best.id);
@@ -173,7 +199,7 @@ export async function POST(request: Request) {
   console.log(`[shelf/seed] Built ${items.length} shelf items for user ${userId}`);
 
   if (items.length === 0) {
-    console.error("[shelf/seed] No items produced despite having catalog products — category ID mismatch?");
+    console.error("[shelf/seed] No items produced — catalog appears to be empty");
     return NextResponse.json({ cart_id: null, items: [], seeded: false });
   }
 
