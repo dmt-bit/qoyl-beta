@@ -258,7 +258,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       }
       function onUp(e:PointerEvent){
         if(!dragged){
-          const r=el.getBoundingClientRect();
+          const r=(el as HTMLDivElement).getBoundingClientRect();
           mp.x=((e.clientX-r.left)/r.width)*2-1; mp.y=-((e.clientY-r.top)/r.height)*2+1;
           ray.setFromCamera(mp,cam);
           const hits=ray.intersectObjects(hotspots.map(h=>h.mesh));
