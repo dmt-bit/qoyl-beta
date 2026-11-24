@@ -85,7 +85,7 @@ function ShelfItem({ item, onToggle }: { item: CartItem; onToggle: () => void })
 function BottleIcon({ score, purchased }: { score: number | null; purchased: boolean }) {
   const fill = purchased ? "#D4CFC8" : score != null && score >= 70 ? "#B8D4C0" : score != null && score >= 40 ? "#D4C8A8" : "#C4BEB4";
   return (
-    <svg width="32" height="58" viewBox="0 0 28 52" fill="none">
+    <svg width="52" height="90" viewBox="0 0 28 52" fill="none">
       <rect x="9" y="0" width="10" height="7" rx="2" fill="#1A1A1A" opacity={purchased ? 0.3 : 0.7} />
       <rect x="11" y="6" width="6" height="6" fill={fill} />
       <rect x="4" y="11" width="20" height="36" rx="3" fill={fill} />
@@ -101,7 +101,7 @@ function ToolIcon({ purchased }: { score: number | null; purchased: boolean }) {
   const fill = purchased ? "#D4CFC8" : "#1A1A1A";
   const opacity = purchased ? 0.3 : 0.6;
   return (
-    <svg width="32" height="58" viewBox="0 0 28 52" fill="none">
+    <svg width="52" height="90" viewBox="0 0 28 52" fill="none">
       <rect x="10" y="30" width="8" height="22" rx="4" fill={fill} opacity={opacity} />
       <ellipse cx="14" cy="20" rx="10" ry="12" fill={fill} opacity={opacity} />
       <rect x="8" y="8" width="2" height="8" rx="1" fill="white" opacity={purchased ? 0.1 : 0.3} />
@@ -115,7 +115,7 @@ function FakeHairIcon({ purchased }: { score: number | null; purchased: boolean 
   const fill = purchased ? "#D4CFC8" : "#1A1A1A";
   const opacity = purchased ? 0.3 : 0.75;
   return (
-    <svg width="32" height="58" viewBox="0 0 28 52" fill="none">
+    <svg width="52" height="90" viewBox="0 0 28 52" fill="none">
       <rect x="3" y="12" width="22" height="30" rx="2" fill={fill} opacity={opacity} />
       <rect x="1" y="8" width="26" height="8" rx="2" fill={fill} opacity={opacity * 1.1} />
       <rect x="12" y="8" width="4" height="34" fill="white" opacity={purchased ? 0.1 : 0.2} />
@@ -383,8 +383,8 @@ export default function ShowerShelfCart({
           flex-direction: row;
           align-items: flex-end;
           justify-content: center;
-          gap: 10px;
-          padding: 0 16px 6px;
+          gap: 16px;
+          padding: 0 20px 8px;
         }
 
         /* ── Product item ── */
@@ -393,8 +393,8 @@ export default function ShowerShelfCart({
           flex-direction: column;
           align-items: center;
           transition: opacity 0.2s;
-          min-width: 54px;
-          max-width: 70px;
+          min-width: 80px;
+          max-width: 110px;
         }
         .ssc-item-link {
           display: flex;
@@ -403,38 +403,38 @@ export default function ShowerShelfCart({
           text-decoration: none;
         }
         .ssc-product-img {
-          width: 44px;
-          height: 56px;
+          width: 72px;
+          height: 90px;
           object-fit: contain;
           display: block;
-          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.18));
+          filter: drop-shadow(0 3px 8px rgba(0,0,0,0.22));
         }
         .ssc-product-name {
-          margin-top: 4px;
-          font-size: 8px;
+          margin-top: 5px;
+          font-size: 10px;
           color: #2A2825;
           text-align: center;
           line-height: 1.3;
           word-break: break-word;
           hyphens: auto;
-          text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+          text-shadow: 0 1px 3px rgba(255,255,255,0.9);
         }
         .ssc-product-price {
-          font-size: 7px;
+          font-size: 9px;
           color: #888;
-          margin-top: 1px;
+          margin-top: 2px;
           text-align: center;
           text-shadow: 0 1px 2px rgba(255,255,255,0.8);
         }
         .ssc-check {
-          margin-top: 4px;
-          width: 16px;
-          height: 16px;
+          margin-top: 5px;
+          width: 22px;
+          height: 22px;
           border-radius: 50%;
-          border: 1px solid #C4BEB4;
+          border: 1.5px solid #C4BEB4;
           background: transparent;
           color: transparent;
-          font-size: 8px;
+          font-size: 11px;
           cursor: pointer;
           display: flex;
           align-items: center;
