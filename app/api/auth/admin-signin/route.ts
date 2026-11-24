@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 // These users get an auto-confirmed magic link without waiting for email.
 const BYPASS_EMAILS = new Set([
   "qoyl.live@gmail.com",
+  "hey@qoyl.live",
 ]);
 
 export async function POST(request: Request) {
