@@ -29,6 +29,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
 
     import("three").then((THREE) => {
       if (!mountRef.current) return;
+      const elDiv = el as HTMLDivElement;
 
       function marbleTex(w: number, h: number, tileDiv: number, baseColor: string, groutColor: string): T.CanvasTexture {
         const c = document.createElement("canvas"); c.width = w; c.height = h;
@@ -72,7 +73,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
         return new THREE.CanvasTexture(c);
       }
 
-      const W = el.clientWidth, H = el.clientHeight || Math.round(el.clientWidth * 9/16);
+      const W = elDiv.clientWidth, H = elDiv.clientHeight || Math.round(elDiv.clientWidth * 9/16);
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
       renderer.setSize(W, H);
@@ -80,7 +81,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 0.9;
-      el.appendChild(renderer.domElement);
+      elDiv.appendChild(renderer.domElement);
 
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0xE8E0D4);
@@ -258,7 +259,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       }
       function onUp(e:PointerEvent){
         if(!dragged){
-          const r=(el as HTMLDivElement).getBoundingClientRect();
+          const r=elDiv.getBoundingClientRect();
           mp.x=((e.clientX-r.left)/r.width)*2-1; mp.y=-((e.clientY-r.top)/r.height)*2+1;
           ray.setFromCamera(mp,cam);
           const hits=ray.intersectObjects(hotspots.map(h=>h.mesh));
@@ -268,15 +269,15 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       }
       function onMov2(e:MouseEvent){
         if(isDown) return;
-        const r=(el as HTMLDivElement).getBoundingClientRect();
+        const r=elDiv.getBoundingClientRect();
         mp.x=((e.clientX-r.left)/r.width)*2-1; mp.y=-((e.clientY-r.top)/r.height)*2+1;
         ray.setFromCamera(mp,cam);
         const hits=ray.intersectObjects(hotspots.map(h=>h.mesh));
-        el.style.cursor=hits.length?"pointer":"grab";
+        elDiv.style.cursor=hits.length?"pointer":"grab";
         setHint(hits.length?(hits[0].object.userData.id==="shower"?"Shower Products":"Vanity Products"):null);
       }
-      el.addEventListener("pointerdown",onDown); el.addEventListener("pointermove",onMove);
-      el.addEventListener("pointerup",onUp); el.addEventListener("mousemove",onMov2);
+      elDiv.addEventListener("pointerdown",onDown); elDiv.addEventListener("pointermove",onMove);
+      elDiv.addEventListener("pointerup",onUp); elDiv.addEventListener("mousemove",onMov2);
 
       // ANIMATE
       let t=0;
@@ -291,18 +292,18 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       animate();
 
       function onResize(){
-        const nw=el.clientWidth, nh=el.clientHeight||Math.round(el.clientWidth*9/16);
+        const nw=elDiv.clientWidth, nh=elDiv.clientHeight||Math.round(elDiv.clientWidth*9/16);
         cam.aspect=nw/nh; cam.updateProjectionMatrix(); renderer.setSize(nw,nh);
       }
       window.addEventListener("resize",onResize);
 
-      (el as HTMLElement & {_cleanup?:()=>void})._cleanup=()=>{
+      (elDiv as HTMLElement & {_cleanup?:()=>void})._cleanup=()=>{
         cancelAnimationFrame(rafRef.current);
-        el.removeEventListener("pointerdown",onDown); el.removeEventListener("pointermove",onMove);
-        el.removeEventListener("pointerup",onUp); el.removeEventListener("mousemove",onMov2);
+        elDiv.removeEventListener("pointerdown",onDown); elDiv.removeEventListener("pointermove",onMove);
+        elDiv.removeEventListener("pointerup",onUp); elDiv.removeEventListener("mousemove",onMov2);
         window.removeEventListener("resize",onResize);
         renderer.dispose();
-        if(el.contains(renderer.domElement)) el.removeChild(renderer.domElement);
+        if(elDiv.contains(renderer.domElement)) elDiv.removeChild(renderer.domElement);
       };
     });
   }, []);
