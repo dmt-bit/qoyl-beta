@@ -295,10 +295,10 @@ function buildRoom(scene: THREE.Scene) {
   const frameMat = brassMat.clone();
   const frameW = 0.025;
   [
-    [0.04, 1.6 + frameW * 2, frameW, vanityZ],
-    [0.04, frameW, 1.6, vanityZ - 0.8 - frameW / 2],
-    [0.04, frameW, 1.6, vanityZ + 0.8 + frameW / 2],
-  ].forEach(([_dx, fw, fh, fz]) => {
+    [1.6 + frameW * 2, frameW, vanityZ],
+    [frameW, 1.6, vanityZ - 0.8 - frameW / 2],
+    [frameW, 1.6, vanityZ + 0.8 + frameW / 2],
+  ].forEach(([fw, fh, fz]) => {
     const frame = new THREE.Mesh(new THREE.BoxGeometry(0.03, fh as number, fw as number), frameMat);
     frame.position.set(vanityX + 0.03, vanityH_cabinet + 1.1, fz as number);
     scene.add(frame);
