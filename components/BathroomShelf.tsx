@@ -385,373 +385,371 @@ export default function BathroomShelf({
       <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
 
       {/* ═══ ROOM SCENE ═══ */}
-      <div style={{ position: "relative", width: "100%", maxWidth: 900, margin: "0 auto", userSelect: "none" }}>
+      <div style={{ position: "relative", width: "100%", maxWidth: 1100, margin: "0 auto", userSelect: "none" }}>
         <svg
-          viewBox="0 0 900 560"
+          viewBox="0 0 1100 580"
           xmlns="http://www.w3.org/2000/svg"
           style={{ display: "block", width: "100%", height: "auto" }}
           aria-hidden="true"
         >
           <defs>
-            {/* ── Marble floor with grout lines ── */}
-            <pattern id="bs-marble-floor" patternUnits="userSpaceOnUse" width="140" height="140" patternTransform="skewX(-6)">
-              <rect width="140" height="140" fill="#EEE8DF"/>
-              {/* Primary veining */}
-              <path d="M0 35 Q28 28 56 42 Q84 55 112 46 Q126 42 140 48" stroke="rgba(185,168,145,0.5)" strokeWidth="1.2" fill="none"/>
-              <path d="M0 95 Q35 85 70 100 Q100 112 140 98" stroke="rgba(170,150,125,0.4)" strokeWidth="0.9" fill="none"/>
-              <path d="M20 0 Q28 50 18 90 Q14 115 22 140" stroke="rgba(180,162,138,0.35)" strokeWidth="0.8" fill="none"/>
-              <path d="M85 0 Q90 40 80 80 Q76 105 84 140" stroke="rgba(175,158,132,0.25)" strokeWidth="0.6" fill="none"/>
-              {/* Secondary fine veins */}
-              <path d="M0 60 Q40 55 80 65 Q110 72 140 62" stroke="rgba(200,185,165,0.2)" strokeWidth="0.5" fill="none"/>
-              {/* Grout lines */}
-              <line x1="0" y1="0" x2="0" y2="140" stroke="rgba(210,200,185,0.8)" strokeWidth="1.5"/>
-              <line x1="140" y1="0" x2="140" y2="140" stroke="rgba(210,200,185,0.8)" strokeWidth="1.5"/>
-              <line x1="0" y1="0" x2="140" y2="0" stroke="rgba(210,200,185,0.8)" strokeWidth="1.5"/>
-              <line x1="0" y1="140" x2="140" y2="140" stroke="rgba(210,200,185,0.8)" strokeWidth="1.5"/>
+            {/* Marble patterns */}
+            <pattern id="bs-marble-floor" patternUnits="userSpaceOnUse" width="130" height="130">
+              <rect width="130" height="130" fill="#EDE8DF"/>
+              <path d="M0 32 Q32 26 65 38 Q98 50 130 42" stroke="rgba(182,165,142,0.5)" strokeWidth="1.1" fill="none"/>
+              <path d="M0 88 Q40 80 80 92 Q105 100 130 86" stroke="rgba(168,148,122,0.38)" strokeWidth="0.8" fill="none"/>
+              <path d="M18 0 Q24 45 16 85 Q12 108 20 130" stroke="rgba(178,160,135,0.3)" strokeWidth="0.7" fill="none"/>
+              <path d="M80 0 Q84 38 76 78 Q72 102 80 130" stroke="rgba(172,154,128,0.22)" strokeWidth="0.5" fill="none"/>
+              <line x1="0"   y1="0" x2="0"   y2="130" stroke="rgba(205,195,178,0.75)" strokeWidth="1.5"/>
+              <line x1="130" y1="0" x2="130" y2="130" stroke="rgba(205,195,178,0.75)" strokeWidth="1.5"/>
+              <line x1="0" y1="0"   x2="130" y2="0"   stroke="rgba(205,195,178,0.75)" strokeWidth="1.5"/>
+              <line x1="0" y1="130" x2="130" y2="130" stroke="rgba(205,195,178,0.75)" strokeWidth="1.5"/>
             </pattern>
-            {/* ── Marble wall with richer veining ── */}
             <pattern id="bs-marble-wall" patternUnits="userSpaceOnUse" width="220" height="180">
-              <rect width="220" height="180" fill="#F4F0EB"/>
-              {/* Bold primary vein */}
-              <path d="M0 55 Q55 44 110 62 Q165 80 220 68" stroke="rgba(178,158,130,0.55)" strokeWidth="1.4" fill="none"/>
-              {/* Medium veins */}
-              <path d="M0 125 Q65 112 130 128 Q175 138 220 122" stroke="rgba(168,148,120,0.4)" strokeWidth="1" fill="none"/>
-              <path d="M35 0 Q42 70 30 130 Q26 158 36 180" stroke="rgba(182,164,138,0.3)" strokeWidth="1.1" fill="none"/>
-              <path d="M140 0 Q148 55 136 115 Q132 148 140 180" stroke="rgba(175,155,128,0.22)" strokeWidth="0.8" fill="none"/>
-              {/* Fine hairline veins */}
-              <path d="M0 88 Q50 82 100 92 Q155 102 220 88" stroke="rgba(195,180,158,0.25)" strokeWidth="0.5" fill="none"/>
-              <path d="M0 20 Q30 16 60 22 Q90 28 110 20" stroke="rgba(188,172,148,0.2)" strokeWidth="0.4" fill="none"/>
-              {/* Slab joint lines */}
-              <line x1="0" y1="90" x2="220" y2="90" stroke="rgba(205,195,178,0.6)" strokeWidth="0.8"/>
-              <line x1="110" y1="0" x2="110" y2="180" stroke="rgba(205,195,178,0.5)" strokeWidth="0.8"/>
+              <rect width="220" height="180" fill="#F3EFE9"/>
+              <path d="M0 52 Q55 42 110 60 Q165 78 220 66" stroke="rgba(175,155,128,0.52)" strokeWidth="1.3" fill="none"/>
+              <path d="M0 128 Q65 116 130 130 Q175 140 220 122" stroke="rgba(165,145,118,0.38)" strokeWidth="0.95" fill="none"/>
+              <path d="M32 0 Q40 68 28 128 Q24 155 34 180" stroke="rgba(178,160,135,0.28)" strokeWidth="1" fill="none"/>
+              <path d="M145 0 Q152 55 140 115 Q136 148 144 180" stroke="rgba(172,152,126,0.2)" strokeWidth="0.72" fill="none"/>
+              <path d="M0 86 Q50 80 100 90 Q155 100 220 84" stroke="rgba(190,175,152,0.22)" strokeWidth="0.5" fill="none"/>
+              <line x1="0" y1="90"  x2="220" y2="90"  stroke="rgba(200,190,172,0.5)" strokeWidth="0.8"/>
+              <line x1="110" y1="0" x2="110" y2="180" stroke="rgba(200,190,172,0.4)" strokeWidth="0.8"/>
             </pattern>
-            {/* ── Gradients ── */}
-            <radialGradient id="bs-floor-light" cx="45%" cy="20%" r="65%">
-              <stop offset="0%" stopColor="rgba(255,252,242,0.7)"/>
-              <stop offset="60%" stopColor="rgba(240,232,218,0.2)"/>
-              <stop offset="100%" stopColor="rgba(220,208,190,0)"/>
-            </radialGradient>
-            <radialGradient id="bs-chandelier-glow" cx="50%" cy="0%" r="55%">
-              <stop offset="0%" stopColor="rgba(255,248,218,0.75)"/>
-              <stop offset="50%" stopColor="rgba(255,248,218,0.2)"/>
-              <stop offset="100%" stopColor="rgba(255,248,218,0)"/>
-            </radialGradient>
-            <radialGradient id="bs-room-ambient" cx="50%" cy="40%" r="55%">
-              <stop offset="0%" stopColor="rgba(255,250,235,0.3)"/>
-              <stop offset="100%" stopColor="rgba(255,250,235,0)"/>
-            </radialGradient>
-            <linearGradient id="bs-left-shadow" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(42,36,32,0.18)"/>
-              <stop offset="100%" stopColor="rgba(42,36,32,0)"/>
-            </linearGradient>
-            <linearGradient id="bs-right-shadow" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="rgba(42,36,32,0)"/>
-              <stop offset="100%" stopColor="rgba(42,36,32,0.14)"/>
-            </linearGradient>
-            <linearGradient id="bs-ceiling-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#FDFAF6"/>
-              <stop offset="100%" stopColor="#F5F0E8"/>
-            </linearGradient>
+
+            {/* Gradients */}
             <linearGradient id="bs-brass-h" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%"   stopColor="#7A5C28"/>
-              <stop offset="25%"  stopColor="#C4A462"/>
+              <stop offset="28%"  stopColor="#C4A462"/>
               <stop offset="55%"  stopColor="#E8D090"/>
               <stop offset="80%"  stopColor="#C4A462"/>
               <stop offset="100%" stopColor="#9A7238"/>
             </linearGradient>
             <linearGradient id="bs-brass-v" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%"   stopColor="#E8D090"/>
-              <stop offset="40%"  stopColor="#C4A462"/>
+              <stop offset="45%"  stopColor="#C4A462"/>
               <stop offset="100%" stopColor="#7A5C28"/>
+            </linearGradient>
+            <linearGradient id="bs-ceiling" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stopColor="#FEFCF8"/>
+              <stop offset="100%" stopColor="#F2EDE4"/>
+            </linearGradient>
+            {/* Left wall (vanity side) — slightly warmer, lit from center */}
+            <linearGradient id="bs-left-wall-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stopColor="rgba(42,36,32,0.18)"/>
+              <stop offset="40%"  stopColor="rgba(42,36,32,0.04)"/>
+              <stop offset="100%" stopColor="rgba(42,36,32,0.0)"/>
+            </linearGradient>
+            {/* Right wall (tub side) */}
+            <linearGradient id="bs-right-wall-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stopColor="rgba(42,36,32,0.0)"/>
+              <stop offset="60%"  stopColor="rgba(42,36,32,0.04)"/>
+              <stop offset="100%" stopColor="rgba(42,36,32,0.2)"/>
+            </linearGradient>
+            <radialGradient id="bs-chandelier-glow" cx="50%" cy="0%" r="55%">
+              <stop offset="0%"   stopColor="rgba(255,248,218,0.72)"/>
+              <stop offset="50%"  stopColor="rgba(255,248,218,0.18)"/>
+              <stop offset="100%" stopColor="rgba(255,248,218,0)"/>
+            </radialGradient>
+            <radialGradient id="bs-floor-glow" cx="50%" cy="10%" r="70%">
+              <stop offset="0%"   stopColor="rgba(255,252,242,0.6)"/>
+              <stop offset="100%" stopColor="rgba(220,210,192,0)"/>
+            </radialGradient>
+            <linearGradient id="bs-glass" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stopColor="rgba(195,218,228,0.07)"/>
+              <stop offset="22%"  stopColor="rgba(218,235,242,0.19)"/>
+              <stop offset="50%"  stopColor="rgba(228,242,248,0.28)"/>
+              <stop offset="78%"  stopColor="rgba(210,228,236,0.15)"/>
+              <stop offset="100%" stopColor="rgba(195,215,225,0.06)"/>
+            </linearGradient>
+            <linearGradient id="bs-glass-sheen" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stopColor="rgba(255,255,255,0.22)"/>
+              <stop offset="35%"  stopColor="rgba(255,255,255,0.08)"/>
+              <stop offset="100%" stopColor="rgba(255,255,255,0.02)"/>
             </linearGradient>
             <linearGradient id="bs-tub" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%"   stopColor="#FFFFFF"/>
-              <stop offset="35%"  stopColor="#F8F6F2"/>
-              <stop offset="75%"  stopColor="#EDEAE4"/>
-              <stop offset="100%" stopColor="#D8D2C8"/>
+              <stop offset="40%"  stopColor="#F8F6F2"/>
+              <stop offset="80%"  stopColor="#EDEAE4"/>
+              <stop offset="100%" stopColor="#D6D0C6"/>
             </linearGradient>
-            <linearGradient id="bs-tub-side" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%"  stopColor="#E0DAD0"/>
-              <stop offset="100%" stopColor="#C8C2B8"/>
-            </linearGradient>
-            <linearGradient id="bs-mirror" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%"  stopColor="rgba(228,238,245,0.55)"/>
-              <stop offset="35%" stopColor="rgba(205,220,232,0.22)"/>
-              <stop offset="65%" stopColor="rgba(215,228,238,0.3)"/>
-              <stop offset="100%" stopColor="rgba(220,232,240,0.45)"/>
-            </linearGradient>
-            {/* Glass: subtle blue-grey tint with vertical highlight streak */}
-            <linearGradient id="bs-glass" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%"   stopColor="rgba(195,218,228,0.08)"/>
-              <stop offset="20%"  stopColor="rgba(218,235,242,0.18)"/>
-              <stop offset="45%"  stopColor="rgba(228,242,248,0.26)"/>
-              <stop offset="70%"  stopColor="rgba(210,228,236,0.14)"/>
-              <stop offset="100%" stopColor="rgba(195,215,225,0.07)"/>
-            </linearGradient>
-            <linearGradient id="bs-glass-sheen" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%"   stopColor="rgba(255,255,255,0.18)"/>
-              <stop offset="30%"  stopColor="rgba(255,255,255,0.08)"/>
-              <stop offset="100%" stopColor="rgba(255,255,255,0.03)"/>
+            <linearGradient id="bs-mirror-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stopColor="rgba(228,238,245,0.55)"/>
+              <stop offset="38%"  stopColor="rgba(205,220,232,0.22)"/>
+              <stop offset="65%"  stopColor="rgba(215,228,238,0.3)"/>
+              <stop offset="100%" stopColor="rgba(220,232,240,0.5)"/>
             </linearGradient>
             <linearGradient id="bs-cabinet" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%"   stopColor="#EAE4DA"/>
               <stop offset="100%" stopColor="#CEC6BA"/>
             </linearGradient>
             <pattern id="bs-flute" patternUnits="userSpaceOnUse" width="11" height="1">
-              <rect width="11" height="1" fill="#D6CEC2"/>
-              <rect x="0" width="1.5" height="1" fill="rgba(255,255,255,0.32)"/>
-              <rect x="4.5" width="2" height="1" fill="rgba(0,0,0,0.07)"/>
+              <rect width="11" height="1" fill="#D4CCC0"/>
+              <rect x="0"   width="1.5" height="1" fill="rgba(255,255,255,0.32)"/>
+              <rect x="4.5" width="2"   height="1" fill="rgba(0,0,0,0.07)"/>
             </pattern>
-            <filter id="bs-shadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur in="SourceAlpha" stdDeviation="10"/>
-              <feOffset dx="0" dy="8"/>
-              <feComposite in2="SourceGraphic"/>
-              <feBlend in="SourceGraphic" mode="normal"/>
-              <feDropShadow dx="0" dy="8" stdDeviation="14" floodColor="rgba(42,36,32,0.22)"/>
+
+            {/* Filters */}
+            <filter id="bs-glow">
+              <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="rgba(228,201,138,0.65)"/>
             </filter>
             <filter id="bs-soft-shadow">
-              <feDropShadow dx="0" dy="4" stdDeviation="8" floodColor="rgba(42,36,32,0.15)"/>
+              <feDropShadow dx="0" dy="5" stdDeviation="10" floodColor="rgba(42,36,32,0.18)"/>
             </filter>
-            <filter id="bs-brass-glow">
-              <feDropShadow dx="0" dy="0" stdDeviation="5" floodColor="rgba(228,201,138,0.6)"/>
+            <filter id="bs-deep-shadow">
+              <feDropShadow dx="0" dy="8" stdDeviation="16" floodColor="rgba(42,36,32,0.25)"/>
             </filter>
-            {/* Clip path for shower glass interior */}
-            <clipPath id="bs-shower-clip">
-              <rect x="244" y="110" width="292" height="246"/>
+
+            {/* Clip paths */}
+            <clipPath id="bs-left-wall-clip">
+              {/* Left wall polygon: top-left corner to vanishing point center */}
+              <polygon points="0,0 340,0 340,580 0,580"/>
+            </clipPath>
+            <clipPath id="bs-shower-glass-clip">
+              <rect x="390" y="82" width="310" height="298"/>
             </clipPath>
           </defs>
 
-          {/* ── Ceiling ── */}
-          <rect x="0" y="0" width="900" height="150" fill="url(#bs-ceiling-grad)"/>
+          {/* ════════════════════════════════════════════════
+              PANORAMIC ROOM — two-point perspective
+              Vanishing point left ~x=340, right ~x=760
+              Horizon line y≈200
+              Left wall: vanity + mirror (x 0–340)
+              Back wall: shower (x 340–700)
+              Right wall: tub + plant (x 700–1100)
+          ════════════════════════════════════════════════ */}
+
+          {/* ── CEILING ── */}
+          <rect x="0" y="0" width="1100" height="160" fill="url(#bs-ceiling)"/>
           {/* Crown moulding */}
-          <rect x="0" y="145" width="900" height="6" fill="#E8E2D8"/>
-          <rect x="0" y="149" width="900" height="2" fill="rgba(180,165,142,0.5)"/>
-
-          {/* ── Back wall (Calacatta marble) ── */}
-          <rect x="0" y="0" width="900" height="360" fill="url(#bs-marble-wall)"/>
-          {/* Ambient chandelier glow on wall */}
-          <ellipse cx="450" cy="0" rx="380" ry="200" fill="url(#bs-chandelier-glow)"/>
-          {/* Room ambient fill */}
-          <ellipse cx="450" cy="200" rx="380" ry="220" fill="url(#bs-room-ambient)"/>
-          {/* Left edge darkening (perspective corner shadow) */}
-          <rect x="0" y="0" width="80" height="560" fill="url(#bs-left-shadow)"/>
-          {/* Right edge darkening */}
-          <rect x="820" y="0" width="80" height="560" fill="url(#bs-right-shadow)"/>
-
-          {/* ── Floor (perspective marble tiles) ── */}
-          <polygon points="0,352 900,352 900,560 0,560" fill="url(#bs-marble-floor)"/>
-          {/* Floor perspective: tiles appear to converge */}
-          <line x1="450" y1="352" x2="0"   y2="560" stroke="rgba(200,188,170,0.35)" strokeWidth="1"/>
-          <line x1="450" y1="352" x2="225"  y2="560" stroke="rgba(200,188,170,0.25)" strokeWidth="0.8"/>
-          <line x1="450" y1="352" x2="675"  y2="560" stroke="rgba(200,188,170,0.25)" strokeWidth="0.8"/>
-          <line x1="450" y1="352" x2="900"  y2="560" stroke="rgba(200,188,170,0.35)" strokeWidth="1"/>
-          {/* Horizontal floor grout lines receding */}
-          <line x1="0" y1="395" x2="900" y2="395" stroke="rgba(205,195,178,0.4)" strokeWidth="0.8"/>
-          <line x1="0" y1="445" x2="900" y2="445" stroke="rgba(205,195,178,0.4)" strokeWidth="0.8"/>
-          <line x1="0" y1="500" x2="900" y2="500" stroke="rgba(205,195,178,0.4)" strokeWidth="0.8"/>
-          {/* Floor light pool from chandelier */}
-          <ellipse cx="450" cy="455" rx="380" ry="100" fill="url(#bs-floor-light)"/>
-          {/* Baseboard — continuous strip; shower glass sits in front of it */}
-          <rect x="0" y="348" width="900" height="8" fill="#E0D8CE"/>
-          <rect x="0" y="354" width="900" height="3" fill="url(#bs-brass-h)" opacity="0.45"/>
+          <line x1="0" y1="155" x2="1100" y2="155" stroke="#E0D8CE" strokeWidth="6"/>
+          <line x1="0" y1="159" x2="1100" y2="159" stroke="rgba(175,160,138,0.4)" strokeWidth="1"/>
+          {/* Left wall ceiling edge (recedes from top-left to vanishing point) */}
+          <line x1="0" y1="0" x2="340" y2="40" stroke="rgba(200,190,172,0.4)" strokeWidth="1"/>
+          {/* Right wall ceiling edge */}
+          <line x1="1100" y1="0" x2="760" y2="40" stroke="rgba(200,190,172,0.4)" strokeWidth="1"/>
 
           {/* Chandelier */}
-          <rect x="446" y="0" width="8" height="40" fill="url(#bs-brass-v)"/>
-          <ellipse cx="450" cy="42" rx="18" ry="8" fill="url(#bs-brass-h)" filter="url(#bs-brass-glow)"/>
-          <line x1="450" y1="42" x2="310" y2="75" stroke="url(#bs-brass-h)" strokeWidth="4"/>
-          <line x1="450" y1="42" x2="590" y2="75" stroke="url(#bs-brass-h)" strokeWidth="4"/>
-          <line x1="450" y1="42" x2="380" y2="88" stroke="url(#bs-brass-h)" strokeWidth="3"/>
-          <line x1="450" y1="42" x2="520" y2="88" stroke="url(#bs-brass-h)" strokeWidth="3"/>
-          <line x1="450" y1="42" x2="450" y2="82" stroke="url(#bs-brass-v)" strokeWidth="4"/>
-          <g filter="url(#bs-brass-glow)">
-            <circle cx="310" cy="82" r="10" fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
-            <circle cx="590" cy="82" r="10" fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
-            <circle cx="380" cy="96" r="8"  fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
-            <circle cx="520" cy="96" r="8"  fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
-            <circle cx="450" cy="90" r="9"  fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
+          <rect x="546" y="0" width="8" height="38" fill="url(#bs-brass-v)"/>
+          <ellipse cx="550" cy="40" rx="20" ry="9" fill="url(#bs-brass-h)" filter="url(#bs-glow)"/>
+          <line x1="550" y1="40" x2="400" y2="72" stroke="url(#bs-brass-h)" strokeWidth="4"/>
+          <line x1="550" y1="40" x2="700" y2="72" stroke="url(#bs-brass-h)" strokeWidth="4"/>
+          <line x1="550" y1="40" x2="470" y2="84" stroke="url(#bs-brass-h)" strokeWidth="3"/>
+          <line x1="550" y1="40" x2="630" y2="84" stroke="url(#bs-brass-h)" strokeWidth="3"/>
+          <line x1="550" y1="40" x2="550" y2="80" stroke="url(#bs-brass-v)" strokeWidth="4"/>
+          <g filter="url(#bs-glow)">
+            <circle cx="400" cy="80" r="11" fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
+            <circle cx="700" cy="80" r="11" fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
+            <circle cx="470" cy="92" r="9"  fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
+            <circle cx="630" cy="92" r="9"  fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
+            <circle cx="550" cy="88" r="10" fill="#FFF8E8" stroke="#C8A86A" strokeWidth="1.5"/>
           </g>
+          {/* Warm ceiling glow from chandelier */}
+          <ellipse cx="550" cy="0" rx="420" ry="210" fill="url(#bs-chandelier-glow)"/>
 
-          {/* Artwork */}
-          <rect x="30" y="80" width="160" height="210" fill="#2A2420" rx="2"/>
-          <rect x="34" y="84" width="152" height="202" fill="#D4B8A8"/>
-          <path d="M34 84 Q80 110 110 90 Q140 70 186 100 L186 180 Q150 160 110 185 Q70 210 34 190 Z" fill="#C4A898" opacity="0.7"/>
-          <path d="M60 130 Q95 115 130 135 Q160 150 186 140 L186 240 Q155 225 120 245 Q80 260 34 240 L34 180 Z" fill="#B89888" opacity="0.5"/>
-          <ellipse cx="100" cy="150" rx="45" ry="60" fill="rgba(220,180,170,0.4)"/>
-          <path d="M85 110 Q95 105 110 115 Q118 130 112 155 Q105 175 95 180 Q85 175 80 155 Q75 135 85 110" fill="rgba(210,175,165,0.5)"/>
-          <ellipse cx="160" cy="100" rx="20" ry="15" fill="rgba(100,130,100,0.3)" transform="rotate(-20,160,100)"/>
-          <rect x="30" y="80" width="160" height="210" fill="none" stroke="url(#bs-brass-h)" strokeWidth="4" rx="2"/>
+          {/* ── BACK WALL (straight on, x 340–700) ── */}
+          <rect x="340" y="40" width="360" height="380" fill="url(#bs-marble-wall)"/>
 
-          {/* ── Shower alcove ── */}
-          {/* Alcove recess shadow around opening */}
-          <rect x="238" y="98" width="306" height="258" fill="rgba(42,36,32,0.14)" rx="2"/>
-          <rect x="242" y="102" width="298" height="254" fill="#EDE8DF"/>
-          {/* Interior marble wall fills full alcove height */}
-          <rect x="244" y="104" width="292" height="252" fill="url(#bs-marble-wall)" opacity="0.85"/>
-          {/* Steam / humidity haze */}
-          <rect x="244" y="110" width="292" height="246" fill="rgba(228,238,245,0.08)"/>
+          {/* ── LEFT WALL (receding, x 0–340) ── */}
+          {/* Left wall recedes from floor-level corner at (340,420) up to ceiling at (340,40) */}
+          <polygon points="0,0 340,40 340,420 0,580" fill="url(#bs-marble-wall)"/>
+          {/* Shading to emphasize it's a different plane */}
+          <polygon points="0,0 340,40 340,420 0,580" fill="url(#bs-left-wall-grad)"/>
 
-          {/* ── Shower glass panels — run full height, no floor track ── */}
-          {/* Panel 1 */}
-          <rect x="244" y="110" width="96" height="246" fill="url(#bs-glass)"/>
-          <rect x="244" y="110" width="96" height="246" fill="url(#bs-glass-sheen)"/>
-          <line x1="339" y1="110" x2="339" y2="356" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
-          <rect x="244" y="110" width="96" height="246" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2"/>
-          {/* Panel 2 */}
-          <rect x="342" y="110" width="96" height="246" fill="url(#bs-glass)"/>
-          <rect x="342" y="110" width="96" height="246" fill="url(#bs-glass-sheen)"/>
-          <line x1="437" y1="110" x2="437" y2="356" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5"/>
-          <rect x="342" y="110" width="96" height="246" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2"/>
-          {/* Panel 3 */}
-          <rect x="440" y="110" width="96" height="246" fill="url(#bs-glass)"/>
-          <rect x="440" y="110" width="96" height="246" fill="url(#bs-glass-sheen)"/>
-          <line x1="535" y1="110" x2="535" y2="356" stroke="rgba(255,255,255,0.5)" strokeWidth="1.2"/>
-          <rect x="440" y="110" width="96" height="246" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2"/>
-          {/* Top brass rail only */}
-          <rect x="242" y="104" width="296" height="8" fill="url(#bs-brass-h)" opacity="0.95" rx="1"/>
+          {/* ── RIGHT WALL (receding, x 700–1100) ── */}
+          <polygon points="700,40 1100,0 1100,580 700,420" fill="url(#bs-marble-wall)"/>
+          <polygon points="700,40 1100,0 1100,580 700,420" fill="url(#bs-right-wall-grad)"/>
 
-          {/* Hover highlight on shower */}
-          <rect x="244" y="110" width="292" height="246"
-            fill={showerHover ? "rgba(200,168,106,0.09)" : "rgba(200,168,106,0)"}
-            style={{ transition: "fill 0.3s", pointerEvents: "none" }}
-          />
+          {/* ── FLOOR ── */}
+          {/* Floor trapezoid with perspective */}
+          <polygon points="0,580 1100,580 700,420 340,420" fill="url(#bs-marble-floor)"/>
+          {/* Floor perspective lines converging to back corners */}
+          <line x1="0"    y1="580" x2="340" y2="420" stroke="rgba(198,185,165,0.5)" strokeWidth="1.2"/>
+          <line x1="1100" y1="580" x2="700" y2="420" stroke="rgba(198,185,165,0.5)" strokeWidth="1.2"/>
+          <line x1="220"  y1="580" x2="340" y2="420" stroke="rgba(198,185,165,0.3)" strokeWidth="0.8"/>
+          <line x1="880"  y1="580" x2="700" y2="420" stroke="rgba(198,185,165,0.3)" strokeWidth="0.8"/>
+          {/* Floor glow */}
+          <ellipse cx="550" cy="500" rx="440" ry="90" fill="url(#bs-floor-glow)"/>
+          {/* Wall-floor junction lines */}
+          <line x1="340" y1="420" x2="700" y2="420" stroke="rgba(192,180,160,0.6)" strokeWidth="1.5"/>
+          <line x1="0"   y1="580" x2="340" y2="420" stroke="rgba(188,175,155,0.5)" strokeWidth="1.2"/>
+          <line x1="700" y1="420" x2="1100" y2="580" stroke="rgba(188,175,155,0.5)" strokeWidth="1.2"/>
 
-          {/* ── Door handles ── */}
-          <rect x="334" y="210" width="9" height="44" rx="4" fill="url(#bs-brass-v)" filter="url(#bs-brass-glow)"/>
-          <rect x="432" y="210" width="9" height="44" rx="4" fill="url(#bs-brass-v)" filter="url(#bs-brass-glow)"/>
+          {/* ══════════════════════
+              LEFT WALL — VANITY
+          ══════════════════════ */}
 
-          {/* ── Plants inside shower (visible through glass) ── */}
-          <g opacity="0.5" clipPath="url(#bs-shower-clip)">
-            <ellipse cx="302" cy="235" rx="26" ry="52" fill="#6A8858" transform="rotate(6,302,235)"/>
-            <ellipse cx="285" cy="215" rx="16" ry="38" fill="#5A7848" transform="rotate(-8,285,215)"/>
-            <ellipse cx="460" cy="228" rx="22" ry="48" fill="#648050" transform="rotate(-10,460,228)"/>
-            <ellipse cx="478" cy="248" rx="14" ry="30" fill="#587248" transform="rotate(5,478,248)"/>
-            <line x1="302" y1="356" x2="302" y2="255" stroke="#4A6038" strokeWidth="2.5"/>
-            <line x1="460" y1="356" x2="460" y2="262" stroke="#4A6038" strokeWidth="2"/>
-          </g>
+          {/* Mirror on left wall — large, brass-framed, foreshortened */}
+          {/* Mirror face (foreshortened trapezoid) */}
+          <polygon points="30,65 275,82 275,268 30,255" fill="url(#bs-mirror-grad)"/>
+          {/* Mirror reflection streak */}
+          <polygon points="45,68 80,70 72,250 38,248" fill="rgba(255,255,255,0.14)"/>
+          {/* Brass frame */}
+          <polygon points="30,65 275,82 275,268 30,255" fill="none" stroke="url(#bs-brass-h)" strokeWidth="5"/>
+          {/* Inner bevel */}
+          <polygon points="38,70 268,86 268,263 38,251" fill="none" stroke="rgba(228,205,152,0.3)" strokeWidth="1.5"/>
+          {/* Sconce left of mirror */}
+          <line x1="22" y1="135" x2="28" y2="137" stroke="url(#bs-brass-h)" strokeWidth="3"/>
+          <ellipse cx="20" cy="134" rx="7" ry="9" fill="rgba(255,250,220,0.65)" stroke="#C8A86A" strokeWidth="1"/>
+          <ellipse cx="20" cy="134" rx="5" ry="7" fill="rgba(255,252,232,0.9)" filter="url(#bs-glow)"/>
 
-          {/* ── Marble niche shelf inside ── */}
-          {/* Niche recess */}
-          <rect x="356" y="150" width="68" height="96" fill="#D8D2C8" rx="1"/>
-          <rect x="358" y="152" width="64" height="92" fill="#EAE4DC" rx="1"/>
-          <rect x="358" y="152" width="64" height="92" fill="none" stroke="rgba(196,165,100,0.6)" strokeWidth="1.5" rx="1"/>
-          {/* Niche shelves */}
-          <rect x="358" y="192" width="64" height="3" rx="1" fill="url(#bs-brass-h)" filter="url(#bs-brass-glow)"/>
-          <rect x="358" y="228" width="64" height="3" rx="1" fill="url(#bs-brass-h)" filter="url(#bs-brass-glow)"/>
-          {/* Product silhouettes on niche shelves */}
-          <rect x="366" y="170" width="8" height="22" rx="2" fill="rgba(180,196,205,0.7)"/>
-          <rect x="378" y="166" width="10" height="26" rx="2" fill="rgba(195,180,205,0.7)"/>
-          <rect x="393" y="172" width="8" height="20" rx="2" fill="rgba(195,210,200,0.7)"/>
-          <rect x="366" y="207" width="8" height="21" rx="2" fill="rgba(205,195,170,0.7)"/>
-          <rect x="380" y="204" width="10" height="24" rx="2" fill="rgba(180,196,205,0.7)"/>
-          <rect x="396" y="208" width="8" height="20" rx="2" fill="rgba(195,180,205,0.7)"/>
-
-          {/* ── Rain shower head (ceiling-mount, sits at top rail level) ── */}
-          <rect x="375" y="112" width="30" height="8" rx="3" fill="url(#bs-brass-h)" filter="url(#bs-soft-shadow)"/>
-          <rect x="388" y="120" width="4" height="20" rx="2" fill="url(#bs-brass-v)"/>
-          <ellipse cx="390" cy="143" rx="16" ry="5" fill="url(#bs-brass-h)" opacity="0.95" filter="url(#bs-brass-glow)"/>
-          {/* Rain drops */}
-          {[0,1,2,3,4,5,6,7].map(i => (
-            <line key={i} x1={380+i*4} y1="148" x2={380+i*4} y2="156"
-              stroke="rgba(195,218,228,0.4)" strokeWidth="0.8"/>
-          ))}
-
-          {/* ── Freestanding Bathtub ── */}
-          {/* Cast shadow on floor */}
-          <ellipse cx="390" cy="435" rx="168" ry="18" fill="rgba(42,36,32,0.12)"/>
-          {/* Tub outer body — base rim and sides */}
-          <ellipse cx="390" cy="395" rx="170" ry="54" fill="#CBC4BA"/>
-          {/* Tub outer shape (slight offset for thickness) */}
-          <ellipse cx="390" cy="390" rx="168" ry="52" fill="url(#bs-tub)" filter="url(#bs-soft-shadow)"/>
-          {/* Tub inner lip highlight */}
-          <ellipse cx="390" cy="386" rx="155" ry="42" fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="2.5"/>
-          {/* Interior water fill (slight blue tint) */}
-          <ellipse cx="390" cy="390" rx="152" ry="40" fill="rgba(205,222,232,0.18)"/>
-          {/* Specular highlight on tub rim */}
-          <path d="M240 376 Q310 368 390 372 Q470 376 540 374" stroke="rgba(255,255,255,0.5)" strokeWidth="2" fill="none"/>
-          {/* End caps */}
-          <ellipse cx="223" cy="392" rx="20" ry="48" fill="url(#bs-tub-side)"/>
-          <ellipse cx="557" cy="392" rx="20" ry="48" fill="url(#bs-tub-side)"/>
-          {/* Foot silhouette (subtle) */}
-          <ellipse cx="265" cy="440" rx="16" ry="5" fill="rgba(42,36,32,0.15)"/>
-          <ellipse cx="515" cy="440" rx="16" ry="5" fill="rgba(42,36,32,0.15)"/>
-          {/* Drain */}
-          <ellipse cx="390" cy="395" rx="12" ry="5" fill="rgba(42,36,32,0.12)"/>
-          <ellipse cx="390" cy="395" rx="10" ry="4" fill="none" stroke="rgba(180,165,140,0.6)" strokeWidth="1"/>
-          {/* Floor-mount filler (matte black) */}
-          <rect x="542" y="348" width="11" height="58" rx="5" fill="#1E1A18"/>
-          <rect x="537" y="348" width="21" height="7" rx="3" fill="#1E1A18"/>
-          <path d="M553 352 Q565 350 568 364 Q570 376 560 383" stroke="#1E1A18" strokeWidth="7" fill="none" strokeLinecap="round"/>
-          <path d="M553 352 Q565 350 568 364 Q570 376 560 383" stroke="#3A3330" strokeWidth="3" fill="none" strokeLinecap="round"/>
-          {/* Water spout highlight */}
-          <circle cx="560" cy="383" r="5" fill="#2A2520" stroke="rgba(200,168,106,0.6)" strokeWidth="1.5"/>
-
-          {/* ── Vanity ── */}
-          {/* Cabinet shadow on wall */}
-          <rect x="612" y="285" width="292" height="92" rx="2" fill="rgba(42,36,32,0.08)"/>
-          {/* Marble counter top */}
-          <rect x="615" y="278" width="288" height="22" rx="2" fill="url(#bs-marble-wall)"/>
-          <rect x="615" y="278" width="288" height="5" rx="1" fill="#EDE8E0"/>
-          {/* Counter top highlight edge */}
-          <rect x="615" y="278" width="288" height="2" fill="rgba(255,255,255,0.5)"/>
-          {/* Cabinet body — fluted panels */}
-          <rect x="618" y="298" width="282" height="58" fill="url(#bs-cabinet)"/>
-          <rect x="618" y="298" width="282" height="58" fill="url(#bs-flute)"/>
-          {/* Hover highlight on cabinet */}
-          <rect x="612" y="278" width="292" height="84"
+          {/* Vanity counter — foreshortened, on left wall */}
+          {/* Counter top (marble slab) */}
+          <polygon points="0,310 310,282 310,298 0,328" fill="url(#bs-marble-wall)"/>
+          <polygon points="0,308 310,280 310,284 0,312" fill="rgba(255,255,255,0.45)"/>
+          {/* Cabinet body */}
+          <polygon points="0,328 310,298 310,390 0,420" fill="url(#bs-cabinet)"/>
+          <polygon points="0,328 310,298 310,390 0,420" fill="url(#bs-flute)"/>
+          {/* Hover highlight on vanity */}
+          <polygon points="0,308 310,280 310,390 0,420"
             fill={vanityHover ? "rgba(200,168,106,0.09)" : "rgba(200,168,106,0)"}
             style={{ transition: "fill 0.3s", pointerEvents: "none" }}
           />
-          {/* Cabinet bottom edge brass strip */}
-          <rect x="618" y="354" width="282" height="4" rx="1" fill="url(#bs-brass-h)" opacity="0.65"/>
+          {/* Cabinet door gap */}
+          <line x1="155" y1="298" x2="155" y2="389" stroke="rgba(185,172,152,0.65)" strokeWidth="1.2"/>
+          {/* Cabinet pulls */}
+          <line x1="68"  y1="336" x2="90"  y2="335" stroke="url(#bs-brass-h)" strokeWidth="3.5" strokeLinecap="round"/>
+          <line x1="195" y1="332" x2="217" y2="331" stroke="url(#bs-brass-h)" strokeWidth="3.5" strokeLinecap="round"/>
+          {/* Bottom edge brass strip */}
+          <polygon points="0,420 310,390 312,395 0,425" fill="url(#bs-brass-h)" opacity="0.6"/>
           {/* Cabinet legs */}
-          <rect x="628" y="356" width="10" height="26" rx="4" fill="url(#bs-brass-v)"/>
-          <rect x="880" y="356" width="10" height="26" rx="4" fill="url(#bs-brass-v)"/>
-          {/* Door gap line + pulls */}
-          <line x1="762" y1="298" x2="762" y2="354" stroke="rgba(188,175,155,0.7)" strokeWidth="1.2"/>
-          <rect x="746" y="320" width="13" height="4" rx="2" fill="url(#bs-brass-h)"/>
-          <rect x="765" y="320" width="13" height="4" rx="2" fill="url(#bs-brass-h)"/>
-          {/* Vessel sink */}
-          <ellipse cx="715" cy="287" rx="52" ry="11" fill="#D0C8BE"/>
-          <ellipse cx="715" cy="285" rx="50" ry="9" fill="#EDE8E0"/>
-          <ellipse cx="715" cy="284" rx="44" ry="7" fill="rgba(195,220,235,0.25)"/>
-          <ellipse cx="715" cy="284" rx="44" ry="7" fill="none" stroke="rgba(180,165,142,0.4)" strokeWidth="1"/>
-          {/* Tall wall-mount faucet */}
-          <rect x="712" y="255" width="6" height="30" rx="3" fill="url(#bs-brass-v)" filter="url(#bs-soft-shadow)"/>
-          <rect x="706" y="255" width="18" height="5" rx="2" fill="url(#bs-brass-h)"/>
-          <ellipse cx="715" cy="253" rx="8" ry="3" fill="url(#bs-brass-h)" opacity="0.9"/>
-          {/* Mirror (larger, grander) */}
-          <rect x="622" y="72" width="272" height="202" fill="rgba(240,245,250,0.12)"/>
-          <rect x="622" y="72" width="272" height="202" fill="url(#bs-mirror)"/>
-          {/* Mirror reflections — bright streaks */}
-          <path d="M632 76 L658 76 L648 230" stroke="rgba(255,255,255,0.3)" strokeWidth="1.8" fill="none"/>
-          <path d="M855 90 L870 76 L876 100" stroke="rgba(255,255,255,0.18)" strokeWidth="1.2" fill="none"/>
-          {/* Mirror brass frame */}
-          <rect x="622" y="72" width="272" height="202" fill="none" stroke="url(#bs-brass-h)" strokeWidth="5" rx="1"/>
-          {/* Frame inner bevel */}
-          <rect x="627" y="77" width="262" height="192" fill="none" stroke="rgba(230,205,155,0.3)" strokeWidth="1.5" rx="1"/>
+          <rect x="8"   y="420" width="9" height="22" rx="3" fill="url(#bs-brass-v)"/>
+          <rect x="286" y="393" width="9" height="20" rx="3" fill="url(#bs-brass-v)"/>
+
+          {/* Vessel sink (on counter) */}
+          <ellipse cx="175" cy="289" rx="44" ry="10" fill="#CBC4BA"/>
+          <ellipse cx="175" cy="287" rx="42" ry="8"  fill="#EDE8E0"/>
+          <ellipse cx="175" cy="286" rx="36" ry="6"  fill="rgba(195,220,235,0.22)"/>
+          {/* Faucet */}
+          <rect x="172" y="260" width="5" height="27" rx="2" fill="url(#bs-brass-v)" filter="url(#bs-soft-shadow)"/>
+          <rect x="166" y="260" width="17" height="4" rx="2" fill="url(#bs-brass-h)"/>
+
           {/* Accessories on counter */}
-          <rect x="840" y="260" width="16" height="22" rx="3" fill="#2A3832"/>
-          <rect x="843" y="254" width="10" height="8" rx="2" fill="#2A3832"/>
-          <rect x="844" y="253" width="8" height="3" rx="1" fill="#C8A86A"/>
-          <rect x="862" y="263" width="14" height="19" rx="3" fill="#2A3832" opacity="0.9"/>
-          <ellipse cx="885" cy="278" rx="10" ry="4" fill="#D0C8B8" stroke="#C8A86A" strokeWidth="1"/>
-          <rect x="834" y="276" width="60" height="6" rx="2" fill="url(#bs-brass-h)" opacity="0.7"/>
-          {/* Sconce */}
-          <rect x="746" y="62" width="4" height="20" fill="url(#bs-brass-v)"/>
-          <ellipse cx="748" cy="58" rx="8" ry="10" fill="rgba(255,250,225,0.6)" stroke="#C8A86A" strokeWidth="1"/>
-          <ellipse cx="748" cy="58" rx="6" ry="8" fill="rgba(255,252,235,0.9)" filter="url(#bs-brass-glow)"/>
-          {/* Plant */}
-          <path d="M590 390 Q600 410 580 420 Q570 425 560 420 Q545 410 555 390 Z" fill="#C8C0B0"/>
-          <line x1="572" y1="390" x2="572" y2="310" stroke="#6A7858" strokeWidth="3"/>
-          <ellipse cx="558" cy="320" rx="22" ry="10" fill="#7A9068" transform="rotate(-25,558,320)"/>
-          <ellipse cx="590" cy="335" rx="24" ry="11" fill="#6A8458" transform="rotate(20,590,335)"/>
-          <ellipse cx="555" cy="355" rx="20" ry="9" fill="#8A9C72" transform="rotate(-30,555,355)"/>
-          <ellipse cx="592" cy="368" rx="22" ry="10" fill="#7A8C60" transform="rotate(15,592,368)"/>
+          <rect x="40"  y="300" width="11" height="17" rx="2" fill="#2A3832"/>
+          <rect x="43"  y="295" width="8"  height="7"  rx="2" fill="#2A3832"/>
+          <rect x="58"  y="302" width="10" height="14" rx="2" fill="#2A3832" opacity="0.9"/>
+          <ellipse cx="260" cy="290" rx="8" ry="3" fill="#D0C8B8" stroke="#C8A86A" strokeWidth="1"/>
+
+          {/* ══════════════════════
+              BACK WALL — SHOWER
+          ══════════════════════ */}
+
+          {/* Shower alcove recess */}
+          <rect x="368" y="60" width="304" height="368" fill="rgba(42,36,32,0.1)"/>
+          <rect x="372" y="64" width="296" height="362" fill="#EDE8DF"/>
+          {/* Interior marble */}
+          <rect x="374" y="66" width="292" height="356" fill="url(#bs-marble-wall)" opacity="0.82"/>
+
+          {/* Shower glass — 3 panes, full height from rail to floor */}
+          {/* Top brass rail */}
+          <rect x="372" y="64" width="296" height="8" fill="url(#bs-brass-h)" opacity="0.95"/>
+          {/* Panel 1 */}
+          <rect x="372" y="72" width="97"  height="348" fill="url(#bs-glass)"/>
+          <rect x="372" y="72" width="97"  height="348" fill="url(#bs-glass-sheen)"/>
+          <line x1="468" y1="72"  x2="468" y2="420" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5"/>
+          <rect x="372" y="72" width="97"  height="348" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2"/>
+          {/* Panel 2 */}
+          <rect x="471" y="72" width="97"  height="348" fill="url(#bs-glass)"/>
+          <rect x="471" y="72" width="97"  height="348" fill="url(#bs-glass-sheen)"/>
+          <line x1="567" y1="72"  x2="567" y2="420" stroke="rgba(255,255,255,0.65)" strokeWidth="1.5"/>
+          <rect x="471" y="72" width="97"  height="348" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2"/>
+          {/* Panel 3 */}
+          <rect x="570" y="72" width="97"  height="348" fill="url(#bs-glass)"/>
+          <rect x="570" y="72" width="97"  height="348" fill="url(#bs-glass-sheen)"/>
+          <line x1="666" y1="72"  x2="666" y2="420" stroke="rgba(255,255,255,0.55)" strokeWidth="1.2"/>
+          <rect x="570" y="72" width="97"  height="348" fill="none" stroke="url(#bs-brass-v)" strokeWidth="2"/>
+
+          {/* Door handles */}
+          <rect x="460" y="220" width="10" height="50" rx="5" fill="url(#bs-brass-v)" filter="url(#bs-glow)"/>
+          <rect x="559" y="220" width="10" height="50" rx="5" fill="url(#bs-brass-v)" filter="url(#bs-glow)"/>
+
+          {/* Hover highlight on shower */}
+          <rect x="372" y="64" width="296" height="356"
+            fill={showerHover ? "rgba(200,168,106,0.08)" : "rgba(200,168,106,0)"}
+            style={{ transition: "fill 0.3s", pointerEvents: "none" }}
+          />
+
+          {/* Plants inside shower (clipped to glass) */}
+          <g opacity="0.45" clipPath="url(#bs-shower-glass-clip)">
+            <ellipse cx="420" cy="250" rx="24" ry="50" fill="#6A8858" transform="rotate(7,420,250)"/>
+            <ellipse cx="405" cy="230" rx="15" ry="36" fill="#5A7848" transform="rotate(-8,405,230)"/>
+            <ellipse cx="635" cy="245" rx="22" ry="46" fill="#648050" transform="rotate(-9,635,245)"/>
+            <line x1="420" y1="420" x2="420" y2="265" stroke="#4A6038" strokeWidth="2.5"/>
+            <line x1="635" y1="420" x2="635" y2="262" stroke="#4A6038" strokeWidth="2"/>
+          </g>
+
+          {/* Niche shelf inside shower */}
+          <rect x="490" y="128" width="68" height="96" fill="#D8D2C8"/>
+          <rect x="492" y="130" width="64" height="92" fill="#EAE4DC"/>
+          <rect x="492" y="130" width="64" height="92" fill="none" stroke="rgba(196,165,100,0.55)" strokeWidth="1.5"/>
+          <rect x="492" y="170" width="64" height="3" fill="url(#bs-brass-h)" filter="url(#bs-glow)"/>
+          <rect x="492" y="206" width="64" height="3" fill="url(#bs-brass-h)" filter="url(#bs-glow)"/>
+          {/* Product silhouettes */}
+          <rect x="500" y="148" width="8"  height="22" rx="2" fill="rgba(180,196,205,0.75)"/>
+          <rect x="512" y="144" width="10" height="26" rx="2" fill="rgba(195,180,205,0.75)"/>
+          <rect x="527" y="150" width="8"  height="20" rx="2" fill="rgba(195,210,200,0.75)"/>
+          <rect x="500" y="184" width="8"  height="22" rx="2" fill="rgba(205,195,170,0.75)"/>
+          <rect x="514" y="181" width="10" height="25" rx="2" fill="rgba(180,196,205,0.75)"/>
+          <rect x="530" y="185" width="8"  height="21" rx="2" fill="rgba(195,180,205,0.75)"/>
+
+          {/* Rain shower head */}
+          <rect x="502" y="72"  width="34" height="8" rx="3" fill="url(#bs-brass-h)"/>
+          <rect x="517" y="80"  width="4"  height="22" rx="2" fill="url(#bs-brass-v)"/>
+          <ellipse cx="519" cy="106" rx="17" ry="5" fill="url(#bs-brass-h)" opacity="0.95" filter="url(#bs-glow)"/>
+          {[0,1,2,3,4,5,6,7,8].map(i => (
+            <line key={i} x1={508+i*4} y1="111" x2={508+i*4} y2="119"
+              stroke="rgba(195,218,228,0.38)" strokeWidth="0.8"/>
+          ))}
+
+          {/* Abstract art — left of shower on back wall */}
+          <rect x="344" y="78"  width="22" height="2" fill="url(#bs-brass-h)" opacity="0.6"/>
+          <rect x="344" y="78"  width="2"  height="310" fill="url(#bs-brass-v)" opacity="0.6"/>
+          <rect x="344" y="386" width="22" height="2" fill="url(#bs-brass-h)" opacity="0.6"/>
+
+          {/* ══════════════════════
+              RIGHT WALL — BATHTUB
+          ══════════════════════ */}
+
+          {/* Freestanding tub — foreshortened on right wall */}
+          {/* Shadow on floor */}
+          <ellipse cx="895" cy="525" rx="145" ry="22" fill="rgba(42,36,32,0.11)"/>
+          {/* Tub outer rim */}
+          <ellipse cx="895" cy="488" rx="148" ry="48" fill="#C8C2B8"/>
+          {/* Tub body */}
+          <ellipse cx="895" cy="484" rx="146" ry="46" fill="url(#bs-tub)" filter="url(#bs-soft-shadow)"/>
+          {/* Inner lip */}
+          <ellipse cx="895" cy="480" rx="132" ry="36" fill="none" stroke="rgba(255,255,255,0.65)" strokeWidth="2.5"/>
+          {/* Water tint */}
+          <ellipse cx="895" cy="484" rx="128" ry="34" fill="rgba(205,222,232,0.16)"/>
+          {/* Specular highlight */}
+          <path d="M758 474 Q830 466 895 470 Q960 474 1032 470" stroke="rgba(255,255,255,0.5)" strokeWidth="2" fill="none"/>
+          {/* End caps */}
+          <ellipse cx="750" cy="488" rx="18" ry="44" fill="#DDD8CE"/>
+          <ellipse cx="1040" cy="488" rx="18" ry="44" fill="#DDD8CE"/>
+          {/* Floor-mount filler (matte black) */}
+          <rect x="1030" y="444" width="10" height="52" rx="5" fill="#1E1A18"/>
+          <rect x="1024" y="444" width="22" height="7"  rx="3" fill="#1E1A18"/>
+          <path d="M1040 448 Q1052 448 1055 462 Q1057 475 1047 482" stroke="#1E1A18" strokeWidth="7" fill="none" strokeLinecap="round"/>
+          <path d="M1040 448 Q1052 448 1055 462 Q1057 475 1047 482" stroke="#2E2A28" strokeWidth="3" fill="none" strokeLinecap="round"/>
+          <circle cx="1047" cy="482" r="5" fill="#1E1A18" stroke="rgba(200,168,106,0.6)" strokeWidth="1.5"/>
+
+          {/* Tall plant in right corner */}
+          <ellipse cx="1070" cy="528" rx="22" ry="8" fill="#B8B0A5"/>
+          <line x1="1072" y1="522" x2="1068" y2="340" stroke="#6A7858" strokeWidth="4"/>
+          <ellipse cx="1055" cy="358" rx="26" ry="11" fill="#7A9068" transform="rotate(-28,1055,358)"/>
+          <ellipse cx="1090" cy="375" rx="28" ry="12" fill="#6A8458" transform="rotate(22,1090,375)"/>
+          <ellipse cx="1050" cy="400" rx="24" ry="10" fill="#8A9C72" transform="rotate(-32,1050,400)"/>
+          <ellipse cx="1092" cy="418" rx="26" ry="11" fill="#7A8C60" transform="rotate(18,1092,418)"/>
+          <ellipse cx="1055" cy="440" rx="22" ry="10" fill="#708858" transform="rotate(-20,1055,440)"/>
+
+          {/* Corner junction line left-to-back wall */}
+          <line x1="340" y1="40" x2="340" y2="420" stroke="rgba(188,175,155,0.65)" strokeWidth="2"/>
+          {/* Corner junction right-to-back wall */}
+          <line x1="700" y1="40" x2="700" y2="420" stroke="rgba(188,175,155,0.65)" strokeWidth="2"/>
         </svg>
 
         {/* ═══ HOTSPOT BUTTONS ═══ */}
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
-          {/* Shower hotspot */}
+          {/* Shower hotspot — back wall, center */}
           <button
             type="button"
             aria-label="Open shower shelf"
@@ -760,7 +758,7 @@ export default function BathroomShelf({
             onMouseLeave={() => setShowerHover(false)}
             style={{
               position: "absolute",
-              left: "27%", top: "20%", width: "32%", height: "41%",
+              left: "34%", top: "12%", width: "27%", height: "62%",
               pointerEvents: "all", cursor: "pointer",
               background: "none", border: "none", padding: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -768,7 +766,7 @@ export default function BathroomShelf({
           >
             <HotspotRing label="tap to open" />
           </button>
-          {/* Vanity hotspot */}
+          {/* Vanity hotspot — left wall */}
           <button
             type="button"
             aria-label="Open vanity cabinet"
@@ -777,7 +775,7 @@ export default function BathroomShelf({
             onMouseLeave={() => setVanityHover(false)}
             style={{
               position: "absolute",
-              right: "2%", top: "38%", width: "22%", height: "38%",
+              left: "0%", top: "48%", width: "28%", height: "36%",
               pointerEvents: "all", cursor: "pointer",
               background: "none", border: "none", padding: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
