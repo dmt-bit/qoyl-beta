@@ -134,6 +134,7 @@ function PhotoShelf({
   image,
   items,
   shelfOffsets, // top % positions of each shelf row inside the image
+  rowPaddingLeft, // optional left padding % to shift items into a niche/inset
   onToggle,
 }: {
   label: string;
@@ -141,6 +142,7 @@ function PhotoShelf({
   image: string;
   items: CartItem[];
   shelfOffsets: number[]; // one per shelf row, 0-100 (percent from top of image)
+  rowPaddingLeft?: string; // e.g. "40%" to push items into a niche area
   onToggle: (key: string) => void;
 }) {
   const isEmpty = items.length === 0;
@@ -175,7 +177,7 @@ function PhotoShelf({
             <div
               key={rowIdx}
               className="ssc-shelf-row"
-              style={{ top: topPct + "%" }}
+              style={{ top: topPct + "%", ...(rowPaddingLeft ? { paddingLeft: rowPaddingLeft } : {}) }}
             >
               {rowItems.map((item, i) => {
                 const globalIdx = rowIdx * itemsPerRow + i;
@@ -585,7 +587,8 @@ export default function ShowerShelfCart({
           sublabel="shampoo · conditioner · treatments"
           image={NICHE_IMG}
           items={inItems}
-          shelfOffsets={[50, 76]}
+          shelfOffsets={[62, 82]}
+          rowPaddingLeft="38%"
           onToggle={toggleItem}
         />
 
