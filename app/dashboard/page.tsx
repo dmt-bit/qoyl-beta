@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PostCard, { Post } from "@/components/PostCard";
-import ShowerShelfCart from "@/components/ShowerShelfCart";
+import BathroomShelf from "@/components/BathroomShelf";
 import { useAuth } from "@/lib/auth-context";
 import type { CartItem } from "@/lib/styleCart";
 import { formatAdultAgeRange } from "@/lib/ageRange";
@@ -684,10 +684,10 @@ function DashboardContent() {
           </p>
         )}
 
-        {/* My Shelf — always shown once loaded; ShowerShelfCart handles empty state */}
+        {/* My Shelf — always shown once loaded; BathroomShelf handles empty state */}
         {shelfLoaded && (
           <div className="print-hide mt-8">
-            <ShowerShelfCart
+            <BathroomShelf
               cartId={shelfCartId ?? ""}
               items={shelfItems}
             />
