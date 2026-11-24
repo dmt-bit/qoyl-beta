@@ -298,27 +298,6 @@ function ShelfPanel({
   );
 }
 
-// ─── Hotspot pulse ring ───────────────────────────────────────────────────
-function HotspotRing({ label }: { label: string }) {
-  return (
-    <div style={{ position: "relative", display: "inline-flex", flexDirection: "column", alignItems: "center" }}>
-      <div style={{
-        width: 36, height: 36, borderRadius: "50%",
-        background: "rgba(200,168,106,0.2)",
-        border: "1.5px solid #C8A86A",
-        animation: "bs-ring-pulse 2.4s ease-in-out infinite",
-      }} />
-      <div style={{
-        fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase",
-        color: "#C8A86A", whiteSpace: "nowrap", fontWeight: 500,
-        marginTop: 6,
-        textShadow: "0 1px 4px rgba(255,255,255,0.8)",
-      }}>
-        {label}
-      </div>
-    </div>
-  );
-}
 
 // ─── Global styles (keyframes etc.) ──────────────────────────────────────
 const GLOBAL_CSS = `

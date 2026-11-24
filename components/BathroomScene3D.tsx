@@ -181,7 +181,7 @@ function buildRoom(scene: THREE.Scene) {
   const brassMat = new THREE.MeshStandardMaterial({ map: brassTex, roughness: 0.3, metalness: 0.75 });
 
   // baseboard all around
-  [[0, -D/2, 0, 0], [-W/2, 0, Math.PI/2, 0], [W/2, 0, -Math.PI/2, 0]].forEach(([x, z, ry, _]) => {
+  [[0, -D/2, 0], [-W/2, 0, Math.PI/2], [W/2, 0, -Math.PI/2]].forEach(([x, z, ry]) => {
     const board = new THREE.Mesh(new THREE.BoxGeometry(x === 0 ? W : D, 0.08, 0.04), brassMat.clone());
     board.position.set(x as number, 0.04, z as number);
     board.rotation.y = ry as number;
@@ -276,7 +276,7 @@ function buildRoom(scene: THREE.Scene) {
 
   // cabinet legs
   const legMat = brassMat.clone();
-  [[-vanityW/2 + 0.1, 0.1], [vanityW/2 - 0.1, 0.1]].forEach(([z, _]) => {
+  [[-vanityW/2 + 0.1], [vanityW/2 - 0.1]].forEach(([z]) => {
     const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.1, 8), legMat);
     leg.position.set(vanityX + 0.04, 0.05, vanityZ + (z as number));
     scene.add(leg);
@@ -298,7 +298,7 @@ function buildRoom(scene: THREE.Scene) {
     [0.04, 1.6 + frameW * 2, frameW, vanityZ],
     [0.04, frameW, 1.6, vanityZ - 0.8 - frameW / 2],
     [0.04, frameW, 1.6, vanityZ + 0.8 + frameW / 2],
-  ].forEach(([dx, fw, fh, fz]) => {
+  ].forEach(([_dx, fw, fh, fz]) => {
     const frame = new THREE.Mesh(new THREE.BoxGeometry(0.03, fh as number, fw as number), frameMat);
     frame.position.set(vanityX + 0.03, vanityH_cabinet + 1.1, fz as number);
     scene.add(frame);
