@@ -364,12 +364,27 @@ export default function BathroomShelf({
     <>
       <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
 
-      {/* ═══ 3D ROOM SCENE ═══ */}
-      <div style={{ width: "100%", maxWidth: 1100, margin: "0 auto" }}>
-        <BathroomScene3D onHotspot={(id) => setOpenPanel(id)} />
+      {/* ═══ 3D ROOM — full page ═══ */}
+      <div style={{
+        position: "fixed", inset: 0,
+        width: "100%", height: "100%",
+        overflow: "hidden",
+      }}>
+        <BathroomScene3D
+          onHotspot={(id) => setOpenPanel(id)}
+          fullViewport
+          hud={purchasable.length > 0 ? {
+            total,
+            hasPrice,
+            checkedCount: purchasedIds.size,
+            totalCount: purchasable.length,
+            onShare: handleShare,
+            onShopAll: handleShopAll,
+          } : undefined}
+        />
       </div>
 
-      {/* ═══ PANELS ═══ */}
+      {/* ═══ PANELS (sit above the fixed room) ═══ */}
       <ShelfPanel
         open={openPanel === "shower"}
         title="In the shower"
@@ -401,54 +416,6 @@ export default function BathroomShelf({
         onToggle={toggleItem}
         onClose={() => setOpenPanel(null)}
       />
-
-      {/* ═══ FOOTER ═══ */}
-      {purchasable.length > 0 && (
-        <div style={{
-          marginTop: 20,
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          flexWrap: "wrap", gap: 12,
-          padding: "16px 20px",
-          background: "rgba(42,36,32,0.03)",
-          borderRadius: 14,
-        }}>
-          <div>
-            {hasPrice && (
-              <div style={{ fontSize: 20, fontWeight: 500, fontVariantNumeric: "tabular-nums" }}>
-                ${total.toFixed(2)}
-              </div>
-            )}
-            <div style={{ fontSize: 12, color: "#7A6E64" }}>
-              {purchasedIds.size} of {purchasable.length} products checked off
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <button
-              type="button" onClick={handleShare}
-              style={{
-                padding: "10px 20px", borderRadius: 100,
-                border: "1.5px solid rgba(120,110,100,0.3)",
-                background: "none", cursor: "pointer",
-                fontSize: 13, fontWeight: 500, fontFamily: "inherit",
-                color: "inherit",
-              }}
-            >
-              Share shelf
-            </button>
-            <button
-              type="button" onClick={handleShopAll}
-              style={{
-                padding: "10px 20px", borderRadius: 100,
-                border: "none",
-                background: "#2A2420", color: "#F8F5F0",
-                cursor: "pointer", fontSize: 13, fontWeight: 500, fontFamily: "inherit",
-              }}
-            >
-              Shop all
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 }
