@@ -8,6 +8,12 @@ function getShelfZone(item: CartItem): "in" | "out" | "other" {
   if (item.product_type === "fake_hair") return "out";
   if (item.product_type === "tool") return "out";
   if (item.product_type === "tutorial") return "other";
+  // Check secondary_category_labels first — set by the shelf seed with the
+  // canonical category slug label so zone routing is always reliable.
+  const labels = (item.secondary_category_labels ?? []).map((l) => l.toLowerCase());
+  if (labels.some((l) => l === "shampoo" || l === "conditioner" || l === "deep conditioner")) return "in";
+  if (labels.some((l) => l === "leave-in" || l === "styler" || l === "oil")) return "out";
+  // Fall back to product name heuristic
   const name = item.product_name.toLowerCase();
   if (name.includes("shampoo") || name.includes("wash")) return "in";
   if (name.includes("conditioner") || name.includes("mask") || name.includes("treatment")) return "in";
