@@ -578,7 +578,7 @@ function DashboardContent() {
   const [shelfLoaded, setShelfLoaded] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
     let cancelled = false;
     // First fetch the shelf. If it's empty, seed it with routine products,
     // then re-fetch so the shelf always shows something on first visit.
