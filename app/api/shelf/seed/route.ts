@@ -138,7 +138,7 @@ export async function POST(request: Request) {
     }
 
     // Find first product in this category that hasn't been used yet
-    const best = (products as CatalogRow[]).find(
+    const best = (products as unknown as CatalogRow[]).find(
       (p) => p.category_id === catId && !usedProductIds.has(p.id)
     );
 
