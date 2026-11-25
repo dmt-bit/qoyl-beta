@@ -90,6 +90,64 @@ export async function POST(request: Request) {
         // Travel kits are free now (generated from /api/travel-kits/generate
         // on form submit), so there is no travel_kit payment branch here.
 
+        // ── Qoyl Store order ─────────────────────────────────────────────────
+        if (productType === "store_order") {
+          const orderId = session.metadata?.order_id;
+          if (!orderId) {
+            console.error("store_order webhook missing order_id metadata:", session.id);
+            break;
+          }
+
+          // Mark the order as paid
+          const { data: order, error: orderErr } = await getSupabaseAdmin()
+            .from("store_orders")
+            .update({ status: "paid" })
+            .eq("id", orderId)
+            .select()
+            .single();
+
+          if (orderErr) {
+            console.error("Failed to mark store_order paid:", orderId, orderErr);
+            break;
+          }
+
+          // Build a plain-text item list for the fulfillment email
+          type OrderItem = {
+            product_name?: string;
+            price_estimate?: number;
+            quantity?: number;
+            affiliate_url?: string;
+            seller_url?: string;
+          };
+          const itemLines = (order.items as OrderItem[])
+            .map((item, idx) => {
+              const qty   = item.quantity ?? 1;
+              const price = item.price_estimate != null
+                ? `$${(item.price_estimate * qty).toFixed(2)}`
+                : "price unknown";
+              const link  = item.affiliate_url ?? item.seller_url ?? "no link";
+              return `${idx + 1}. ${item.product_name ?? "Unknown"} — ${price} ×${qty}\n   ${link}`;
+            })
+            .join("\n\n");
+
+          const addr = order.shipping_address
+            ? `${order.shipping_address.name}\n${order.shipping_address.line1}${order.shipping_address.line2 ? "\n" + order.shipping_address.line2 : ""}\n${order.shipping_address.city}, ${order.shipping_address.state} ${order.shipping_address.postal_code}\n${order.shipping_address.country}`
+            : "Address will be in Stripe Dashboard (collected during Checkout)";
+
+          await sendAdminNotification(
+            `🛒 New Qoyl Store order — ${order.items.length} items — $${order.total_usd}`,
+            `Order ID: ${orderId}\nUser ID:  ${userId}\n\nShip to:\n${addr}\n\nItems to purchase:\n\n${itemLines}\n\nSubtotal: $${order.subtotal_usd}\nFee: $${order.service_fee_usd}\nTotal paid: $${order.total_usd}\n\nStripe session: ${session.id}`
+          );
+
+          await sendNotificationEmail(
+            `🛒 ACTION NEEDED: New Qoyl Store order — ${order.items.length} items`,
+            `A customer just placed a Qoyl Store order. Please purchase each item below and ship to the address provided.\n\nOrder ID: ${orderId}\nUser ID:  ${userId}\n\nShip to:\n${addr}\n\nItems to purchase:\n\n${itemLines}\n\nSubtotal: $${order.subtotal_usd}\nFulfillment fee: $${order.service_fee_usd}\nTotal charged to customer: $${order.total_usd}\n\nStripe session: ${session.id}\n\nMark order as "fulfilling" in /admin/orders once you have started purchasing.`
+          );
+
+          break;
+        }
+
+        // ── Routine subscription ──────────────────────────────────────────────
         if (productType === "routine_subscription") {
           // Anchors the wash-day cycle (see lib/routineCalendar.ts) to
           // the date the subscription actually went live, not whenever

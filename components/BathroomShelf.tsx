@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import type { CartItem } from "@/lib/styleCart";
@@ -481,6 +482,7 @@ export default function BathroomShelf({
   profileChips?: string[];
   routineSteps?: RoutineStep[];
 }) {
+  const router = useRouter();
   const [items, setItems]         = useState(initialItems);
   const [openPanel, setOpenPanel] = useState<"shower" | "vanity" | "dashboard" | null>(null);
 
@@ -507,13 +509,9 @@ export default function BathroomShelf({
   }
 
   function handleShopAll() {
-    const remaining = items.filter(
-      (i) => i.product_type !== "tutorial" && i.product_id != null && !purchasedIds.has(i.product_id as string)
-    );
-    for (const item of remaining) {
-      const url = item.affiliate_url ?? item.seller_url;
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
+    // Route to the internal Qoyl Store checkout instead of opening external tabs.
+    // The checkout page fetches the full shelf directly from /api/shelf.
+    router.push("/store/checkout");
   }
 
   const showerItems = items.filter((i) => getShelfZone(i) === "shower" && i.product_type !== "tutorial");
