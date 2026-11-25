@@ -631,8 +631,10 @@ function StyleMatchContent() {
     sessionStorage.removeItem(COMMUNITY_PREFILL_KEY);
     try {
       const parsed = JSON.parse(raw) as { base64: string; mediaType: string };
+      const dataUrl = `data:${parsed.mediaType};base64,${parsed.base64}`;
       setPrefilledImage(parsed);
-      setImagePreviewUrl(`data:${parsed.mediaType};base64,${parsed.base64}`);
+      setImagePreviewUrl(dataUrl);
+      setReferenceImageUrl(dataUrl);
     } catch {
       // Malformed/stale sessionStorage value - ignore, user can still
       // upload a photo normally.
