@@ -309,9 +309,15 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
         if(elDiv.contains(cvs)) elDiv.removeChild(cvs);
       };
       } catch(err) {
+        const msg = err instanceof Error ? err.stack || err.message : String(err);
         console.error('[BathroomScene3D] scene init error:', err);
+        try { localStorage.setItem('__bscene_err', msg); } catch(_){}
       }
-    }).catch(err => console.error('[BathroomScene3D] import error:', err));
+    }).catch(err => {
+      const msg = err instanceof Error ? err.stack || err.message : String(err);
+      console.error('[BathroomScene3D] import error:', err);
+      try { localStorage.setItem('__bscene_err', 'IMPORT:' + msg); } catch(_){}
+    });
   }, []);
 
   useEffect(() => {
