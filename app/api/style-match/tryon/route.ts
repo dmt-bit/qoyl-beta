@@ -4,6 +4,58 @@ import { NextRequest, NextResponse } from "next/server";
 // Requires FAL_KEY environment variable set in Vercel.
 // Model: fal-ai/hair-swap -- transfers hairstyle from reference onto user selfie.
 
+async function uploadToFalStorage(
+  imageDataUrl: string,
+  falKey: string
+): Promise<string> {
+  // Extract base64 and content type from data URL
+  const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!match) throw new Error("Invalid image data URL");
+  const [, contentType, base64Data] = match;
+
+  // Convert base64 to binary buffer
+  const binaryData = Buffer.from(base64Data, "base64");
+
+  // Step 1: Initiate upload -- get a presigned PUT URL and the final file_url
+  const initiateRes = await fetch(
+    "https://rest.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Key ${falKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        content_type: contentType,
+        file_name: "selfie.jpg",
+      }),
+    }
+  );
+
+  if (!initiateRes.ok) {
+    const errText = await initiateRes.text();
+    throw new Error(`fal storage initiate failed ${initiateRes.status}: ${errText}`);
+  }
+
+  const { file_url, upload_url } = (await initiateRes.json()) as {
+    file_url: string;
+    upload_url: string;
+  };
+
+  // Step 2: PUT binary data to the presigned URL (no auth header needed)
+  const uploadRes = await fetch(upload_url, {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    body: binaryData,
+  });
+
+  if (!uploadRes.ok) {
+    throw new Error(`fal storage PUT failed ${uploadRes.status}`);
+  }
+
+  return file_url;
+}
+
 export async function POST(req: NextRequest) {
   const falKey = process.env.FAL_KEY;
   if (!falKey) {
@@ -29,21 +81,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Convert base64 to data URL if not already
+  // Ensure selfie is a full data URL
   const selfieDataUrl = selfieBase64.startsWith("data:")
     ? selfieBase64
     : `data:image/jpeg;base64,${selfieBase64}`;
 
   try {
-    // Upload selfie to fal storage first (required for image inputs)
-    await fetch("https://fal.run/fal-ai/fast-sdxl/upload", {
-      method: "POST",
-      headers: {
-        Authorization: `Key ${falKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ image_url: selfieDataUrl }),
-    });
+    // Upload selfie to fal CDN storage to get a hosted HTTPS URL
+    // (fal hair-swap model requires hosted URLs, not data URIs)
+    let selfieUrl: string;
+    try {
+      selfieUrl = await uploadToFalStorage(selfieDataUrl, falKey);
+    } catch (uploadErr) {
+      console.error("fal storage upload error:", uploadErr);
+      return NextResponse.json(
+        { error: "Could not upload selfie for processing. Please try again." },
+        { status: 502 }
+      );
+    }
 
     // fal.ai hair-swap: transfers hair from reference_image onto face_image
     const falRes = await fetch("https://fal.run/fal-ai/hair-swap", {
@@ -54,7 +109,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         // face_image: the user's selfie (who we're putting hair on)
-        face_image_url: selfieDataUrl,
+        face_image_url: selfieUrl,
         // hair_image: the reference style photo (where we get the hair from)
         hair_image_url: referenceImageUrl,
       }),
