@@ -25,6 +25,8 @@ const CATEGORIES: { slug: string; label: string }[] = [
   { slug: "oil", label: "Oil" },
   { slug: "treatment", label: "Treatment" },
   { slug: "hair-mask", label: "Hair Mask" },
+  { slug: "tool", label: "Tools" },
+  { slug: "accessory", label: "Accessories" },
 ];
 
 function ScoreDot({ score }: { score: number }) {

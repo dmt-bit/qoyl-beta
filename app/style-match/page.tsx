@@ -2955,9 +2955,15 @@ function StyleMatchContent() {
                           <li key={item.name} className="border border-bronze/30 px-4 py-3 space-y-1">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-dark">{item.name}</span>
-                              <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-bronze2 underline shrink-0 ml-3">
-                                {item.retailer} →
-                              </a>
+                              {item.catalogProductId ? (
+                                <a href={item.url} className="shrink-0 ml-3 bg-bronze px-2.5 py-1 font-sans font-semibold lowercase text-cream transition-colors hover:bg-bronze2" style={{ fontSize: "11px" }}>
+                                  qoyl store →
+                                </a>
+                              ) : (
+                                <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-bronze2 underline shrink-0 ml-3">
+                                  {item.retailer} →
+                                </a>
+                              )}
                             </div>
                             {item.whyItMatters && (
                               <p className="text-xs text-dark/60 leading-relaxed">{item.whyItMatters}</p>
@@ -2977,9 +2983,15 @@ function StyleMatchContent() {
                           {shoppingList.accessories.map((item) => (
                             <li key={item.name} className="flex items-center justify-between border border-bronze/30 px-4 py-3">
                               <span className="text-sm text-dark">{item.name}</span>
-                              <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-bronze2 underline">
-                                {item.retailer} →
-                              </a>
+                              {item.catalogProductId ? (
+                                <a href={item.url} className="shrink-0 ml-3 bg-bronze px-2.5 py-1 font-sans font-semibold lowercase text-cream transition-colors hover:bg-bronze2" style={{ fontSize: "11px" }}>
+                                  qoyl store →
+                                </a>
+                              ) : (
+                                <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-bronze2 underline">
+                                  {item.retailer} →
+                                </a>
+                              )}
                             </li>
                           ))}
                         </ul>

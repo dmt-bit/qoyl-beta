@@ -40,6 +40,10 @@ export type StaticShoppingItem = {
   name: string;
   url: string;
   retailer: string;
+  // Set when this item maps to a catalog_products row - signals that it
+  // can be purchased through the qoyl store rather than an external link.
+  catalogProductId?: string | null;
+  image_url?: string | null;
 };
 
 // Richer than StaticShoppingItem - carries the catalog's own "why this
@@ -53,6 +57,10 @@ export type StyleShoppingTool = {
   retailer: string;
   whyItMatters: string | null;
   priceRange: string | null;
+  // Set when this tool maps to a catalog_products row (category "tool")
+  // so the UI can show a store buy button instead of an external link.
+  catalogProductId?: string | null;
+  image_url?: string | null;
 };
 
 export type FakeHairItem = {
@@ -934,6 +942,59 @@ function buildLengthExtensionOptions(
   ];
 }
 
+// Fetches catalog_products rows for the "tool" and "accessory" categories
+// so shopping list items can link to the qoyl store when an admin has
+// added a matching product. Returns a name-keyed map (lowercased) so
+// buildTools / buildAccessories can overlay catalog data onto static items.
+type CatalogToolRow = { id: string; name: string; image_url: string | null; processed_image_url: string | null };
+async function fetchCatalogToolsAndAccessories(): Promise<Map<string, CatalogToolRow>> {
+  const { data } = await supabase
+    .from("catalog_products")
+    .select("id, name, image_url, processed_image_url, categories!inner(slug)")
+    .in("categories.slug", ["tool", "accessory"])
+    .limit(100);
+  const map = new Map<string, CatalogToolRow>();
+  if (data) {
+    for (const row of data as unknown as (CatalogToolRow & { categories: { slug: string } })[]) {
+      map.set(row.name.toLowerCase(), row);
+    }
+  }
+  return map;
+}
+
+// Overlays catalog data (id + image) onto a StyleShoppingTool when the
+// catalog has a matching product, switching the retailer to "qoyl".
+function overlayCatalogTool(
+  tool: StyleShoppingTool,
+  catalogMap: Map<string, CatalogToolRow>
+): StyleShoppingTool {
+  const match = catalogMap.get(tool.name.toLowerCase());
+  if (!match) return tool;
+  return {
+    ...tool,
+    retailer: "qoyl",
+    url: `/store?q=${encodeURIComponent(match.name)}`,
+    catalogProductId: match.id,
+    image_url: match.processed_image_url ?? match.image_url,
+  };
+}
+
+// Same for StaticShoppingItem (accessories).
+function overlayCatalogAccessory(
+  item: StaticShoppingItem,
+  catalogMap: Map<string, CatalogToolRow>
+): StaticShoppingItem {
+  const match = catalogMap.get(item.name.toLowerCase());
+  if (!match) return item;
+  return {
+    ...item,
+    retailer: "qoyl",
+    url: `/store?q=${encodeURIComponent(match.name)}`,
+    catalogProductId: match.id,
+    image_url: match.processed_image_url ?? match.image_url,
+  };
+}
+
 function catalogToolToShoppingTool(tool: HairTool): StyleShoppingTool {
   return {
     name: tool.name,
@@ -1152,6 +1213,11 @@ export async function buildStyleShoppingList(input: {
   const remainingSlugs = categorySlugs.filter((slug) => !brandCoveredSlugs.has(slug));
 
   const { items: hairCare, uncoveredSlugs } = await fetchScoredHairCareProducts(remainingSlugs, input.installType ?? null);
+
+  // Catalog lookup for tools + accessories - resolves in parallel with
+  // the fake-hair fetch below; a missing "tool"/"accessory" category just
+  // returns an empty map, so the static fallbacks are unaffected.
+  const catalogToolMap = await fetchCatalogToolsAndAccessories();
   const amazonFallback = uncoveredSlugs.map((slug) => {
     const label = categoryLabel(slug);
     return {
@@ -1225,8 +1291,10 @@ export async function buildStyleShoppingList(input: {
       input.heatRequired,
       input.requiresFakeHair,
       input.translationToolsNeeded
+    ).map((t) => overlayCatalogTool(t, catalogToolMap)),
+    accessories: buildAccessories(input.accessoriesVisible).map((a) =>
+      overlayCatalogAccessory(a, catalogToolMap)
     ),
-    accessories: buildAccessories(input.accessoriesVisible),
   };
 }
 
