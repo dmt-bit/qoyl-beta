@@ -93,9 +93,10 @@ export async function POST(req: NextRequest) {
     try {
       selfieUrl = await uploadToFalStorage(selfieDataUrl, falKey);
     } catch (uploadErr) {
-      console.error("fal storage upload error:", uploadErr);
+      const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
+      console.error("fal storage upload error:", msg);
       return NextResponse.json(
-        { error: "Could not upload selfie for processing. Please try again." },
+        { error: `Upload failed: ${msg}` },
         { status: 502 }
       );
     }
@@ -119,7 +120,7 @@ export async function POST(req: NextRequest) {
       const errText = await falRes.text();
       console.error("fal.ai hair-swap error:", falRes.status, errText);
       return NextResponse.json(
-        { error: "Try-on generation failed. Please try again." },
+        { error: `hair-swap ${falRes.status}: ${errText.slice(0, 300)}` },
         { status: 502 }
       );
     }
@@ -134,9 +135,10 @@ export async function POST(req: NextRequest) {
       null;
 
     if (!outputUrl) {
-      console.error("fal.ai unexpected response shape:", JSON.stringify(result).slice(0, 500));
+      const shape = JSON.stringify(result).slice(0, 300);
+      console.error("fal.ai unexpected response shape:", shape);
       return NextResponse.json(
-        { error: "Try-on generation failed. Please try again." },
+        { error: `Unexpected response: ${shape}` },
         { status: 502 }
       );
     }
