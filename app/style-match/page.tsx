@@ -31,6 +31,7 @@ import {
   tutorialSearchQuery,
 } from "@/lib/installTypeContent";
 import type { CartItem } from "@/lib/styleCart";
+import { storeCart } from "@/lib/storeCart";
 import CompleteYourLookCart from "@/components/CompleteYourLookCart";
 import VisualBrowseStrip, { BrowseImageModal } from "@/components/VisualBrowseStrip";
 
@@ -737,6 +738,10 @@ function StyleMatchContent() {
   const [cartId, setCartId] = useState<string | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const cartBuiltRef = useRef(false);
+  // Qoyl store cart count — updated whenever user adds a hairCare item
+  const [storeCartCount, setStoreCartCount] = useState(0);
+  // Track which product IDs the user has already added to avoid duplicate adds
+  const [addedProductIds, setAddedProductIds] = useState<Set<string>>(new Set());
   // Hair-type-aware style translation (see lib/styleTranslations.ts) -
   // null whenever no style_translations row exists for this detected
   // style + the viewer's hair family, which is most styles/most users
@@ -2916,7 +2921,38 @@ function StyleMatchContent() {
                                 <p className="text-xs text-dark/50">
                                   {item.brand} · {item.categoryLabel}
                                 </p>
-                                <ShopButton productName={item.name} brandName={item.brand} className="mt-2 inline-block text-xs text-bronze2 underline" />
+                                {addedProductIds.has(item.catalogProductId) ? (
+                                  <span className="mt-2 inline-flex items-center gap-1 text-xs text-bronze font-medium">
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l3 3 5-5"/></svg>
+                                    Added to cart
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-cream bg-bronze px-2.5 py-1 hover:bg-bronze2 transition-colors"
+                                    onClick={() => {
+                                      const cartItem: CartItem = {
+                                        product_id: item.catalogProductId,
+                                        product_name: item.name,
+                                        product_type: "product",
+                                        seller_type: "amazon",
+                                        seller_url: `https://www.amazon.com/s?k=${encodeURIComponent(`${item.brand} ${item.name}`)}`,
+                                        affiliate_url: null,
+                                        price_estimate: null,
+                                        compat_score: item.score,
+                                        quantity: 1,
+                                        status: "pending",
+                                        image_url: item.image_url ?? null,
+                                        secondary_category_labels: item.secondary_category_labels,
+                                      };
+                                      storeCart.add(cartItem);
+                                      setStoreCartCount(storeCart.count());
+                                      setAddedProductIds((prev) => { const next = new Set(prev); next.add(item.catalogProductId); return next; });
+                                    }}
+                                  >
+                                    + Add to cart
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </li>
@@ -3168,6 +3204,56 @@ function StyleMatchContent() {
           referenceImageUrl={referenceImageUrl}
           onClose={() => setTryOnOpen(false)}
         />
+      )}
+
+      {/* Floating cart bar — appears when user has added items to Qoyl store cart */}
+      {storeCartCount > 0 && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 50,
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            padding: "12px 20px 12px 16px",
+            borderRadius: 100,
+            background: "rgba(14,10,6,0.92)",
+            backdropFilter: "blur(16px)",
+            border: "1.5px solid rgba(200,168,106,0.35)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.38)",
+            fontFamily: "'DM Sans', sans-serif",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <span style={{ fontSize: 13, color: "rgba(248,243,236,0.75)", letterSpacing: "0.02em" }}>
+            {storeCartCount} {storeCartCount === 1 ? "item" : "items"} in your cart
+          </span>
+          <a
+            href="/store/checkout"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "8px 18px",
+              borderRadius: 100,
+              background: "rgba(200,168,106,0.92)",
+              color: "#1A1410",
+              fontSize: 12,
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+              textDecoration: "none",
+              transition: "background 0.15s",
+            }}
+          >
+            Checkout
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2.5 6h7M6.5 3l3 3-3 3"/>
+            </svg>
+          </a>
+        </div>
       )}
     </main>
   );
