@@ -18,11 +18,14 @@ export interface SceneProps {
 }
 
 // Hotspot positions as percentage of image dimensions (left%, top%)
-// Tuned for the luxury bathroom photo (1402×1752, portrait corner shot)
+// Tuned for the wide-angle luxury bathroom photo (1024×1024):
+//   - Vanity with vessel sinks: far right
+//   - Glass shower enclosure: back-left
+//   - Freestanding tub: front-left (use as routine/dashboard anchor)
 const HOTSPOTS: { id: "shower" | "vanity" | "dashboard"; label: string; left: string; top: string }[] = [
-  { id: "vanity",    label: "Vanity",    left: "28%", top: "52%" },
-  { id: "shower",   label: "Shower",    left: "72%", top: "45%" },
-  { id: "dashboard", label: "Routine",  left: "50%", top: "22%" },
+  { id: "vanity",    label: "Vanity",    left: "82%", top: "58%" },
+  { id: "shower",   label: "Shower",    left: "24%", top: "52%" },
+  { id: "dashboard", label: "Routine",  left: "52%", top: "38%" },
 ];
 
 export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneProps) {
@@ -40,12 +43,12 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
     >
       {/* Full-bleed photo */}
       <Image
-        src="/bathroom-bg.png"
+        src="/bathroom-bg.jpg"
         alt="Luxury bathroom"
         fill
         priority
         sizes="100vw"
-        style={{ objectFit: "cover", objectPosition: "center top" }}
+        style={{ objectFit: "cover", objectPosition: "center center" }}
         draggable={false}
       />
 
