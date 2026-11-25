@@ -319,8 +319,8 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
   }, [initScene]);
 
   return (
-    <div style={{ position:"relative", width:"100%", height: fullViewport ? "100%" : undefined, background:"#E8E0D4", cursor:"grab" }}>
-      <div ref={mountRef} style={{ width:"100%", height: fullViewport ? "100%" : undefined, display:"block" }} />
+    <div style={{ position:"relative", width:"100%", height: fullViewport ? "100%" : undefined, background:"#E8E0D4" }}>
+      <div ref={mountRef} style={{ width:"100%", height: fullViewport ? "100%" : undefined, display:"block", cursor:"grab" }} />
 
       {/* Drag hint */}
       <div style={{
@@ -347,6 +347,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
           padding:"20px 28px 32px",
           background:"linear-gradient(to top, rgba(18,13,10,0.78) 0%, rgba(18,13,10,0.0) 100%)",
           display:"flex", alignItems:"flex-end", justifyContent:"space-between", gap:16,
+          pointerEvents:"none",
         }}>
           <div>
             {hud.hasPrice && (
@@ -362,7 +363,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
               fontFamily:"'DM Sans',sans-serif", textShadow:"0 1px 6px rgba(0,0,0,0.5)",
             }}>{hud.checkedCount} of {hud.totalCount} checked off</div>
           </div>
-          <div style={{ display:"flex", gap:10 }}>
+          <div style={{ display:"flex", gap:10, pointerEvents:"all" }}>
             <button type="button" onClick={hud.onShare} style={{
               padding:"11px 24px", borderRadius:100,
               border:"1.5px solid rgba(255,255,255,0.22)",
