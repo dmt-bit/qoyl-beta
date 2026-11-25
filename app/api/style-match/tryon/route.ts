@@ -22,7 +22,7 @@ async function describeHairStyle(referenceImageUrl: string, anthropicKey: string
     },
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
-      max_tokens: 120,
+      max_tokens: 200,
       messages: [
         {
           role: "user",
@@ -33,7 +33,7 @@ async function describeHairStyle(referenceImageUrl: string, anthropicKey: string
             },
             {
               type: "text",
-              text: "Describe the hairstyle in this image in 10 words or fewer. Focus only on the hair: length, texture, cut, and color. Use plain descriptive language suitable as a prompt for an AI hair-change model. Examples: 'long wavy brunette layers', 'short textured natural afro', 'blunt bob with copper highlights'. Reply with only the hair description, nothing else.",
+              text: `Describe the hairstyle in this photo as a concise AI image-editing prompt. Cover all of these in order: length (e.g. pixie, ear-length, chin-length, shoulder-length, mid-back, waist-length), cut/shape (e.g. blunt, layered, textured, undercut, tapered, curtain bangs, side-swept bangs), texture (e.g. straight, wavy, curly, coily, kinky, locs, braids), and color (be specific: shade + undertone + any highlights or balayage, e.g. "cool ash blonde with face-framing highlights", "deep espresso brown", "auburn with copper balayage", "natural 4c coils"). Write one flowing phrase of 15–25 words. Do not mention the person's face, skin, or anything other than the hair. Reply with only the hair description, no preamble.`,
             },
           ],
         },
