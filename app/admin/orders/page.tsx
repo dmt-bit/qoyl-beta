@@ -55,6 +55,9 @@ const NEXT_STATUS: Partial<Record<OrderStatus, OrderStatus>> = {
   shipped:    "completed",
 };
 
+// Guard — only Qoyl admin emails may access (extend as needed)
+const ADMIN_EMAILS = ["thabo.a.mela@gmail.com"];
+
 export default function AdminOrdersPage() {
   const { user } = useAuth();
   const router   = useRouter();
@@ -66,8 +69,6 @@ export default function AdminOrdersPage() {
   const [trackingInputs, setTrackingInputs] = useState<Record<string, string>>({});
   const [filterStatus, setFilterStatus] = useState<"all" | OrderStatus>("all");
 
-  // Guard — only Qoyl admin emails may access
-  const ADMIN_EMAILS = ["thabo.a.mela@gmail.com"]; // extend as needed
   useEffect(() => {
     if (user && !ADMIN_EMAILS.includes(user.email ?? "")) {
       router.replace("/dashboard");

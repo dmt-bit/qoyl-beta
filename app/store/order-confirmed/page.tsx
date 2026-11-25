@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
@@ -52,7 +52,7 @@ function OrderConfirmedInner() {
           Order received
         </h1>
         <p style={{ fontSize: 15, color: "#7A6E65", margin: "0 0 32px", lineHeight: 1.6 }}>
-          We're on it. The Qoyl team will purchase every item on your shelf
+          We&apos;re on it. The Qoyl team will purchase every item on your shelf
           and ship them directly to your door.
         </p>
       </div>

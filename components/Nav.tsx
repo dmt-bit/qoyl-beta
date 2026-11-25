@@ -265,26 +265,6 @@ function BottomNavTab({
   );
 }
 
-// Calendar icon with a small bronze dot when this user has a routine to
-// show (a saved profile - routine is free for everyone, so there's no
-// lock state to signal anymore).
-function RoutineTabIcon({ active, hasProfile }: { active: boolean; hasProfile: boolean }) {
-  const colorClass = `shrink-0 ${active ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`;
-  return (
-    <span className="relative inline-flex">
-      {hasProfile && (
-        <span
-          aria-hidden
-          className={`absolute -top-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full ${
-            active ? "bg-cream" : "bg-bronze"
-          }`}
-        />
-      )}
-      <CalendarIcon size={20} className={colorClass} />
-    </span>
-  );
-}
-
 // Persistent primary navigation on mobile - the pattern every major
 // mobile app uses, replacing the old side-strip workaround entirely
 // (see the removed HomeSideNavMobile/HomeMiniMenuButton). Rendered

@@ -213,7 +213,7 @@ export default function StoreCheckoutPage() {
             Your Qoyl Order
           </h1>
           <p style={{ fontSize: 13, color: "#7A6E65", marginTop: 6, lineHeight: 1.5 }}>
-            We'll purchase every item on your behalf and ship it directly to you.
+            We&apos;ll purchase every item on your behalf and ship it directly to you.
           </p>
         </div>
 
