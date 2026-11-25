@@ -214,7 +214,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
 
       // PLANT
       const PX=RW/2-0.55, PZ=-RD/2+0.55;
-      scene.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.21,0.16,0.38,16), new THREE.MeshStandardMaterial({color:0xADA49A,roughness:0.85})), {position: new THREE.Vector3(PX,0.19,PZ)}));
+      const plantPot = new THREE.Mesh(new THREE.CylinderGeometry(0.21,0.16,0.38,16), new THREE.MeshStandardMaterial({color:0xADA49A,roughness:0.85})); plantPot.position.set(PX,0.19,PZ); scene.add(plantPot);
       const stm = new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,2.0,8), new THREE.MeshStandardMaterial({color:0x506038,roughness:0.9})); stm.position.set(PX,1.38,PZ); scene.add(stm);
       const lc=[0x6A8858,0x5A7848,0x7A9068,0x648050,0x5C7040];
       for (let i=0;i<9;i++) {
