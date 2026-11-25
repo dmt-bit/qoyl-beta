@@ -74,11 +74,13 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
         return new THREE.CanvasTexture(c);
       }
 
+      try { localStorage.setItem('__bscene_step','try-block-start'); } catch(_){}
       const W = elDiv.clientWidth||window.innerWidth, H = elDiv.clientHeight||window.innerHeight;
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
       renderer.setSize(W, H);
       renderer.shadowMap.enabled = true;
+      try { localStorage.setItem('__bscene_step','renderer-created'); } catch(_){}
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 0.9;
@@ -283,6 +285,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       cvs.addEventListener("pointerup",onUp); cvs.addEventListener("mousemove",onMov2);
 
       // ANIMATE
+      try { localStorage.setItem('__bscene_step','before-animate'); } catch(_){}
       let t=0;
       function animate(){
         rafRef.current=requestAnimationFrame(animate); t+=0.016;
@@ -293,12 +296,14 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
         renderer.render(scene,cam);
       }
       animate();
+      try { localStorage.setItem('__bscene_step','after-animate'); } catch(_){}
 
       function onResize(){
         const nw=elDiv.clientWidth||window.innerWidth, nh=elDiv.clientHeight||window.innerHeight;
         cam.aspect=nw/nh; cam.updateProjectionMatrix(); renderer.setSize(nw,nh);
       }
       window.addEventListener("resize",onResize);
+      try { localStorage.setItem('__bscene_step','after-resize-listener'); } catch(_){}
 
       (elDiv as HTMLElement & {_cleanup?:()=>void})._cleanup=()=>{
         cancelAnimationFrame(rafRef.current);
