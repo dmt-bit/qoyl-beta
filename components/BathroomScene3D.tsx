@@ -4,8 +4,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import type * as T from "three";
 
 export interface SceneProps {
-  onHotspot: (id: "shower" | "vanity") => void;
+  onHotspot: (id: "shower" | "vanity" | "dashboard") => void;
   fullViewport?: boolean;
+  /** Summary lines shown on the wall-mounted routine board */
+  wallInfo?: { greeting: string; chips: string[]; routineLines: string[] };
   hud?: {
     total: number;
     hasPrice: boolean;
@@ -16,7 +18,7 @@ export interface SceneProps {
   };
 }
 
-export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneProps) {
+export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud }: SceneProps) {
   const mountRef  = useRef<HTMLDivElement>(null);
   const rafRef    = useRef<number>(0);
   const [hint, setHint] = useState<string | null>(null);
@@ -237,14 +239,101 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       const twl=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.48,1.1),new THREE.MeshStandardMaterial({color:0xF0EBE2,roughness:0.6})); twl.position.set(RW/2-0.02,1.5,-2.2); scene.add(twl);
       const rl=new THREE.Mesh(new THREE.CylinderGeometry(0.013,0.013,1.15,10),bm.clone()); rl.rotation.z=Math.PI/2; rl.position.set(RW/2-0.02,1.76,-2.2); scene.add(rl);
 
+      // WALL BOARD — left wall, centered, showing routine info
+      const boardW = 2.2, boardH = 1.5;
+      const boardC = document.createElement("canvas"); boardC.width = 512; boardC.height = 350;
+      const bctx = boardC.getContext("2d")!;
+      // Background: dark matte board
+      bctx.fillStyle = "#1E1A16"; bctx.fillRect(0, 0, 512, 350);
+      bctx.fillStyle = "rgba(255,240,210,0.04)"; bctx.fillRect(8, 8, 496, 334);
+      // Greeting
+      const wi = wallInfo ?? { greeting: "Your routine", chips: [], routineLines: [] };
+      bctx.font = "italic 300 28px 'Georgia', serif";
+      bctx.fillStyle = "#E8D090";
+      bctx.textAlign = "center";
+      bctx.fillText(wi.greeting, 256, 54);
+      // Divider
+      bctx.strokeStyle = "rgba(200,168,106,0.35)"; bctx.lineWidth = 1;
+      bctx.beginPath(); bctx.moveTo(60, 70); bctx.lineTo(452, 70); bctx.stroke();
+      // Chips row
+      let cx = 30, cy = 96;
+      bctx.font = "11px 'Arial', sans-serif";
+      for (const chip of wi.chips.slice(0, 4)) {
+        const tw = bctx.measureText(chip).width + 18;
+        if (cx + tw > 480) { cx = 30; cy += 26; }
+        bctx.strokeStyle = "rgba(200,168,106,0.5)"; bctx.lineWidth = 1;
+        bctx.strokeRect(cx, cy - 13, tw, 20); // rounded rect approximation
+        bctx.fillStyle = "rgba(200,168,106,0.8)";
+        bctx.fillText(chip, cx + 9, cy + 1);
+        cx += tw + 8;
+      }
+      // Divider
+      const ry2 = cy + 24;
+      bctx.strokeStyle = "rgba(200,168,106,0.2)"; bctx.lineWidth = 1;
+      bctx.beginPath(); bctx.moveTo(60, ry2); bctx.lineTo(452, ry2); bctx.stroke();
+      // Routine lines
+      bctx.textAlign = "left";
+      let ly2 = ry2 + 26;
+      for (const line of wi.routineLines.slice(0, 5)) {
+        bctx.font = "bold 12px 'Arial', sans-serif";
+        bctx.fillStyle = "rgba(230,210,170,0.9)";
+        const colon = line.indexOf(":");
+        if (colon > -1) {
+          bctx.fillText(line.slice(0, colon + 1), 30, ly2);
+          bctx.font = "12px 'Arial', sans-serif";
+          bctx.fillStyle = "rgba(200,185,155,0.7)";
+          const rest = line.slice(colon + 1).trim();
+          // Wrap long rest text
+          const words = rest.split(" "); let wLine = ""; let wx = 220;
+          for (const w of words) {
+            const test = wLine + (wLine ? " " : "") + w;
+            if (bctx.measureText(test).width > 268) {
+              bctx.fillText(wLine, wx, ly2); ly2 += 16; wLine = w; wx = 220;
+            } else { wLine = test; }
+          }
+          if (wLine) bctx.fillText(wLine, wx, ly2);
+        } else {
+          bctx.fillText(line, 30, ly2);
+        }
+        ly2 += 22;
+        if (ly2 > 320) break;
+      }
+      // Tap hint at bottom
+      bctx.font = "10px 'Arial', sans-serif";
+      bctx.fillStyle = "rgba(200,168,106,0.4)";
+      bctx.textAlign = "center";
+      bctx.fillText("tap to open your dashboard →", 256, 338);
+      const boardTex = new THREE.CanvasTexture(boardC);
+      const boardMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(boardW, boardH),
+        new THREE.MeshStandardMaterial({ map: boardTex, roughness: 0.9, metalness: 0 })
+      );
+      boardMesh.rotation.y = Math.PI / 2; // face right (into room from left wall)
+      boardMesh.position.set(-RW/2 + 0.02, 1.9, -0.5);
+      scene.add(boardMesh);
+      // Frame around board
+      for (const [fw, fh, fx, fy, fz] of [
+        [boardW+0.06, 0.04, -RW/2+0.015, 1.9+boardH/2+0.02, -0.5],
+        [boardW+0.06, 0.04, -RW/2+0.015, 1.9-boardH/2-0.02, -0.5],
+        [0.04, boardH+0.08, -RW/2+0.015, 1.9, -0.5-boardW/2-0.02],
+        [0.04, boardH+0.08, -RW/2+0.015, 1.9, -0.5+boardW/2+0.02],
+      ] as [number,number,number,number,number][]) {
+        const frm = new THREE.Mesh(new THREE.BoxGeometry(0.04, fh, fw), bm.clone());
+        frm.rotation.y = Math.PI/2; frm.position.set(fx, fy, fz); scene.add(frm);
+      }
+
       // HOTSPOTS
-      const hotspots: {mesh: T.Mesh; id:"shower"|"vanity"}[] = [];
+      const hotspots: {mesh: T.Mesh; id:"shower"|"vanity"|"dashboard"}[] = [];
       for (const {id,px,py,pz,label} of [
-        {id:"shower"  as const, px:SX-0.5, py:1.5, pz:-2.2,  label:"Shower"},
-        {id:"vanity"  as const, px:-3.0,   py:1.5, pz:VZ-0.3, label:"Vanity"},
+        {id:"shower"    as const, px:SX-0.5,    py:1.5, pz:-2.2,  label:"Shower"},
+        {id:"vanity"    as const, px:-3.0,       py:1.5, pz:VZ-0.3, label:"Vanity"},
+        {id:"dashboard" as const, px:-RW/2+0.6,  py:1.5, pz:-0.5,  label:"Routine"},
       ]) {
         const mat=new THREE.MeshBasicMaterial({map:hotspotTex(label),transparent:true,depthWrite:false,side:THREE.DoubleSide});
-        const mesh=new THREE.Mesh(new THREE.PlaneGeometry(0.75,0.75),mat); mesh.position.set(px,py,pz); mesh.userData.id=id;
+        const mesh=new THREE.Mesh(new THREE.PlaneGeometry(0.75,0.75),mat);
+        mesh.position.set(px,py,pz);
+        if (id === "dashboard") mesh.rotation.y = Math.PI/2;
+        mesh.userData.id=id;
         scene.add(mesh); hotspots.push({mesh,id});
       }
 
@@ -323,7 +412,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       console.error('[BathroomScene3D] import error:', err);
       try { localStorage.setItem('__bscene_err', 'IMPORT:' + msg); } catch{}
     });
-  }, []);
+  }, [wallInfo]);
 
   useEffect(() => {
     initScene();

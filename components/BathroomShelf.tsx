@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import type { CartItem } from "@/lib/styleCart";
+import type { RoutineStep } from "@/lib/routine";
 
 const BathroomScene3D = dynamic(() => import("./BathroomScene3D"), { ssr: false });
 
@@ -299,6 +301,160 @@ function ShelfPanel({
 }
 
 
+// ─── Dashboard slide-up panel ─────────────────────────────────────────────
+function DashboardPanel({
+  open,
+  greeting,
+  chips,
+  routineSteps,
+  onClose,
+}: {
+  open: boolean;
+  greeting: string;
+  chips: string[];
+  routineSteps: RoutineStep[];
+  onClose: () => void;
+}) {
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        onClick={onClose}
+        style={{
+          position: "fixed", inset: 0,
+          background: open ? "rgba(42,36,32,0.55)" : "rgba(42,36,32,0)",
+          backdropFilter: open ? "blur(4px)" : "none",
+          zIndex: 200,
+          pointerEvents: open ? "all" : "none",
+          transition: "background 0.4s, backdrop-filter 0.4s",
+        }}
+        aria-hidden="true"
+      />
+      {/* Panel */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Your routine"
+        style={{
+          position: "fixed", left: "50%", bottom: 0,
+          transform: open ? "translateX(-50%) translateY(0)" : "translateX(-50%) translateY(100%)",
+          width: "min(640px, 100vw)",
+          maxHeight: "85vh",
+          background: "#F8F5F0",
+          borderRadius: "24px 24px 0 0",
+          display: "flex", flexDirection: "column",
+          transition: "transform 0.45s cubic-bezier(0.32,0.72,0,1)",
+          zIndex: 201,
+          boxShadow: "0 -12px 60px rgba(42,36,32,0.25)",
+          overflow: "hidden",
+        }}
+        onKeyDown={(e) => { if (e.key === "Escape") onClose(); }}
+        tabIndex={-1}
+      >
+        {/* Handle */}
+        <div style={{
+          width: 36, height: 4, background: "rgba(180,168,152,0.5)",
+          borderRadius: 2, margin: "14px auto 0", flexShrink: 0,
+        }} />
+        {/* Header */}
+        <div style={{
+          padding: "16px 24px 12px",
+          borderBottom: "1px solid rgba(220,210,195,0.6)",
+          flexShrink: 0,
+        }}>
+          <div style={{
+            fontFamily: "'Cormorant Garamond', Georgia, serif",
+            fontSize: 24, fontWeight: 400, fontStyle: "italic",
+            color: "#2A2420",
+          }}>
+            {greeting}
+          </div>
+          {chips.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+              {chips.map((chip) => (
+                <span key={chip} style={{
+                  fontSize: 11, fontWeight: 500,
+                  border: "1px solid rgba(200,168,106,0.5)",
+                  borderRadius: 100, padding: "3px 10px",
+                  color: "#B4985A", letterSpacing: "0.03em",
+                  textTransform: "capitalize",
+                }}>
+                  {chip}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+        {/* Scroll content */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "20px 24px 36px" }}>
+          {/* Routine steps */}
+          {routineSteps.length > 0 && (
+            <div>
+              <p style={{
+                fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
+                color: "#B4A898", marginBottom: 14, fontWeight: 600,
+              }}>Your Routine</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                {routineSteps.map((step) => (
+                  <div key={step.title} style={{ borderLeft: "2px solid rgba(200,168,106,0.4)", paddingLeft: 14 }}>
+                    <p style={{
+                      fontFamily: "'Cormorant Garamond', Georgia, serif",
+                      fontSize: 17, color: "#B4985A", margin: 0, lineHeight: 1.2,
+                    }}>{step.title}</p>
+                    <p style={{ fontSize: 13, color: "rgba(42,36,32,0.65)", margin: "4px 0 0", lineHeight: 1.5 }}>
+                      {step.description}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href="/routine"
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  marginTop: 20, fontSize: 12, fontWeight: 600,
+                  letterSpacing: "0.07em", color: "#2A2420",
+                  background: "rgba(200,168,106,0.15)",
+                  border: "1px solid rgba(200,168,106,0.4)",
+                  borderRadius: 100, padding: "9px 18px",
+                  textDecoration: "none",
+                }}
+              >
+                Full routine calendar →
+              </Link>
+            </div>
+          )}
+
+          {/* Quick links */}
+          <div style={{ marginTop: routineSteps.length > 0 ? 28 : 0 }}>
+            <p style={{
+              fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase",
+              color: "#B4A898", marginBottom: 12, fontWeight: 600,
+            }}>Quick actions</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {[
+                { href: "/style-match", label: "Style Match", desc: "Upload a photo, get matched styles" },
+                { href: "/search",      label: "Search product", desc: "Check any product's compatibility" },
+                { href: "/travel",      label: "Travel kit",    desc: "5 products for your destination" },
+                { href: "/profile",     label: "My profile",    desc: "Edit your hair profile" },
+              ].map(({ href, label, desc }) => (
+                <Link key={href} href={href} style={{
+                  display: "block", padding: "14px 14px",
+                  borderRadius: 14, border: "1px solid rgba(200,168,106,0.3)",
+                  background: "rgba(255,251,245,0.8)", textDecoration: "none",
+                  transition: "border-color 0.2s",
+                }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: "#2A2420", margin: 0 }}>{label}</p>
+                  <p style={{ fontSize: 11, color: "rgba(42,36,32,0.55)", margin: "3px 0 0", lineHeight: 1.4 }}>{desc}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Global styles (keyframes etc.) ──────────────────────────────────────
 const GLOBAL_CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap');
@@ -315,12 +471,18 @@ const GLOBAL_CSS = `
 export default function BathroomShelf({
   cartId,
   items: initialItems,
+  greeting,
+  profileChips,
+  routineSteps,
 }: {
   cartId: string;
   items: CartItem[];
+  greeting?: string;
+  profileChips?: string[];
+  routineSteps?: RoutineStep[];
 }) {
   const [items, setItems]         = useState(initialItems);
-  const [openPanel, setOpenPanel] = useState<"shower" | "vanity" | null>(null);
+  const [openPanel, setOpenPanel] = useState<"shower" | "vanity" | "dashboard" | null>(null);
 
   const purchasedIds = new Set<string>(
     items
@@ -360,6 +522,12 @@ export default function BathroomShelf({
   const total = purchasable.reduce((s, i) => s + (i.price_estimate ?? 0) * (i.quantity ?? 1), 0);
   const hasPrice = purchasable.some((i) => i.price_estimate != null);
 
+  const wallInfo = {
+    greeting: greeting ?? "Your routine",
+    chips: profileChips ?? [],
+    routineLines: (routineSteps ?? []).map((s) => `${s.title}: ${s.description}`),
+  };
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
@@ -374,6 +542,7 @@ export default function BathroomShelf({
         <BathroomScene3D
           onHotspot={(id) => setOpenPanel(id)}
           fullViewport
+          wallInfo={wallInfo}
           hud={purchasable.length > 0 ? {
             total,
             hasPrice,
@@ -415,6 +584,13 @@ export default function BathroomShelf({
         items={vanityItems}
         purchasedIds={purchasedIds}
         onToggle={toggleItem}
+        onClose={() => setOpenPanel(null)}
+      />
+      <DashboardPanel
+        open={openPanel === "dashboard"}
+        greeting={greeting ?? "Your routine"}
+        chips={profileChips ?? []}
+        routineSteps={routineSteps ?? []}
         onClose={() => setOpenPanel(null)}
       />
     </>

@@ -633,6 +633,14 @@ function DashboardContent() {
     : "Welcome to Qoyl";
   const childSafetyNote = getChildSafetyNote(hairProfile?.profile_for ?? null);
 
+  const profileChips = hairProfile ? [
+    hairProfile.curl_type && hairProfile.curl_type !== "not_sure" ? `Curl type ${hairProfile.curl_type}` : null,
+    hairProfile.porosity && hairProfile.porosity !== "not sure" ? `${hairProfile.porosity} porosity` : null,
+    hairProfile.scalp_condition ? SCALP_LABELS[hairProfile.scalp_condition] ?? hairProfile.scalp_condition : null,
+    formatAdultAgeRange(hairProfile.adult_age_range),
+    routineFocusChipLabel(hairProfile.routine_focus, hairProfile.extension_type),
+  ].filter((c): c is string => Boolean(c)) : [];
+
   return (
     <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-2xl">
@@ -690,6 +698,9 @@ function DashboardContent() {
             <BathroomShelf
               cartId={shelfCartId ?? ""}
               items={shelfItems}
+              greeting={greeting}
+              profileChips={profileChips}
+              routineSteps={steps}
             />
           </div>
         )}
