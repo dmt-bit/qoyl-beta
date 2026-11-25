@@ -273,21 +273,6 @@ const STATIC_STYLES: StyleRow[] = [
   { id: "static-twa", name: "TWA", slug: "twa", description: "Teeny weeny afro — close-cropped natural style.", hair_types_compatible: ["4a", "4b", "4c"], requires_fake_hair: false, estimated_time: "15-30 minutes", difficulty: "beginner" },
 ];
 
-function CameraIcon() {
-  return (
-    <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.132.175C3.098 7.58 2.25 8.507 2.25 9.605v9.145c0 1.152.938 2.25 2.25 2.25h15c1.313 0 2.25-1.098 2.25-2.25V9.605c0-1.098-.848-2.026-1.803-2.2a41.03 41.03 0 00-1.132-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.235 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-    </svg>
-  );
-}
-function SparkleIcon() {
-  return (
-    <svg className="h-6 w-6 text-bronze2" fill="currentColor" viewBox="0 0 24 24">
-      <path d="M12 2l1.8 5.4L19 9l-5.2 1.6L12 16l-1.8-5.4L5 9l5.2-1.6L12 2zM19 14l.9 2.6L22 17l-2.1.9L19 20l-.9-2.1L16 17l2.1-.4L19 14zM5 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7.7-2z" />
-    </svg>
-  );
-}
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
     <svg
@@ -344,22 +329,6 @@ function BangLengthDiagram({ bangLength }: { bangLength: BangLength }) {
       <ellipse cx="36" cy="80" rx="26" ry="40" stroke="#0a0a0a" strokeWidth="1.5" />
       <line x1="12" y1={EYEBROW_Y} x2="60" y2={EYEBROW_Y} stroke="#bbb" strokeWidth="1" strokeDasharray="2 2" />
       <line x1="10" y1={BANG_LENGTH_Y[bangLength]} x2="62" y2={BANG_LENGTH_Y[bangLength]} stroke="#0a0a0a" strokeWidth="2.5" />
-    </svg>
-  );
-}
-
-function CheckListIcon() {
-  return (
-    <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
-
-function UploadIcon() {
-  return (
-    <svg className="h-6 w-6 text-dark/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 8.25L12 3.75 7.5 8.25M12 3.75v12" />
     </svg>
   );
 }
