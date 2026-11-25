@@ -1,22 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Virtual hair try-on via fal.ai
-// Requires FAL_KEY environment variable set in Vercel.
-// Model: fal-ai/hair-swap -- transfers hairstyle from reference onto user selfie.
+// Model: fal-ai/image-editing/hair-change
+// Flow:
+//   1. If no hairPrompt provided, call Claude vision to describe the hair in referenceImageUrl
+//   2. Upload selfie to fal CDN storage
+//   3. Call fal hair-change with selfie URL + hair style prompt
+//   4. Return result image URL + the prompt used (so UI can show/cache it)
 
-async function uploadToFalStorage(
-  imageDataUrl: string,
-  falKey: string
-): Promise<string> {
-  // Extract base64 and content type from data URL
+export const maxDuration = 45;
+
+const ANTHROPIC_MODEL = "claude-haiku-4-5";
+
+async function describeHairStyle(referenceImageUrl: string, anthropicKey: string): Promise<string> {
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "x-api-key": anthropicKey,
+      "anthropic-version": "2023-06-01",
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: ANTHROPIC_MODEL,
+      max_tokens: 120,
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "image",
+              source: { type: "url", url: referenceImageUrl },
+            },
+            {
+              type: "text",
+              text: "Describe the hairstyle in this image in 10 words or fewer. Focus only on the hair: length, texture, cut, and color. Use plain descriptive language suitable as a prompt for an AI hair-change model. Examples: 'long wavy brunette layers', 'short textured natural afro', 'blunt bob with copper highlights'. Reply with only the hair description, nothing else.",
+            },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Claude vision failed ${response.status}: ${err.slice(0, 200)}`);
+  }
+
+  const data = await response.json();
+  const text = data?.content?.[0]?.text?.trim() ?? "";
+  if (!text) throw new Error("Empty response from Claude vision");
+  return text;
+}
+
+async function uploadToFalStorage(imageDataUrl: string, falKey: string): Promise<string> {
   const match = imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
   if (!match) throw new Error("Invalid image data URL");
   const [, contentType, base64Data] = match;
-
-  // Convert base64 to binary buffer
   const binaryData = Buffer.from(base64Data, "base64");
 
-  // Step 1: Initiate upload -- get a presigned PUT URL and the final file_url
+  // Step 1: get a presigned PUT URL
   const initiateRes = await fetch(
     "https://rest.fal.ai/storage/upload/initiate?storage_type=fal-cdn-v3",
     {
@@ -25,16 +67,13 @@ async function uploadToFalStorage(
         Authorization: `Key ${falKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        content_type: contentType,
-        file_name: "selfie.jpg",
-      }),
+      body: JSON.stringify({ content_type: contentType, file_name: "selfie.jpg" }),
     }
   );
 
   if (!initiateRes.ok) {
-    const errText = await initiateRes.text();
-    throw new Error(`fal storage initiate failed ${initiateRes.status}: ${errText}`);
+    const err = await initiateRes.text();
+    throw new Error(`fal storage initiate failed ${initiateRes.status}: ${err}`);
   }
 
   const { file_url, upload_url } = (await initiateRes.json()) as {
@@ -42,7 +81,7 @@ async function uploadToFalStorage(
     upload_url: string;
   };
 
-  // Step 2: PUT binary data to the presigned URL (no auth header needed)
+  // Step 2: PUT binary data to presigned URL
   const uploadRes = await fetch(upload_url, {
     method: "PUT",
     headers: { "Content-Type": contentType },
@@ -58,6 +97,8 @@ async function uploadToFalStorage(
 
 export async function POST(req: NextRequest) {
   const falKey = process.env.FAL_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
   if (!falKey) {
     return NextResponse.json(
       { error: "Virtual try-on is not configured. Contact support." },
@@ -65,14 +106,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let body: { selfieBase64?: string; referenceImageUrl?: string };
+  let body: { selfieBase64?: string; referenceImageUrl?: string; hairPrompt?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { selfieBase64, referenceImageUrl } = body;
+  const { selfieBase64, referenceImageUrl, hairPrompt } = body;
 
   if (!selfieBase64 || !referenceImageUrl) {
     return NextResponse.json(
@@ -81,69 +122,81 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Ensure selfie is a full data URL
   const selfieDataUrl = selfieBase64.startsWith("data:")
     ? selfieBase64
     : `data:image/jpeg;base64,${selfieBase64}`;
 
   try {
-    // Upload selfie to fal CDN storage to get a hosted HTTPS URL
-    // (fal hair-swap model requires hosted URLs, not data URIs)
+    // Step 1: get hair style prompt (use provided one or generate via Claude vision)
+    let prompt = hairPrompt?.trim();
+    if (!prompt) {
+      if (!anthropicKey) {
+        prompt = "natural hair style";
+      } else {
+        try {
+          prompt = await describeHairStyle(referenceImageUrl, anthropicKey);
+        } catch (err) {
+          console.error("Claude vision error:", err);
+          prompt = "natural hair style";
+        }
+      }
+    }
+
+    // Step 2: upload selfie to fal CDN storage
     let selfieUrl: string;
     try {
       selfieUrl = await uploadToFalStorage(selfieDataUrl, falKey);
     } catch (uploadErr) {
-      const msg = uploadErr instanceof Error ? uploadErr.message : String(uploadErr);
-      console.error("fal storage upload error:", msg);
+      console.error("fal storage upload error:", uploadErr);
       return NextResponse.json(
-        { error: `Upload failed: ${msg}` },
+        { error: "Could not upload photo for processing. Please try again." },
         { status: 502 }
       );
     }
 
-    // fal.ai hair-swap: transfers hair from reference_image onto face_image
-    const falRes = await fetch("https://fal.run/fal-ai/hair-swap", {
+    // Step 3: call fal hair-change model
+    const falRes = await fetch("https://fal.run/fal-ai/image-editing/hair-change", {
       method: "POST",
       headers: {
         Authorization: `Key ${falKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        // face_image: the user's selfie (who we're putting hair on)
-        face_image_url: selfieUrl,
-        // hair_image: the reference style photo (where we get the hair from)
-        hair_image_url: referenceImageUrl,
+        image_url: selfieUrl,
+        prompt,
+        num_inference_steps: 30,
+        guidance_scale: 3.5,
+        output_format: "jpeg",
       }),
     });
 
     if (!falRes.ok) {
       const errText = await falRes.text();
-      console.error("fal.ai hair-swap error:", falRes.status, errText);
+      console.error("fal hair-change error:", falRes.status, errText);
       return NextResponse.json(
-        { error: `hair-swap ${falRes.status}: ${errText.slice(0, 300)}` },
+        { error: "Try-on generation failed. Please try again." },
         { status: 502 }
       );
     }
 
     const result = await falRes.json();
 
-    // fal.ai returns { image: { url: "..." } } or { images: [{url: "..."}] }
+    // fal returns { images: [{ url: "..." }] }
     const outputUrl =
-      result?.image?.url ??
       result?.images?.[0]?.url ??
+      result?.image?.url ??
       result?.output?.image?.url ??
       null;
 
     if (!outputUrl) {
-      const shape = JSON.stringify(result).slice(0, 300);
-      console.error("fal.ai unexpected response shape:", shape);
+      console.error("fal hair-change unexpected response:", JSON.stringify(result).slice(0, 300));
       return NextResponse.json(
-        { error: `Unexpected response: ${shape}` },
+        { error: "Try-on generation failed. Please try again." },
         { status: 502 }
       );
     }
 
-    return NextResponse.json({ imageUrl: outputUrl });
+    return NextResponse.json({ imageUrl: outputUrl, promptUsed: prompt });
   } catch (err) {
     console.error("try-on route error:", err);
     return NextResponse.json(

@@ -9,12 +9,12 @@ type Props = {
 
 export default function TryOnModal({ referenceImageUrl, onClose }: Props) {
   const [selfiePreview, setSelfiePreview] = useState<string | null>(null);
+  const [hairPrompt, setHairPrompt] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Close on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -23,7 +23,6 @@ export default function TryOnModal({ referenceImageUrl, onClose }: Props) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // Prevent body scroll while open
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = ""; };
@@ -48,13 +47,21 @@ export default function TryOnModal({ referenceImageUrl, onClose }: Props) {
       const res = await fetch("/api/style-match/tryon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ selfieBase64: selfiePreview, referenceImageUrl }),
+        body: JSON.stringify({
+          selfieBase64: selfiePreview,
+          referenceImageUrl,
+          hairPrompt: hairPrompt.trim() || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok || data.error) {
         setError(data.error ?? "Try-on failed. Please try again.");
       } else {
         setResultUrl(data.imageUrl);
+        // If we got back a prompt from Claude vision, show it so user can refine next time
+        if (data.promptUsed && !hairPrompt.trim()) {
+          setHairPrompt(data.promptUsed);
+        }
       }
     } catch {
       setError("Try-on failed. Please try again.");
@@ -93,7 +100,7 @@ export default function TryOnModal({ referenceImageUrl, onClose }: Props) {
             see it on you
           </h2>
           <p className="mt-0.5 font-mono lowercase text-dark/50" style={{ fontSize: "10px" }}>
-            AI-generated preview -- for inspiration only
+            AI-generated preview — for inspiration only
           </p>
         </div>
 
@@ -151,6 +158,29 @@ export default function TryOnModal({ referenceImageUrl, onClose }: Props) {
             </div>
           </div>
 
+          {/* Hair style prompt — shown when selfie is uploaded */}
+          {selfiePreview && !resultUrl && (
+            <div className="mt-4">
+              <label className="mb-1 block font-mono lowercase text-dark/40" style={{ fontSize: "9px", letterSpacing: "0.08em" }}>
+                hair style description
+                <span className="ml-1 text-dark/25">(auto-generated from the photo — edit if needed)</span>
+              </label>
+              <input
+                type="text"
+                value={hairPrompt}
+                onChange={(e) => setHairPrompt(e.target.value)}
+                placeholder="e.g. long wavy brunette layers"
+                className="w-full border border-dark/15 bg-warm/10 px-3 py-2 font-mono text-dark placeholder:text-dark/25 focus:border-dark/30 focus:outline-none"
+                style={{ fontSize: "11px" }}
+              />
+              {!hairPrompt.trim() && (
+                <p className="mt-1 font-mono text-dark/35" style={{ fontSize: "9px" }}>
+                  leave blank to auto-detect from the reference photo
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Result */}
           {resultUrl && (
             <div className="mt-4">
@@ -160,8 +190,23 @@ export default function TryOnModal({ referenceImageUrl, onClose }: Props) {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={resultUrl} alt="Virtual try-on result" className="w-full object-cover" />
               <p className="mt-1 font-mono lowercase text-dark/30" style={{ fontSize: "9px" }}>
-                for inspiration only -- results vary
+                for inspiration only — results vary
               </p>
+              {/* Show prompt used so user can tweak it */}
+              {hairPrompt && (
+                <div className="mt-3">
+                  <label className="mb-1 block font-mono lowercase text-dark/40" style={{ fontSize: "9px", letterSpacing: "0.08em" }}>
+                    style used — edit and regenerate
+                  </label>
+                  <input
+                    type="text"
+                    value={hairPrompt}
+                    onChange={(e) => setHairPrompt(e.target.value)}
+                    className="w-full border border-dark/15 bg-warm/10 px-3 py-2 font-mono text-dark focus:border-dark/30 focus:outline-none"
+                    style={{ fontSize: "11px" }}
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -176,21 +221,21 @@ export default function TryOnModal({ referenceImageUrl, onClose }: Props) {
             onChange={handleFileChange}
           />
 
-          {!resultUrl ? (
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={!selfiePreview || loading}
-              className="mt-4 w-full bg-dark py-3.5 font-sans font-bold lowercase text-white transition-colors hover:bg-[#333] disabled:opacity-50"
-              style={{ fontSize: "14px" }}
-            >
-              {loading ? "generating preview..." : "generate preview →"}
-            </button>
-          ) : (
+          <button
+            type="button"
+            onClick={handleGenerate}
+            disabled={!selfiePreview || loading}
+            className="mt-4 w-full bg-dark py-3.5 font-sans font-bold lowercase text-white transition-colors hover:bg-[#333] disabled:opacity-50"
+            style={{ fontSize: "14px" }}
+          >
+            {loading ? "generating preview..." : resultUrl ? "regenerate →" : "generate preview →"}
+          </button>
+
+          {resultUrl && (
             <button
               type="button"
               onClick={resetSelfie}
-              className="mt-3 w-full border border-dark py-3 font-sans font-bold lowercase text-dark transition-colors hover:bg-dark/5"
+              className="mt-2 w-full border border-dark py-3 font-sans font-bold lowercase text-dark transition-colors hover:bg-dark/5"
               style={{ fontSize: "14px" }}
             >
               try a different selfie
