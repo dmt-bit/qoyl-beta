@@ -32,7 +32,7 @@ import {
 } from "@/lib/installTypeContent";
 import type { CartItem } from "@/lib/styleCart";
 import CompleteYourLookCart from "@/components/CompleteYourLookCart";
-import { BrowseImageModal } from "@/components/VisualBrowseStrip";
+import VisualBrowseStrip, { BrowseImageModal } from "@/components/VisualBrowseStrip";
 
 type BangLength = "above-eyebrow" | "at-eyebrow" | "below-eyebrow" | "cheekbone-length";
 type ApproximateLength = "twa" | "short" | "medium" | "long" | "waist" | "hip";
@@ -1509,56 +1509,41 @@ function StyleMatchContent() {
         </div>
       )}
 
-      {/* ── Landing slide-up panel ── */}
+      {/* ── Landing UI: upload card + browse strip ── */}
       {isLanding && (
         <div style={{
-          position: "fixed", left: "50%", bottom: 0, zIndex: 10,
-          transform: "translateX(-50%)",
-          width: "min(640px, 100vw)",
-          background: "#F8F5F0",
-          borderRadius: "24px 24px 0 0",
-          boxShadow: "0 -12px 60px rgba(10,8,6,0.4)",
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          position: "fixed", inset: 0, zIndex: 10,
+          display: "flex", flexDirection: "column",
+          justifyContent: "space-between",
+          pointerEvents: "none",
         }}>
-          {/* Handle */}
-          <div style={{ width: 36, height: 4, background: "rgba(180,168,152,0.5)", borderRadius: 2, margin: "14px auto 0" }} />
 
-          {/* Header */}
-          <div style={{ padding: "18px 24px 0" }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 28, fontWeight: 300, fontStyle: "italic", color: "#1A1510", margin: 0 }}>
-                Style Match
-              </p>
-              <div style={{ display: "flex", gap: 6 }}>
-                {["Tutorials", "Shopping list", "Stylists"].map((pill) => (
-                  <span key={pill} style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: "#B4985A", border: "1px solid rgba(200,168,106,0.4)", borderRadius: 100, padding: "2px 8px" }}>{pill}</span>
-                ))}
-              </div>
-            </div>
-            <p style={{ fontSize: 13, color: "#7A6E65", marginTop: 6, lineHeight: 1.5 }}>
-              Show us the style. We will build your plan.
-            </p>
-          </div>
-
-          {/* Actions */}
-          <div style={{ padding: "16px 24px 28px", display: "flex", flexDirection: "column", gap: 12 }}>
-
-            {/* Upload photo */}
+          {/* Upload photo card — upper area, overlaid on photo */}
+          <div style={{
+            pointerEvents: "auto",
+            margin: "auto 0",
+            marginTop: "clamp(80px, 22vh, 140px)",
+            padding: "0 20px",
+            width: "min(600px, 100vw)",
+            alignSelf: "center",
+          }}>
             <label style={{
               display: "flex", alignItems: "center", gap: 14,
-              background: "white", border: "1.5px solid rgba(200,168,106,0.4)",
-              borderRadius: 16, padding: "16px 18px", cursor: "pointer",
-              transition: "border-color 0.2s",
+              background: "rgba(15,12,9,0.55)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              border: "1px solid rgba(200,168,106,0.3)",
+              borderRadius: 20, padding: "16px 18px", cursor: "pointer",
             }}>
-              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(200,168,106,0.12)", border: "1px solid rgba(200,168,106,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <div style={{ width: 42, height: 42, borderRadius: "50%", background: "rgba(200,168,106,0.15)", border: "1px solid rgba(200,168,106,0.35)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C8A86A" strokeWidth="1.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.132.175C3.098 7.58 2.25 8.507 2.25 9.605v9.145c0 1.152.938 2.25 2.25 2.25h15c1.313 0 2.25-1.098 2.25-2.25V9.605c0-1.098-.848-2.026-1.803-2.2a41.03 41.03 0 00-1.132-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.235 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
                 </svg>
               </div>
               <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontSize: 15, fontWeight: 500, color: "#1A1510" }}>Upload a photo</p>
-                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#9A8E82" }}>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 500, color: "rgba(255,248,235,0.95)" }}>Upload a photo</p>
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: "rgba(200,185,160,0.7)" }}>
                   {imageFile ? imageFile.name : (prefilledImage ? "Community photo ready →" : "A picture of the style you want")}
                 </p>
               </div>
@@ -1575,40 +1560,48 @@ function StyleMatchContent() {
               />
             </label>
 
-            {/* Analyze / Browse row */}
-            <div style={{ display: "grid", gridTemplateColumns: (imageFile || prefilledImage) ? "1fr 1fr" : "1fr", gap: 10 }}>
-              {(imageFile || prefilledImage) && (
-                <button
-                  type="button"
-                  onClick={handlePrimarySubmit}
-                  style={{
-                    padding: "13px 0", borderRadius: 100, border: "none",
-                    background: "linear-gradient(135deg,#C8A86A,#A8863A)",
-                    color: "#1A1510", fontFamily: "inherit",
-                    fontSize: 14, fontWeight: 500, letterSpacing: "0.06em", cursor: "pointer",
-                  }}
-                >
-                  Analyze this style →
-                </button>
-              )}
+            {/* Analyze button — appears once a photo is chosen */}
+            {(imageFile || prefilledImage) && (
+              <button
+                type="button"
+                onClick={handlePrimarySubmit}
+                style={{
+                  marginTop: 10, width: "100%",
+                  padding: "13px 0", borderRadius: 100, border: "none",
+                  background: "linear-gradient(135deg,#C8A86A,#A8863A)",
+                  color: "#1A1510", fontFamily: "inherit",
+                  fontSize: 14, fontWeight: 600, letterSpacing: "0.06em", cursor: "pointer",
+                }}
+              >
+                Analyze this style →
+              </button>
+            )}
+
+            {error && (
+              <p style={{ margin: "8px 0 0", fontSize: 12, color: "#F87171", textAlign: "center" }}>{error}</p>
+            )}
+          </div>
+
+          {/* Browse styles strip — anchored to bottom */}
+          <div style={{ pointerEvents: "auto", width: "100%" }}>
+            {/* label */}
+            <div style={{ padding: "0 20px 10px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(200,185,160,0.65)", fontWeight: 500 }}>
+                Browse styles
+              </span>
+              <div style={{ flex: 1, height: 1, background: "rgba(200,168,106,0.2)" }} />
               <button
                 type="button"
                 onClick={openInspoMode}
-                style={{
-                  padding: "13px 0", borderRadius: 100,
-                  border: "1.5px solid rgba(200,168,106,0.5)",
-                  background: "transparent", color: "#7A6E65",
-                  fontFamily: "inherit", fontSize: 14, fontWeight: 500,
-                  letterSpacing: "0.06em", cursor: "pointer",
-                }}
+                style={{ fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(200,168,106,0.8)", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}
               >
-                Browse styles
+                See all →
               </button>
             </div>
-
-            {error && (
-              <p style={{ margin: 0, fontSize: 12, color: "#C0392B", textAlign: "center" }}>{error}</p>
-            )}
+            <VisualBrowseStrip
+              gender={hairProfile?.gender ?? null}
+              onSelectImage={(img) => setBrowseModalImage(img)}
+            />
           </div>
         </div>
       )}
