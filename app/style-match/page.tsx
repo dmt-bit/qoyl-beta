@@ -1639,15 +1639,138 @@ function StyleMatchContent() {
 
   if (pageState === "analyzing") return <AnalyzingOverlay />;
 
-  return (
-    <main className="min-h-screen bg-white font-sans text-dark">
-      {pageState === "landing" && <StyleMatchPromoHero />}
+  const isLanding = pageState === "landing";
 
-      {pageState === "landing" && (
-        <VisualBrowseStrip
-          gender={hairProfile?.gender ?? null}
-          onSelectImage={(img) => setBrowseModalImage(img)}
-        />
+  return (
+    <main className="font-sans text-dark" style={{ minHeight: "100vh", background: isLanding ? "transparent" : "white" }}>
+
+      {/* ── Full-page salon photo background (landing only) ── */}
+      {isLanding && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 0,
+          backgroundImage: "url('/salon-bg.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center 30%",
+        }} aria-hidden="true">
+          {/* subtle dark vignette at bottom so panel reads cleanly */}
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(to bottom, rgba(10,8,6,0.35) 0%, rgba(10,8,6,0.1) 40%, rgba(10,8,6,0.65) 100%)",
+          }} />
+        </div>
+      )}
+
+      {/* ── Landing slide-up panel ── */}
+      {isLanding && (
+        <div style={{
+          position: "fixed", left: "50%", bottom: 0, zIndex: 10,
+          transform: "translateX(-50%)",
+          width: "min(640px, 100vw)",
+          background: "#F8F5F0",
+          borderRadius: "24px 24px 0 0",
+          boxShadow: "0 -12px 60px rgba(10,8,6,0.4)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        }}>
+          {/* Handle */}
+          <div style={{ width: 36, height: 4, background: "rgba(180,168,152,0.5)", borderRadius: 2, margin: "14px auto 0" }} />
+
+          {/* Header */}
+          <div style={{ padding: "18px 24px 0" }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+              <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 28, fontWeight: 300, fontStyle: "italic", color: "#1A1510", margin: 0 }}>
+                Style Match
+              </p>
+              <div style={{ display: "flex", gap: 6 }}>
+                {["Tutorials", "Shopping list", "Stylists"].map((pill) => (
+                  <span key={pill} style={{ fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: "#B4985A", border: "1px solid rgba(200,168,106,0.4)", borderRadius: 100, padding: "2px 8px" }}>{pill}</span>
+                ))}
+              </div>
+            </div>
+            <p style={{ fontSize: 13, color: "#7A6E65", marginTop: 6, lineHeight: 1.5 }}>
+              Show us the style. We will build your plan.
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div style={{ padding: "16px 24px 28px", display: "flex", flexDirection: "column", gap: 12 }}>
+
+            {/* Upload photo */}
+            <label style={{
+              display: "flex", alignItems: "center", gap: 14,
+              background: "white", border: "1.5px solid rgba(200,168,106,0.4)",
+              borderRadius: 16, padding: "16px 18px", cursor: "pointer",
+              transition: "border-color 0.2s",
+            }}>
+              <div style={{ width: 44, height: 44, borderRadius: "50%", background: "rgba(200,168,106,0.12)", border: "1px solid rgba(200,168,106,0.3)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C8A86A" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.132.175C3.098 7.58 2.25 8.507 2.25 9.605v9.145c0 1.152.938 2.25 2.25 2.25h15c1.313 0 2.25-1.098 2.25-2.25V9.605c0-1.098-.848-2.026-1.803-2.2a41.03 41.03 0 00-1.132-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.235 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                </svg>
+              </div>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 500, color: "#1A1510" }}>Upload a photo</p>
+                <p style={{ margin: "2px 0 0", fontSize: 12, color: "#9A8E82" }}>
+                  {imageFile ? imageFile.name : (prefilledImage ? "Community photo ready →" : "A picture of the style you want")}
+                </p>
+              </div>
+              {imagePreviewUrl && (
+                <div style={{ width: 48, height: 48, borderRadius: 10, overflow: "hidden", flexShrink: 0, position: "relative" }}>
+                  <Image src={imagePreviewUrl} alt="Selected" fill style={{ objectFit: "cover" }} sizes="48px" />
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+                onChange={handlePhotoChange}
+                style={{ position: "absolute", width: 1, height: 1, opacity: 0 }}
+              />
+            </label>
+
+            {/* Analyze / Browse row */}
+            <div style={{ display: "grid", gridTemplateColumns: (imageFile || prefilledImage) ? "1fr 1fr" : "1fr", gap: 10 }}>
+              {(imageFile || prefilledImage) && (
+                <button
+                  type="button"
+                  onClick={handlePrimarySubmit}
+                  style={{
+                    padding: "13px 0", borderRadius: 100, border: "none",
+                    background: "linear-gradient(135deg,#C8A86A,#A8863A)",
+                    color: "#1A1510", fontFamily: "inherit",
+                    fontSize: 14, fontWeight: 500, letterSpacing: "0.06em", cursor: "pointer",
+                  }}
+                >
+                  Analyze this style →
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={openInspoMode}
+                style={{
+                  padding: "13px 0", borderRadius: 100,
+                  border: "1.5px solid rgba(200,168,106,0.5)",
+                  background: "transparent", color: "#7A6E65",
+                  fontFamily: "inherit", fontSize: 14, fontWeight: 500,
+                  letterSpacing: "0.06em", cursor: "pointer",
+                }}
+              >
+                Browse styles
+              </button>
+            </div>
+
+            {error && (
+              <p style={{ margin: 0, fontSize: 12, color: "#C0392B", textAlign: "center" }}>{error}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* wordmark overlay on the photo */}
+      {isLanding && (
+        <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", zIndex: 11 }}>
+          <p style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 28, fontWeight: 700, color: "white", letterSpacing: "0.08em", margin: 0, textShadow: "0 1px 8px rgba(0,0,0,0.4)" }}>
+            qoyl
+          </p>
+        </div>
       )}
 
       {browseModalImage && (
@@ -1667,81 +1790,8 @@ function StyleMatchContent() {
         />
       )}
 
-      <div className="px-4 py-10 sm:px-6">
+      <div className="px-4 py-10 sm:px-6" style={{ display: isLanding ? "none" : undefined }}>
       <div className="mx-auto max-w-2xl">
-        {pageState === "landing" && (
-          <>
-            <h1 className="font-serif text-[28px] font-semibold text-dark">Style Match</h1>
-            <p className="mt-2 text-sm text-dark/70">
-              Upload a photo of the style you want or browse our style library — we will
-              find tutorials, build your complete shopping list, and match you with a
-              local stylist.
-            </p>
-
-            <DemoSection />
-
-            {error && <p className="mt-4 text-sm text-red">{error}</p>}
-
-            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="rounded-xl border border-bronze/30 p-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
-                  <CameraIcon />
-                </div>
-                <p className="mt-4 font-serif text-xl font-semibold text-dark">Upload a photo</p>
-                <p className="mt-1 text-sm text-dark/70">A picture of the style you want.</p>
-
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
-                  onChange={handlePhotoChange}
-                  className="mt-4 block w-full text-xs text-dark/70 file:mr-3 file:rounded-full file:border file:border-bronze/40 file:bg-transparent file:px-3 file:py-1.5 file:text-xs file:text-bronze2"
-                />
-
-                {imagePreviewUrl && (
-                  <div className="relative mt-3 h-40 w-full overflow-hidden rounded-lg bg-[#f5f5f5]">
-                    <Image src={imagePreviewUrl} alt="Selected style" fill className="object-cover" />
-                  </div>
-                )}
-                {prefilledImage && !imageFile && (
-                  <p className="mt-2 text-xs text-bronze2">Using the community photo you picked →</p>
-                )}
-
-                <button
-                  type="button"
-                  onClick={handlePrimarySubmit}
-                  disabled={!imageFile && !prefilledImage}
-                  className="mt-4 w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-40"
-                >
-                  Analyze this style →
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={openInspoMode}
-                className="rounded-xl border border-bronze/30 p-6 text-left transition-colors hover:border-bronze"
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
-                  <CompassIcon />
-                </div>
-                <p className="mt-4 font-serif text-xl font-semibold text-dark">Browse styles</p>
-                <p className="mt-1 text-sm text-dark/70">
-                  Not sure? Browse styles for your hair type.
-                </p>
-              </button>
-            </div>
-
-            {hasHairPhoto === false && (
-              <Link
-                href="/profile"
-                className="mt-6 block text-sm text-bronze2 underline underline-offset-2 hover:text-dark"
-              >
-                Add a hair photo to your profile for a more personalized style analysis →
-              </Link>
-            )}
-          </>
-        )}
-
         {pageState === "inspo" && (
           <div>
             <button
