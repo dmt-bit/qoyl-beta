@@ -32,7 +32,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       const elDiv = el as HTMLDivElement;
       try {
 
-      function marbleTex(w: number, h: number, tileDiv: number, baseColor: string, groutColor: string): T.CanvasTexture {
+      const marbleTex = (w: number, h: number, tileDiv: number, baseColor: string, groutColor: string): T.CanvasTexture => {
         const c = document.createElement("canvas"); c.width = w; c.height = h;
         const ctx = c.getContext("2d")!;
         ctx.fillStyle = baseColor; ctx.fillRect(0, 0, w, h);
@@ -54,7 +54,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
         return t;
       }
 
-      function brassTex(): T.CanvasTexture {
+      const brassTex = (): T.CanvasTexture => {
         const c = document.createElement("canvas"); c.width = 128; c.height = 8;
         const ctx = c.getContext("2d")!;
         const g = ctx.createLinearGradient(0,0,128,0);
@@ -63,7 +63,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
         return new THREE.CanvasTexture(c);
       }
 
-      function hotspotTex(label: string): T.CanvasTexture {
+      const hotspotTex = (label: string): T.CanvasTexture => {
         const c = document.createElement("canvas"); c.width = 256; c.height = 256;
         const ctx = c.getContext("2d")!;
         ctx.clearRect(0,0,256,256);
@@ -104,7 +104,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       const RW = 9, RH = 4, RD = 9;
       const bm = new THREE.MeshStandardMaterial({ map: brassTex(), roughness:0.3, metalness:0.75 });
 
-      function addWall(geo: T.BufferGeometry, mat: T.Material, x: number, y: number, z: number, ry = 0) {
+      const addWall = (geo: T.BufferGeometry, mat: T.Material, x: number, y: number, z: number, ry = 0) => {
         const m = new THREE.Mesh(geo, mat); m.rotation.y = ry;
         m.position.set(x,y,z); m.receiveShadow = true; scene.add(m); return m;
       }
@@ -121,7 +121,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       addWall(new THREE.PlaneGeometry(RW,RD), floorMat, 0,0,0, -Math.PI/2).rotation.x = -Math.PI/2;
       addWall(new THREE.PlaneGeometry(RW,RD), ceilMat, 0,RH,0, Math.PI/2).rotation.x = Math.PI/2;
 
-      function baseboard(len: number, x: number, z: number, ry = 0) {
+      const baseboard = (len: number, x: number, z: number, ry = 0) => {
         const b = new THREE.Mesh(new THREE.BoxGeometry(len, 0.1, 0.03), bm.clone());
         b.rotation.y = ry; b.position.set(x, 0.05, z); scene.add(b);
       }
@@ -254,15 +254,15 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       const ray=new THREE.Raycaster();
       const mp=new THREE.Vector2();
       let isDown=false, dragged=false, dx0=0, dy0=0, lx=0, ly=0;
-      function onDown(e:PointerEvent){isDown=true;dragged=false;dx0=e.clientX;dy0=e.clientY;lx=e.clientX;ly=e.clientY; cvs.setPointerCapture(e.pointerId);}
-      function onMove(e:PointerEvent){
+      const onDown = (e:PointerEvent) => {isDown=true;dragged=false;dx0=e.clientX;dy0=e.clientY;lx=e.clientX;ly=e.clientY; cvs.setPointerCapture(e.pointerId);};
+      const onMove = (e:PointerEvent) => {
         if(!isDown) return;
         if(Math.hypot(e.clientX-dx0,e.clientY-dy0)>6) dragged=true;
         yaw  -= (e.clientX-lx)*0.0028;
         pitch = Math.max(-Math.PI/2.8, Math.min(Math.PI/2.8, pitch-(e.clientY-ly)*0.0028));
         lx=e.clientX; ly=e.clientY;
       }
-      function onUp(e:PointerEvent){
+      const onUp = (e:PointerEvent) => {
         if(!dragged){
           const r=cvs.getBoundingClientRect();
           mp.x=((e.clientX-r.left)/r.width)*2-1; mp.y=-((e.clientY-r.top)/r.height)*2+1;
@@ -272,7 +272,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
         }
         isDown=false;
       }
-      function onMov2(e:MouseEvent){
+      const onMov2 = (e:MouseEvent) => {
         if(isDown) return;
         const r=cvs.getBoundingClientRect();
         mp.x=((e.clientX-r.left)/r.width)*2-1; mp.y=-((e.clientY-r.top)/r.height)*2+1;
@@ -287,7 +287,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       // ANIMATE
       try { localStorage.setItem('__bscene_step','before-animate'); } catch(_){}
       let t=0;
-      function animate(){
+      const animate = () => {
         rafRef.current=requestAnimationFrame(animate); t+=0.016;
         const dir=new THREE.Vector3(Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch));
         cam.lookAt(cam.position.clone().add(dir));
@@ -298,7 +298,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       animate();
       try { localStorage.setItem('__bscene_step','after-animate'); } catch(_){}
 
-      function onResize(){
+      const onResize = () => {
         const nw=elDiv.clientWidth||window.innerWidth, nh=elDiv.clientHeight||window.innerHeight;
         cam.aspect=nw/nh; cam.updateProjectionMatrix(); renderer.setSize(nw,nh);
       }
