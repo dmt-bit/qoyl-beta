@@ -5,6 +5,7 @@ import Image from "next/image";
 
 export interface SceneProps {
   onHotspot: (id: "shower" | "vanity" | "dashboard") => void;
+  onExit?: () => void;
   fullViewport?: boolean;
   wallInfo?: { greeting: string; chips: string[]; routineLines: string[] };
   hud?: {
@@ -28,7 +29,7 @@ const HOTSPOTS: { id: "shower" | "vanity" | "dashboard"; label: string; left: st
   { id: "dashboard", label: "Routine",  left: "52%", top: "38%" },
 ];
 
-export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneProps) {
+export default function BathroomScene3D({ onHotspot, onExit, fullViewport, hud }: SceneProps) {
   const [hovered, setHovered] = useState<string | null>(null);
 
   return (
@@ -62,6 +63,40 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
           pointerEvents: "none",
         }}
       />
+
+      {/* Back / exit button */}
+      {onExit && (
+        <button
+          type="button"
+          onClick={onExit}
+          style={{
+            position: "absolute",
+            top: 20,
+            left: 20,
+            zIndex: 10,
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+            padding: "9px 16px 9px 12px",
+            borderRadius: 100,
+            border: "1.5px solid rgba(255,255,255,0.22)",
+            background: "rgba(14,10,6,0.52)",
+            backdropFilter: "blur(12px)",
+            cursor: "pointer",
+            fontSize: 12,
+            fontWeight: 500,
+            letterSpacing: "0.06em",
+            fontFamily: "'DM Sans', sans-serif",
+            color: "#F8F3EC",
+            whiteSpace: "nowrap",
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 11.5L4.5 7 9 2.5" />
+          </svg>
+          dashboard
+        </button>
+      )}
 
       {/* Hotspot buttons */}
       {HOTSPOTS.map(({ id, label, left, top }) => {
