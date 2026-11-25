@@ -152,9 +152,9 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
       // Shower area skylight feel
       const showerPt = new THREE.PointLight(0xE8F4FF, 1.4, 5);
       showerPt.position.set(2.5, 3.5, -3.5); scene.add(showerPt);
-      // Right wall warm fill
-      const rightFill = new THREE.PointLight(0xFFEED8, 1.0, 7);
-      rightFill.position.set(3.8, 2.8, -1.5); scene.add(rightFill);
+      // Back-wall board fill — illuminates the board and blank wall section
+      const boardFill = new THREE.PointLight(0xFFEED8, 1.6, 6);
+      boardFill.position.set(-1.5, 3.2, -2.5); scene.add(boardFill);
       scene.add(new THREE.HemisphereLight(0xFFF8F0, 0xC8B89A, 0.3));
 
       const RW = 9, RH = 4, RD = 9;
@@ -309,9 +309,9 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
         pnlInner.position.set(RW/2 - 0.004, 0.46, pz); scene.add(pnlInner);
       }
 
-      // WALL BOARD — right wall, in the blank section above towel rail area (z around -2.8, clear of tub and plant)
-      const boardW = 2.0, boardH = 1.4;
-      const boardBZ = -2.8; // z position on right wall
+      // WALL BOARD — back wall, blank left section (left of shower)
+      const boardW = 2.2, boardH = 1.5;
+      const boardBX = -1.5; // x center on back wall (clear of shower which starts at x≈1.0)
       const boardBY = 2.1;  // height center
       const boardC = document.createElement("canvas"); boardC.width = 512; boardC.height = 358;
       const bctx = boardC.getContext("2d")!;
@@ -394,18 +394,18 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
         new THREE.PlaneGeometry(boardW, boardH),
         new THREE.MeshStandardMaterial({ map: boardTex, roughness: 0.88, metalness: 0 })
       );
-      boardMesh.rotation.y = -Math.PI / 2; // face left into room from right wall
-      boardMesh.position.set(RW/2 - 0.02, boardBY, boardBZ);
+      boardMesh.rotation.y = Math.PI; // face into room from back wall
+      boardMesh.position.set(boardBX, boardBY, -RD/2 + 0.02);
       scene.add(boardMesh);
-      // Frame around board — right wall orientation
-      for (const [fw, fh, fy, fz] of [
-        [boardW+0.07, 0.045, boardBY + boardH/2 + 0.022, boardBZ],
-        [boardW+0.07, 0.045, boardBY - boardH/2 - 0.022, boardBZ],
-        [0.045, boardH+0.09, boardBY, boardBZ - boardW/2 - 0.022],
-        [0.045, boardH+0.09, boardBY, boardBZ + boardW/2 + 0.022],
+      // Frame around board — back wall orientation
+      for (const [fw, fh, fx, fy] of [
+        [boardW+0.07, 0.045, boardBX, boardBY + boardH/2 + 0.022],
+        [boardW+0.07, 0.045, boardBX, boardBY - boardH/2 - 0.022],
+        [0.045, boardH+0.09, boardBX - boardW/2 - 0.022, boardBY],
+        [0.045, boardH+0.09, boardBX + boardW/2 + 0.022, boardBY],
       ] as [number,number,number,number][]) {
-        const frm = new THREE.Mesh(new THREE.BoxGeometry(0.04, fh, fw), bm.clone());
-        frm.rotation.y = -Math.PI/2; frm.position.set(RW/2 - 0.015, fy, fz); scene.add(frm);
+        const frm = new THREE.Mesh(new THREE.BoxGeometry(fw, fh, 0.04), bm.clone());
+        frm.position.set(fx, fy, -RD/2 + 0.015); scene.add(frm);
       }
 
       // HOTSPOTS
@@ -413,12 +413,12 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
       for (const {id,px,py,pz,label} of [
         {id:"shower"    as const, px:SX-0.5,    py:1.5, pz:-2.2,  label:"Shower"},
         {id:"vanity"    as const, px:-3.0,       py:1.5, pz:VZ-0.3, label:"Vanity"},
-        {id:"dashboard" as const, px:RW/2-0.6,   py:1.5, pz:-2.8,  label:"Routine"},
+        {id:"dashboard" as const, px:-1.5,        py:1.5, pz:-RD/2+0.6, label:"Routine"},
       ]) {
         const mat=new THREE.MeshBasicMaterial({map:hotspotTex(label),transparent:true,depthWrite:false,side:THREE.DoubleSide});
         const mesh=new THREE.Mesh(new THREE.PlaneGeometry(0.75,0.75),mat);
         mesh.position.set(px,py,pz);
-        if (id === "dashboard") mesh.rotation.y = -Math.PI/2;
+        if (id === "dashboard") mesh.rotation.y = Math.PI;
         mesh.userData.id=id;
         scene.add(mesh); hotspots.push({mesh,id});
       }
