@@ -2289,20 +2289,45 @@ function StyleMatchContent() {
               <button
                 type="button"
                 onClick={() => setTryOnOpen(true)}
-                className="mt-4 flex w-full items-center justify-between border border-bronze bg-warm/20 px-4 py-3 transition-colors hover:bg-warm/40"
+                className="group mt-5 w-full overflow-hidden transition-opacity hover:opacity-90 active:opacity-80"
+                style={{
+                  background: "linear-gradient(135deg, #C8A86A 0%, #A07840 50%, #C8A86A 100%)",
+                  backgroundSize: "200% 200%",
+                }}
               >
-                <span className="flex items-center gap-2">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                    <circle cx="12" cy="8" r="4" />
-                    <path strokeLinecap="round" d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                  </svg>
-                  <span className="font-sans font-semibold lowercase text-dark" style={{ fontSize: "13px" }}>
-                    see it on you
-                  </span>
-                </span>
-                <span className="font-mono lowercase text-dark/40" style={{ fontSize: "10px" }}>
-                  AI preview
-                </span>
+                <div className="flex items-center justify-between px-5 py-4">
+                  <div className="flex flex-col items-start gap-0.5 text-left">
+                    <span className="font-sans font-bold lowercase text-white" style={{ fontSize: "15px", letterSpacing: "-0.2px" }}>
+                      see it on you
+                    </span>
+                    <span className="font-mono lowercase text-white/70" style={{ fontSize: "10px" }}>
+                      try this style with your photo
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="font-mono uppercase text-white/60"
+                      style={{ fontSize: "9px", letterSpacing: "0.1em" }}
+                    >
+                      AI preview
+                    </span>
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      className="opacity-80"
+                    >
+                      <path d="M12 3c-1 2.5-3.5 4-6 4 0 5 2.5 9.5 6 11 3.5-1.5 6-6 6-11-2.5 0-5-1.5-6-4z" />
+                      <path d="M9 12l2 2 4-4" />
+                    </svg>
+                  </div>
+                </div>
               </button>
             )}
 
