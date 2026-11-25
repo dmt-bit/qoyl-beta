@@ -66,7 +66,6 @@ function ProductCard({
     return l.charAt(0).toUpperCase() + l.slice(1).replace(/-/g, " ");
   })();
   const [t, b] = getBottleColor(item.secondary_category_labels);
-  const shopUrl = item.affiliate_url ?? item.seller_url;
 
   return (
     <div
@@ -167,26 +166,27 @@ function ProductCard({
         </div>
       )}
 
-      {/* Shop link */}
-      {shopUrl && (
-        <a href={shopUrl} target="_blank" rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 5,
-            fontSize: 10, fontWeight: 500, letterSpacing: "0.05em",
-            color: "#2A2420", background: "#F0EBE4",
-            border: "none", borderRadius: 100,
-            padding: "5px 10px", cursor: "pointer",
-            fontFamily: "inherit", textDecoration: "none",
-            marginTop: 2,
-          }}
-        >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M1.5 5h7M5 1.5l3.5 3.5L5 8.5"/>
-          </svg>
-          Shop
-        </a>
-      )}
+      {/* Add to Qoyl Store cart */}
+      <Link href="/store/checkout"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 5,
+          fontSize: 10, fontWeight: 500, letterSpacing: "0.05em",
+          color: "#1A1410", background: "rgba(200,168,106,0.18)",
+          border: "1px solid rgba(200,168,106,0.4)",
+          borderRadius: 100,
+          padding: "5px 10px", cursor: "pointer",
+          fontFamily: "inherit", textDecoration: "none",
+          marginTop: 2,
+        }}
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="3.5" cy="8.5" r="0.75" fill="currentColor"/>
+          <circle cx="7.5" cy="8.5" r="0.75" fill="currentColor"/>
+          <path d="M1 1h1.5l1 4.5h4L9 3H3"/>
+        </svg>
+        Add to cart in Qoyl Store
+      </Link>
     </div>
   );
 }
