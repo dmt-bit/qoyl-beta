@@ -564,9 +564,13 @@ export default function BathroomShelf({
     );
   }
 
+  const [shareToast, setShareToast] = useState(false);
+
   async function handleShare() {
     const url = `${window.location.origin}/cart/${cartId}`;
     try { await navigator.clipboard.writeText(url); } catch {}
+    setShareToast(true);
+    setTimeout(() => setShareToast(false), 2200);
   }
 
   function handleShopAll() {
@@ -600,6 +604,7 @@ export default function BathroomShelf({
       }}>
         <BathroomScene3D
           onHotspot={(id) => setOpenPanel(id)}
+          onExit={() => router.push("/dashboard")}
           fullViewport
           wallInfo={wallInfo}
           hud={purchasable.length > 0 ? {
@@ -656,6 +661,39 @@ export default function BathroomShelf({
         routineSteps={routineSteps ?? []}
         onClose={() => setOpenPanel(null)}
       />
+
+      {/* Share toast */}
+      {shareToast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 100,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 200,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "11px 20px",
+            borderRadius: 100,
+            background: "rgba(14,10,6,0.88)",
+            backdropFilter: "blur(16px)",
+            border: "1px solid rgba(200,168,106,0.35)",
+            color: "#F8F3EC",
+            fontSize: 12,
+            fontWeight: 500,
+            letterSpacing: "0.06em",
+            fontFamily: "'DM Sans', sans-serif",
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="rgba(200,168,106,0.9)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M2.5 7.5l3 3 6-6" />
+          </svg>
+          Link copied
+        </div>
+      )}
     </>
   );
 }

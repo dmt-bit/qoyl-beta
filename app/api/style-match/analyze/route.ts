@@ -168,7 +168,7 @@ function buildAnalysisInstructions(opts: {
   curlType: string | null;
 }): string {
   const fields = [
-    `"style_name": "specific style name - use the precise subtype, not the general category. Name the PRIMARY defining feature only. Do NOT append secondary features like 'with Blunt Bangs', 'with Highlights', 'with Layers' — if bangs are genuinely the defining style (baby bangs, curtain bangs, etc.) name ONLY the bang style; if color is the defining feature name ONLY the color style."`,
+    `"style_name": "MUST be EXACTLY one of the following style names, copied verbatim (case-sensitive): Wash and Go, Twist Out, Braid Out, Box Braids, Knotless Braids, Faux Locs, Passion Twists, Goddess Braids, Locs, Bantu Knots, High Puff, TWA, Silk Press, Blowout, Beach Waves, French Braid, Dutch Braid, Space Buns, Sleek Bun, Diffused Waves, Flexi Rod Set, Flat Twist Out, Pineapple Updo, Baby Bangs, Curtain Bangs, Micro Bangs, Blunt Bangs, Side Swept Bangs, Wispy Bangs. Choose the CLOSEST match from this list — no other values are allowed. Name the PRIMARY defining feature only; do NOT append secondary features."`,
     `"style_description": "one sentence only"`,
     `"confidence": "high/medium/low"`,
     `"confidence_reason": "one sentence on what visual features confirmed this identification"`,

@@ -1,88 +1,80 @@
 // Editorial image breaks on /routine, matched to the user's curl type.
-//
-// The archive files are Cloudinary *videos*, so they can't be used as <img>
-// sources directly: the image/upload path returns 404 for them. The poster
-// frame is served from the video/upload path (so_2.0 = the frame 2 seconds
-// in, usually more representative than frame 0) as a .jpg - see toPosterUrl.
+// Images are sourced from Pexels (free to use, no sign-in required for display).
 
 type RoutineImagePair = { break1: string; break2: string };
 
+// Pexels image URLs sized to 800w for fast loading.
+// Coily (4a-4c): tight coils, TWAs, natural texture
+// Curly (3a-3c): defined curls, wash-and-gos
+// Wavy (2a-2c): beachy waves, loose curls
+// Straight (1a-1c): sleek, blowouts
 const ROUTINE_IMAGES: Record<string, RoutineImagePair> = {
   // Coily 4a-4c
   "4a": {
-    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6940165.jpeg",
-    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/8343868.jpeg",
+    break1: "https://images.pexels.com/photos/3738382/pexels-photo-3738382.jpeg?auto=compress&cs=tinysrgb&w=800",
+    break2: "https://images.pexels.com/photos/3755706/pexels-photo-3755706.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   "4b": {
-    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/8343868.jpeg",
-    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6381013.jpeg",
+    break1: "https://images.pexels.com/photos/3755706/pexels-photo-3755706.jpeg?auto=compress&cs=tinysrgb&w=800",
+    break2: "https://images.pexels.com/photos/8961546/pexels-photo-8961546.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   "4c": {
-    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6940165.jpeg",
-    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6381013.jpeg",
+    break1: "https://images.pexels.com/photos/8961546/pexels-photo-8961546.jpeg?auto=compress&cs=tinysrgb&w=800",
+    break2: "https://images.pexels.com/photos/3738382/pexels-photo-3738382.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   // Curly 3a-3c
   "3a": {
-    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7020172.jpeg",
-    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6663336.jpeg",
+    break1: "https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=800",
+    break2: "https://images.pexels.com/photos/3785079/pexels-photo-3785079.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   "3b": {
-    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7020172.jpeg",
-    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/5891307.jpeg",
+    break1: "https://images.pexels.com/photos/3785079/pexels-photo-3785079.jpeg?auto=compress&cs=tinysrgb&w=800",
+    break2: "https://images.pexels.com/photos/4350095/pexels-photo-4350095.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   "3c": {
-    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6663336.jpeg",
-    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7020172.jpeg",
+    break1: "https://images.pexels.com/photos/4350095/pexels-photo-4350095.jpeg?auto=compress&cs=tinysrgb&w=800",
+    break2: "https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   // Wavy 2a-2c
   "2a": {
-    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7306713.jpeg",
-    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6663336.jpeg",
+    break1: "https://images.pexels.com/photos/2065195/pexels-photo-2065195.jpeg?auto=compress&cs=tinysrgb&w=800",
+    break2: "https://images.pexels.com/photos/3812745/pexels-photo-3812745.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   "2b": {
-    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7306713.jpeg",
-    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7020172.jpeg",
+    break1: "https://images.pexels.com/photos/3812745/pexels-photo-3812745.jpeg?auto=compress&cs=tinysrgb&w=800",
+    break2: "https://images.pexels.com/photos/2065195/pexels-photo-2065195.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   "2c": {
-    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6663336.jpeg",
-    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7306713.jpeg",
+    break1: "https://images.pexels.com/photos/3812745/pexels-photo-3812745.jpeg?auto=compress&cs=tinysrgb&w=800",
+    break2: "https://images.pexels.com/photos/2065195/pexels-photo-2065195.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   // Straight 1a-1c
   "1a": {
-    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6502872.jpeg",
-    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7306713.jpeg",
+    break1: "https://images.pexels.com/photos/3373737/pexels-photo-3373737.jpeg?auto=compress&cs=tinysrgb&w=800",
+    break2: "https://images.pexels.com/photos/2065195/pexels-photo-2065195.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   "1b": {
-    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6502872.jpeg",
-    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/7020172.jpeg",
+    break1: "https://images.pexels.com/photos/3373737/pexels-photo-3373737.jpeg?auto=compress&cs=tinysrgb&w=800",
+    break2: "https://images.pexels.com/photos/3812745/pexels-photo-3812745.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   "1c": {
-    break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6502872.jpeg",
-    break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6663336.jpeg",
+    break1: "https://images.pexels.com/photos/3373737/pexels-photo-3373737.jpeg?auto=compress&cs=tinysrgb&w=800",
+    break2: "https://images.pexels.com/photos/2065195/pexels-photo-2065195.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
 };
 
 // Fallback for an unknown or missing curl type.
 const DEFAULT_IMAGES: RoutineImagePair = {
-  break1: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/6381013.jpeg",
-  break2: "https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/video-posters/8343868.jpeg",
+  break1: "https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg?auto=compress&cs=tinysrgb&w=800",
+  break2: "https://images.pexels.com/photos/3738382/pexels-photo-3738382.jpeg?auto=compress&cs=tinysrgb&w=800",
 };
 
-// Turns an archive video URL (image/upload or video/upload, any extension)
-// into its poster-frame .jpg. Idempotent: a URL that's already a poster
-// frame comes back unchanged.
+// URLs are already plain image URLs; this is kept for API compatibility.
 export function toPosterUrl(url: string): string {
-  let out = url;
-  if (out.includes("/image/upload/")) {
-    out = out.replace("/image/upload/", "/video/upload/");
-  }
-  if (out.includes("/video/upload/") && !out.includes("/video/upload/so_")) {
-    out = out.replace("/video/upload/", "/video/upload/so_2.0/");
-  }
-  return out.replace(/\.(mp4|jpe?g|png|webp)$/i, "") + ".jpg";
+  return url;
 }
 
 export function getRoutineImages(curlType: string | null | undefined): RoutineImagePair {
   const pair = (curlType && ROUTINE_IMAGES[curlType]) || DEFAULT_IMAGES;
-  return { break1: toPosterUrl(pair.break1), break2: toPosterUrl(pair.break2) };
+  return { break1: pair.break1, break2: pair.break2 };
 }
