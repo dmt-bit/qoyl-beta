@@ -30,6 +30,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
     import("three").then((THREE) => {
       if (!mountRef.current) return;
       const elDiv = el as HTMLDivElement;
+      try {
 
       function marbleTex(w: number, h: number, tileDiv: number, baseColor: string, groutColor: string): T.CanvasTexture {
         const c = document.createElement("canvas"); c.width = w; c.height = h;
@@ -307,7 +308,10 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
         renderer.dispose();
         if(elDiv.contains(cvs)) elDiv.removeChild(cvs);
       };
-    });
+      } catch(err) {
+        console.error('[BathroomScene3D] scene init error:', err);
+      }
+    }).catch(err => console.error('[BathroomScene3D] import error:', err));
   }, []);
 
   useEffect(() => {
