@@ -32,7 +32,7 @@ import {
 } from "@/lib/installTypeContent";
 import type { CartItem } from "@/lib/styleCart";
 import CompleteYourLookCart from "@/components/CompleteYourLookCart";
-import VisualBrowseStrip, { BrowseImageModal } from "@/components/VisualBrowseStrip";
+import { BrowseImageModal } from "@/components/VisualBrowseStrip";
 
 type BangLength = "above-eyebrow" | "at-eyebrow" | "below-eyebrow" | "cheekbone-length";
 type ApproximateLength = "twa" | "short" | "medium" | "long" | "waist" | "hip";
@@ -281,14 +281,6 @@ function CameraIcon() {
     </svg>
   );
 }
-function CompassIcon() {
-  return (
-    <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15 9l-3.5 1.5L10 14l3.5-1.5L15 9z" />
-    </svg>
-  );
-}
 function SparkleIcon() {
   return (
     <svg className="h-6 w-6 text-bronze2" fill="currentColor" viewBox="0 0 24 24">
@@ -369,120 +361,6 @@ function UploadIcon() {
     <svg className="h-6 w-6 text-dark/60" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 8.25L12 3.75 7.5 8.25M12 3.75v12" />
     </svg>
-  );
-}
-
-const STYLE_MATCH_FEATURE_PILLS = ["Tutorials", "Shopping list", "Stylist match"];
-
-// Full-bleed promotional hero, shown only on the initial landing screen -
-// gives /style-match its own compelling entry point instead of dropping
-// straight into a form. Moved here from the home page, which now only
-// links to /style-match rather than promoting it inline.
-function StyleMatchPromoHero() {
-  return (
-    <div className="relative">
-      <div className="relative h-[470px] w-full overflow-hidden bg-white sm:h-[530px]">
-        <Image
-          src="https://cqpxiassldkmusngqorx.supabase.co/storage/v1/object/public/media/media/photos/35140064.jpg"
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover object-center"
-        />
-  {/* Light scrim behind just the wordmark - the headline moved
-            off the photo entirely into the white banner below, so the
-            rest of the image stays clean with no overlay/text on it. */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-dark/60 to-transparent" />
-
-        <div className="absolute inset-x-0 top-6 flex justify-center">
-          <p className="font-serif text-2xl font-bold lowercase text-white">qoyl</p>
-        </div>
-      </div>
-
-      {/* Meme-card treatment (item: feed card aesthetic) - a solid
-          white banner in normal flow below the image, not floated over
-          it, so the headline never fights the photo for contrast. */}
-      <div className="border-t-2 border-dark bg-white px-5 py-4">
-        <h2 className="font-sans font-bold lowercase text-dark" style={{ fontSize: "22px", letterSpacing: "-0.5px" }}>
-          show us the style.
-        </h2>
-        <p className="mt-0.5 font-sans font-light lowercase text-muted" style={{ fontSize: "16px" }}>
-          we will build your plan.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap justify-center gap-2 px-4 py-6">
-        {STYLE_MATCH_FEATURE_PILLS.map((pill) => (
-          <span
-            key={pill}
-            className="rounded-full border border-bronze/40 px-3 py-1.5 text-xs font-medium text-bronze2"
-          >
-            {pill}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function DemoSection() {
-  return (
-    <div className="mt-8">
-      <p className="text-xs font-semibold uppercase tracking-widest text-bronze">How it works</p>
-      <h2 className="mt-2 font-serif text-2xl font-semibold text-dark">
-        Your complete style plan in under 30 seconds
-      </h2>
-
-      <div className="no-scrollbar -mx-4 mt-5 flex snap-x gap-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
-        <div className="w-[85%] shrink-0 snap-center rounded-xl bg-[#f5f5f5] p-5 sm:w-auto">
-          <div className="flex items-center justify-between">
-            <span className="font-serif text-2xl text-bronze">1</span>
-            <CameraIcon />
-          </div>
-          <p className="mt-3 text-sm text-dark/80">
-            Upload a photo of the style you want or browse our style library
-          </p>
-          <div className="mt-4 flex h-28 items-center justify-center rounded-2xl border-2 border-cream/20">
-            <UploadIcon />
-          </div>
-        </div>
-
-        <div className="w-[85%] shrink-0 snap-center rounded-xl bg-[#f5f5f5] p-5 sm:w-auto">
-          <div className="flex items-center justify-between">
-            <span className="font-serif text-2xl text-bronze">2</span>
-            <SparkleIcon />
-          </div>
-          <p className="mt-3 text-sm text-dark/80">
-            We identify the style, difficulty, time required, and what you need
-          </p>
-          <div className="mt-4 rounded-lg bg-white p-3">
-            <p className="font-serif text-sm text-dark">Knotless Braids</p>
-            <div className="mt-2 flex gap-1.5">
-              <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[9px] text-bronze2">Intermediate</span>
-              <span className="rounded-full border border-bronze/40 px-2 py-0.5 text-[9px] text-bronze2">5-9 hrs</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="w-[85%] shrink-0 snap-center rounded-xl bg-[#f5f5f5] p-5 sm:w-auto">
-          <div className="flex items-center justify-between">
-            <span className="font-serif text-2xl text-bronze">3</span>
-            <CheckListIcon />
-          </div>
-          <p className="mt-3 text-sm text-dark/80">
-            Tutorials from real creators, a shopping list scored for your hair, and a local
-            stylist if available
-          </p>
-          <div className="mt-4 flex gap-1.5">
-            {["Tutorials", "Shopping List", "Stylist"].map((label) => (
-              <div key={label} className="flex-1 rounded-lg bg-white px-1.5 py-3 text-center">
-                <p className="text-[9px] font-medium text-dark/70">{label}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }
 
