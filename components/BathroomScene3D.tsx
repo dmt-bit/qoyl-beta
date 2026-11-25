@@ -71,7 +71,7 @@ export default function BathroomScene3D({ onHotspot, onExit, fullViewport, hud }
           onClick={onExit}
           style={{
             position: "absolute",
-            top: 20,
+            top: 48,
             left: 20,
             zIndex: 10,
             display: "flex",
