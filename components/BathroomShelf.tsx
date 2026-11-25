@@ -369,6 +369,7 @@ export default function BathroomShelf({
         position: "fixed", inset: 0,
         width: "100%", height: "100%",
         overflow: "hidden",
+        zIndex: 100,
       }}>
         <BathroomScene3D
           onHotspot={(id) => setOpenPanel(id)}
