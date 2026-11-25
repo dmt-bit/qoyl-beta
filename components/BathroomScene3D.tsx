@@ -74,13 +74,13 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
         return new THREE.CanvasTexture(c);
       }
 
-      try { localStorage.setItem('__bscene_step','try-block-start'); } catch(_){}
+      try { localStorage.setItem('__bscene_step','try-block-start'); } catch{}
       const W = elDiv.clientWidth||window.innerWidth, H = elDiv.clientHeight||window.innerHeight;
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
       renderer.setSize(W, H);
       renderer.shadowMap.enabled = true;
-      try { localStorage.setItem('__bscene_step','renderer-created'); } catch(_){}
+      try { localStorage.setItem('__bscene_step','renderer-created'); } catch{}
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 0.9;
@@ -285,7 +285,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       cvs.addEventListener("pointerup",onUp); cvs.addEventListener("mousemove",onMov2);
 
       // ANIMATE
-      try { localStorage.setItem('__bscene_step','before-animate'); } catch(_){}
+      try { localStorage.setItem('__bscene_step','before-animate'); } catch{}
       let t=0;
       const animate = () => {
         rafRef.current=requestAnimationFrame(animate); t+=0.016;
@@ -296,14 +296,14 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
         renderer.render(scene,cam);
       }
       animate();
-      try { localStorage.setItem('__bscene_step','after-animate'); } catch(_){}
+      try { localStorage.setItem('__bscene_step','after-animate'); } catch{}
 
       const onResize = () => {
         const nw=elDiv.clientWidth||window.innerWidth, nh=elDiv.clientHeight||window.innerHeight;
         cam.aspect=nw/nh; cam.updateProjectionMatrix(); renderer.setSize(nw,nh);
       }
       window.addEventListener("resize",onResize);
-      try { localStorage.setItem('__bscene_step','after-resize-listener'); } catch(_){}
+      try { localStorage.setItem('__bscene_step','after-resize-listener'); } catch{}
 
       (elDiv as HTMLElement & {_cleanup?:()=>void})._cleanup=()=>{
         cancelAnimationFrame(rafRef.current);
@@ -316,12 +316,12 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       } catch(err) {
         const msg = err instanceof Error ? err.stack || err.message : String(err);
         console.error('[BathroomScene3D] scene init error:', err);
-        try { localStorage.setItem('__bscene_err', msg); } catch(_){}
+        try { localStorage.setItem('__bscene_err', msg); } catch{}
       }
     }).catch(err => {
       const msg = err instanceof Error ? err.stack || err.message : String(err);
       console.error('[BathroomScene3D] import error:', err);
-      try { localStorage.setItem('__bscene_err', 'IMPORT:' + msg); } catch(_){}
+      try { localStorage.setItem('__bscene_err', 'IMPORT:' + msg); } catch{}
     });
   }, []);
 
