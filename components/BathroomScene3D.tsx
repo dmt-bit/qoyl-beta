@@ -73,7 +73,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
         return new THREE.CanvasTexture(c);
       }
 
-      const W = elDiv.clientWidth, H = elDiv.clientHeight || Math.round(elDiv.clientWidth * 9/16);
+      const W = elDiv.clientWidth||window.innerWidth, H = elDiv.clientHeight||window.innerHeight;
       const renderer = new THREE.WebGLRenderer({ antialias: true });
       renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
       renderer.setSize(W, H);
@@ -245,11 +245,13 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
         scene.add(mesh); hotspots.push({mesh,id});
       }
 
-      // INPUT
+      // INPUT — attach to the canvas itself, not the wrapper div
+      const cvs = renderer.domElement;
+      cvs.style.cursor = "grab";
       const ray=new THREE.Raycaster();
       const mp=new THREE.Vector2();
       let isDown=false, dragged=false, dx0=0, dy0=0, lx=0, ly=0;
-      function onDown(e:PointerEvent){isDown=true;dragged=false;dx0=e.clientX;dy0=e.clientY;lx=e.clientX;ly=e.clientY;}
+      function onDown(e:PointerEvent){isDown=true;dragged=false;dx0=e.clientX;dy0=e.clientY;lx=e.clientX;ly=e.clientY; cvs.setPointerCapture(e.pointerId);}
       function onMove(e:PointerEvent){
         if(!isDown) return;
         if(Math.hypot(e.clientX-dx0,e.clientY-dy0)>6) dragged=true;
@@ -259,7 +261,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       }
       function onUp(e:PointerEvent){
         if(!dragged){
-          const r=elDiv.getBoundingClientRect();
+          const r=cvs.getBoundingClientRect();
           mp.x=((e.clientX-r.left)/r.width)*2-1; mp.y=-((e.clientY-r.top)/r.height)*2+1;
           ray.setFromCamera(mp,cam);
           const hits=ray.intersectObjects(hotspots.map(h=>h.mesh));
@@ -269,15 +271,15 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       }
       function onMov2(e:MouseEvent){
         if(isDown) return;
-        const r=elDiv.getBoundingClientRect();
+        const r=cvs.getBoundingClientRect();
         mp.x=((e.clientX-r.left)/r.width)*2-1; mp.y=-((e.clientY-r.top)/r.height)*2+1;
         ray.setFromCamera(mp,cam);
         const hits=ray.intersectObjects(hotspots.map(h=>h.mesh));
-        elDiv.style.cursor=hits.length?"pointer":"grab";
+        cvs.style.cursor=hits.length?"pointer":"grab";
         setHint(hits.length?(hits[0].object.userData.id==="shower"?"Shower Products":"Vanity Products"):null);
       }
-      elDiv.addEventListener("pointerdown",onDown); elDiv.addEventListener("pointermove",onMove);
-      elDiv.addEventListener("pointerup",onUp); elDiv.addEventListener("mousemove",onMov2);
+      cvs.addEventListener("pointerdown",onDown); cvs.addEventListener("pointermove",onMove);
+      cvs.addEventListener("pointerup",onUp); cvs.addEventListener("mousemove",onMov2);
 
       // ANIMATE
       let t=0;
@@ -292,18 +294,18 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
       animate();
 
       function onResize(){
-        const nw=elDiv.clientWidth, nh=elDiv.clientHeight||Math.round(elDiv.clientWidth*9/16);
+        const nw=elDiv.clientWidth||window.innerWidth, nh=elDiv.clientHeight||window.innerHeight;
         cam.aspect=nw/nh; cam.updateProjectionMatrix(); renderer.setSize(nw,nh);
       }
       window.addEventListener("resize",onResize);
 
       (elDiv as HTMLElement & {_cleanup?:()=>void})._cleanup=()=>{
         cancelAnimationFrame(rafRef.current);
-        elDiv.removeEventListener("pointerdown",onDown); elDiv.removeEventListener("pointermove",onMove);
-        elDiv.removeEventListener("pointerup",onUp); elDiv.removeEventListener("mousemove",onMov2);
+        cvs.removeEventListener("pointerdown",onDown); cvs.removeEventListener("pointermove",onMove);
+        cvs.removeEventListener("pointerup",onUp); cvs.removeEventListener("mousemove",onMov2);
         window.removeEventListener("resize",onResize);
         renderer.dispose();
-        if(elDiv.contains(renderer.domElement)) elDiv.removeChild(renderer.domElement);
+        if(elDiv.contains(cvs)) elDiv.removeChild(cvs);
       };
     });
   }, []);
@@ -320,7 +322,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, hud }: SceneP
 
   return (
     <div style={{ position:"relative", width:"100%", height: fullViewport ? "100%" : undefined, background:"#E8E0D4" }}>
-      <div ref={mountRef} style={{ width:"100%", height: fullViewport ? "100%" : undefined, display:"block", cursor:"grab" }} />
+      <div ref={mountRef} style={{ width:"100%", height: fullViewport ? "100%" : undefined, display:"block" }} />
 
       {/* Drag hint */}
       <div style={{
