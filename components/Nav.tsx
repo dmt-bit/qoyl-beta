@@ -300,13 +300,11 @@ function BottomNav({
   user: unknown;
   hairProfile: unknown;
 }) {
-  const profileHref = !user ? "/auth" : hairProfile ? "/dashboard" : "/profile";
-  const profileActive = pathname.startsWith("/dashboard") || pathname.startsWith("/profile");
+  const profileHref = !user ? "/auth" : hairProfile ? "/profile" : "/profile";
+  const profileActive = pathname.startsWith("/profile");
   const searchActive = pathname.startsWith("/search");
   const styleActive = pathname.startsWith("/style-match");
-  const routineActive = pathname.startsWith("/routine");
-  // Was "Feed" - home is a search-first hero now (see app/page.tsx), not
-  // a feed, so the tab is relabeled. Route/active-state logic unchanged.
+  const shelfActive = pathname.startsWith("/dashboard");
   const feedActive = pathname === "/";
 
   return (
@@ -335,10 +333,10 @@ function BottomNav({
         icon={<SparkleIcon size={24} className={BOTTOM_NAV_ACTIVE} />}
       />
       <BottomNavTab
-        href="/routine"
-        label="Routine"
-        active={routineActive}
-        icon={<RoutineTabIcon active={routineActive} hasProfile={Boolean(hairProfile)} />}
+        href="/dashboard"
+        label="My Shelf"
+        active={shelfActive}
+        icon={<ShelfIcon size={20} className={`shrink-0 ${shelfActive ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`} />}
       />
       <BottomNavTab
         href={profileHref}
