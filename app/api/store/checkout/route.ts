@@ -12,7 +12,7 @@ import type { CartItem } from "@/lib/styleCart";
 export type StoreCheckoutBody = {
   user_id: string;
   email: string;
-  cart_id: string;
+  cart_id?: string;
   items: CartItem[];
   shipping_address?: {
     name: string;
@@ -29,9 +29,9 @@ export async function POST(request: Request) {
   const body: StoreCheckoutBody = await request.json();
   const { user_id, email, cart_id, items, shipping_address } = body;
 
-  if (!user_id || !email || !cart_id || !items?.length) {
+  if (!user_id || !email || !items?.length) {
     return NextResponse.json(
-      { error: "user_id, email, cart_id, and items are required." },
+      { error: "user_id, email, and items are required." },
       { status: 400 }
     );
   }
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
     .from("store_orders")
     .insert({
       user_id,
-      cart_id,
+      cart_id: cart_id || user_id,
       status: "pending_payment",
       items: purchasable,
       subtotal_usd: subtotal,
