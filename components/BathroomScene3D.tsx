@@ -37,23 +37,65 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
       const marbleTex = (w: number, h: number, tileDiv: number, baseColor: string, groutColor: string): T.CanvasTexture => {
         const c = document.createElement("canvas"); c.width = w; c.height = h;
         const ctx = c.getContext("2d")!;
-        ctx.fillStyle = baseColor; ctx.fillRect(0, 0, w, h);
-        for (let i = 0; i < 7; i++) {
-          ctx.beginPath();
-          ctx.strokeStyle = i % 2 === 0 ? "rgba(170,152,128,0.5)" : "rgba(148,130,108,0.3)";
-          ctx.lineWidth = 0.8 + Math.random();
-          let x = Math.random()*w, y = Math.random()*h;
-          ctx.moveTo(x, y);
-          for (let s = 0; s < 5; s++) { x += (Math.random()-0.5)*w*0.4; y += (Math.random()-0.5)*h*0.4; ctx.quadraticCurveTo(Math.random()*w, Math.random()*h, x, y); }
-          ctx.stroke();
+        // Richer base gradient
+        const bg = ctx.createLinearGradient(0, 0, w*0.6, h);
+        bg.addColorStop(0, baseColor);
+        bg.addColorStop(0.4, baseColor);
+        bg.addColorStop(0.7, shiftBrightness(baseColor, -8));
+        bg.addColorStop(1, shiftBrightness(baseColor, 6));
+        ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+        // Layered marble veining: faint background wash + fine foreground lines
+        for (let pass = 0; pass < 2; pass++) {
+          const count = pass === 0 ? 5 : 9;
+          for (let i = 0; i < count; i++) {
+            ctx.beginPath();
+            const alpha = pass === 0 ? (0.12 + Math.random()*0.18) : (0.06 + Math.random()*0.12);
+            const warm = i % 3 === 0;
+            ctx.strokeStyle = warm ? `rgba(160,138,110,${alpha})` : `rgba(130,118,98,${alpha})`;
+            ctx.lineWidth = pass === 0 ? (1.5 + Math.random()*2.5) : (0.5 + Math.random()*1.0);
+            let x = Math.random()*w, y = Math.random()*h;
+            ctx.moveTo(x, y);
+            const steps = 4 + Math.floor(Math.random()*4);
+            for (let s = 0; s < steps; s++) {
+              const nx = x + (Math.random()-0.5)*w*0.5;
+              const ny = y + (Math.random()-0.5)*h*0.5;
+              const cpx = (x+nx)/2 + (Math.random()-0.5)*w*0.15;
+              const cpy = (y+ny)/2 + (Math.random()-0.5)*h*0.15;
+              ctx.quadraticCurveTo(cpx, cpy, nx, ny);
+              x = nx; y = ny;
+            }
+            ctx.stroke();
+          }
         }
+        // Subtle noise overlay
+        const imgData = ctx.getImageData(0, 0, w, h);
+        for (let p = 0; p < imgData.data.length; p += 4) {
+          const n = (Math.random()-0.5)*6;
+          imgData.data[p]   = Math.max(0, Math.min(255, imgData.data[p]   + n));
+          imgData.data[p+1] = Math.max(0, Math.min(255, imgData.data[p+1] + n));
+          imgData.data[p+2] = Math.max(0, Math.min(255, imgData.data[p+2] + n));
+        }
+        ctx.putImageData(imgData, 0, 0);
+        // Grout lines with slight bevel
         const ts = w / tileDiv;
-        ctx.strokeStyle = groutColor; ctx.lineWidth = 2.5;
+        ctx.strokeStyle = groutColor; ctx.lineWidth = 3;
         for (let x = 0; x <= w; x += ts) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,h); ctx.stroke(); }
         for (let y = 0; y <= h; y += ts) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); }
+        // Bright grout highlight (simulate bevel)
+        ctx.strokeStyle = "rgba(255,252,245,0.4)"; ctx.lineWidth = 1;
+        for (let x = 1; x <= w; x += ts) { ctx.beginPath(); ctx.moveTo(x+1,0); ctx.lineTo(x+1,h); ctx.stroke(); }
+        for (let y = 1; y <= h; y += ts) { ctx.beginPath(); ctx.moveTo(0,y+1); ctx.lineTo(w,y+1); ctx.stroke(); }
         const t = new THREE.CanvasTexture(c);
         t.wrapS = t.wrapT = THREE.RepeatWrapping;
         return t;
+      }
+      // Helper: lighten or darken a hex colour by delta (±)
+      const shiftBrightness = (hex: string, delta: number): string => {
+        const n = parseInt(hex.replace("#",""), 16);
+        const r = Math.max(0, Math.min(255, (n>>16) + delta));
+        const g = Math.max(0, Math.min(255, ((n>>8)&0xff) + delta));
+        const b = Math.max(0, Math.min(255, (n&0xff) + delta));
+        return `#${r.toString(16).padStart(2,"0")}${g.toString(16).padStart(2,"0")}${b.toString(16).padStart(2,"0")}`;
       }
 
       const brassTex = (): T.CanvasTexture => {
@@ -78,30 +120,42 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
 
       try { localStorage.setItem('__bscene_step','try-block-start'); } catch{}
       const W = elDiv.clientWidth||window.innerWidth, H = elDiv.clientHeight||window.innerHeight;
-      const renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2.5));
       renderer.setSize(W, H);
       renderer.shadowMap.enabled = true;
       try { localStorage.setItem('__bscene_step','renderer-created'); } catch{}
       renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 0.9;
+      renderer.toneMappingExposure = 1.05;
       elDiv.appendChild(renderer.domElement);
 
       const scene = new THREE.Scene();
       scene.background = new THREE.Color(0xE8E0D4);
-      scene.fog = new THREE.FogExp2(0xE8E0D4, 0.018);
+      scene.fog = new THREE.FogExp2(0xE8E0D4, 0.012);
 
       const cam = new THREE.PerspectiveCamera(70, W/H, 0.05, 60);
       cam.position.set(0, 1.65, 0);
       let yaw = 0.1, pitch = -0.08;
 
-      scene.add(new THREE.AmbientLight(0xFFF5E8, 0.7));
-      const chanPt = new THREE.PointLight(0xFFE8B0, 3.5, 12, 1.5);
-      chanPt.position.set(0, 3.7, -1); chanPt.castShadow = true; scene.add(chanPt);
-      const sconcePt = new THREE.PointLight(0xFFD890, 2.0, 4);
+      scene.add(new THREE.AmbientLight(0xFFF5E8, 0.55));
+      const chanPt = new THREE.PointLight(0xFFE8B0, 4.5, 14, 1.4);
+      chanPt.position.set(0, 3.7, -1); chanPt.castShadow = true;
+      chanPt.shadow.mapSize.width = 1024; chanPt.shadow.mapSize.height = 1024;
+      chanPt.shadow.camera.near = 0.1; chanPt.shadow.camera.far = 15;
+      scene.add(chanPt);
+      // Mirror sconce strip — warm fill from vanity wall
+      const sconcePt = new THREE.PointLight(0xFFE0A0, 2.8, 5);
       sconcePt.position.set(-4.3, 2.4, -0.8); scene.add(sconcePt);
-      scene.add(new THREE.HemisphereLight(0xFFF8F0, 0xC8B89A, 0.4));
+      const sconcePt2 = new THREE.PointLight(0xFFF0C0, 1.8, 5);
+      sconcePt2.position.set(-4.3, 2.4, -2.5); scene.add(sconcePt2);
+      // Shower area skylight feel
+      const showerPt = new THREE.PointLight(0xE8F4FF, 1.4, 5);
+      showerPt.position.set(2.5, 3.5, -3.5); scene.add(showerPt);
+      // Right wall warm fill
+      const rightFill = new THREE.PointLight(0xFFEED8, 1.0, 7);
+      rightFill.position.set(3.8, 2.8, -1.5); scene.add(rightFill);
+      scene.add(new THREE.HemisphereLight(0xFFF8F0, 0xC8B89A, 0.3));
 
       const RW = 9, RH = 4, RD = 9;
       const bm = new THREE.MeshStandardMaterial({ map: brassTex(), roughness:0.3, metalness:0.75 });
@@ -113,9 +167,12 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
 
       const wallTex = marbleTex(1024,1024,6,"#EAE4DC","rgba(200,188,170,0.9)"); wallTex.repeat.set(2,1);
       const floorTex = marbleTex(1024,1024,4,"#D8D0C4","rgba(188,175,158,0.95)"); floorTex.repeat.set(3,3);
-      const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness:0.75, metalness:0 });
-      const floorMat = new THREE.MeshStandardMaterial({ map: floorTex, roughness:0.45, metalness:0.04 });
-      const ceilMat = new THREE.MeshStandardMaterial({ color:0xF8F4EE, roughness:0.95 });
+      const wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness:0.72, metalness:0 });
+      const floorMat = new THREE.MeshPhysicalMaterial({
+        map: floorTex, roughness:0.28, metalness:0.02,
+        clearcoat:0.35, clearcoatRoughness:0.18, reflectivity:0.6,
+      });
+      const ceilMat = new THREE.MeshStandardMaterial({ color:0xF8F4EE, roughness:0.98 });
 
       addWall(new THREE.PlaneGeometry(RW,RH), wallMat, 0, RH/2, -RD/2);
       addWall(new THREE.PlaneGeometry(RD,RH), wallMat, -RW/2, RH/2, 0, Math.PI/2);
@@ -133,13 +190,13 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
 
       // SHOWER
       const SX = 2.75, SZ = -RD/2, SW = 3.5, SH = RH;
-      const showerWallTex = marbleTex(512,512,4,"#C8C0B4","rgba(175,162,145,0.95)"); showerWallTex.repeat.set(2,1);
-      const showerWallMat = new THREE.MeshStandardMaterial({ map: showerWallTex, roughness:0.6 });
+      const showerWallTex = marbleTex(1024,512,5,"#C8C0B4","rgba(175,162,145,0.95)"); showerWallTex.repeat.set(2,1);
+      const showerWallMat = new THREE.MeshPhysicalMaterial({ map: showerWallTex, roughness:0.38, clearcoat:0.3, clearcoatRoughness:0.2 });
       addWall(new THREE.PlaneGeometry(SW, SH), showerWallMat, SX, SH/2, SZ+0.01);
       const showerSideWall = new THREE.Mesh(new THREE.PlaneGeometry(3,SH), showerWallMat);
       showerSideWall.rotation.y = -Math.PI/2; showerSideWall.position.set(SX - SW/2, SH/2, SZ+1.5); scene.add(showerSideWall);
 
-      const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xC8E0E8, transparent: true, opacity: 0.18, roughness: 0.05, metalness: 0.0, transmission: 0.85, side: THREE.DoubleSide });
+      const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xD8ECEC, transparent: true, opacity: 0.15, roughness: 0.02, metalness: 0.0, transmission: 0.92, ior: 1.5, side: THREE.DoubleSide });
       const glassPane = new THREE.Mesh(new THREE.PlaneGeometry(SW, SH*0.98), glassMat);
       glassPane.position.set(SX, SH*0.49, -1.5); scene.add(glassPane);
       const glassSide = new THREE.Mesh(new THREE.PlaneGeometry(3, SH*0.98), glassMat);
@@ -148,8 +205,8 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
         const vr = new THREE.Mesh(new THREE.BoxGeometry(0.03, SH, 0.03), bm.clone()); vr.position.set(x, SH/2, -1.5); scene.add(vr);
       }
       const topRail = new THREE.Mesh(new THREE.BoxGeometry(SW+0.03, 0.06, 0.06), bm.clone()); topRail.position.set(SX, SH-0.03, -1.5); scene.add(topRail);
-      const rPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.5,12), bm.clone()); rPipe.position.set(SX-0.5, SH-0.25, SZ+0.6); scene.add(rPipe);
-      const rHead = new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.28,0.04,24), bm.clone()); rHead.position.set(SX-0.5, SH-0.52, SZ+0.6); scene.add(rHead);
+      const rPipe = new THREE.Mesh(new THREE.CylinderGeometry(0.025,0.025,0.5,32), bm.clone()); rPipe.position.set(SX-0.5, SH-0.25, SZ+0.6); scene.add(rPipe);
+      const rHead = new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.28,0.04,48), bm.clone()); rHead.position.set(SX-0.5, SH-0.52, SZ+0.6); scene.add(rHead);
       for (let i=0;i<9;i++) for (let j=0;j<9;j++) {
         const drop = new THREE.Mesh(new THREE.CylinderGeometry(0.004,0.004,0.18,4), new THREE.MeshStandardMaterial({color:0xBDD8E8,transparent:true,opacity:0.35}));
         drop.position.set(SX-0.5-0.24+i*0.06, SH-0.72, SZ+0.6-0.24+j*0.06); scene.add(drop);
@@ -166,7 +223,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
 
       // VANITY
       const VX = -RW/2, VZ = -1.5, VW = 4.0, VHc = 0.9, VDEPTH = 0.6;
-      const counterMat = new THREE.MeshStandardMaterial({ map: marbleTex(256,256,2,"#E8E2D8","rgba(205,190,172,0.8)"), roughness:0.4, metalness:0.05 });
+      const counterMat = new THREE.MeshPhysicalMaterial({ map: marbleTex(512,512,2,"#E8E2D8","rgba(205,190,172,0.8)"), roughness:0.22, metalness:0.02, clearcoat:0.55, clearcoatRoughness:0.12 });
       const cab = new THREE.Mesh(new THREE.BoxGeometry(VDEPTH, VHc, VW), new THREE.MeshStandardMaterial({ color:0xDDD8CE, roughness:0.7 }));
       cab.position.set(VX + VDEPTH/2, VHc/2, VZ); scene.add(cab);
       const ctr = new THREE.Mesh(new THREE.BoxGeometry(VDEPTH+0.04, 0.06, VW+0.04), counterMat); ctr.position.set(VX + VDEPTH/2, VHc+0.03, VZ); scene.add(ctr);
@@ -178,12 +235,12 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
         const pull = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.03, 0.18), bm.clone()); pull.position.set(VX+VDEPTH+0.02, VHc/2, dz); scene.add(pull);
       }
       for (const dz of [-0.9, 0.9]) {
-        const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.19,0.13,24), new THREE.MeshStandardMaterial({ color:0xECE8E0, roughness:0.3 }));
+        const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.19,0.13,48), new THREE.MeshPhysicalMaterial({ color:0xECE8E0, roughness:0.22, clearcoat:0.5, clearcoatRoughness:0.1 }));
         basin.position.set(VX+VDEPTH*0.5, VHc+0.065, VZ+dz); scene.add(basin);
-        const inner = new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.16,0.09,24), new THREE.MeshStandardMaterial({color:0xE0DBD2,roughness:0.4}));
+        const inner = new THREE.Mesh(new THREE.CylinderGeometry(0.17,0.16,0.09,48), new THREE.MeshPhysicalMaterial({color:0xE0DBD2,roughness:0.3,clearcoat:0.3}));
         inner.position.set(VX+VDEPTH*0.5, VHc+0.05, VZ+dz); scene.add(inner);
-        const fStem = new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.018,0.38,10), bm.clone()); fStem.position.set(VX+VDEPTH*0.5, VHc+0.42, VZ+dz-0.22); scene.add(fStem);
-        const fElbow = new THREE.Mesh(new THREE.TorusGeometry(0.09,0.015,8,16,Math.PI/2), bm.clone()); fElbow.rotation.z = -Math.PI/2; fElbow.rotation.y = Math.PI/2; fElbow.position.set(VX+VDEPTH*0.5, VHc+0.6, VZ+dz-0.13); scene.add(fElbow);
+        const fStem = new THREE.Mesh(new THREE.CylinderGeometry(0.018,0.018,0.38,24), bm.clone()); fStem.position.set(VX+VDEPTH*0.5, VHc+0.42, VZ+dz-0.22); scene.add(fStem);
+        const fElbow = new THREE.Mesh(new THREE.TorusGeometry(0.09,0.015,16,32,Math.PI/2), bm.clone()); fElbow.rotation.z = -Math.PI/2; fElbow.rotation.y = Math.PI/2; fElbow.position.set(VX+VDEPTH*0.5, VHc+0.6, VZ+dz-0.13); scene.add(fElbow);
       }
       const mirror = new THREE.Mesh(new THREE.PlaneGeometry(0.04, 1.4), new THREE.MeshStandardMaterial({color:0xD0E4F0,roughness:0.02,metalness:0.95,envMapIntensity:1}));
       mirror.rotation.y = Math.PI/2; mirror.position.set(VX+0.03, VHc+1.1, VZ); scene.add(mirror);
@@ -206,7 +263,7 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
 
       // BATHTUB
       const TX = RW/2 - 0.4, TZ = 0.5;
-      const tub = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.52, 2.8), new THREE.MeshStandardMaterial({color:0xF8F5F0,roughness:0.25,metalness:0}));
+      const tub = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.52, 2.8), new THREE.MeshPhysicalMaterial({color:0xF8F5F0,roughness:0.18,metalness:0,clearcoat:0.6,clearcoatRoughness:0.08}));
       tub.position.set(TX-0.375, 0.26, TZ); scene.add(tub);
       const rim2 = new THREE.Mesh(new THREE.BoxGeometry(0.79,0.055,2.84), new THREE.MeshStandardMaterial({color:0xEEEBE5,roughness:0.35})); rim2.position.set(TX-0.395, 0.548, TZ); scene.add(rim2);
       const tubInt = new THREE.Mesh(new THREE.BoxGeometry(0.6,0.42,2.6), new THREE.MeshStandardMaterial({color:0xEDE8E0,roughness:0.3})); tubInt.position.set(TX-0.37, 0.31, TZ); scene.add(tubInt);
@@ -218,8 +275,8 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
 
       // PLANT
       const PX=RW/2-0.55, PZ=-RD/2+0.55;
-      const plantPot = new THREE.Mesh(new THREE.CylinderGeometry(0.21,0.16,0.38,16), new THREE.MeshStandardMaterial({color:0xADA49A,roughness:0.85})); plantPot.position.set(PX,0.19,PZ); scene.add(plantPot);
-      const stm = new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,2.0,8), new THREE.MeshStandardMaterial({color:0x506038,roughness:0.9})); stm.position.set(PX,1.38,PZ); scene.add(stm);
+      const plantPot = new THREE.Mesh(new THREE.CylinderGeometry(0.21,0.16,0.38,32), new THREE.MeshStandardMaterial({color:0xADA49A,roughness:0.85})); plantPot.position.set(PX,0.19,PZ); scene.add(plantPot);
+      const stm = new THREE.Mesh(new THREE.CylinderGeometry(0.028,0.028,2.0,16), new THREE.MeshStandardMaterial({color:0x506038,roughness:0.9})); stm.position.set(PX,1.38,PZ); scene.add(stm);
       const lc=[0x6A8858,0x5A7848,0x7A9068,0x648050,0x5C7040];
       for (let i=0;i<9;i++) {
         const a=(i/9)*Math.PI*2, h2=0.5+(i/9)*1.6;
@@ -228,98 +285,127 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
       }
 
       // CHANDELIER
-      const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.014,0.014,0.4,8), bm.clone()); chain.position.set(0,RH-0.2,-1); scene.add(chain);
-      const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.6,0.016,8,32), bm.clone()); ring2.position.set(0,RH-0.42,-1); scene.add(ring2);
+      const chain = new THREE.Mesh(new THREE.CylinderGeometry(0.014,0.014,0.4,16), bm.clone()); chain.position.set(0,RH-0.2,-1); scene.add(chain);
+      const ring2 = new THREE.Mesh(new THREE.TorusGeometry(0.6,0.016,16,64), bm.clone()); ring2.position.set(0,RH-0.42,-1); scene.add(ring2);
       const bMat2 = new THREE.MeshStandardMaterial({color:0xFFF5D8,emissive:new THREE.Color(0xFFEE80),emissiveIntensity:1.8,roughness:0.4});
       for (let i=0;i<6;i++) {
         const a=(i/6)*Math.PI*2;
-        const bl=new THREE.Mesh(new THREE.SphereGeometry(0.065,12,12),bMat2); bl.position.set(Math.cos(a)*0.6,RH-0.48,-1+Math.sin(a)*0.6); scene.add(bl);
-        const ww=new THREE.Mesh(new THREE.CylinderGeometry(0.007,0.007,0.16,6),bm.clone()); ww.position.set(Math.cos(a)*0.6,RH-0.34,-1+Math.sin(a)*0.6); scene.add(ww);
+        const bl=new THREE.Mesh(new THREE.SphereGeometry(0.065,24,24),bMat2); bl.position.set(Math.cos(a)*0.6,RH-0.48,-1+Math.sin(a)*0.6); scene.add(bl);
+        const ww=new THREE.Mesh(new THREE.CylinderGeometry(0.007,0.007,0.16,12),bm.clone()); ww.position.set(Math.cos(a)*0.6,RH-0.34,-1+Math.sin(a)*0.6); scene.add(ww);
       }
       const twl=new THREE.Mesh(new THREE.BoxGeometry(0.02,0.48,1.1),new THREE.MeshStandardMaterial({color:0xF0EBE2,roughness:0.6})); twl.position.set(RW/2-0.02,1.5,-2.2); scene.add(twl);
       const rl=new THREE.Mesh(new THREE.CylinderGeometry(0.013,0.013,1.15,10),bm.clone()); rl.rotation.z=Math.PI/2; rl.position.set(RW/2-0.02,1.76,-2.2); scene.add(rl);
 
-      // WALL BOARD — left wall, centered, showing routine info
-      const boardW = 2.2, boardH = 1.5;
-      const boardC = document.createElement("canvas"); boardC.width = 512; boardC.height = 350;
+      // WAINSCOTING — right wall chair rail for realism
+      const wainMat = new THREE.MeshStandardMaterial({ color:0xE0D8CE, roughness:0.72 });
+      const chairRail = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.06, RD), wainMat);
+      chairRail.position.set(RW/2 - 0.022, 0.92, 0); scene.add(chairRail);
+      // Panel mouldings on right wall (decorative rectangles)
+      for (const pz of [-3.2, -1.0, 1.4]) {
+        const pnl = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.75, 1.3), wainMat);
+        pnl.position.set(RW/2 - 0.006, 0.46, pz); scene.add(pnl);
+        // inner recessed rect
+        const pnlInner = new THREE.Mesh(new THREE.BoxGeometry(0.008, 0.6, 1.1), new THREE.MeshStandardMaterial({color:0xD8D0C6, roughness:0.8}));
+        pnlInner.position.set(RW/2 - 0.004, 0.46, pz); scene.add(pnlInner);
+      }
+
+      // WALL BOARD — right wall, in the blank section above towel rail area (z around -2.8, clear of tub and plant)
+      const boardW = 2.0, boardH = 1.4;
+      const boardBZ = -2.8; // z position on right wall
+      const boardBY = 2.1;  // height center
+      const boardC = document.createElement("canvas"); boardC.width = 512; boardC.height = 358;
       const bctx = boardC.getContext("2d")!;
-      // Background: dark matte board
-      bctx.fillStyle = "#1E1A16"; bctx.fillRect(0, 0, 512, 350);
-      bctx.fillStyle = "rgba(255,240,210,0.04)"; bctx.fillRect(8, 8, 496, 334);
+      // Rich dark background with subtle warm gradient
+      const boardGrad = bctx.createLinearGradient(0, 0, 512, 358);
+      boardGrad.addColorStop(0, "#211C17");
+      boardGrad.addColorStop(1, "#1A1510");
+      bctx.fillStyle = boardGrad; bctx.fillRect(0, 0, 512, 358);
+      // Thin inner border
+      bctx.strokeStyle = "rgba(200,168,106,0.2)"; bctx.lineWidth = 1.5;
+      bctx.strokeRect(14, 14, 484, 330);
       // Greeting
       const wi = wallInfo ?? { greeting: "Your routine", chips: [], routineLines: [] };
-      bctx.font = "italic 300 28px 'Georgia', serif";
+      bctx.font = "italic 300 30px 'Georgia', serif";
       bctx.fillStyle = "#E8D090";
       bctx.textAlign = "center";
-      bctx.fillText(wi.greeting, 256, 54);
-      // Divider
-      bctx.strokeStyle = "rgba(200,168,106,0.35)"; bctx.lineWidth = 1;
-      bctx.beginPath(); bctx.moveTo(60, 70); bctx.lineTo(452, 70); bctx.stroke();
+      bctx.fillText(wi.greeting, 256, 58);
+      // Gold ornament line
+      bctx.strokeStyle = "rgba(200,168,106,0.5)"; bctx.lineWidth = 1;
+      bctx.beginPath(); bctx.moveTo(80, 72); bctx.lineTo(432, 72); bctx.stroke();
+      bctx.beginPath(); bctx.moveTo(140, 68); bctx.lineTo(372, 68); bctx.stroke();
       // Chips row
-      let cx = 30, cy = 96;
-      bctx.font = "11px 'Arial', sans-serif";
+      let cx = 28, cy = 100;
+      bctx.font = "500 11px 'Arial', sans-serif";
       for (const chip of wi.chips.slice(0, 4)) {
-        const tw = bctx.measureText(chip).width + 18;
-        if (cx + tw > 480) { cx = 30; cy += 26; }
-        bctx.strokeStyle = "rgba(200,168,106,0.5)"; bctx.lineWidth = 1;
-        bctx.strokeRect(cx, cy - 13, tw, 20); // rounded rect approximation
-        bctx.fillStyle = "rgba(200,168,106,0.8)";
-        bctx.fillText(chip, cx + 9, cy + 1);
-        cx += tw + 8;
+        const tw = bctx.measureText(chip).width + 20;
+        if (cx + tw > 484) { cx = 28; cy += 28; }
+        // Pill background
+        bctx.fillStyle = "rgba(200,168,106,0.1)";
+        bctx.beginPath(); bctx.roundRect?.(cx, cy - 14, tw, 22, 11); bctx.fill();
+        bctx.strokeStyle = "rgba(200,168,106,0.55)"; bctx.lineWidth = 1;
+        bctx.beginPath(); bctx.roundRect?.(cx, cy - 14, tw, 22, 11); bctx.stroke();
+        bctx.fillStyle = "rgba(220,195,135,0.9)";
+        bctx.fillText(chip, cx + 10, cy + 2);
+        cx += tw + 10;
       }
       // Divider
-      const ry2 = cy + 24;
-      bctx.strokeStyle = "rgba(200,168,106,0.2)"; bctx.lineWidth = 1;
-      bctx.beginPath(); bctx.moveTo(60, ry2); bctx.lineTo(452, ry2); bctx.stroke();
-      // Routine lines
+      const ry2 = Math.max(cy + 26, 136);
+      bctx.strokeStyle = "rgba(200,168,106,0.18)"; bctx.lineWidth = 1;
+      bctx.beginPath(); bctx.moveTo(28, ry2); bctx.lineTo(484, ry2); bctx.stroke();
+      // Routine lines with accent bar
       bctx.textAlign = "left";
-      let ly2 = ry2 + 26;
-      for (const line of wi.routineLines.slice(0, 5)) {
-        bctx.font = "bold 12px 'Arial', sans-serif";
-        bctx.fillStyle = "rgba(230,210,170,0.9)";
+      let ly2 = ry2 + 22;
+      for (const line of wi.routineLines.slice(0, 4)) {
+        // Accent bar
+        bctx.fillStyle = "rgba(200,168,106,0.6)";
+        bctx.fillRect(28, ly2 - 11, 2.5, 14);
         const colon = line.indexOf(":");
         if (colon > -1) {
-          bctx.fillText(line.slice(0, colon + 1), 30, ly2);
+          bctx.font = "600 12px 'Arial', sans-serif";
+          bctx.fillStyle = "rgba(232,210,160,0.95)";
+          bctx.fillText(line.slice(0, colon + 1), 38, ly2);
           bctx.font = "12px 'Arial', sans-serif";
-          bctx.fillStyle = "rgba(200,185,155,0.7)";
+          bctx.fillStyle = "rgba(200,185,150,0.72)";
           const rest = line.slice(colon + 1).trim();
-          // Wrap long rest text
-          const words = rest.split(" "); let wLine = ""; let wx = 220;
-          for (const w of words) {
-            const test = wLine + (wLine ? " " : "") + w;
-            if (bctx.measureText(test).width > 268) {
-              bctx.fillText(wLine, wx, ly2); ly2 += 16; wLine = w; wx = 220;
+          const words = rest.split(" "); let wLine = ""; let wx = 38 + bctx.measureText(line.slice(0,colon+1)).width + 8;
+          const maxW = 440;
+          for (const wrd of words) {
+            const test = wLine + (wLine ? " " : "") + wrd;
+            if (wx + bctx.measureText(test).width > maxW) {
+              bctx.fillText(wLine, wx, ly2); ly2 += 15; wLine = wrd; wx = 38;
             } else { wLine = test; }
           }
           if (wLine) bctx.fillText(wLine, wx, ly2);
         } else {
-          bctx.fillText(line, 30, ly2);
+          bctx.font = "12px 'Arial', sans-serif";
+          bctx.fillStyle = "rgba(210,192,155,0.85)";
+          bctx.fillText(line, 38, ly2);
         }
-        ly2 += 22;
-        if (ly2 > 320) break;
+        ly2 += 26;
+        if (ly2 > 316) break;
       }
-      // Tap hint at bottom
+      // Tap hint
       bctx.font = "10px 'Arial', sans-serif";
-      bctx.fillStyle = "rgba(200,168,106,0.4)";
+      bctx.fillStyle = "rgba(200,168,106,0.38)";
       bctx.textAlign = "center";
-      bctx.fillText("tap to open your dashboard →", 256, 338);
+      bctx.fillText("tap to open your dashboard  →", 256, 346);
       const boardTex = new THREE.CanvasTexture(boardC);
       const boardMesh = new THREE.Mesh(
         new THREE.PlaneGeometry(boardW, boardH),
-        new THREE.MeshStandardMaterial({ map: boardTex, roughness: 0.9, metalness: 0 })
+        new THREE.MeshStandardMaterial({ map: boardTex, roughness: 0.88, metalness: 0 })
       );
-      boardMesh.rotation.y = Math.PI / 2; // face right (into room from left wall)
-      boardMesh.position.set(-RW/2 + 0.02, 1.9, -0.5);
+      boardMesh.rotation.y = -Math.PI / 2; // face left into room from right wall
+      boardMesh.position.set(RW/2 - 0.02, boardBY, boardBZ);
       scene.add(boardMesh);
-      // Frame around board
-      for (const [fw, fh, fx, fy, fz] of [
-        [boardW+0.06, 0.04, -RW/2+0.015, 1.9+boardH/2+0.02, -0.5],
-        [boardW+0.06, 0.04, -RW/2+0.015, 1.9-boardH/2-0.02, -0.5],
-        [0.04, boardH+0.08, -RW/2+0.015, 1.9, -0.5-boardW/2-0.02],
-        [0.04, boardH+0.08, -RW/2+0.015, 1.9, -0.5+boardW/2+0.02],
-      ] as [number,number,number,number,number][]) {
+      // Frame around board — right wall orientation
+      for (const [fw, fh, fy, fz] of [
+        [boardW+0.07, 0.045, boardBY + boardH/2 + 0.022, boardBZ],
+        [boardW+0.07, 0.045, boardBY - boardH/2 - 0.022, boardBZ],
+        [0.045, boardH+0.09, boardBY, boardBZ - boardW/2 - 0.022],
+        [0.045, boardH+0.09, boardBY, boardBZ + boardW/2 + 0.022],
+      ] as [number,number,number,number][]) {
         const frm = new THREE.Mesh(new THREE.BoxGeometry(0.04, fh, fw), bm.clone());
-        frm.rotation.y = Math.PI/2; frm.position.set(fx, fy, fz); scene.add(frm);
+        frm.rotation.y = -Math.PI/2; frm.position.set(RW/2 - 0.015, fy, fz); scene.add(frm);
       }
 
       // HOTSPOTS
@@ -327,12 +413,12 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
       for (const {id,px,py,pz,label} of [
         {id:"shower"    as const, px:SX-0.5,    py:1.5, pz:-2.2,  label:"Shower"},
         {id:"vanity"    as const, px:-3.0,       py:1.5, pz:VZ-0.3, label:"Vanity"},
-        {id:"dashboard" as const, px:-RW/2+0.6,  py:1.5, pz:-0.5,  label:"Routine"},
+        {id:"dashboard" as const, px:RW/2-0.6,   py:1.5, pz:-2.8,  label:"Routine"},
       ]) {
         const mat=new THREE.MeshBasicMaterial({map:hotspotTex(label),transparent:true,depthWrite:false,side:THREE.DoubleSide});
         const mesh=new THREE.Mesh(new THREE.PlaneGeometry(0.75,0.75),mat);
         mesh.position.set(px,py,pz);
-        if (id === "dashboard") mesh.rotation.y = Math.PI/2;
+        if (id === "dashboard") mesh.rotation.y = -Math.PI/2;
         mesh.userData.id=id;
         scene.add(mesh); hotspots.push({mesh,id});
       }
@@ -368,7 +454,8 @@ export default function BathroomScene3D({ onHotspot, fullViewport, wallInfo, hud
         ray.setFromCamera(mp,cam);
         const hits=ray.intersectObjects(hotspots.map(h=>h.mesh));
         cvs.style.cursor=hits.length?"pointer":"grab";
-        setHint(hits.length?(hits[0].object.userData.id==="shower"?"Shower Products":"Vanity Products"):null);
+        const hid = hits[0].object.userData.id;
+        setHint(hits.length?(hid==="shower"?"Shower Products":hid==="vanity"?"Vanity Products":"My Routine"):null);
       }
       cvs.addEventListener("pointerdown",onDown); cvs.addEventListener("pointermove",onMove);
       cvs.addEventListener("pointerup",onUp); cvs.addEventListener("mousemove",onMov2);
