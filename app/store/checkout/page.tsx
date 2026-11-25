@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useAuth } from "@/lib/auth-context";
 import type { CartItem } from "@/lib/styleCart";
+import { storeCart, type StoreCartEntry } from "@/lib/storeCart";
 
 // ─── Shipping form state ───────────────────────────────────────────────────
 type ShippingForm = {
@@ -31,7 +32,7 @@ export default function StoreCheckoutPage() {
   const { user } = useAuth();
   const router   = useRouter();
 
-  const [items, setItems]           = useState<CartItem[]>([]);
+  const [entries, setEntries]       = useState<StoreCartEntry[]>([]);
   const [cartId, setCartId]         = useState<string>("");
   const [loading, setLoading]       = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -39,24 +40,26 @@ export default function StoreCheckoutPage() {
   const [form, setForm]             = useState<ShippingForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<ShippingForm>>({});
 
-  // Load shelf items when user is available
+  // Load cart from localStorage + fetch cart_id for the order
   useEffect(() => {
-    if (!user?.id) return;
-    fetch(`/api/shelf?user_id=${user.id}`)
-      .then((r) => r.json())
-      .then((json) => {
-        setCartId(json.cart_id ?? "");
-        const purchasable = (json.items as CartItem[] ?? []).filter(
-          (i) => i.product_type !== "tutorial" && (i.price_estimate ?? 0) > 0
-        );
-        setItems(purchasable);
-      })
-      .catch(() => setError("Could not load your shelf. Please try again."))
-      .finally(() => setLoading(false));
+    const loaded = storeCart.getAll();
+    setEntries(loaded);
+    if (user?.id) {
+      fetch(`/api/shelf?user_id=${user.id}`)
+        .then((r) => r.json())
+        .then((json) => { setCartId(json.cart_id ?? ""); })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
   }, [user?.id]);
 
+  // Flatten entries to CartItem[] with quantity baked in
+  const items: CartItem[] = entries.map((e) => ({ ...e.item, quantity: e.quantity }));
+
   // Derived totals
-  const subtotal    = items.reduce((s, i) => s + (i.price_estimate ?? 0) * (i.quantity ?? 1), 0);
+  const subtotal    = entries.reduce((s, e) => s + (e.item.price_estimate ?? 0) * e.quantity, 0);
   const serviceFee  = subtotal * 0.1;
   const total       = subtotal + serviceFee;
 
@@ -106,7 +109,8 @@ export default function StoreCheckoutPage() {
       if (!res.ok || !data.url) {
         throw new Error(data.error ?? "Failed to start checkout.");
       }
-      // Redirect to Stripe Checkout
+      // Clear the cart and redirect to Stripe Checkout
+      storeCart.clear();
       window.location.href = data.url;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong.");
@@ -177,12 +181,12 @@ export default function StoreCheckoutPage() {
     );
   }
 
-  if (!items.length) {
+  if (!loading && !entries.length) {
     return (
       <PageShell>
         <EmptyState
-          title="Your shelf has no priced items"
-          body="Add products with prices to your shelf first, then come back to check out."
+          title="Your cart is empty"
+          body="Tap &quot;Add to Qoyl cart&quot; on any product in your shelf, then come back here to check out."
           action={{ label: "Back to my shelf", href: "/dashboard" }}
         />
       </PageShell>
@@ -245,11 +249,22 @@ export default function StoreCheckoutPage() {
             <section>
               <h2 style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: 20,
                 fontWeight: 400, color: "#1A1510", margin: "0 0 16px" }}>
-                {items.length} {items.length === 1 ? "item" : "items"}
+                {entries.length} {entries.length === 1 ? "item" : "items"}
               </h2>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                {items.map((item, i) => (
-                  <ItemRow key={item.product_id ?? i} item={item} />
+                {entries.map((entry) => (
+                  <ItemRow
+                    key={entry.item.product_id ?? entry.item.product_name}
+                    entry={entry}
+                    onRemove={(id) => {
+                      storeCart.remove(id);
+                      setEntries(storeCart.getAll());
+                    }}
+                    onQtyChange={(id, qty) => {
+                      storeCart.setQuantity(id, qty);
+                      setEntries(storeCart.getAll());
+                    }}
+                  />
                 ))}
               </div>
             </section>
@@ -334,8 +349,13 @@ function PageShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ItemRow({ item }: { item: CartItem }) {
-  const qty = item.quantity ?? 1;
+function ItemRow({ entry, onRemove, onQtyChange }: {
+  entry: StoreCartEntry;
+  onRemove: (id: string) => void;
+  onQtyChange: (id: string, qty: number) => void;
+}) {
+  const { item, quantity } = entry;
+  const id = item.product_id ?? item.product_name;
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "center",
       background: "white", borderRadius: 12, padding: "12px 14px",
@@ -362,13 +382,29 @@ function ItemRow({ item }: { item: CartItem }) {
             {item.secondary_category_labels[0].charAt(0).toUpperCase() + item.secondary_category_labels[0].slice(1)}
           </p>
         )}
+        {/* Qty stepper */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
+          <button onClick={() => quantity > 1 ? onQtyChange(id, quantity - 1) : onRemove(id)}
+            style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #E0D8CE",
+              background: "none", cursor: "pointer", fontSize: 14, lineHeight: 1,
+              color: "#7A6E65", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {quantity === 1 ? "×" : "−"}
+          </button>
+          <span style={{ fontSize: 13, color: "#1A1510", minWidth: 16, textAlign: "center" }}>{quantity}</span>
+          <button onClick={() => onQtyChange(id, quantity + 1)}
+            style={{ width: 22, height: 22, borderRadius: "50%", border: "1px solid #E0D8CE",
+              background: "none", cursor: "pointer", fontSize: 14, lineHeight: 1,
+              color: "#7A6E65", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            +
+          </button>
+        </div>
       </div>
       <div style={{ textAlign: "right", flexShrink: 0 }}>
         <p style={{ margin: 0, fontSize: 13, fontWeight: 500, color: "#1A1510" }}>
-          {item.price_estimate != null ? fmtPrice(item.price_estimate * qty) : "—"}
+          {item.price_estimate != null ? fmtPrice(item.price_estimate * quantity) : "—"}
         </p>
-        {qty > 1 && (
-          <p style={{ margin: "2px 0 0", fontSize: 11, color: "#9A8E82" }}>×{qty}</p>
+        {quantity > 1 && item.price_estimate != null && (
+          <p style={{ margin: "2px 0 0", fontSize: 11, color: "#9A8E82" }}>{fmtPrice(item.price_estimate)} each</p>
         )}
       </div>
     </div>

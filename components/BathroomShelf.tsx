@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import dynamic from "next/dynamic";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import type { CartItem } from "@/lib/styleCart";
 import type { RoutineStep } from "@/lib/routine";
+import { storeCart } from "@/lib/storeCart";
 
 const BathroomScene3D = dynamic(() => import("./BathroomScene3D"), { ssr: false });
 
@@ -55,10 +56,12 @@ function ProductCard({
   item,
   checked,
   onToggle,
+  onAddToCart,
 }: {
   item: CartItem;
   checked: boolean;
   onToggle: () => void;
+  onAddToCart: (item: CartItem) => void;
 }) {
   const catLabel = (() => {
     const l = item.secondary_category_labels?.[0];
@@ -66,6 +69,14 @@ function ProductCard({
     return l.charAt(0).toUpperCase() + l.slice(1).replace(/-/g, " ");
   })();
   const [t, b] = getBottleColor(item.secondary_category_labels);
+  const [added, setAdded] = useState(false);
+
+  function handleAdd(e: React.MouseEvent) {
+    e.stopPropagation();
+    onAddToCart(item);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
+  }
 
   return (
     <div
@@ -167,26 +178,40 @@ function ProductCard({
       )}
 
       {/* Add to Qoyl Store cart */}
-      <Link href="/store/checkout"
-        onClick={(e) => e.stopPropagation()}
+      <button
+        type="button"
+        onClick={handleAdd}
         style={{
           display: "inline-flex", alignItems: "center", gap: 5,
           fontSize: 10, fontWeight: 500, letterSpacing: "0.05em",
-          color: "#1A1410", background: "rgba(200,168,106,0.18)",
-          border: "1px solid rgba(200,168,106,0.4)",
+          color: added ? "#3A6A4A" : "#1A1410",
+          background: added ? "rgba(126,155,138,0.18)" : "rgba(200,168,106,0.18)",
+          border: `1px solid ${added ? "rgba(126,155,138,0.5)" : "rgba(200,168,106,0.4)"}`,
           borderRadius: 100,
           padding: "5px 10px", cursor: "pointer",
-          fontFamily: "inherit", textDecoration: "none",
+          fontFamily: "inherit",
           marginTop: 2,
+          transition: "all 0.2s ease",
         }}
       >
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
-          <circle cx="3.5" cy="8.5" r="0.75" fill="currentColor"/>
-          <circle cx="7.5" cy="8.5" r="0.75" fill="currentColor"/>
-          <path d="M1 1h1.5l1 4.5h4L9 3H3"/>
-        </svg>
-        Add to cart in Qoyl Store
-      </Link>
+        {added ? (
+          <>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M1.5 5l2.5 2.5 4.5-4.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Added!
+          </>
+        ) : (
+          <>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="3.5" cy="8.5" r="0.75" fill="currentColor"/>
+              <circle cx="7.5" cy="8.5" r="0.75" fill="currentColor"/>
+              <path d="M1 1h1.5l1 4.5h4L9 3H3"/>
+            </svg>
+            Add to Qoyl cart
+          </>
+        )}
+      </button>
     </div>
   );
 }
@@ -201,6 +226,8 @@ function ShelfPanel({
   purchasedIds,
   onToggle,
   onClose,
+  onAddToCart,
+  cartCount,
 }: {
   open: boolean;
   title: string;
@@ -210,6 +237,8 @@ function ShelfPanel({
   purchasedIds: Set<string>;
   onToggle: (productId: string | null) => void;
   onClose: () => void;
+  onAddToCart: (item: CartItem) => void;
+  cartCount: number;
 }) {
   return (
     <>
@@ -257,19 +286,41 @@ function ShelfPanel({
           padding: "16px 24px 12px",
           borderBottom: "1px solid rgba(220,210,195,0.6)",
           flexShrink: 0,
+          display: "flex", alignItems: "flex-start", justifyContent: "space-between",
         }}>
-          <div style={{
-            fontFamily: "'Cormorant Garamond', Georgia, serif",
-            fontSize: 24, fontWeight: 400, fontStyle: "italic",
-            color: "#2A2420",
-            display: "flex", alignItems: "center", gap: 10,
-          }}>
-            {icon}
-            {title}
+          <div>
+            <div style={{
+              fontFamily: "'Cormorant Garamond', Georgia, serif",
+              fontSize: 24, fontWeight: 400, fontStyle: "italic",
+              color: "#2A2420",
+              display: "flex", alignItems: "center", gap: 10,
+            }}>
+              {icon}
+              {title}
+            </div>
+            <div style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "#B4A898", marginTop: 2 }}>
+              {subtitle}
+            </div>
           </div>
-          <div style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "#B4A898", marginTop: 2 }}>
-            {subtitle}
-          </div>
+          {/* Cart badge — taps through to checkout */}
+          <a href="/store/checkout" style={{ textDecoration: "none", flexShrink: 0 }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "7px 12px", borderRadius: 100,
+              background: cartCount > 0 ? "rgba(200,168,106,0.15)" : "rgba(220,210,195,0.3)",
+              border: `1px solid ${cartCount > 0 ? "rgba(200,168,106,0.5)" : "rgba(220,210,195,0.6)"}`,
+              transition: "all 0.2s",
+            }}>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke={cartCount > 0 ? "#A8863A" : "#B4A898"} strokeWidth="1.4">
+                <circle cx="4.5" cy="12" r="1" fill="currentColor" stroke="none"/>
+                <circle cx="10.5" cy="12" r="1" fill="currentColor" stroke="none"/>
+                <path d="M1 1h2l1.5 7h6L12 4H4"/>
+              </svg>
+              <span style={{ fontSize: 11, fontWeight: 600, color: cartCount > 0 ? "#A8863A" : "#B4A898" }}>
+                {cartCount > 0 ? `${cartCount} in cart` : "Cart"}
+              </span>
+            </div>
+          </a>
         </div>
         {/* Scroll content */}
         <div style={{ overflowY: "auto", flex: 1, padding: "20px 24px 32px", WebkitOverflowScrolling: "touch" as React.CSSProperties["WebkitOverflowScrolling"] }}>
@@ -291,6 +342,7 @@ function ShelfPanel({
                   item={item}
                   checked={item.product_id != null && purchasedIds.has(item.product_id)}
                   onToggle={() => onToggle(item.product_id)}
+                  onAddToCart={onAddToCart}
                 />
               ))}
             </div>
@@ -485,6 +537,15 @@ export default function BathroomShelf({
   const router = useRouter();
   const [items, setItems]         = useState(initialItems);
   const [openPanel, setOpenPanel] = useState<"shower" | "vanity" | "dashboard" | null>(null);
+  const [cartCount, setCartCount] = useState(0);
+
+  // Sync cart count from localStorage on mount and after adds
+  useEffect(() => { setCartCount(storeCart.count()); }, []);
+
+  const handleAddToCart = useCallback((item: CartItem) => {
+    storeCart.add(item);
+    setCartCount(storeCart.count());
+  }, []);
 
   const purchasedIds = new Set<string>(
     items
@@ -568,6 +629,8 @@ export default function BathroomShelf({
         purchasedIds={purchasedIds}
         onToggle={toggleItem}
         onClose={() => setOpenPanel(null)}
+        onAddToCart={handleAddToCart}
+        cartCount={cartCount}
       />
       <ShelfPanel
         open={openPanel === "vanity"}
@@ -583,6 +646,8 @@ export default function BathroomShelf({
         purchasedIds={purchasedIds}
         onToggle={toggleItem}
         onClose={() => setOpenPanel(null)}
+        onAddToCart={handleAddToCart}
+        cartCount={cartCount}
       />
       <DashboardPanel
         open={openPanel === "dashboard"}
