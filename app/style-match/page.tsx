@@ -2937,7 +2937,7 @@ function StyleMatchContent() {
                             >
                               <div>
                                 <p className="text-xs text-dark/70">{item.name}</p>
-                                <p className="text-[10px] uppercase tracking-wide text-dark/30">Also available on Amazon</p>
+                                <p className="text-[10px] uppercase tracking-wide text-dark/30">Search Amazon</p>
                               </div>
                               <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-xs text-dark/50 underline shrink-0">
                                 View →

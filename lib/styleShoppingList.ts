@@ -1221,7 +1221,7 @@ export async function buildStyleShoppingList(input: {
   const amazonFallback = uncoveredSlugs.map((slug) => {
     const label = categoryLabel(slug);
     return {
-      name: `${label} for ${input.styleName}`,
+      name: label,
       url: amazonSearch(`${label} ${input.styleName}`),
       retailer: "Amazon",
     };
