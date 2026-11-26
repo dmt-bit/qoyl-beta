@@ -40,20 +40,63 @@ export default function StoreCheckoutPage() {
   const [form, setForm]             = useState<ShippingForm>(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState<Partial<ShippingForm>>({});
 
-  // Load cart from localStorage + fetch cart_id for the order
+  // Load cart from localStorage, hydrate prices, and fetch cart_id for the order
   useEffect(() => {
     const loaded = storeCart.getAll();
-    setEntries(loaded);
-    if (user?.id) {
-      fetch(`/api/shelf?user_id=${user.id}`)
-        .then((r) => r.json())
-        .then((json) => { setCartId(json.cart_id ?? ""); })
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    } else {
+
+    // Kick off price hydration for items missing price_estimate
+    const rawItems = loaded.map((e) => e.item);
+    const needsPricing = rawItems.some((i) => i.price_estimate == null || i.price_estimate === 0);
+
+    async function hydrateAndInit() {
+      let hydrated = loaded;
+
+      if (needsPricing) {
+        try {
+          const res = await fetch("/api/store/price-items", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items: rawItems }),
+          });
+          if (res.ok) {
+            const { prices } = await res.json() as {
+              prices: { product_id: string | null; product_name: string; price: number | null }[];
+            };
+            // Merge resolved prices back into entries
+            hydrated = loaded.map((entry) => {
+              if (entry.item.price_estimate != null && entry.item.price_estimate > 0) return entry;
+              const resolved = prices.find(
+                (p) => p.product_id
+                  ? p.product_id === entry.item.product_id
+                  : p.product_name === entry.item.product_name
+              );
+              if (resolved?.price != null) {
+                return { ...entry, item: { ...entry.item, price_estimate: resolved.price } };
+              }
+              return entry;
+            });
+          }
+        } catch {
+          // Non-fatal: show items without prices rather than blocking checkout
+        }
+      }
+
+      setEntries(hydrated);
+
+      if (user?.id) {
+        try {
+          const r = await fetch(`/api/shelf?user_id=${user.id}`);
+          const json = await r.json();
+          setCartId(json.cart_id ?? "");
+        } catch {
+          // cart_id is optional; checkout still works without it
+        }
+      }
       setLoading(false);
     }
-  }, [user?.id]);
+
+    hydrateAndInit();
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Flatten entries to CartItem[] with quantity baked in
   const items: CartItem[] = entries.map((e) => ({ ...e.item, quantity: e.quantity }));

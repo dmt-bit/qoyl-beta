@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import type { CartItem } from "@/lib/styleCart";
+import { resolvePrice } from "@/lib/itemPricing";
 
 // POST /api/store/checkout
 // Creates a Stripe Checkout session for the user's shelf items.
@@ -63,36 +64,11 @@ export async function POST(request: Request) {
     }
   }
 
-  // Category-based fallback prices (USD) for items without a catalog price.
-  // These are conservative mid-market estimates used only when no DB price exists.
-  function estimatePrice(item: CartItem): number | null {
-    if (item.price_estimate != null && item.price_estimate > 0) return item.price_estimate;
-    if (item.product_id && priceById.has(item.product_id)) return priceById.get(item.product_id)!;
-    if (item.product_type === "tutorial") return null;
-    // Tools: estimate by name keyword
-    if (item.product_type === "tool") {
-      const n = item.product_name.toLowerCase();
-      if (n.includes("dryer") || n.includes("flat iron") || n.includes("curling")) return 39.99;
-      if (n.includes("diffuser")) return 24.99;
-      if (n.includes("brush") || n.includes("comb") || n.includes("detangl")) return 14.99;
-      if (n.includes("bonnet") || n.includes("cap") || n.includes("wrap")) return 12.99;
-      return 19.99; // generic tool fallback
-    }
-    // Hair products: estimate by category label / name keyword
-    const n = item.product_name.toLowerCase();
-    if (n.includes("shampoo") || n.includes("conditioner") || n.includes("co-wash")) return 16.99;
-    if (n.includes("mask") || n.includes("treatment") || n.includes("deep")) return 18.99;
-    if (n.includes("oil") || n.includes("serum")) return 14.99;
-    if (n.includes("leave-in") || n.includes("leave in")) return 15.99;
-    if (n.includes("gel") || n.includes("mousse") || n.includes("cream")) return 13.99;
-    if (n.includes("spray") || n.includes("mist")) return 12.99;
-    return 15.99; // generic product fallback
-  }
-
-  // Only include purchasable items; skip tutorials and zero-priced items
+  // Only include purchasable items; skip tutorials and zero-priced items.
+  // resolvePrice applies: existing price_estimate → DB lookup → keyword fallback.
   const purchasable = items
     .filter((i) => i.product_type !== "tutorial")
-    .map((i) => ({ ...i, price_estimate: estimatePrice(i) }))
+    .map((i) => ({ ...i, price_estimate: resolvePrice(i, priceById) }))
     .filter((i) => i.price_estimate != null && i.price_estimate > 0);
 
   if (!purchasable.length) {
