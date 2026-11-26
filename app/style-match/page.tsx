@@ -2938,7 +2938,7 @@ function StyleMatchContent() {
                                         seller_type: "amazon",
                                         seller_url: `https://www.amazon.com/s?k=${encodeURIComponent(`${item.brand} ${item.name}`)}`,
                                         affiliate_url: null,
-                                        price_estimate: item.price_per_pack_usd ?? null,
+                                        price_estimate: item.price_usd ?? null,
                                         compat_score: item.score,
                                         quantity: 1,
                                         status: "pending",

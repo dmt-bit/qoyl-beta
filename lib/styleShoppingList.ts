@@ -34,6 +34,10 @@ export type ScoredHairCareItem = {
   // When non-empty, the ShowerShelfCart shows an "also covers X · Y · Z"
   // badge and the scorer skips those categories entirely.
   secondary_category_labels: string[];
+  // Retail price from catalog_products.price_usd. Used as the
+  // price_estimate when adding to the store cart. null when the catalog
+  // row has no price yet.
+  price_usd: number | null;
 };
 
 export type StaticShoppingItem = {
@@ -300,7 +304,7 @@ async function fetchScoredHairCareProducts(
 
     const { data: candidates } = await supabase
       .from("catalog_products")
-      .select("id, name, image_url, processed_image_url, secondary_category_ids, catalog_brands(name)")
+      .select("id, name, image_url, processed_image_url, price_usd, secondary_category_ids, catalog_brands(name)")
       .eq("category_id", categoryId)
       .limit(15);
 
@@ -372,6 +376,7 @@ async function fetchScoredHairCareProducts(
         ?? (best.product as { image_url?: string | null }).image_url
         ?? null,
       secondary_category_labels,
+      price_usd: (best.product as { price_usd?: number | null }).price_usd ?? null,
     });
   }
 
