@@ -36,6 +36,8 @@ export async function POST(request: Request) {
     );
   }
 
+  const admin = getSupabaseAdmin();
+
   // Auto-fill missing prices. Items added from the style-match page or the
   // bathroom shelf may arrive with price_estimate: null when the catalog row
   // has no price or when the client couldn't fetch it. We handle two cases:
@@ -139,7 +141,6 @@ export async function POST(request: Request) {
   // Insert a pending store_order row before creating the Stripe session so
   // we have an order ID to pass in metadata (the webhook updates it to
   // "paid" when payment completes).
-  const admin = getSupabaseAdmin();
   const { data: order, error: orderErr } = await admin
     .from("store_orders")
     .insert({
