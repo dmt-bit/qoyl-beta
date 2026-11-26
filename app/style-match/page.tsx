@@ -481,6 +481,121 @@ function SelectableCard({
   );
 }
 
+// Expandable step-by-step guide for a single YouTube tutorial video.
+// Fetches from /api/style-match/guide on first expand; caches in state.
+type StyleGuideStep = { step: number; title: string; description: string };
+type StyleGuideState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "ready"; steps: StyleGuideStep[]; source: "chapters" | "ai_generated" };
+
+function StyleGuidePanel({
+  videoId,
+  styleName,
+  curlType,
+  installType,
+}: {
+  videoId: string;
+  styleName: string;
+  curlType: string | null;
+  installType: string | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [guide, setGuide] = useState<StyleGuideState>({ status: "idle" });
+
+  async function fetchGuide() {
+    if (guide.status === "ready" || guide.status === "loading") return;
+    setGuide({ status: "loading" });
+    try {
+      const params = new URLSearchParams({ video_id: videoId, style_name: styleName });
+      if (curlType) params.set("curl_type", curlType);
+      if (installType) params.set("install_type", installType);
+      const res = await fetch(`/api/style-match/guide?${params.toString()}`);
+      if (!res.ok) throw new Error("failed");
+      const data = await res.json();
+      if (!Array.isArray(data.steps) || data.steps.length === 0) throw new Error("empty");
+      setGuide({ status: "ready", steps: data.steps, source: data.source });
+    } catch {
+      setGuide({ status: "error" });
+    }
+  }
+
+  function handleToggle() {
+    const next = !open;
+    setOpen(next);
+    if (next) fetchGuide();
+  }
+
+  return (
+    <div className="border-t border-bronze/20">
+      <button
+        type="button"
+        onClick={handleToggle}
+        className="flex w-full items-center justify-between px-4 py-3 text-left transition-colors hover:bg-warm/30"
+      >
+        <span className="text-xs font-semibold text-bronze2">
+          {open ? "Hide step-by-step guide" : "View step-by-step guide"}
+        </span>
+        <span className="text-xs text-dark/40" aria-hidden>
+          {open ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-4">
+          {guide.status === "loading" && (
+            <p className="text-xs text-dark/40">Generating guide...</p>
+          )}
+          {guide.status === "error" && (
+            <p className="text-xs text-dark/40">
+              Could not generate a guide for this video.{" "}
+              <button
+                type="button"
+                onClick={() => { setGuide({ status: "idle" }); fetchGuide(); }}
+                className="underline underline-offset-2"
+              >
+                Try again
+              </button>
+            </p>
+          )}
+          {guide.status === "ready" && (
+            <ol className="space-y-3">
+              {guide.steps.map((s) => (
+                <li key={s.step} className="flex gap-3">
+                  <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-bronze/15 text-[10px] font-bold text-bronze2">
+                    {s.step}
+                  </span>
+                  <div>
+                    <p className="text-xs font-semibold text-dark">{s.title}</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-dark/70">{s.description}</p>
+                  </div>
+                </li>
+              ))}
+              <li className="pt-1">
+                <p className="text-[10px] text-dark/30">
+                  {guide.source === "chapters"
+                    ? "Steps based on video chapters."
+                    : "AI-generated guide based on video content."}
+                  {" "}
+                  <a
+                    href={`https://www.youtube.com/watch?v=${videoId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline underline-offset-2 hover:text-dark/60"
+                  >
+                    Watch full video for details →
+                  </a>
+                </p>
+              </li>
+            </ol>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Pulls the video id out of any of the common YouTube URL shapes an admin
 // might paste into styles.tutorial_url (watch?v=, youtu.be/, /embed/).
 function extractYouTubeId(url: string): string | null {
@@ -2591,22 +2706,32 @@ function StyleMatchContent() {
                     <p className="text-xs font-semibold uppercase tracking-widest text-bronze">From YouTube</p>
                     <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
                       {youtubeVideos.map((v) => (
-                        <a
+                        <div
                           key={v.videoId}
-                          href={`https://www.youtube.com/watch?v=${v.videoId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex flex-col overflow-hidden rounded-xl border border-bronze/30 transition-colors hover:border-bronze"
+                          className="flex flex-col overflow-hidden rounded-xl border border-bronze/30"
                         >
-                          <div className="relative h-28 w-full bg-[#f5f5f5]">
-                            {v.thumbnailUrl && <Image src={v.thumbnailUrl} alt={v.title} fill className="object-cover" />}
-                          </div>
-                          <div className="flex flex-1 flex-col gap-1 p-4">
-                            <p className="line-clamp-2 font-serif text-sm text-dark">{v.title}</p>
-                            <p className="text-xs text-dark/50">{v.channelTitle}</p>
-                            <span className="mt-1 text-xs text-bronze2">Watch on YouTube →</span>
-                          </div>
-                        </a>
+                          <a
+                            href={`https://www.youtube.com/watch?v=${v.videoId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col transition-colors hover:border-bronze"
+                          >
+                            <div className="relative h-28 w-full bg-[#f5f5f5]">
+                              {v.thumbnailUrl && <Image src={v.thumbnailUrl} alt={v.title} fill className="object-cover" />}
+                            </div>
+                            <div className="flex flex-1 flex-col gap-1 p-4">
+                              <p className="line-clamp-2 font-serif text-sm text-dark">{v.title}</p>
+                              <p className="text-xs text-dark/50">{v.channelTitle}</p>
+                              <span className="mt-1 text-xs text-bronze2">Watch on YouTube →</span>
+                            </div>
+                          </a>
+                          <StyleGuidePanel
+                            videoId={v.videoId}
+                            styleName={detected?.style_name ?? "this style"}
+                            curlType={hairProfile?.curl_type ?? null}
+                            installType={selectedInstallType}
+                          />
+                        </div>
                       ))}
                     </div>
                     <p className="mt-3 text-[10px] text-dark/40">Videos from YouTube - not affiliated with Qoyl.</p>
