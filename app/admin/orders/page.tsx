@@ -68,6 +68,12 @@ export default function AdminOrdersPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [trackingInputs, setTrackingInputs] = useState<Record<string, string>>({});
   const [filterStatus, setFilterStatus] = useState<"all" | OrderStatus>("all");
+  const [adminPassword, setAdminPassword] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return sessionStorage.getItem("admin_password") ?? "";
+  });
+  const [notifying, setNotifying] = useState<string | null>(null);
+  const [notifyResult, setNotifyResult] = useState<Record<string, "sent" | "failed">>({});
 
   useEffect(() => {
     if (user && !ADMIN_EMAILS.includes(user.email ?? "")) {
@@ -96,8 +102,28 @@ export default function AdminOrdersPage() {
     const { error } = await supabase.from("store_orders").update(payload).eq("id", orderId);
     if (!error) {
       setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, ...payload } : o));
+
+      // When marking shipped, auto-send the customer notification email
+      if (status === "shipped" && adminPassword) {
+        await notifyShipped(orderId);
+      }
     }
     setUpdating(null);
+  }
+
+  async function notifyShipped(orderId: string) {
+    if (!adminPassword) return;
+    setNotifying(orderId);
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/notify-shipped`, {
+        method: "POST",
+        headers: { "x-admin-password": adminPassword },
+      });
+      setNotifyResult((r) => ({ ...r, [orderId]: res.ok ? "sent" : "failed" }));
+    } catch {
+      setNotifyResult((r) => ({ ...r, [orderId]: "failed" }));
+    }
+    setNotifying(null);
   }
 
   const displayed = filterStatus === "all"
@@ -132,10 +158,22 @@ export default function AdminOrdersPage() {
             </h1>
             <p style={{ fontSize: 12, color: "#9A8E82", margin: "4px 0 0" }}>Qoyl Store — fulfillment dashboard</p>
           </div>
-          <div style={{ display: "flex", gap: 16 }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
             <StatChip label="Total orders" value={String(stats.total)} />
             <StatChip label="Needs action" value={String(stats.paid)} accent />
             <StatChip label="Revenue" value={fmtPrice(stats.revenue)} />
+            <input
+              type="password"
+              placeholder="Admin password"
+              value={adminPassword}
+              onChange={(e) => {
+                setAdminPassword(e.target.value);
+                sessionStorage.setItem("admin_password", e.target.value);
+              }}
+              style={{ padding: "7px 12px", border: "1.5px solid #DDD5C8", borderRadius: 8,
+                fontSize: 12, fontFamily: "monospace", outline: "none",
+                background: "#FDFBF8", color: "#1A1510", width: 160 }}
+            />
           </div>
         </div>
       </div>
@@ -324,12 +362,24 @@ export default function AdminOrdersPage() {
                               <ActionButton
                                 label={
                                   nextStatus === "fulfilling" ? "Mark fulfilling" :
-                                  nextStatus === "shipped"    ? "Mark shipped" :
+                                  nextStatus === "shipped"    ? "Mark shipped + notify customer" :
                                   "Mark completed"
                                 }
                                 onClick={() => updateStatus(order.id, nextStatus)}
                                 loading={updating === order.id}
                                 primary
+                              />
+                            )}
+                            {(order.status === "shipped" || order.status === "completed") && (
+                              <ActionButton
+                                label={
+                                  notifying === order.id ? "Sending…" :
+                                  notifyResult[order.id] === "sent" ? "✓ Email sent" :
+                                  notifyResult[order.id] === "failed" ? "✗ Failed — retry" :
+                                  "Resend shipped email"
+                                }
+                                onClick={() => notifyShipped(order.id)}
+                                loading={notifying === order.id}
                               />
                             )}
                             {order.status !== "cancelled" && order.status !== "completed" && (

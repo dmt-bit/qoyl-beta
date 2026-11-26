@@ -5,6 +5,8 @@ import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { sendRoutineEmail } from "@/lib/sendRoutineEmail";
 import { sendAdminNotification } from "@/lib/adminNotify";
 import { sendNotificationEmail } from "@/lib/notify";
+import { sendOrderConfirmationEmail } from "@/lib/sendOrderConfirmationEmail";
+import type { CartItem } from "@/lib/styleCart";
 
 export async function POST(request: Request) {
   const body = await request.text();
@@ -143,6 +145,33 @@ export async function POST(request: Request) {
             `🛒 ACTION NEEDED: New Qoyl Store order — ${order.items.length} items`,
             `A customer just placed a Qoyl Store order. Please purchase each item below and ship to the address provided.\n\nOrder ID: ${orderId}\nUser ID:  ${userId}\n\nShip to:\n${addr}\n\nItems to purchase:\n\n${itemLines}\n\nSubtotal: $${order.subtotal_usd}\nFulfillment fee: $${order.service_fee_usd}\nTotal charged to customer: $${order.total_usd}\n\nStripe session: ${session.id}\n\nMark order as "fulfilling" in /admin/orders once you have started purchasing.`
           );
+
+          // Send customer confirmation email (non-fatal if it fails)
+          const customerEmail = session.customer_email ?? session.customer_details?.email ?? null;
+          if (customerEmail) {
+            // Look up first name from hair_profiles
+            const { data: profile } = await getSupabaseAdmin()
+              .from("hair_profiles")
+              .select("first_name")
+              .eq("user_id", userId)
+              .maybeSingle();
+
+            const confirmResult = await sendOrderConfirmationEmail({
+              recipientEmail: customerEmail,
+              firstName: profile?.first_name ?? null,
+              orderId,
+              items: order.items as CartItem[],
+              subtotalUsd: order.subtotal_usd,
+              serviceFeeUsd: order.service_fee_usd,
+              totalUsd: order.total_usd,
+              shippingAddress: order.shipping_address ?? null,
+            });
+            if (!confirmResult.sent) {
+              console.error("[webhook] Order confirmation email failed:", orderId, confirmResult);
+            }
+          } else {
+            console.warn("[webhook] No customer email on session for confirmation:", session.id);
+          }
 
           break;
         }
