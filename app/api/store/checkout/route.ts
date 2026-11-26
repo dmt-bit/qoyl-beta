@@ -176,14 +176,14 @@ export async function POST(request: Request) {
       cancel_url: `${origin}/dashboard?store=cancelled`,
       metadata: {
         user_id,
-        cart_id,
+        cart_id: cart_id ?? null,
         order_id: order.id,
         product_type: "store_order",
       },
       payment_intent_data: {
         metadata: {
           user_id,
-          cart_id,
+          cart_id: cart_id ?? null,
           order_id: order.id,
         },
       },
