@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     .filter((i) => i.product_id && i.price_estimate == null)
     .map((i) => i.product_id as string);
 
-  let priceById = new Map<string, number>();
+  const priceById = new Map<string, number>();
   if (catalogIds.length > 0) {
     const { data: priceRows } = await admin
       .from("catalog_products")

@@ -7,7 +7,6 @@ import { useSearchParams } from "next/navigation";
 import { COMMUNITY_PREFILL_KEY } from "@/components/CommunityGrid";
 import TryOnModal from "@/components/TryOnModal";
 import PostCard, { Post } from "@/components/PostCard";
-import ShopButton from "@/components/ShopButton";
 import BrandLogo from "@/components/BrandLogo";
 import StylistRecommendationBlock from "@/components/StylistRecommendationBlock";
 import { useAuth } from "@/lib/auth-context";
