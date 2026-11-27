@@ -568,33 +568,11 @@ function DashboardContent() {
     async function loadRecentSearches() {
       const { data } = await supabase
         .from("product_searches")
-        .select("id, product_name, compatibility_score, searched_at, barcode")
+        .select("id, product_name, compatibility_score, searched_at, barcode, image_url")
         .eq("user_id", user!.id)
         .order("searched_at", { ascending: false })
         .limit(5);
-      if (!data || cancelled) {
-        if (!cancelled) setRecentSearches([]);
-        return;
-      }
-      // Enrich with product images from catalog_products (best-effort).
-      const barcodes = data.map((r) => r.barcode).filter(Boolean) as string[];
-      const imageMap: Record<string, string> = {};
-      if (barcodes.length > 0) {
-        const { data: products } = await supabase
-          .from("catalog_products")
-          .select("barcode, image_url")
-          .in("barcode", barcodes);
-        if (products) {
-          for (const p of products) {
-            if (p.barcode && p.image_url) imageMap[p.barcode] = p.image_url;
-          }
-        }
-      }
-      const enriched = data.map((r) => ({
-        ...r,
-        image_url: r.barcode ? (imageMap[r.barcode] ?? null) : null,
-      }));
-      if (!cancelled) setRecentSearches(enriched);
+      if (!cancelled) setRecentSearches(data ?? []);
     }
 
     loadRecentSearches();

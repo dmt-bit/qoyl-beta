@@ -1845,6 +1845,7 @@ function SearchPageContent() {
         product_name: product.name,
         brand_name: product.brand,
         barcode: product.code,
+        image_url: product.imageUrl ?? null,
         compatibility_score: score,
         hair_profile_porosity: porosity,
         hair_profile_curl_type: curlType,
