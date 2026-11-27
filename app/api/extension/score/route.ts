@@ -130,8 +130,9 @@ export async function POST(request: Request) {
         "temperate"
       );
 
-  const results = await scoreCatalogProductsForProfile(profile, [productRow.id]);
-  const result = results[0];
+  const results = await scoreCatalogProductsForProfile([productRow.id], profile);
+  const entry = results[productRow.id];
+  const result = entry?.result;
 
   if (!result) {
     return NextResponse.json(
@@ -140,7 +141,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const score = Math.round(result.score);
+  const score = Math.round(result.normalizedScore);
   const tier = scoreTier(score);
 
   return NextResponse.json(
