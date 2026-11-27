@@ -751,6 +751,7 @@ function DashboardContent() {
   ].filter((c): c is string => Boolean(c)) : [];
 
   return (
+    <>
     <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
       <div className="mx-auto max-w-2xl">
         <div className="flex items-start justify-between gap-4">
@@ -1223,6 +1224,7 @@ function DashboardContent() {
       </div>
     </main>
     <PushOptIn autoPrompt={true} />
+    </>
   );
 }
 

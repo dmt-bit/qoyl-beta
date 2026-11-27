@@ -42,8 +42,17 @@ function base64urlEncode(buf: ArrayBuffer): string {
   return Buffer.from(buf).toString("base64url");
 }
 
-function base64urlDecode(str: string): Buffer {
-  return Buffer.from(str, "base64url");
+function base64urlDecode(str: string): ArrayBuffer {
+  const b = Buffer.from(str, "base64url");
+  return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
+}
+
+function toArrayBuffer(buf: ArrayBuffer | ArrayBufferLike): ArrayBuffer {
+  if (buf instanceof ArrayBuffer) return buf;
+  // SharedArrayBuffer or other: copy into a plain ArrayBuffer
+  const ab = new ArrayBuffer(buf.byteLength);
+  new Uint8Array(ab).set(new Uint8Array(buf as unknown as ArrayBuffer));
+  return ab;
 }
 
 async function buildVapidJwt(audience: string): Promise<string> {
@@ -65,15 +74,19 @@ async function buildVapidJwt(audience: string): Promise<string> {
   const header = { typ: "JWT", alg: "ES256" };
   const payload = { aud: audience, exp: now + 86400, sub: subject };
 
-  const toSign =
-    base64urlEncode(Buffer.from(JSON.stringify(header))) +
-    "." +
-    base64urlEncode(Buffer.from(JSON.stringify(payload)));
+  const headerBytes = new TextEncoder().encode(JSON.stringify(header));
+  const payloadBytes = new TextEncoder().encode(JSON.stringify(payload));
 
+  const toSign =
+    base64urlEncode(toArrayBuffer(headerBytes.buffer)) +
+    "." +
+    base64urlEncode(toArrayBuffer(payloadBytes.buffer));
+
+  const toSignBytes = new TextEncoder().encode(toSign);
   const sig = await crypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
     cryptoKey,
-    Buffer.from(toSign)
+    toSignBytes
   );
 
   return `${toSign}.${base64urlEncode(sig)}`;
@@ -128,7 +141,7 @@ async function encryptPayload(
   const serverPublicKeyRaw = await crypto.subtle.exportKey("raw", serverKeyPair.publicKey);
 
   // PRK using HKDF
-  const prk = await crypto.subtle.importKey("raw", sharedSecret, "HKDF", false, ["deriveBits"]);
+  const prk = await crypto.subtle.importKey("raw", toArrayBuffer(sharedSecret), "HKDF", false, ["deriveBits"]);
 
   const authInfo = Buffer.concat([
     Buffer.from("Content-Encoding: auth\0"),
@@ -146,36 +159,38 @@ async function encryptPayload(
     256
   );
 
-  // Encryption key
-  const context = Buffer.concat([
+  // Encryption key (context unused in aes128gcm but kept for spec reference)
+  const _context = Buffer.concat([
     Buffer.from("P-256\0"),
     Buffer.from([0, 65]),
-    Buffer.from(base64urlDecode(p256dhBase64)),
+    Buffer.from(base64urlDecode(p256dhBase64) as ArrayBuffer),
     Buffer.from([0, 65]),
-    Buffer.from(serverPublicKeyRaw),
+    Buffer.from(toArrayBuffer(serverPublicKeyRaw)),
   ]);
+  void _context;
 
   const keyInfo = Buffer.concat([Buffer.from("Content-Encoding: aes128gcm\0"), Buffer.from([1])]);
   const cekInfo = Buffer.concat([Buffer.from("Content-Encoding: nonce\0"), Buffer.from([1])]);
 
-  const ikm = await crypto.subtle.importKey("raw", prkExpanded, "HKDF", false, ["deriveBits"]);
+  const ikm = await crypto.subtle.importKey("raw", toArrayBuffer(prkExpanded), "HKDF", false, ["deriveBits"]);
 
+  const saltBuf = toArrayBuffer(salt.buffer);
   const [cekBits, nonceBits] = await Promise.all([
-    crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt, info: keyInfo }, ikm, 128),
-    crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt, info: cekInfo }, ikm, 96),
+    crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: saltBuf, info: keyInfo }, ikm, 128),
+    crypto.subtle.deriveBits({ name: "HKDF", hash: "SHA-256", salt: saltBuf, info: cekInfo }, ikm, 96),
   ]);
 
-  const cek = await crypto.subtle.importKey("raw", cekBits, "AES-GCM", false, ["encrypt"]);
+  const cek = await crypto.subtle.importKey("raw", toArrayBuffer(cekBits), "AES-GCM", false, ["encrypt"]);
 
-  const plaintextBuf = Buffer.concat([
-    Buffer.from(payload, "utf8"),
-    Buffer.from([2]), // padding delimiter
-  ]);
+  const payloadBytes = new TextEncoder().encode(payload);
+  const plaintextBuf = new Uint8Array(payloadBytes.length + 1);
+  plaintextBuf.set(payloadBytes);
+  plaintextBuf[payloadBytes.length] = 2; // padding delimiter
 
-  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonceBits }, cek, plaintextBuf);
+  const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv: toArrayBuffer(nonceBits) }, cek, plaintextBuf);
 
   // Build the aes128gcm content-encoding header + ciphertext.
-  const serverPubKeyBuf = Buffer.from(serverPublicKeyRaw);
+  const serverPubKeyBuf = Buffer.from(toArrayBuffer(serverPublicKeyRaw));
   const recordSize = Buffer.alloc(4);
   recordSize.writeUInt32BE(4096, 0);
 
@@ -187,7 +202,7 @@ async function encryptPayload(
   ]);
 
   return {
-    body: Buffer.concat([header, Buffer.from(encrypted)]),
+    body: Buffer.concat([header, Buffer.from(toArrayBuffer(encrypted))]),
     salt: Buffer.from(salt),
   };
 }
@@ -223,7 +238,7 @@ async function sendPushToSubscription(
     res = await fetch(row.endpoint, {
       method: "POST",
       headers,
-      body: encryptedBody,
+      body: new Uint8Array(encryptedBody),
     });
   } catch (err) {
     console.error("[webPush] fetch failed:", err);

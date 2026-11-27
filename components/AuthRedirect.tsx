@@ -15,7 +15,7 @@ export default function AuthRedirect({ to }: { to: string }) {
     if (!loading && user) {
       router.replace(to);
     }
-  }, [session, loading, router, to]);
+  }, [user, loading, router, to]);
 
   return null;
 }

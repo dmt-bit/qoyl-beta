@@ -1,48 +1,46 @@
 "use client";
 
-// PushOptIn — registers the service worker and subscribes to web push.
-// Renders nothing visible itself; call it from a button's onClick or
-// mount it after the user has taken an action that implies they want notifications.
-//
-// Usage as a hook:
-//   const { subscribe, state } = usePushOptIn();
-//   <button onClick={subscribe}>enable notifications</button>
-//
-// Usage as an auto-prompt (shows a soft prompt bar):
-//   <PushOptIn autoPrompt />
-
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { supabase } from "@/lib/supabase";
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
 
 type PushState = "idle" | "loading" | "granted" | "denied" | "unsupported";
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
-  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+  const output = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i++) {
+    output[i] = rawData.charCodeAt(i);
+  }
+  return output.buffer as ArrayBuffer;
 }
 
-async function registerAndSubscribe(token: string): Promise<PushSubscription | null> {
+async function getToken(): Promise<string | null> {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token ?? null;
+}
+
+async function registerAndSubscribe(): Promise<PushSubscription | null> {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) return null;
 
-  // Register the service worker.
+  const token = await getToken();
+  if (!token) return null;
+
   const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
   await reg.update();
 
-  // Request permission.
   const permission = await Notification.requestPermission();
   if (permission !== "granted") return null;
 
-  // Subscribe.
   const subscription = await reg.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
   });
 
-  // Save to backend.
   await fetch("/api/push/subscribe", {
     method: "POST",
     headers: {
@@ -58,7 +56,7 @@ async function registerAndSubscribe(token: string): Promise<PushSubscription | n
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function usePushOptIn() {
-  const { session } = useAuth();
+  const { user } = useAuth();
   const [state, setState] = useState<PushState>("idle");
 
   useEffect(() => {
@@ -68,16 +66,16 @@ export function usePushOptIn() {
   }, []);
 
   const subscribe = useCallback(async () => {
-    if (!session?.access_token) return;
+    if (!user) return;
     setState("loading");
     try {
-      const sub = await registerAndSubscribe(session.access_token);
+      const sub = await registerAndSubscribe();
       setState(sub ? "granted" : "denied");
     } catch (err) {
       console.error("[PushOptIn] subscribe error:", err);
       setState("denied");
     }
-  }, [session]);
+  }, [user]);
 
   return { subscribe, state };
 }
@@ -89,20 +87,15 @@ interface PushOptInProps {
 }
 
 export default function PushOptIn({ autoPrompt }: PushOptInProps) {
-  const { session } = useAuth();
+  const { user } = useAuth();
   const { subscribe, state } = usePushOptIn();
   const [dismissed, setDismissed] = useState(false);
 
-  // Only show the auto-prompt once per session.
   useEffect(() => {
     try {
       if (sessionStorage.getItem("qoyl_push_dismissed")) setDismissed(true);
     } catch { /* ignore */ }
   }, []);
-
-  if (!autoPrompt) return null;
-  if (!session) return null;
-  if (dismissed || state === "granted" || state === "denied" || state === "unsupported") return null;
 
   // Don't prompt if already subscribed.
   useEffect(() => {
@@ -113,6 +106,10 @@ export default function PushOptIn({ autoPrompt }: PushOptInProps) {
       });
     });
   }, []);
+
+  if (!autoPrompt) return null;
+  if (!user) return null;
+  if (dismissed || state === "granted" || state === "denied" || state === "unsupported") return null;
 
   function dismiss() {
     setDismissed(true);
