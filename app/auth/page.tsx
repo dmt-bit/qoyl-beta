@@ -17,6 +17,7 @@ function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectParam = searchParams.get("redirect");
+  const fromExtension = searchParams.get("from") === "extension";
   const { user, loading, hairProfile, hairProfileLoading } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -42,7 +43,12 @@ function AuthPageContent() {
       const res = await fetch("/api/auth/admin-signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({
+          email,
+          // When coming from the extension, redirect to the callback page
+          // so the session gets relayed to chrome.storage.local.
+          ...(fromExtension ? { redirectTo: "/auth/extension-callback" } : {}),
+        }),
       });
 
       const data = await res.json();
