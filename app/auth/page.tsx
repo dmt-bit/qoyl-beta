@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/lib/supabase";
 
 export default function AuthPage() {
   return (
@@ -17,19 +16,14 @@ export default function AuthPage() {
 function AuthPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Only honored for a user who already has a hair profile (see the
-  // redirect effect below) - someone without one yet still goes to
-  // /profile first, since app/boo/page.tsx's whole point in requiring
-  // sign-in is a personalized basket, which needs that profile to exist.
   const redirectParam = searchParams.get("redirect");
-  const fromExtension = searchParams.get("from") === "extension";
   const { user, loading, hairProfile, hairProfileLoading } = useAuth();
 
   const [email, setEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
 
+  // Redirect already-signed-in users
   useEffect(() => {
     if (loading || hairProfileLoading || !user) return;
     if (hairProfile && redirectParam) {
@@ -44,59 +38,28 @@ function AuthPageContent() {
     setError(null);
     setSubmitting(true);
 
-    // Check if this email can bypass email confirmation (admin accounts).
-    // The server returns a confirmUrl we redirect to directly instead of
-    // waiting for the user to click a link in their inbox.
     try {
-      const bypassRes = await fetch("/api/auth/admin-signin", {
+      const res = await fetch("/api/auth/admin-signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      if (bypassRes.ok) {
-        const bypassData = await bypassRes.json();
-        if (bypassData.bypass && bypassData.confirmUrl) {
-          // Redirect to Supabase's verify endpoint — this confirms the
-          // session and redirects back to the app without any email step.
-          window.location.href = bypassData.confirmUrl;
-          return; // submitting stays true; navigation takes over
-        }
+
+      const data = await res.json();
+
+      if (!res.ok || !data.confirmUrl) {
+        setError(data.error ?? "Something went wrong. Please try again.");
+        setSubmitting(false);
+        return;
       }
+
+      // Navigate to Supabase's verify endpoint — establishes the session
+      // and redirects back to the app. No email, no link to click.
+      window.location.href = data.confirmUrl;
     } catch {
-      // If the bypass check fails for any reason, fall through to normal OTP.
+      setError("Something went wrong. Please try again.");
+      setSubmitting(false);
     }
-
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-    const emailRedirectTo = fromExtension
-      ? `${baseUrl}/auth/extension-callback`
-      : baseUrl;
-
-    const { error: otpError } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo },
-    });
-    setSubmitting(false);
-
-    if (otpError) {
-      setError(otpError.message);
-      return;
-    }
-    setSent(true);
-  }
-
-  if (sent) {
-    return (
-      <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
-        <div className="mx-auto max-w-sm">
-          <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
-            Check your email
-          </h1>
-          <p className="mt-4 text-sm text-dark/70">
-            check your email — we sent you a link to <span className="text-dark">{email}</span>.
-          </p>
-        </div>
-      </main>
-    );
   }
 
   return (
@@ -106,8 +69,7 @@ function AuthPageContent() {
           Sign In
         </h1>
         <p className="mt-2 text-sm text-dark/70">
-          Enter your email and we&apos;ll send you a link - no password
-          needed.
+          Enter your email to get started.
         </p>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -127,14 +89,14 @@ function AuthPageContent() {
             />
           </div>
 
-          {error && <p className="text-sm text-red">{error}</p>}
+          {error && <p className="text-sm text-red-600">{error}</p>}
 
           <button
             type="submit"
             disabled={submitting}
             className="w-full bg-bronze py-3 text-sm font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
           >
-            {submitting ? "Sending..." : "Send My Link"}
+            {submitting ? "Signing in…" : "Sign In"}
           </button>
 
           <p className="text-center text-xs text-dark/50">
