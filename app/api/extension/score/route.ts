@@ -69,7 +69,8 @@ export async function POST(request: Request) {
   }
 
   // --- Look up product in catalog -------------------------------------------
-  let productRow: { id: string; name: string; brand_name: string | null; category: string | null } | null = null;
+  // catalog_products has no brand_name column — brand is via brand_id -> catalog_brands
+  let productRow: { id: string; name: string; brand_name: string | null } | null = null;
 
   const normalizedName = productName.toLowerCase().trim();
 
@@ -117,36 +118,57 @@ export async function POST(request: Request) {
   }
 
   // Run searches in priority order, stop at first hit
+  // catalog_products joins to catalog_brands for the brand name
   for (const candidate of searchCandidates) {
     if (!candidate || candidate.length < 3) continue;
 
     const { data: rows } = await admin
       .from("catalog_products")
-      .select("id, name, brand_name, category")
+      .select("id, name, catalog_brands(name)")
       .ilike("name", `%${candidate.slice(0, 60)}%`)
       .limit(5);
 
     if (rows?.length) {
       // Pick closest match by name length similarity to the original
-      productRow = rows.reduce((best, row) => {
+      const best = rows.reduce((b: typeof rows[0], row) => {
         const diff = Math.abs(row.name.length - productName.length);
-        const bestDiff = Math.abs(best.name.length - productName.length);
-        return diff < bestDiff ? row : best;
+        const bestDiff = Math.abs(b.name.length - productName.length);
+        return diff < bestDiff ? row : b;
       });
+      productRow = {
+        id: best.id,
+        name: best.name,
+        brand_name: (best.catalog_brands as unknown as { name: string } | null)?.name ?? null,
+      };
       break;
     }
 
-    // If we have a brand, also try brand-scoped search with this candidate
+    // If we have a brand, also try brand-scoped search via the join
     if (brandName) {
-      const { data: brandRows } = await admin
-        .from("catalog_products")
-        .select("id, name, brand_name, category")
-        .ilike("brand_name", `%${brandName.slice(0, 40)}%`)
-        .ilike("name", `%${candidate.slice(0, 40)}%`)
-        .limit(3);
-      if (brandRows?.length) {
-        productRow = brandRows[0];
-        break;
+      // First find the brand id, then search products by brand_id + name
+      const { data: brandData } = await admin
+        .from("catalog_brands")
+        .select("id")
+        .ilike("name", `%${brandName.slice(0, 40)}%`)
+        .limit(1)
+        .maybeSingle();
+
+      if (brandData?.id) {
+        const { data: brandRows } = await admin
+          .from("catalog_products")
+          .select("id, name, catalog_brands(name)")
+          .eq("brand_id", brandData.id)
+          .ilike("name", `%${candidate.slice(0, 40)}%`)
+          .limit(3);
+        if (brandRows?.length) {
+          const br = brandRows[0];
+          productRow = {
+            id: br.id,
+            name: br.name,
+            brand_name: (br.catalog_brands as unknown as { name: string } | null)?.name ?? brandName,
+          };
+          break;
+        }
       }
     }
   }
@@ -194,7 +216,7 @@ export async function POST(request: Request) {
       score,
       tier,
       productName: productRow.name,
-      brandName: productRow.brand_name,
+      brandName: productRow.brand_name ?? null,
       curlType: hairProfile?.curl_type ?? null,
       notInCatalog: false,
     },
