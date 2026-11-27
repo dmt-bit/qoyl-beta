@@ -400,7 +400,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
     (async () => {
       const { data: candidates } = await supabase
         .from("catalog_products")
-        .select("id, name, image_url, catalog_brands(name)")
+        .select("id, name, image_url, processed_image_url, catalog_brands(name)")
         .eq("is_verified", true)
         .order("created_at", { ascending: false })
         .limit(24);
@@ -411,7 +411,7 @@ export default function MasonryFeed({ posts }: { posts: Post[] }) {
         id: c.id as string,
         name: c.name as string,
         brand: (c.catalog_brands as unknown as { name: string } | null)?.name ?? "Unknown brand",
-        imageUrl: (c.image_url as string | null) ?? null,
+        imageUrl: ((c.processed_image_url as string | null) ?? (c.image_url as string | null)) ?? null,
         score: null,
       }));
 
