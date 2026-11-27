@@ -56,7 +56,6 @@ function toArrayBuffer(buf: ArrayBuffer | ArrayBufferLike): ArrayBuffer {
 }
 
 async function buildVapidJwt(audience: string): Promise<string> {
-  const pubKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!;
   const privKey = process.env.VAPID_PRIVATE_KEY!;
   const subject = process.env.VAPID_SUBJECT ?? "mailto:hey@qoyl.live";
 
