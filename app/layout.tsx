@@ -12,12 +12,16 @@ const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
   variable: "--font-space-grotesk",
+  display: "swap",
+  preload: false,
 });
 
 const spaceMono = Space_Mono({
   subsets: ["latin"],
   weight: ["400", "700"],
   variable: "--font-space-mono",
+  display: "swap",
+  preload: false,
 });
 
 // Display font for headings/hero text - hand-drawn, bouncy rounded feel
@@ -33,6 +37,8 @@ const fredoka = Fredoka({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-fredoka",
+  display: "swap",
+  preload: false,
 });
 
 // Lora and DM Sans used by the ShowerShelfCart checkout page.
@@ -40,12 +46,16 @@ const lora = Lora({
   subsets: ["latin"],
   weight: ["400", "600"],
   variable: "--font-lora",
+  display: "swap",
+  preload: false,
 });
 
 const dmSans = DM_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-dm-sans",
+  display: "swap",
+  preload: false,
 });
 
 // Installable as a home screen app (see public/manifest.json). The icon is
