@@ -286,7 +286,7 @@ function RoutineIcon() {
   );
 }
 
-function DashboardNav({ hasProfile }: { hasProfile: boolean }) {
+function DashboardNav({ hasProfile, onSignOut }: { hasProfile: boolean; onSignOut: () => void }) {
   const navLinks = [
     { href: "/style-match", label: "Style Match" },
     { href: "/store", label: "Shop" },
@@ -309,6 +309,14 @@ function DashboardNav({ hasProfile }: { hasProfile: boolean }) {
             {link.label}
           </Link>
         ))}
+        <div className="ml-auto shrink-0 flex items-center pl-4">
+          <button
+            onClick={onSignOut}
+            className="whitespace-nowrap pb-2.5 pt-2.5 text-sm font-medium text-dark/40 transition-colors hover:text-dark/70"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     </nav>
   );
@@ -775,7 +783,13 @@ function DashboardContent() {
 
         <ProfileChips />
 
-        <DashboardNav hasProfile={!!hairProfile} />
+        <DashboardNav
+          hasProfile={!!hairProfile}
+          onSignOut={async () => {
+            await supabase.auth.signOut();
+            router.push("/");
+          }}
+        />
 
         {childSafetyNote && (
           <p className="mt-4 border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-dark/90">
