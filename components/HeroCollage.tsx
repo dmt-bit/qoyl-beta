@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 
 const BG_VIDEOS = [
@@ -34,6 +34,31 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
   const [statementVisible, setStatementVisible] = useState(true);
   const progressBarRef = useRef<HTMLDivElement | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  // PWA install prompt — captured from the beforeinstallprompt event.
+  const installPromptRef = useRef<Event & { prompt(): Promise<void> } | null>(null);
+  const [canInstall, setCanInstall] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      e.preventDefault();
+      installPromptRef.current = e as Event & { prompt(): Promise<void> };
+      setCanInstall(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleStartHere = useCallback(async (e: React.MouseEvent) => {
+    if (installPromptRef.current) {
+      e.preventDefault();
+      await installPromptRef.current.prompt();
+      installPromptRef.current = null;
+      setCanInstall(false);
+    }
+    // If no install prompt (iOS, already installed, or desktop Chrome without prompt),
+    // the Link href="/profile" fallback navigates normally.
+  }, []);
 
   const runProgressBar = () => {
     const el = progressBarRef.current;
@@ -136,6 +161,7 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
         <Link
           href="/profile"
           className="lowercase"
+          onClick={handleStartHere}
           style={{
             fontFamily: "var(--font-space-grotesk), 'Space Grotesk', sans-serif",
             fontSize: "clamp(13px, 2vw, 15px)",
@@ -159,7 +185,7 @@ export default function HeroCollage({ hasEventStrip }: { hasEventStrip: boolean 
             (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.35)";
           }}
         >
-          start here
+          {canInstall ? "download the app" : "start here"}
         </Link>
       </div>
 

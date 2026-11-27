@@ -4,6 +4,7 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import FeedbackSurveyTrigger from "@/components/FeedbackSurveyTrigger";
 import HomeScreenPrompt from "@/components/HomeScreenPrompt";
+import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import { AuthProvider } from "@/lib/auth-context";
 import "./globals.css";
 
@@ -101,6 +102,7 @@ export default function RootLayout({
           <Footer />
           <FeedbackSurveyTrigger />
           <HomeScreenPrompt />
+          <ServiceWorkerRegistrar />
         </AuthProvider>
       </body>
     </html>
