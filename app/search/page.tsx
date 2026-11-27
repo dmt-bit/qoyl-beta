@@ -79,6 +79,7 @@ type QoylProductRow = {
   name: string;
   barcode: string | null;
   image_url: string | null;
+  processed_image_url: string | null;
   catalog_brands: { name: string; slug: string; website_domain: string | null } | null;
   categories: { slug: string } | null;
   price_usd: number | null;
@@ -91,7 +92,7 @@ type QoylProductRow = {
 // different schema. Keeping qoyl-beta's consumer catalog on separate
 // tables avoids colliding with that.
 const QOYL_PRODUCT_SELECT_BASE =
-  "id, name, barcode, image_url, catalog_brands(name, slug, website_domain), categories(slug), price_usd";
+  "id, name, barcode, image_url, processed_image_url, catalog_brands(name, slug, website_domain), categories(slug), price_usd";
 
 // catalog_products.average_score doesn't exist until
 // supabase/add_brand_directory.sql has been run - naming it explicitly in
@@ -119,7 +120,8 @@ function toQoylProduct(p: QoylProductRow): Product {
     brandSlug: p.catalog_brands?.slug ?? null,
     brandDomain: p.catalog_brands?.website_domain ?? null,
     catalogProductId: p.id,
-    imageUrl: p.image_url,
+    // Prefer processed (bg-removed) image; fall back to raw image_url.
+    imageUrl: p.processed_image_url ?? p.image_url,
     categorySlug: p.categories?.slug ?? null,
     priceUsd: p.price_usd,
     averageScore: p.average_score ?? null,
