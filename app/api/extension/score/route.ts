@@ -83,30 +83,37 @@ export async function POST(request: Request) {
 
   // Build a list of search candidates — the page title often includes the
   // brand name as a prefix (e.g. "Camille Rose Curl Love Moisture Milk").
-  // We try several stripped variants so catalog names like "Curl Love
-  // Moisture Milk" still match.
+  // We try several stripped variants so catalog names still match.
   const searchCandidates: string[] = [];
 
-  // 1. Full name cleaned
-  searchCandidates.push(cleanName(normalizedName));
+  function normalizeHyphens(n: string) {
+    // "blow-dry" and "blow dry" should both match catalog entries
+    return n.replace(/-/g, " ").replace(/\s+/g, " ").trim();
+  }
 
-  // 2. Brand stripped from front — if brandName is provided or if the
-  //    product name starts with a likely brand prefix (first 1-3 words).
+  // 1. Full name cleaned (with and without hyphens)
+  const cleaned = cleanName(normalizedName);
+  searchCandidates.push(cleaned);
+  const cleanedNoHyphens = normalizeHyphens(cleaned);
+  if (cleanedNoHyphens !== cleaned) searchCandidates.push(cleanedNoHyphens);
+
+  // 2. Brand stripped from front
   if (brandName) {
     const stripped = normalizedName
       .replace(new RegExp(`^${brandName.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*`, "i"), "")
       .trim();
     if (stripped && stripped !== normalizedName) {
       searchCandidates.push(cleanName(stripped));
+      searchCandidates.push(normalizeHyphens(cleanName(stripped)));
     }
   }
 
-  // 3. Try the last 3–6 words of the name (the actual product name usually
-  //    sits at the end when brand + product are concatenated).
+  // 3. Try suffixes — lowered threshold to >= 2 words to catch short names
   const words = cleanName(normalizedName).split(" ").filter(Boolean);
-  if (words.length > 3) {
-    searchCandidates.push(words.slice(-4).join(" "));
-    searchCandidates.push(words.slice(-3).join(" "));
+  if (words.length >= 2) {
+    if (words.length > 3) searchCandidates.push(words.slice(-4).join(" "));
+    if (words.length > 2) searchCandidates.push(words.slice(-3).join(" "));
+    searchCandidates.push(words.slice(-2).join(" "));
   }
 
   // Run searches in priority order, stop at first hit
