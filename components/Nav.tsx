@@ -8,6 +8,7 @@ import { TABS } from "@/lib/postTabs";
 import { shouldShowRoutineNudge } from "@/lib/routineVisit";
 import { supabase } from "@/lib/supabase";
 import { BOO_EVENT } from "@/lib/boo/config";
+import { storeCart } from "@/lib/storeCart";
 
 const DESKTOP_CENTER_LINKS_BASE = [
   { href: "/style-match", label: "Style Match" },
@@ -117,6 +118,14 @@ function SparkleIcon({ size = 14, className = "text-bronze" }: { size?: number; 
 }
 
 function ShopBagIcon({ size = 18, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+    </svg>
+  );
+}
+
+function CartBagIcon({ size = 20, className = "shrink-0 text-dark" }: { size?: number; className?: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
@@ -275,17 +284,21 @@ function BottomNav({
   pathname,
   user,
   hairProfile,
+  cartCount,
 }: {
   pathname: string;
   user: unknown;
   hairProfile: unknown;
+  cartCount: number;
 }) {
-  const profileHref = !user ? "/auth" : hairProfile ? "/profile" : "/profile";
-  const profileActive = pathname.startsWith("/profile");
   const searchActive = pathname.startsWith("/search");
   const styleActive = pathname.startsWith("/style-match");
   const shelfActive = pathname.startsWith("/dashboard");
   const feedActive = pathname === "/";
+  const storeActive = pathname.startsWith("/store");
+
+  void user;
+  void hairProfile;
 
   return (
     <nav
@@ -318,12 +331,33 @@ function BottomNav({
         active={shelfActive}
         icon={<ShelfIcon size={20} className={`shrink-0 ${shelfActive ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`} />}
       />
-      <BottomNavTab
-        href={profileHref}
-        label="Profile"
-        active={profileActive}
-        icon={<PersonIcon size={20} className={`shrink-0 ${profileActive ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`} />}
-      />
+      {/* Store tab — shows cart count badge when items are waiting */}
+      <Link
+        href="/store/checkout"
+        className="flex flex-1 flex-col items-center justify-center gap-1 py-1.5"
+      >
+        <div
+          className={`relative flex flex-col items-center justify-center gap-0.5 rounded-lg px-3 py-1 transition-colors ${
+            storeActive ? "bg-dark" : ""
+          }`}
+        >
+          <CartBagIcon
+            size={20}
+            className={`shrink-0 ${storeActive ? BOTTOM_NAV_ACTIVE : BOTTOM_NAV_INACTIVE}`}
+          />
+          {cartCount > 0 && (
+            <span
+              className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-bronze text-[9px] font-semibold text-cream"
+              aria-label={`${cartCount} items in cart`}
+            >
+              {cartCount > 9 ? "9+" : cartCount}
+            </span>
+          )}
+          <span className={`font-sans text-[10px] ${storeActive ? "text-cream" : BOTTOM_NAV_INACTIVE}`}>
+            Store
+          </span>
+        </div>
+      </Link>
     </nav>
   );
 }
@@ -399,6 +433,7 @@ export default function Nav() {
   const hasProfile = Boolean(hairProfile);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showRoutineNudge, setShowRoutineNudge] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   // Re-checked whenever the profile resolves or the user navigates
   // (pathname changes) - the latter so the dot clears right after a
@@ -407,6 +442,12 @@ export default function Nav() {
   useEffect(() => {
     setShowRoutineNudge(shouldShowRoutineNudge(user?.id ?? null, hasProfile));
   }, [user, hasProfile, pathname]);
+
+  // Sync cart count on mount and whenever pathname changes (covers add-to-cart
+  // navigations and returns from checkout).
+  useEffect(() => {
+    setCartCount(storeCart.count());
+  }, [pathname]);
 
   // Full-screen menu shouldn't let the page behind it scroll.
   useEffect(() => {
@@ -499,6 +540,21 @@ export default function Nav() {
           </ul>
 
           <div className="flex shrink-0 items-center gap-4 whitespace-nowrap text-sm">
+            {/* Cart icon — always visible on desktop so store is one click away */}
+            <Link
+              href="/store/checkout"
+              className={`relative flex items-center gap-1.5 font-medium transition-colors ${
+                isLinkActive(pathname, "/store") ? "text-bronze2" : "text-dark/70 hover:text-dark"
+              }`}
+              aria-label={cartCount > 0 ? `Cart (${cartCount} items)` : "Cart"}
+            >
+              <CartBagIcon size={18} className="shrink-0 text-current" />
+              {cartCount > 0 && (
+                <span className="absolute -right-2 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-bronze text-[9px] font-semibold text-cream">
+                  {cartCount > 9 ? "9+" : cartCount}
+                </span>
+              )}
+            </Link>
             {loading ? null : user ? (
               <>
                 <Link
@@ -659,7 +715,7 @@ export default function Nav() {
         </div>
       </div>
 
-      <BottomNav pathname={pathname} user={user} hairProfile={hairProfile} />
+      <BottomNav pathname={pathname} user={user} hairProfile={hairProfile} cartCount={cartCount} />
     </nav>
   );
 }
