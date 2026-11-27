@@ -22,6 +22,7 @@ function AuthPageContent() {
   // /profile first, since app/boo/page.tsx's whole point in requiring
   // sign-in is a personalized basket, which needs that profile to exist.
   const redirectParam = searchParams.get("redirect");
+  const fromExtension = searchParams.get("from") === "extension";
   const { user, loading, hairProfile, hairProfileLoading } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -65,11 +66,14 @@ function AuthPageContent() {
       // If the bypass check fails for any reason, fall through to normal OTP.
     }
 
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const emailRedirectTo = fromExtension
+      ? `${baseUrl}/auth/extension-callback`
+      : baseUrl;
+
     const { error: otpError } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo: process.env.NEXT_PUBLIC_SITE_URL || window.location.origin,
-      },
+      options: { emailRedirectTo },
     });
     setSubmitting(false);
 
