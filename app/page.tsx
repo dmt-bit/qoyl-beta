@@ -2,6 +2,7 @@ import EventStrip, { getNextPublishedEvent } from "@/components/EventStrip";
 import HeroCollage from "@/components/HeroCollage";
 import HomeFooterSection from "@/components/HomeFooterSection";
 import HomeSearchStrip from "@/components/HomeSearchStrip";
+import AuthRedirect from "@/components/AuthRedirect";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,9 @@ export default async function Home() {
 
   return (
     <>
+      {/* Logged-in users go straight to their dashboard. */}
+      <AuthRedirect to="/dashboard" />
+
       {event && <EventStrip event={event} />}
 
       <HeroCollage hasEventStrip={Boolean(event)} />
