@@ -13,9 +13,9 @@ import { storeCart } from "@/lib/storeCart";
 const DESKTOP_CENTER_LINKS_BASE = [
   { href: "/style-match", label: "Style Match" },
   { href: "/store", label: "Shop" },
+  { href: "/search", label: "Search" },
   { href: "/travel", label: "Travel" },
   { href: "/posts", label: "Posts" },
-  { href: "/how-we-score", label: "How We Score" },
 ];
 
 // Seasonal, self-removing - hides itself the morning after pickup rather

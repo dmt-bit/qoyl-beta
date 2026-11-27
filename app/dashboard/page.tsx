@@ -262,6 +262,58 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
+function StoreIcon() {
+  return (
+    <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007z" />
+    </svg>
+  );
+}
+
+function PostsIcon() {
+  return (
+    <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z" />
+    </svg>
+  );
+}
+
+function RoutineIcon() {
+  return (
+    <svg className="h-6 w-6 text-bronze2" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+    </svg>
+  );
+}
+
+function DashboardNav({ hasProfile }: { hasProfile: boolean }) {
+  const navLinks = [
+    { href: "/style-match", label: "Style Match" },
+    { href: "/store", label: "Shop" },
+    { href: "/search", label: "Search" },
+    { href: "/travel", label: "Travel" },
+    ...(hasProfile ? [{ href: "/routine", label: "Routine" }] : []),
+    { href: "/posts", label: "Posts" },
+    { href: "/profile", label: "Profile" },
+  ];
+
+  return (
+    <nav className="print-hide -mx-4 mt-6 overflow-x-auto sm:-mx-6">
+      <div className="flex gap-1 border-b border-bronze/20 px-4 sm:px-6">
+        {navLinks.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="shrink-0 whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-dark/60 transition-colors hover:border-bronze/50 hover:text-dark"
+          >
+            {link.label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 function QuickActions() {
   return (
     <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -281,6 +333,24 @@ function QuickActions() {
         </p>
         <span className="mt-3 inline-block text-sm font-semibold text-bronze2">
           Try Style Match →
+        </span>
+      </Link>
+
+      <Link
+        href="/store"
+        className="rounded-xl border border-bronze/30 p-6 transition-colors hover:border-bronze"
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
+          <StoreIcon />
+        </div>
+        <p className="mt-4 font-serif text-xl font-semibold text-dark">
+          Shop Qoyl
+        </p>
+        <p className="mt-1 text-sm text-dark/70">
+          Products scored and curated for your curl type.
+        </p>
+        <span className="mt-3 inline-block text-sm font-semibold text-bronze2">
+          Browse the store →
         </span>
       </Link>
 
@@ -311,6 +381,36 @@ function QuickActions() {
         </p>
         <p className="mt-1 text-sm text-dark/70">
           5 products matched to your destination climate.
+        </p>
+      </Link>
+
+      <Link
+        href="/routine"
+        className="rounded-xl border border-bronze/30 p-6 transition-colors hover:border-bronze"
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
+          <RoutineIcon />
+        </div>
+        <p className="mt-4 font-serif text-xl font-semibold text-dark">
+          My Routine
+        </p>
+        <p className="mt-1 text-sm text-dark/70">
+          Your personalized hair care schedule.
+        </p>
+      </Link>
+
+      <Link
+        href="/posts"
+        className="rounded-xl border border-bronze/30 p-6 transition-colors hover:border-bronze"
+      >
+        <div className="flex h-12 w-12 items-center justify-center rounded-full border border-bronze/40 bg-bronze/10">
+          <PostsIcon />
+        </div>
+        <p className="mt-4 font-serif text-xl font-semibold text-dark">
+          Read Our Posts
+        </p>
+        <p className="mt-1 text-sm text-dark/70">
+          Tips, tutorials, and curl education from the Qoyl team.
         </p>
       </Link>
     </div>
@@ -674,6 +774,8 @@ function DashboardContent() {
         )}
 
         <ProfileChips />
+
+        <DashboardNav hasProfile={!!hairProfile} />
 
         {childSafetyNote && (
           <p className="mt-4 border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-dark/90">
