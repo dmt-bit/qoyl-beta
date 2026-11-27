@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     admin
       .from("catalog_products")
       .select(
-        "id, name, barcode, size, image_url, country, is_verified, source, ingredient_list_raw, ingredient_list_normalized, brand_id, category_id, created_at, updated_at, catalog_brands(name), categories(name)"
+        "id, name, barcode, size, image_url, processed_image_url, country, is_verified, source, ingredient_list_raw, ingredient_list_normalized, brand_id, category_id, created_at, updated_at, catalog_brands(name), categories(name)"
       )
       .order("created_at", { ascending: false }),
     admin.from("catalog_brands").select("id, name").order("name"),

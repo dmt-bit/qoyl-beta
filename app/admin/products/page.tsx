@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { PRODUCT_CATEGORIES } from "@/lib/productCategories";
 import { FunctionSelectorGrid, FUNCTION_CARDS, type IngredientFunction } from "@/components/FunctionSelectorGrid";
 
@@ -13,6 +14,7 @@ type AdminProduct = {
   barcode: string | null;
   size: string | null;
   image_url: string | null;
+  processed_image_url: string | null;
   is_verified: boolean;
   ingredient_list_raw: string | null;
   ingredient_list_normalized: string[] | null;
@@ -237,6 +239,248 @@ function BarcodeLookup({
   );
 }
 
+// ─── ImagePanel ───────────────────────────────────────────────────────────────
+// Self-contained image management UI for a single product: preview, OBF
+// auto-fetch, manual URL entry, and bg-removal trigger.
+
+type OBFCandidate = {
+  image_url: string;
+  source: string;
+};
+
+type ImagePanelState =
+  | { status: "idle" }
+  | { status: "searching" }
+  | { status: "found"; candidates: OBFCandidate[] }
+  | { status: "not_found" }
+  | { status: "removing_bg" }
+  | { status: "bg_done"; processed_image_url: string }
+  | { status: "error"; message: string };
+
+function ImagePanel({
+  productId,
+  productName,
+  barcode,
+  imageUrl,
+  processedImageUrl,
+  password,
+  onImageUrlChange,
+  onProcessedUrlChange,
+}: {
+  productId: string | null;
+  productName: string;
+  barcode: string;
+  imageUrl: string;
+  processedImageUrl: string | null;
+  password: string;
+  onImageUrlChange: (url: string) => void;
+  onProcessedUrlChange?: (url: string) => void;
+}) {
+  const [state, setState] = useState<ImagePanelState>({ status: "idle" });
+  const [manualUrl, setManualUrl] = useState(imageUrl);
+  const [previewError, setPreviewError] = useState(false);
+  const prevImageUrl = useRef(imageUrl);
+
+  // Sync manual URL input when parent changes imageUrl (e.g. after save)
+  useEffect(() => {
+    if (imageUrl !== prevImageUrl.current) {
+      setManualUrl(imageUrl);
+      setPreviewError(false);
+      prevImageUrl.current = imageUrl;
+    }
+  }, [imageUrl]);
+
+  const displayUrl = processedImageUrl ?? imageUrl;
+  const hasImage = !!imageUrl;
+
+  async function handleAutoFind() {
+    setState({ status: "searching" });
+    try {
+      const res = await fetch("/api/admin/images/find", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-password": password },
+        body: JSON.stringify({ name: productName, barcode: barcode || null }),
+      });
+      const data = await res.json();
+      const candidates: OBFCandidate[] = data.candidates ?? [];
+      if (candidates.length > 0) {
+        setState({ status: "found", candidates });
+      } else {
+        setState({ status: "not_found" });
+      }
+    } catch {
+      setState({ status: "error", message: "Auto-fetch failed." });
+    }
+  }
+
+  function pickCandidate(url: string) {
+    onImageUrlChange(url);
+    setManualUrl(url);
+    setPreviewError(false);
+    setState({ status: "idle" });
+  }
+
+  function handleManualSave() {
+    const trimmed = manualUrl.trim();
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+      onImageUrlChange(trimmed);
+      setPreviewError(false);
+    }
+  }
+
+  async function handleRemoveBg() {
+    if (!productId || !imageUrl) return;
+    setState({ status: "removing_bg" });
+    try {
+      const res = await fetch("/api/admin/product-photos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-password": password },
+        body: JSON.stringify({ product_id: productId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.processed_image_url) {
+        onProcessedUrlChange?.(data.processed_image_url);
+        setState({ status: "bg_done", processed_image_url: data.processed_image_url });
+      } else {
+        setState({ status: "error", message: data.error ?? "BG removal failed." });
+      }
+    } catch {
+      setState({ status: "error", message: "BG removal failed." });
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-bronze/30 bg-cream/40 p-3">
+      <p className="mb-2 font-sans text-[11px] font-semibold uppercase tracking-wide text-dark/50">
+        Product image
+      </p>
+
+      <div className="flex gap-3">
+        {/* Preview */}
+        <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded border border-dark/10 bg-white">
+          {displayUrl && !previewError ? (
+            <Image
+              src={displayUrl}
+              alt={productName || "Product"}
+              fill
+              className="object-contain"
+              sizes="80px"
+              unoptimized
+              onError={() => setPreviewError(true)}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <span className="text-2xl opacity-30">🧴</span>
+            </div>
+          )}
+          {processedImageUrl && (
+            <span className="absolute bottom-0.5 right-0.5 rounded bg-green/80 px-1 font-mono text-[8px] text-white">
+              BG
+            </span>
+          )}
+        </div>
+
+        {/* Controls */}
+        <div className="min-w-0 flex-1 space-y-2">
+          {/* Manual URL input */}
+          <div className="flex gap-1.5">
+            <input
+              type="url"
+              value={manualUrl}
+              onChange={(e) => { setManualUrl(e.target.value); setPreviewError(false); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleManualSave(); } }}
+              placeholder="Paste image URL…"
+              className="min-w-0 flex-1 rounded border border-bronze/30 bg-white px-2.5 py-1.5 font-mono text-[11px] text-dark placeholder:text-dark/30 focus:border-bronze focus:outline-none"
+            />
+            {manualUrl.trim() !== imageUrl && manualUrl.trim().startsWith("http") && (
+              <button
+                type="button"
+                onClick={handleManualSave}
+                className="flex-shrink-0 rounded bg-bronze px-2.5 py-1.5 font-sans text-[11px] font-semibold text-cream hover:bg-bronze2"
+              >
+                Set
+              </button>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={handleAutoFind}
+              disabled={state.status === "searching" || (!barcode.trim() && !productName.trim())}
+              className="rounded border border-bronze/40 px-2.5 py-1 font-sans text-[11px] text-dark/70 hover:border-bronze hover:text-dark disabled:opacity-40"
+            >
+              {state.status === "searching" ? "Searching…" : "Auto-find image"}
+            </button>
+
+            {productId && hasImage && !processedImageUrl && (
+              <button
+                type="button"
+                onClick={handleRemoveBg}
+                disabled={state.status === "removing_bg"}
+                className="rounded border border-bronze/40 px-2.5 py-1 font-sans text-[11px] text-dark/70 hover:border-bronze hover:text-dark disabled:opacity-40"
+              >
+                {state.status === "removing_bg" ? "Processing…" : "Remove BG"}
+              </button>
+            )}
+
+            {processedImageUrl && (
+              <span className="rounded bg-green/10 px-2.5 py-1 font-sans text-[11px] text-green">
+                BG removed
+              </span>
+            )}
+          </div>
+
+          {/* Status messages */}
+          {state.status === "not_found" && (
+            <p className="font-sans text-[11px] text-dark/50">No image found on Open Beauty Facts.</p>
+          )}
+          {state.status === "error" && (
+            <p className="font-sans text-[11px] text-red">{state.message}</p>
+          )}
+          {state.status === "bg_done" && (
+            <p className="font-sans text-[11px] text-green">Background removed.</p>
+          )}
+        </div>
+      </div>
+
+      {/* OBF candidates */}
+      {state.status === "found" && state.candidates.length > 0 && (
+        <div className="mt-3 border-t border-bronze/20 pt-3">
+          <p className="mb-2 font-sans text-[11px] text-dark/60">
+            Found {state.candidates.length} candidate{state.candidates.length !== 1 ? "s" : ""}. Pick one:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {state.candidates.map((c, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => pickCandidate(c.image_url)}
+                className="group relative h-16 w-16 overflow-hidden rounded border-2 border-bronze/20 bg-white hover:border-bronze"
+                title={c.source}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={c.image_url} alt={`Candidate ${i + 1}`} className="h-full w-full object-contain" />
+                <span className="absolute inset-0 flex items-center justify-center bg-dark/60 opacity-0 transition-opacity group-hover:opacity-100">
+                  <span className="font-sans text-[10px] font-semibold text-white">Use</span>
+                </span>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setState({ status: "idle" })}
+              className="self-center font-sans text-[11px] text-dark/40 hover:text-dark"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProductForm({
   values,
   brands,
@@ -244,9 +488,12 @@ function ProductForm({
   submitting,
   submitLabel,
   password,
+  productId,
+  processedImageUrl,
   onChange,
   onSubmit,
   onCancel,
+  onProcessedUrlChange,
 }: {
   values: ProductFormValues;
   brands: Brand[];
@@ -254,9 +501,12 @@ function ProductForm({
   submitting: boolean;
   submitLabel: string;
   password: string;
+  productId?: string | null;
+  processedImageUrl?: string | null;
   onChange: (values: ProductFormValues) => void;
   onSubmit: (e: React.FormEvent) => void;
   onCancel?: () => void;
+  onProcessedUrlChange?: (url: string) => void;
 }) {
   // Re-sort on every render rather than trusting callers/the API to
   // hand back an already-sorted list - cheap for a brand-count list
@@ -351,12 +601,15 @@ function ProductForm({
         />
       </div>
 
-      <input
-        type="text"
-        value={values.image_url}
-        onChange={(e) => onChange({ ...values, image_url: e.target.value })}
-        placeholder="Image URL"
-        className={INPUT_CLASS}
+      <ImagePanel
+        productId={productId ?? null}
+        productName={values.name}
+        barcode={values.barcode}
+        imageUrl={values.image_url}
+        processedImageUrl={processedImageUrl ?? null}
+        password={password}
+        onImageUrlChange={(url) => onChange({ ...values, image_url: url })}
+        onProcessedUrlChange={onProcessedUrlChange}
       />
 
       <textarea
@@ -1014,12 +1267,14 @@ function ProductRow({
   password,
   isEditing,
   editForm,
+  editProcessedUrl,
   editSubmitting,
   editError,
   editSummary,
   onStartEdit,
   onCancelEdit,
   onEditFormChange,
+  onEditProcessedUrlChange,
   onEditSubmit,
   onMarkVerified,
   onDelete,
@@ -1030,12 +1285,14 @@ function ProductRow({
   password: string;
   isEditing: boolean;
   editForm: ProductFormValues;
+  editProcessedUrl: string | null;
   editSubmitting: boolean;
   editError: string | null;
   editSummary: MatchSummary | null;
   onStartEdit: (p: AdminProduct) => void;
   onCancelEdit: () => void;
   onEditFormChange: (v: ProductFormValues) => void;
+  onEditProcessedUrlChange: (url: string) => void;
   onEditSubmit: (e: React.FormEvent) => void;
   onMarkVerified: (id: string, e: React.MouseEvent) => void;
   onDelete: (id: string) => void;
@@ -1054,7 +1311,10 @@ function ProductRow({
             submitting={editSubmitting}
             submitLabel="Save changes"
             password={password}
+            productId={product.id}
+            processedImageUrl={editProcessedUrl}
             onChange={onEditFormChange}
+            onProcessedUrlChange={onEditProcessedUrlChange}
             onSubmit={onEditSubmit}
             onCancel={onCancelEdit}
           />
@@ -1128,6 +1388,14 @@ function ProductRow({
             </p>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2">
+            {/* Image status pill */}
+            {product.processed_image_url ? (
+              <span className="rounded-full bg-green/10 px-2 py-0.5 font-mono text-[9px] text-green">img+BG</span>
+            ) : product.image_url ? (
+              <span className="rounded-full bg-dark/5 px-2 py-0.5 font-mono text-[9px] text-dark/50">img</span>
+            ) : (
+              <span className="rounded-full bg-amber/10 px-2 py-0.5 font-mono text-[9px] text-amber">no img</span>
+            )}
             {!product.is_verified && (
               <button
                 type="button"
@@ -1154,12 +1422,14 @@ function BrandGroup({
   password,
   editingId,
   editForm,
+  editProcessedUrl,
   editSubmitting,
   editError,
   editSummary,
   onStartEdit,
   onCancelEdit,
   onEditFormChange,
+  onEditProcessedUrlChange,
   onEditSubmit,
   onMarkVerified,
   onDelete,
@@ -1171,12 +1441,14 @@ function BrandGroup({
   password: string;
   editingId: string | null;
   editForm: ProductFormValues;
+  editProcessedUrl: string | null;
   editSubmitting: boolean;
   editError: string | null;
   editSummary: MatchSummary | null;
   onStartEdit: (p: AdminProduct) => void;
   onCancelEdit: () => void;
   onEditFormChange: (v: ProductFormValues) => void;
+  onEditProcessedUrlChange: (url: string) => void;
   onEditSubmit: (e: React.FormEvent) => void;
   onMarkVerified: (id: string, e: React.MouseEvent) => void;
   onDelete: (id: string) => void;
@@ -1217,12 +1489,14 @@ function BrandGroup({
                 password={password}
                 isEditing={editingId === product.id}
                 editForm={editForm}
+                editProcessedUrl={editProcessedUrl}
                 editSubmitting={editSubmitting}
                 editError={editError}
                 editSummary={editSummary}
                 onStartEdit={onStartEdit}
                 onCancelEdit={onCancelEdit}
                 onEditFormChange={onEditFormChange}
+                onEditProcessedUrlChange={onEditProcessedUrlChange}
                 onEditSubmit={onEditSubmit}
                 onMarkVerified={onMarkVerified}
                 onDelete={onDelete}
@@ -1245,12 +1519,14 @@ type ProductListSectionProps = {
   password: string;
   editingId: string | null;
   editForm: ProductFormValues;
+  editProcessedUrl: string | null;
   editSubmitting: boolean;
   editError: string | null;
   editSummary: MatchSummary | null;
   onStartEdit: (p: AdminProduct) => void;
   onCancelEdit: () => void;
   onEditFormChange: (v: ProductFormValues) => void;
+  onEditProcessedUrlChange: (url: string) => void;
   onEditSubmit: (e: React.FormEvent) => void;
   onMarkVerified: (id: string, e: React.MouseEvent) => void;
   onDelete: (id: string) => void;
@@ -1264,12 +1540,14 @@ function ProductListSection({
   password,
   editingId,
   editForm,
+  editProcessedUrl,
   editSubmitting,
   editError,
   editSummary,
   onStartEdit,
   onCancelEdit,
   onEditFormChange,
+  onEditProcessedUrlChange,
   onEditSubmit,
   onMarkVerified,
   onDelete,
@@ -1370,12 +1648,14 @@ function ProductListSection({
               password={password}
               isEditing={editingId === product.id}
               editForm={editForm}
+              editProcessedUrl={editProcessedUrl}
               editSubmitting={editSubmitting}
               editError={editError}
               editSummary={editSummary}
               onStartEdit={onStartEdit}
               onCancelEdit={onCancelEdit}
               onEditFormChange={onEditFormChange}
+              onEditProcessedUrlChange={onEditProcessedUrlChange}
               onEditSubmit={onEditSubmit}
               onMarkVerified={onMarkVerified}
               onDelete={onDelete}
@@ -1396,12 +1676,14 @@ function ProductListSection({
               password={password}
               editingId={editingId}
               editForm={editForm}
+              editProcessedUrl={editProcessedUrl}
               editSubmitting={editSubmitting}
               editError={editError}
               editSummary={editSummary}
               onStartEdit={onStartEdit}
               onCancelEdit={onCancelEdit}
               onEditFormChange={onEditFormChange}
+              onEditProcessedUrlChange={onEditProcessedUrlChange}
               onEditSubmit={onEditSubmit}
               onMarkVerified={onMarkVerified}
               onDelete={onDelete}
@@ -1416,8 +1698,347 @@ function ProductListSection({
   );
 }
 
+// ─── Images bulk tab ──────────────────────────────────────────────────────────
+// Consolidates the old /admin/images page inline here.
+
+type ImagesTabProduct = {
+  id: string;
+  name: string;
+  brand: string | null;
+  barcode: string | null;
+  image_url: string | null;
+  processed_image_url: string | null;
+};
+
+type ImagesTab2 = "missing" | "all" | "needs_bg";
+
+function ImagesTab({ password }: { password: string }) {
+  const [tab, setTab] = useState<ImagesTab2>("missing");
+  const [products, setProducts] = useState<ImagesTabProduct[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState<{ totalProducts: number; missingImages: number; hasImages: number } | null>(null);
+  const [search, setSearch] = useState("");
+  const [batchRunning, setBatchRunning] = useState(false);
+  const [batchLog, setBatchLog] = useState<string[]>([]);
+  const [savedCount, setSavedCount] = useState(0);
+
+  async function loadData(mode: ImagesTab2) {
+    setLoading(true);
+    try {
+      const [statsRes, productsRes] = await Promise.all([
+        fetch("/api/admin/images", { headers: { "x-admin-password": password } }),
+        fetch(`/api/admin/images/missing?mode=${mode === "all" ? "all" : "missing"}`, { headers: { "x-admin-password": password } }),
+      ]);
+      const statsData = await statsRes.json();
+      const productsData = await productsRes.json();
+      if (!statsData.error) setStats(statsData);
+      if (productsData.products) setProducts(productsData.products as ImagesTabProduct[]);
+    } catch { /* ignore */ }
+    setLoading(false);
+  }
+
+  useEffect(() => { loadData(tab); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleSaved(id: string, newUrl: string) {
+    setSavedCount((n) => n + 1);
+    setStats((s) => s ? { ...s, missingImages: Math.max(0, s.missingImages - 1), hasImages: s.hasImages + 1 } : s);
+    setProducts((ps) => ps.map((p) => p.id === id ? { ...p, image_url: newUrl } : p));
+  }
+
+  async function handleBatchBgRemove() {
+    setBatchRunning(true);
+    setBatchLog(["Starting batch BG removal..."]);
+    try {
+      const res = await fetch("/api/admin/product-photos/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-password": password },
+        body: JSON.stringify({}),
+      });
+      if (!res.body) { setBatchLog(["No response body."]); setBatchRunning(false); return; }
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const data = JSON.parse(line);
+            if (data.product_name) {
+              setBatchLog((prev) => [...prev, `${data.ok ? "✓" : "✗"} ${data.product_name}`]);
+            } else if (data.done) {
+              setBatchLog((prev) => [...prev, `Done. ${data.processed}/${data.total} processed.`]);
+            }
+          } catch { /* skip */ }
+        }
+      }
+    } catch (e) {
+      setBatchLog((prev) => [...prev, `Error: ${e instanceof Error ? e.message : "Unknown"}`]);
+    }
+    setBatchRunning(false);
+    loadData(tab);
+  }
+
+  const needsBg = products.filter((p) => p.image_url && !p.processed_image_url);
+  const filtered = products.filter((p) => {
+    if (tab === "missing" && p.image_url) return false;
+    if (tab === "needs_bg" && !(p.image_url && !p.processed_image_url)) return false;
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return p.name.toLowerCase().includes(q) || (p.brand ?? "").toLowerCase().includes(q);
+  });
+
+  return (
+    <div className="mt-8">
+      {/* Stats */}
+      {stats && (
+        <div className="mb-6 flex flex-wrap gap-6 border-b border-dark/10 pb-5">
+          <div>
+            <p className="font-mono text-[22px] font-bold text-dark">{Math.max(0, stats.missingImages - savedCount)}</p>
+            <p className="font-sans text-[11px] text-dark/50">missing image</p>
+          </div>
+          <div>
+            <p className="font-mono text-[22px] font-bold text-dark">{stats.hasImages + savedCount}</p>
+            <p className="font-sans text-[11px] text-dark/50">have image</p>
+          </div>
+          <div>
+            <p className="font-mono text-[22px] font-bold text-dark">{needsBg.length}</p>
+            <p className="font-sans text-[11px] text-dark/50">need BG removal</p>
+          </div>
+          <div>
+            <p className="font-mono text-[22px] font-bold text-dark">{stats.totalProducts}</p>
+            <p className="font-sans text-[11px] text-dark/50">total</p>
+          </div>
+        </div>
+      )}
+
+      {/* Sub-tabs */}
+      <div className="mb-4 flex gap-0 border-b border-dark/10">
+        {([["missing", "Missing images"], ["needs_bg", "Need BG removal"], ["all", "All products"]] as [ImagesTab2, string][]).map(([t, label]) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => { setTab(t); setSearch(""); setProducts([]); }}
+            className={`px-4 py-2 font-sans text-[12px] transition-colors ${tab === t ? "border-b-2 border-dark font-semibold text-dark" : "text-dark/40 hover:text-dark/70"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Batch BG remove */}
+      {tab === "needs_bg" && (
+        <div className="mb-4 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={handleBatchBgRemove}
+            disabled={batchRunning || needsBg.length === 0}
+            className="self-start rounded-lg bg-dark px-4 py-2 font-sans text-sm font-semibold text-cream disabled:opacity-40"
+          >
+            {batchRunning ? "Processing…" : `Remove BG for all ${needsBg.length} products`}
+          </button>
+          {batchLog.length > 0 && (
+            <div className="max-h-40 overflow-y-auto rounded border border-dark/10 bg-dark/5 p-3">
+              {batchLog.map((line, i) => (
+                <p key={i} className="font-mono text-[11px] text-dark/70">{line}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Search */}
+      {products.length > 0 && (
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search by name or brand…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-none border border-dark/20 bg-transparent px-4 py-2.5 text-sm text-dark placeholder:text-dark/30 focus:border-dark focus:outline-none"
+          />
+        </div>
+      )}
+
+      {loading && <p className="font-mono text-[11px] text-dark/40">Loading…</p>}
+
+      {!loading && products.length === 0 && (
+        <p className="font-sans text-sm text-dark/50">
+          {tab === "missing" ? "All products have images." : tab === "needs_bg" ? "All products with images have BG removed." : "No products found."}
+        </p>
+      )}
+
+      <div className="flex flex-col gap-2">
+        {filtered.map((p) => (
+          <ImagesBulkCard
+            key={p.id}
+            product={p}
+            password={password}
+            onSaved={handleSaved}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ImagesBulkCard({
+  product,
+  password,
+  onSaved,
+}: {
+  product: ImagesTabProduct;
+  password: string;
+  onSaved: (id: string, newUrl: string) => void;
+}) {
+  const [editing, setEditing] = useState(!product.image_url);
+  const [url, setUrl] = useState(product.image_url ?? "");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [previewError, setPreviewError] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [candidates, setCandidates] = useState<{ image_url: string; source: string }[]>([]);
+
+  const hasImage = !!product.image_url;
+  const displayUrl = product.processed_image_url ?? product.image_url ?? url;
+  const isValidUrl = url.trim().startsWith("https://");
+
+  async function save(newUrl: string) {
+    setSaveStatus("saving");
+    const res = await fetch("/api/admin/images", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      body: JSON.stringify({ product_id: product.id, image_url: newUrl }),
+    });
+    if (res.ok) {
+      setSaveStatus("saved");
+      setEditing(false);
+      onSaved(product.id, newUrl);
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    } else {
+      setSaveStatus("error");
+      setTimeout(() => setSaveStatus("idle"), 2000);
+    }
+  }
+
+  async function autoFind() {
+    setSearching(true);
+    setCandidates([]);
+    try {
+      const res = await fetch("/api/admin/images/find", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-password": password },
+        body: JSON.stringify({ name: product.name, barcode: product.barcode }),
+      });
+      const data = await res.json();
+      setCandidates(data.candidates ?? []);
+    } catch { /* ignore */ }
+    setSearching(false);
+  }
+
+  return (
+    <div className="border border-dark/10 bg-white p-3">
+      <div className="flex gap-3">
+        {/* Image preview */}
+        <div className="relative flex h-16 w-16 flex-shrink-0 items-center justify-center border border-dark/10 bg-cream">
+          {displayUrl && !previewError ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={displayUrl} alt={product.name} className="h-full w-full object-contain" onError={() => setPreviewError(true)} />
+          ) : (
+            <span className="font-mono text-[9px] text-dark/20">no img</span>
+          )}
+          {product.processed_image_url && (
+            <span className="absolute bottom-0.5 right-0.5 rounded bg-green/80 px-0.5 font-mono text-[7px] text-white">BG</span>
+          )}
+        </div>
+
+        {/* Product info + controls */}
+        <div className="min-w-0 flex-1">
+          <p className="font-sans text-[13px] font-medium leading-tight text-dark">{product.name}</p>
+          <p className="mb-2 font-sans text-[11px] text-dark/50">{product.brand ?? "—"}</p>
+
+          {editing ? (
+            <div className="flex gap-2">
+              <input
+                type="url"
+                placeholder="Paste image URL…"
+                value={url}
+                autoFocus
+                onChange={(e) => { setUrl(e.target.value); setPreviewError(false); }}
+                onKeyDown={(e) => { if (e.key === "Enter") save(url.trim()); if (e.key === "Escape" && hasImage) setEditing(false); }}
+                className="min-w-0 flex-1 rounded-none border border-dark/20 bg-transparent px-2.5 py-1.5 font-mono text-[11px] text-dark placeholder:text-dark/30 focus:border-dark focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => save(url.trim())}
+                disabled={!isValidUrl || saveStatus === "saving"}
+                className="flex-shrink-0 bg-dark px-3 py-1.5 font-sans text-[11px] font-semibold text-cream disabled:opacity-30"
+              >
+                {saveStatus === "saving" ? "…" : saveStatus === "error" ? "err" : saveStatus === "saved" ? "✓" : "Save"}
+              </button>
+              {hasImage && (
+                <button type="button" onClick={() => setEditing(false)} className="flex-shrink-0 border border-dark/20 px-2.5 py-1.5 font-sans text-[11px] text-dark/50">
+                  Cancel
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <p className="min-w-0 flex-1 truncate font-mono text-[10px] text-dark/30">{product.image_url}</p>
+              <button type="button" onClick={() => setEditing(true)} className="flex-shrink-0 border border-dark/20 px-2.5 py-1 font-sans text-[11px] text-dark/60 hover:text-dark">
+                Edit
+              </button>
+            </div>
+          )}
+
+          <div className="mt-1.5 flex gap-2">
+            <button
+              type="button"
+              onClick={autoFind}
+              disabled={searching}
+              className="font-sans text-[11px] text-bronze2 underline underline-offset-2 hover:text-dark disabled:opacity-50"
+            >
+              {searching ? "Searching…" : "Auto-find image"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Candidates */}
+      {candidates.length > 0 && (
+        <div className="mt-3 border-t border-dark/10 pt-3">
+          <div className="flex flex-wrap gap-2">
+            {candidates.map((c, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => { setUrl(c.image_url); save(c.image_url); setCandidates([]); }}
+                className="group relative h-14 w-14 overflow-hidden border border-dark/10 bg-cream hover:border-bronze"
+                title={c.source}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={c.image_url} alt="" className="h-full w-full object-contain" />
+                <span className="absolute inset-0 flex items-center justify-center bg-dark/60 opacity-0 group-hover:opacity-100">
+                  <span className="font-sans text-[9px] font-bold text-white">Use</span>
+                </span>
+              </button>
+            ))}
+            <button type="button" onClick={() => setCandidates([])} className="self-center font-sans text-[11px] text-dark/40 hover:text-dark">Dismiss</button>
+          </div>
+        </div>
+      )}
+      {candidates.length === 0 && searching === false && url === (product.image_url ?? "") && !hasImage && (
+        null // quiet
+      )}
+    </div>
+  );
+}
+
 export default function AdminProductsPage() {
-  const [activeTab, setActiveTab] = useState<"products" | "coverage" | "brands">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "coverage" | "brands" | "images">("products");
   const [password, setPassword] = useState("");
   const [authorized, setAuthorized] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -1435,6 +2056,7 @@ export default function AdminProductsPage() {
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<ProductFormValues>(EMPTY_FORM);
+  const [editProcessedUrl, setEditProcessedUrl] = useState<string | null>(null);
   const [editSubmitting, setEditSubmitting] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [editSummary, setEditSummary] = useState<MatchSummary | null>(null);
@@ -1557,6 +2179,7 @@ export default function AdminProductsPage() {
     setEditingId(product.id);
     setEditError(null);
     setEditSummary(null);
+    setEditProcessedUrl(product.processed_image_url ?? null);
     setEditForm({
       name: product.name,
       brand_id: product.brand_id ?? "",
@@ -1682,7 +2305,7 @@ export default function AdminProductsPage() {
         </h1>
 
         <div className="mt-6 flex gap-6 border-b border-bronze/20">
-          {(["products", "coverage", "brands"] as const).map((tab) => (
+          {(["products", "images", "coverage", "brands"] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -1693,7 +2316,7 @@ export default function AdminProductsPage() {
                   : "text-dark/50 hover:text-dark/80"
               }`}
             >
-              {tab === "products" ? "Products" : tab === "coverage" ? "Coverage" : "Brands"}
+              {tab === "products" ? "Products" : tab === "images" ? "Images" : tab === "coverage" ? "Coverage" : "Brands"}
             </button>
           ))}
         </div>
@@ -1701,6 +2324,8 @@ export default function AdminProductsPage() {
         {activeTab === "coverage" && <CoverageTab password={password} />}
 
         {activeTab === "brands" && <BrandsTab password={password} />}
+
+        {activeTab === "images" && <ImagesTab password={password} />}
 
         {activeTab === "products" && (
         <>
@@ -1716,6 +2341,8 @@ export default function AdminProductsPage() {
               submitting={addSubmitting}
               submitLabel="Add product"
               password={password}
+              productId={null}
+              processedImageUrl={null}
               onChange={setAddForm}
               onSubmit={handleAddSubmit}
             />
@@ -1734,12 +2361,14 @@ export default function AdminProductsPage() {
           password={password}
           editingId={editingId}
           editForm={editForm}
+          editProcessedUrl={editProcessedUrl}
           editSubmitting={editSubmitting}
           editError={editError}
           editSummary={editSummary}
           onStartEdit={startEdit}
           onCancelEdit={() => setEditingId(null)}
           onEditFormChange={setEditForm}
+          onEditProcessedUrlChange={setEditProcessedUrl}
           onEditSubmit={handleEditSubmit}
           onMarkVerified={markVerified}
           onDelete={handleDelete}
