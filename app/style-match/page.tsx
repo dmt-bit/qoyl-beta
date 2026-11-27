@@ -1637,11 +1637,18 @@ function StyleMatchContent() {
           pointerEvents: "none",
         }}>
 
+          {/* Back link */}
+          <div style={{ pointerEvents: "auto", padding: "16px 20px" }}>
+            <Link href="/dashboard" style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", textDecoration: "none" }}>
+              ← My shelf
+            </Link>
+          </div>
+
           {/* Upload photo card — upper area, overlaid on photo */}
           <div style={{
             pointerEvents: "auto",
             margin: "auto 0",
-            marginTop: "clamp(80px, 22vh, 140px)",
+            marginTop: "clamp(40px, 12vh, 80px)",
             padding: "0 20px",
             width: "min(600px, 100vw)",
             alignSelf: "center",

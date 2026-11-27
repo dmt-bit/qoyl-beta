@@ -3,6 +3,7 @@
 import { Fragment, Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import BabyProfileForm from "@/components/BabyProfileForm";
 import ChildProfileForm from "@/components/ChildProfileForm";
 import Collapse from "@/components/Collapse";
@@ -1098,6 +1099,10 @@ function ProfileForm() {
 
       <div className="px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-md">
+        <Link href="/dashboard" className="mb-6 inline-flex items-center gap-1 text-xs text-dark/40 hover:text-dark/70">
+          ← My shelf
+        </Link>
+
         <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
           {showForm ? "Hair Profile" : "Your Hair Profile"}
         </h1>

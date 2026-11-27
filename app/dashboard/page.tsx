@@ -761,497 +761,56 @@ function DashboardContent() {
 
   return (
     <>
-    <main className="min-h-screen bg-white px-4 py-10 font-sans text-dark sm:px-6">
-      <div className="mx-auto max-w-2xl">
-        <div className="flex items-start justify-between gap-4">
-          <h1 className="font-serif text-3xl font-semibold text-dark sm:text-4xl">
-            {greeting}
-          </h1>
-          <Link
-            href="/profile"
-            className="print-hide mt-2 shrink-0 text-xs text-dark/50 underline underline-offset-2 hover:text-dark/70"
+    <main className="min-h-screen bg-white font-sans text-dark">
+      {/* Minimal top bar */}
+      <div className="flex items-center justify-between px-4 py-4 sm:px-6">
+        <span className="font-serif text-xl font-semibold tracking-tight text-dark">qoyl</span>
+        <div className="flex items-center gap-4">
+          {!entitlementLoading && isAdminUser && (
+            <Link href="/admin/products" className="text-xs font-semibold uppercase tracking-wide text-bronze2 hover:text-dark">
+              Admin
+            </Link>
+          )}
+          <button
+            onClick={async () => { await supabase.auth.signOut(); router.push("/"); }}
+            className="text-xs text-dark/40 hover:text-dark/70"
           >
-            View my profile
-          </Link>
+            Sign out
+          </button>
         </div>
+      </div>
 
-        {hairProfile && (
-          <span className="mt-3 inline-block rounded-full bg-bronze px-3 py-1 text-xs font-semibold text-cream">
-            Your Qoyl profile · free forever
-          </span>
-        )}
-
-        {user?.email && (
-          <p className="mt-3 flex items-center gap-2 text-xs text-dark/50">
-            {user.email}
-            {!entitlementLoading && isAdminUser && (
-              <span className="rounded-full bg-bronze px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-cream">
-                Admin
-              </span>
-            )}
-          </p>
-        )}
-
-        <ProfileChips />
-
-        <DashboardNav
-          hasProfile={!!hairProfile}
-          onSignOut={async () => {
-            await supabase.auth.signOut();
-            router.push("/");
-          }}
-        />
-
+      <div className="mx-auto max-w-2xl px-4 pb-16 sm:px-6">
         {childSafetyNote && (
-          <p className="mt-4 border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-dark/90">
+          <p className="mb-4 border border-bronze/40 bg-warm/10 px-4 py-3 text-sm text-dark/90">
             {childSafetyNote}
           </p>
         )}
 
         {paymentStatus === "success" && (
-          <p className="mt-4 rounded-lg border border-green/40 bg-green/10 px-4 py-3 text-sm text-green">
+          <p className="mb-4 rounded-lg border border-green/40 bg-green/10 px-4 py-3 text-sm text-green">
             You&apos;re all set - your travel kit is ready.
           </p>
         )}
         {paymentStatus === "cancelled" && (
-          <p className="print-hide mt-4 border border-bronze/40 bg-bronze/10 px-4 py-3 text-sm text-cream/80">
+          <p className="print-hide mb-4 border border-bronze/40 bg-bronze/10 px-4 py-3 text-sm text-cream/80">
             No worries - you can unlock this anytime.
           </p>
         )}
 
-        {/* My Shelf — always shown once loaded; BathroomShelf handles empty state */}
+        {/* Shelf — the whole home */}
         {shelfLoaded && (
-          <div className="print-hide mt-8">
-            <BathroomShelf
-              cartId={shelfCartId ?? ""}
-              items={shelfItems}
-              greeting={greeting}
-              profileChips={profileChips}
-              routineSteps={steps}
-            />
-          </div>
+          <BathroomShelf
+            cartId={shelfCartId ?? ""}
+            items={shelfItems}
+            greeting={greeting}
+            profileChips={profileChips}
+            routineSteps={steps}
+          />
         )}
 
-        <div className="print-hide mt-8">
-          <QuickActions />
-        </div>
-
-        {savedStylesLoaded && (
-          <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-dark">My Style Inspo</h2>
-
-            {savedStyles.length === 0 ? (
-              <Link
-                href="/style-match"
-                className="mt-4 flex items-center gap-3 rounded-xl border border-bronze/30 px-5 py-6 transition-colors hover:border-bronze"
-              >
-                <HeartIcon filled={false} />
-                <span className="text-sm text-dark/70">
-                  Save styles you love and build your inspiration board. →
-                </span>
-              </Link>
-            ) : (
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {savedStyles.map((style) => (
-                  <div key={style.id} className="rounded-xl border border-bronze/30 p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="font-serif text-base leading-tight text-dark">{style.style_name}</p>
-                      <button
-                        type="button"
-                        onClick={() => handleUnsaveStyle(style.id)}
-                        aria-label="Unsave style"
-                        className="shrink-0"
-                      >
-                        <HeartIcon filled />
-                      </button>
-                    </div>
-                    <span className="mt-2 inline-block rounded-full border border-bronze/40 px-2 py-0.5 text-[10px] font-medium text-bronze2">
-                      {formatMatchDate(style.created_at)}
-                    </span>
-                    <Link
-                      href={`/style-match?prefill=${encodeURIComponent(style.style_name)}`}
-                      className="mt-3 block text-xs font-semibold text-bronze2 underline underline-offset-2 hover:text-dark"
-                    >
-                      Match this style →
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
-        {hairProfileLoading && (
-          <p className="mt-8 text-sm text-dark/50">
-            Loading your profile...
-          </p>
-        )}
-
-        {!hairProfileLoading && !hairProfile && (
-          <p className="mt-8 text-sm text-dark/70">
-            Save a{" "}
-            <Link href="/profile" className="underline">
-              hair profile
-            </Link>{" "}
-            first so we can personalize your routine.
-          </p>
-        )}
-
-        {hairProfile && (
-          <section className="mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-dark">
-              Your Routine
-            </h2>
-            <div className="mt-4 rounded-xl border border-bronze/30 bg-white p-6">
-              <div className="space-y-4">
-                {steps.map((step) => (
-                  <div key={step.title}>
-                    <p className="font-serif text-lg text-bronze2">
-                      {step.title}
-                    </p>
-                    <p className="mt-1 text-sm text-dark/70">
-                      {step.description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 border-t border-bronze/20 pt-6">
-                <Link
-                  href="/routine"
-                  className="print-hide flex items-center justify-between rounded-xl border border-bronze/40 bg-bronze/10 px-5 py-4 transition-colors hover:border-bronze"
-                >
-                  <div>
-                    <p className="font-serif text-lg text-dark">
-                      Your routine is ready →
-                    </p>
-                    <p className="mt-1 text-sm text-dark/60">
-                      Full wash calendar, personalized steps, and curated
-                      products for this month.
-                    </p>
-                  </div>
-                </Link>
-              </div>
-              {user && <RecentCompletionsStrip userId={user.id} />}
-            </div>
-          </section>
-        )}
-
-        {extensionProfile && (
-          <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-dark">
-              My extensions &amp; wig care
-            </h2>
-            <div className="mt-4 rounded-xl border border-bronze/30 bg-white p-5">
-              <div className="flex flex-wrap gap-2">
-                {Array.from(
-                  new Set((extensionProfile.extension_types ?? []).map((t) => EXTENSION_TYPE_LABELS[t] ?? t))
-                ).map((label) => (
-                  <span
-                    key={label}
-                    className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2"
-                  >
-                    {label}
-                  </span>
-                ))}
-                {(extensionProfile.extension_types ?? []).length === 0 && (
-                  <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
-                    Protective style only
-                  </span>
-                )}
-                {extensionProfile.natural_curl_type && (
-                  <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
-                    Natural: {extensionProfile.natural_curl_type === "not_sure" ? "Not sure" : extensionProfile.natural_curl_type}
-                  </span>
-                )}
-              </div>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <Link
-                  href={`/routine/extension/${extensionProfile.id}`}
-                  className="bg-bronze px-4 py-2 text-sm font-semibold text-cream transition-colors hover:bg-bronze2"
-                >
-                  View my extension routine →
-                </Link>
-                {extensionProfile.needs_blending && (
-                  <Link
-                    href={`/routine/extension/${extensionProfile.id}?tab=blending`}
-                    className="border border-bronze/40 px-4 py-2 text-sm font-semibold text-dark transition-colors hover:border-bronze"
-                  >
-                    Blending guide →
-                  </Link>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {!familyProfilesLoading && (babyProfiles.length > 0 || childProfiles.length > 0) && (
-          <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-dark">Family profiles</h2>
-            <div className="mt-4 space-y-3">
-              {babyProfiles.map((baby) => (
-                <div key={baby.id} className="rounded-xl border border-bronze/30 bg-white p-5">
-                  <p className="font-serif text-lg text-dark">{baby.name || "Baby"}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {baby.age_range && (
-                      <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
-                        {BABY_AGE_RANGE_LABELS[baby.age_range] ?? baby.age_range}
-                      </span>
-                    )}
-                    {baby.hair_texture && (
-                      <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
-                        {BABY_TEXTURE_LABELS[baby.hair_texture] ?? baby.hair_texture}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-3 flex gap-4">
-                    <Link
-                      href={`/routine/baby/${baby.id}`}
-                      className="text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
-                    >
-                      View routine →
-                    </Link>
-                    <Link
-                      href={`/profile?editBaby=${baby.id}`}
-                      className="text-sm font-medium text-dark/60 underline underline-offset-2 hover:text-dark"
-                    >
-                      Edit profile →
-                    </Link>
-                  </div>
-                </div>
-              ))}
-
-              {childProfiles.map((child) => (
-                <div key={child.id} className="rounded-xl border border-bronze/30 bg-white p-5">
-                  <p className="font-serif text-lg text-dark">{child.name || "Child"}</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {child.age_range && (
-                      <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
-                        {CHILD_AGE_RANGE_LABELS[child.age_range] ?? child.age_range}
-                      </span>
-                    )}
-                    {child.curl_type && (
-                      <span className="rounded-full border border-bronze/40 px-3 py-1 text-xs font-medium text-bronze2">
-                        {child.curl_type === "not_sure" ? "Not sure" : child.curl_type}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-3 flex gap-4">
-                    <Link
-                      href={`/routine/child/${child.id}`}
-                      className="text-sm font-medium text-bronze2 underline underline-offset-2 hover:text-dark"
-                    >
-                      View routine →
-                    </Link>
-                    <Link
-                      href={`/profile?editChild=${child.id}`}
-                      className="text-sm font-medium text-dark/60 underline underline-offset-2 hover:text-dark"
-                    >
-                      Edit profile →
-                    </Link>
-                  </div>
-                </div>
-              ))}
-
-              <Link
-                href="/profile?addFamily=1"
-                className="block rounded-xl border border-dashed border-bronze/40 px-5 py-4 text-center text-sm font-medium text-bronze2 transition-colors hover:border-bronze"
-              >
-                Add another child&apos;s profile +
-              </Link>
-            </div>
-          </section>
-        )}
-
-        {recentSearches.length > 0 && (
-          <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-dark">
-              Recently searched
-            </h2>
-            <ul className="mt-4 space-y-2">
-              {recentSearches.map((search) => {
-                const score = search.compatibility_score;
-                return (
-                  <li
-                    key={search.id}
-                    className="flex items-center gap-3 border border-bronze/30 px-4 py-3"
-                  >
-                    {/* Product thumbnail */}
-                    <div className="relative shrink-0 h-12 w-12">
-                      {search.image_url ? (
-                        <Image
-                          src={search.image_url}
-                          alt={search.product_name ?? "Product"}
-                          fill
-                          className="rounded object-contain bg-cream/60"
-                          sizes="48px"
-                        />
-                      ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded bg-bronze/10">
-                          <span className="text-lg">🧴</span>
-                        </div>
-                      )}
-                    </div>
-                    <span className="flex-1 min-w-0 text-sm text-dark truncate">
-                      {search.product_name || "Unknown product"}
-                    </span>
-                    <div className="flex shrink-0 items-center gap-3">
-                      {score !== null && (
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                            TIER_CLASSES[scoreTier(score)]
-                          }`}
-                        >
-                          {score}
-                        </span>
-                      )}
-                      <Link
-                        href={`/search?q=${encodeURIComponent(
-                          search.product_name ?? ""
-                        )}`}
-                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
-                      >
-                        Search again →
-                      </Link>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        )}
-
-        {recentStyleMatches.length > 0 && (
-          <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-dark">
-              Recent Style Matches
-            </h2>
-            {user && <StyleMatchFollowUp candidates={followUpCandidates} userId={user.id} />}
-            <ul className="mt-4 space-y-2">
-              {recentStyleMatches.map((match) => {
-                const expanded = expandedMatchId === match.id;
-                return (
-                  <li
-                    key={match.id}
-                    className="border border-bronze/30 px-4 py-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* Style photo thumbnail */}
-                      <div className="relative shrink-0 h-14 w-14">
-                        {match.image_url ? (
-                          <Image
-                            src={match.image_url}
-                            alt={match.detected_style ?? "Style photo"}
-                            fill
-                            className="rounded object-cover"
-                            sizes="56px"
-                          />
-                        ) : (
-                          <div className="flex h-14 w-14 items-center justify-center rounded bg-bronze/10">
-                            <span className="text-xl">✂️</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-1 items-center justify-between gap-4 min-w-0">
-                        <div className="min-w-0">
-                          <p className="text-sm text-dark">
-                            {match.detected_style || "Unknown style"}
-                          </p>
-                          <p className="mt-0.5 text-xs text-dark/50">
-                            {formatMatchDate(match.created_at)}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedMatchId(expanded ? null : match.id)
-                          }
-                          className="shrink-0 text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
-                        >
-                          {expanded ? "Hide" : "View →"}
-                        </button>
-                      </div>
-                    </div>
-                    {expanded && match.detected_details && (
-                      <div className="mt-3 border-t border-bronze/20 pt-3">
-                        {match.detected_details.style_description && (
-                          <p className="text-sm text-dark/70">
-                            {match.detected_details.style_description}
-                          </p>
-                        )}
-                        {match.detected_details.maintenance_tips && (
-                          <p className="mt-2 text-xs text-dark/50">
-                            {match.detected_details.maintenance_tips}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-            <Link
-              href="/style-match"
-              className="mt-4 inline-block text-sm text-bronze2 underline underline-offset-2 hover:text-dark"
-            >
-              Try another style →
-            </Link>
-          </section>
-        )}
-
-        {travelKits.length > 0 && (
-          <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-dark">
-              My Travel Kits
-            </h2>
-            <ul className="mt-4 space-y-2">
-              {travelKits.map((kit) => (
-                <li
-                  key={kit.id}
-                  className="flex items-center justify-between gap-4 border border-bronze/30 px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm text-dark">{kit.destination}</p>
-                    <p className="mt-0.5 text-xs text-dark/50">
-                      {kit.travel_month
-                        ? kit.travel_month
-                        : `${formatTravelDate(kit.departure_date)} – ${formatTravelDate(kit.return_date)}`}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className="rounded-full px-2 py-0.5 text-xs font-semibold bg-green/20 text-green">
-                      Upcoming
-                    </span>
-                    <Link
-                      href={`/travel?kit=${kit.id}`}
-                      className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
-                    >
-                      View kit →
-                    </Link>
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/travel?new=true"
-              className="mt-4 inline-block text-sm text-bronze2 underline underline-offset-2 hover:text-dark"
-            >
-              Plan another trip →
-            </Link>
-          </section>
-        )}
-
-        {recentPosts.length > 0 && (
-          <section className="print-hide mt-10">
-            <h2 className="font-serif text-2xl font-semibold text-dark">
-              From the Qoyl feed.
-            </h2>
-            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              {recentPosts.map((post) => (
-                <PostCard key={post.slug} post={post} compact />
-              ))}
-            </div>
-          </section>
+        {!shelfLoaded && (
+          <p className="mt-16 text-center text-sm text-dark/40">Loading your shelf...</p>
         )}
       </div>
     </main>

@@ -2707,6 +2707,12 @@ function RoutineContent() {
         </p>
       </div>
 
+      <div className="print-hide flex items-center px-4 pt-3">
+        <Link href="/dashboard" className="inline-flex items-center gap-1 text-xs text-dark/40 hover:text-dark/70">
+          ← My shelf
+        </Link>
+      </div>
+
       <RoutineTopBar data={data} />
       <RoutineMiniNav />
 

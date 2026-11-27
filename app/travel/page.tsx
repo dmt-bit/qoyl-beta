@@ -265,7 +265,12 @@ function LandingView({
   error: string | null;
 }) {
   return (
-    <main className="flex min-h-[100svh] items-center justify-center px-4 py-16 font-sans sm:px-6">
+    <main className="flex min-h-[100svh] flex-col items-center justify-center px-4 py-16 font-sans sm:px-6">
+      <div className="mb-6 w-full max-w-xl">
+        <Link href="/dashboard" className="inline-flex items-center gap-1 text-xs text-white/50 hover:text-white/80">
+          ← My shelf
+        </Link>
+      </div>
       <div className="mx-auto max-w-xl text-center">
         <h1
           className="font-sans font-bold lowercase text-white"

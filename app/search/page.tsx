@@ -2184,6 +2184,10 @@ function SearchPageContent() {
 
       <div className="px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-md">
+        <Link href="/dashboard" className="mb-6 inline-flex items-center gap-1 text-xs text-dark/40 hover:text-dark/70">
+          ← My shelf
+        </Link>
+
         <DisclaimerBanner />
 
         {!user && <AnonymousProfileBanner searchCount={anonSearchCount} />}
