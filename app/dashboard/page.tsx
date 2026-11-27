@@ -27,6 +27,7 @@ import {
 } from "@/lib/protectiveStyleRoutine";
 import { getBasicRoutineSteps, RoutineStep } from "@/lib/routine";
 import { supabase } from "@/lib/supabase";
+import PushOptIn from "@/components/PushOptIn";
 
 type RecentSearch = {
   id: string;
@@ -1221,6 +1222,7 @@ function DashboardContent() {
         )}
       </div>
     </main>
+    <PushOptIn autoPrompt />
   );
 }
 
