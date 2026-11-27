@@ -1222,7 +1222,7 @@ function DashboardContent() {
         )}
       </div>
     </main>
-    <PushOptIn autoPrompt />
+    <PushOptIn autoPrompt={true} />
   );
 }
 
