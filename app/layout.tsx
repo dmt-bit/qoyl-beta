@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Space_Mono, Fredoka, Lora, DM_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import FeedbackSurveyTrigger from "@/components/FeedbackSurveyTrigger";
@@ -8,54 +8,60 @@ import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import { AuthProvider } from "@/lib/auth-context";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+// Self-hosted fonts (copied from @fontsource/* into public/fonts/) so the
+// build never makes network requests to fonts.gstatic.com.
+const spaceGrotesk = localFont({
+  src: [
+    { path: "../public/fonts/space-grotesk-latin-300-normal.woff2", weight: "300" },
+    { path: "../public/fonts/space-grotesk-latin-400-normal.woff2", weight: "400" },
+    { path: "../public/fonts/space-grotesk-latin-500-normal.woff2", weight: "500" },
+    { path: "../public/fonts/space-grotesk-latin-600-normal.woff2", weight: "600" },
+    { path: "../public/fonts/space-grotesk-latin-700-normal.woff2", weight: "700" },
+  ],
   variable: "--font-space-grotesk",
   display: "swap",
-  preload: false,
 });
 
-const spaceMono = Space_Mono({
-  subsets: ["latin"],
-  weight: ["400", "700"],
+const spaceMono = localFont({
+  src: [
+    { path: "../public/fonts/space-mono-latin-400-normal.woff2", weight: "400" },
+    { path: "../public/fonts/space-mono-latin-700-normal.woff2", weight: "700" },
+  ],
   variable: "--font-space-mono",
   display: "swap",
-  preload: false,
 });
 
-// Display font for headings/hero text - hand-drawn, bouncy rounded feel
-// closest to the "Sunday Dinner Club" reference logo. Self-hosted via
-// next/font (this app has no <link> tags for fonts anywhere - Space
-// Grotesk/Mono both load this way), not the literal CSS2 <link> the
-// request specified. The requested family name "Fredoka One" isn't a
-// real next/font/google export (confirmed via a scratch tsc check) -
-// "Fredoka" is the current variable-weight family Google Fonts
-// replaced it with, and is the actual hand-drawn-rounded face behind
-// the old "Fredoka One" name.
-const fredoka = Fredoka({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+// Display font for headings/hero text - hand-drawn, bouncy rounded feel.
+// "Fredoka" is the current variable-weight family that replaced "Fredoka One".
+const fredoka = localFont({
+  src: [
+    { path: "../public/fonts/fredoka-latin-400-normal.woff2", weight: "400" },
+    { path: "../public/fonts/fredoka-latin-500-normal.woff2", weight: "500" },
+    { path: "../public/fonts/fredoka-latin-600-normal.woff2", weight: "600" },
+    { path: "../public/fonts/fredoka-latin-700-normal.woff2", weight: "700" },
+  ],
   variable: "--font-fredoka",
   display: "swap",
-  preload: false,
 });
 
 // Lora and DM Sans used by the ShowerShelfCart checkout page.
-const lora = Lora({
-  subsets: ["latin"],
-  weight: ["400", "600"],
+const lora = localFont({
+  src: [
+    { path: "../public/fonts/lora-latin-400-normal.woff2", weight: "400" },
+    { path: "../public/fonts/lora-latin-600-normal.woff2", weight: "600" },
+  ],
   variable: "--font-lora",
   display: "swap",
-  preload: false,
 });
 
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const dmSans = localFont({
+  src: [
+    { path: "../public/fonts/dm-sans-latin-400-normal.woff2", weight: "400" },
+    { path: "../public/fonts/dm-sans-latin-500-normal.woff2", weight: "500" },
+    { path: "../public/fonts/dm-sans-latin-600-normal.woff2", weight: "600" },
+  ],
   variable: "--font-dm-sans",
   display: "swap",
-  preload: false,
 });
 
 // Installable as a home screen app (see public/manifest.json). The icon is
