@@ -69,41 +69,79 @@ export async function POST(request: Request) {
   }
 
   // --- Look up product in catalog -------------------------------------------
-  // Try exact match first, then fuzzy via ilike
   let productRow: { id: string; name: string; brand_name: string | null; category: string | null } | null = null;
 
-  const normalizedName = productName.toLowerCase();
+  const normalizedName = productName.toLowerCase().trim();
 
-  // Build a name query — strip common noise words for better matching
-  const searchName = normalizedName
-    .replace(/\b(the|a|an|and|with|for|of|by)\b/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const { data: exactRows } = await admin
-    .from("catalog_products")
-    .select("id, name, brand_name, category")
-    .ilike("name", `%${searchName.slice(0, 60)}%`)
-    .limit(5);
-
-  if (exactRows?.length) {
-    // Pick the closest match by name length similarity
-    productRow = exactRows.reduce((best, row) => {
-      const diff = Math.abs(row.name.length - productName.length);
-      const bestDiff = Math.abs(best.name.length - productName.length);
-      return diff < bestDiff ? row : best;
-    });
+  // Strip common noise words
+  function cleanName(n: string) {
+    return n
+      .replace(/\b(the|a|an|and|with|for|of|by)\b/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
-  // Also try brand + partial name if we have a brand
-  if (!productRow && brandName) {
-    const { data: brandRows } = await admin
+  // Build a list of search candidates — the page title often includes the
+  // brand name as a prefix (e.g. "Camille Rose Curl Love Moisture Milk").
+  // We try several stripped variants so catalog names like "Curl Love
+  // Moisture Milk" still match.
+  const searchCandidates: string[] = [];
+
+  // 1. Full name cleaned
+  searchCandidates.push(cleanName(normalizedName));
+
+  // 2. Brand stripped from front — if brandName is provided or if the
+  //    product name starts with a likely brand prefix (first 1-3 words).
+  if (brandName) {
+    const stripped = normalizedName
+      .replace(new RegExp(`^${brandName.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*`, "i"), "")
+      .trim();
+    if (stripped && stripped !== normalizedName) {
+      searchCandidates.push(cleanName(stripped));
+    }
+  }
+
+  // 3. Try the last 3–6 words of the name (the actual product name usually
+  //    sits at the end when brand + product are concatenated).
+  const words = cleanName(normalizedName).split(" ").filter(Boolean);
+  if (words.length > 3) {
+    searchCandidates.push(words.slice(-4).join(" "));
+    searchCandidates.push(words.slice(-3).join(" "));
+  }
+
+  // Run searches in priority order, stop at first hit
+  for (const candidate of searchCandidates) {
+    if (!candidate || candidate.length < 3) continue;
+
+    const { data: rows } = await admin
       .from("catalog_products")
       .select("id, name, brand_name, category")
-      .ilike("brand_name", `%${brandName.slice(0, 40)}%`)
-      .ilike("name", `%${searchName.slice(0, 40)}%`)
-      .limit(3);
-    if (brandRows?.length) productRow = brandRows[0];
+      .ilike("name", `%${candidate.slice(0, 60)}%`)
+      .limit(5);
+
+    if (rows?.length) {
+      // Pick closest match by name length similarity to the original
+      productRow = rows.reduce((best, row) => {
+        const diff = Math.abs(row.name.length - productName.length);
+        const bestDiff = Math.abs(best.name.length - productName.length);
+        return diff < bestDiff ? row : best;
+      });
+      break;
+    }
+
+    // If we have a brand, also try brand-scoped search with this candidate
+    if (brandName) {
+      const { data: brandRows } = await admin
+        .from("catalog_products")
+        .select("id, name, brand_name, category")
+        .ilike("brand_name", `%${brandName.slice(0, 40)}%`)
+        .ilike("name", `%${candidate.slice(0, 40)}%`)
+        .limit(3);
+      if (brandRows?.length) {
+        productRow = brandRows[0];
+        break;
+      }
+    }
   }
 
   if (!productRow) {
