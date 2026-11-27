@@ -135,7 +135,7 @@ export default function PushOptIn({ autoPrompt }: PushOptInProps) {
       }}
     >
       <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.75)", lineHeight: 1.4 }}>
-        get notified when your scores update
+        get notified when your routine updates are ready
       </span>
       <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
         <button
