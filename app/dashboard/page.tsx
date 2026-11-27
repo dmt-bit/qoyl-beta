@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import PostCard, { Post } from "@/components/PostCard";
 import BathroomShelf from "@/components/BathroomShelf";
@@ -34,6 +35,8 @@ type RecentSearch = {
   product_name: string | null;
   compatibility_score: number | null;
   searched_at: string;
+  barcode: string | null;
+  image_url?: string | null;
 };
 
 type TravelKitSummary = {
@@ -49,6 +52,7 @@ type StyleMatchSummary = {
   detected_style: string | null;
   detected_details: { style_description?: string; maintenance_tips?: string } | null;
   created_at: string;
+  image_url: string | null;
 };
 
 type SavedStyle = {
@@ -564,11 +568,33 @@ function DashboardContent() {
     async function loadRecentSearches() {
       const { data } = await supabase
         .from("product_searches")
-        .select("id, product_name, compatibility_score, searched_at")
+        .select("id, product_name, compatibility_score, searched_at, barcode")
         .eq("user_id", user!.id)
         .order("searched_at", { ascending: false })
         .limit(5);
-      if (!cancelled) setRecentSearches(data ?? []);
+      if (!data || cancelled) {
+        if (!cancelled) setRecentSearches([]);
+        return;
+      }
+      // Enrich with product images from catalog_products (best-effort).
+      const barcodes = data.map((r) => r.barcode).filter(Boolean) as string[];
+      const imageMap: Record<string, string> = {};
+      if (barcodes.length > 0) {
+        const { data: products } = await supabase
+          .from("catalog_products")
+          .select("barcode, image_url")
+          .in("barcode", barcodes);
+        if (products) {
+          for (const p of products) {
+            if (p.barcode && p.image_url) imageMap[p.barcode] = p.image_url;
+          }
+        }
+      }
+      const enriched = data.map((r) => ({
+        ...r,
+        image_url: r.barcode ? (imageMap[r.barcode] ?? null) : null,
+      }));
+      if (!cancelled) setRecentSearches(enriched);
     }
 
     loadRecentSearches();
@@ -584,11 +610,16 @@ function DashboardContent() {
     let cancelled = false;
 
     async function loadTravelKits() {
+      // Only show upcoming kits: return_date >= today (or departure_date >= today
+      // when return_date is null, treated via client-side filter below since
+      // Supabase can't OR across nullable columns easily without an RPC).
+      const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
       const { data } = await supabase
         .from("travel_kits")
         .select("id, destination, departure_date, return_date, travel_month")
         .eq("user_id", user!.id)
         .eq("status", "active")
+        .or(`return_date.gte.${today},and(return_date.is.null,departure_date.gte.${today})`)
         .order("departure_date", { ascending: true });
       if (!cancelled) setTravelKits(data ?? []);
     }
@@ -609,7 +640,7 @@ function DashboardContent() {
     async function loadRecentStyleMatches() {
       const { data } = await supabase
         .from("style_matches")
-        .select("id, detected_style, detected_details, created_at")
+        .select("id, detected_style, detected_details, created_at, image_url")
         .eq("user_id", user!.id)
         .order("created_at", { ascending: false })
         .limit(3);
@@ -1065,9 +1096,25 @@ function DashboardContent() {
                 return (
                   <li
                     key={search.id}
-                    className="flex items-center justify-between gap-4 border border-bronze/30 px-4 py-3"
+                    className="flex items-center gap-3 border border-bronze/30 px-4 py-3"
                   >
-                    <span className="text-sm text-dark">
+                    {/* Product thumbnail */}
+                    <div className="relative shrink-0 h-12 w-12">
+                      {search.image_url ? (
+                        <Image
+                          src={search.image_url}
+                          alt={search.product_name ?? "Product"}
+                          fill
+                          className="rounded object-contain bg-cream/60"
+                          sizes="48px"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 items-center justify-center rounded bg-bronze/10">
+                          <span className="text-lg">🧴</span>
+                        </div>
+                      )}
+                    </div>
+                    <span className="flex-1 min-w-0 text-sm text-dark truncate">
                       {search.product_name || "Unknown product"}
                     </span>
                     <div className="flex shrink-0 items-center gap-3">
@@ -1110,24 +1157,42 @@ function DashboardContent() {
                     key={match.id}
                     className="border border-bronze/30 px-4 py-3"
                   >
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="text-sm text-dark">
-                          {match.detected_style || "Unknown style"}
-                        </p>
-                        <p className="mt-0.5 text-xs text-dark/50">
-                          {formatMatchDate(match.created_at)}
-                        </p>
+                    <div className="flex items-center gap-3">
+                      {/* Style photo thumbnail */}
+                      <div className="relative shrink-0 h-14 w-14">
+                        {match.image_url ? (
+                          <Image
+                            src={match.image_url}
+                            alt={match.detected_style ?? "Style photo"}
+                            fill
+                            className="rounded object-cover"
+                            sizes="56px"
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center rounded bg-bronze/10">
+                            <span className="text-xl">✂️</span>
+                          </div>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setExpandedMatchId(expanded ? null : match.id)
-                        }
-                        className="shrink-0 text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
-                      >
-                        {expanded ? "Hide" : "View →"}
-                      </button>
+                      <div className="flex flex-1 items-center justify-between gap-4 min-w-0">
+                        <div className="min-w-0">
+                          <p className="text-sm text-dark">
+                            {match.detected_style || "Unknown style"}
+                          </p>
+                          <p className="mt-0.5 text-xs text-dark/50">
+                            {formatMatchDate(match.created_at)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedMatchId(expanded ? null : match.id)
+                          }
+                          className="shrink-0 text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
+                        >
+                          {expanded ? "Hide" : "View →"}
+                        </button>
+                      </div>
                     </div>
                     {expanded && match.detected_details && (
                       <div className="mt-3 border-t border-bronze/20 pt-3">
@@ -1162,43 +1227,32 @@ function DashboardContent() {
               My Travel Kits
             </h2>
             <ul className="mt-4 space-y-2">
-              {travelKits.map((kit) => {
-                const isUpcoming = kit.departure_date
-                  ? new Date(`${kit.departure_date}T00:00:00`) >= new Date(new Date().toDateString())
-                  : true;
-                return (
-                  <li
-                    key={kit.id}
-                    className="flex items-center justify-between gap-4 border border-bronze/30 px-4 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm text-dark">{kit.destination}</p>
-                      <p className="mt-0.5 text-xs text-dark/50">
-                        {kit.travel_month
-                          ? kit.travel_month
-                          : `${formatTravelDate(kit.departure_date)} – ${formatTravelDate(kit.return_date)}`}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-3">
-                      <span
-                        className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          isUpcoming
-                            ? "bg-green/20 text-green"
-                            : "bg-bronze/20 text-bronze2"
-                        }`}
-                      >
-                        {isUpcoming ? "Upcoming" : "Past"}
-                      </span>
-                      <Link
-                        href={`/travel?kit=${kit.id}`}
-                        className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
-                      >
-                        View kit →
-                      </Link>
-                    </div>
-                  </li>
-                );
-              })}
+              {travelKits.map((kit) => (
+                <li
+                  key={kit.id}
+                  className="flex items-center justify-between gap-4 border border-bronze/30 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm text-dark">{kit.destination}</p>
+                    <p className="mt-0.5 text-xs text-dark/50">
+                      {kit.travel_month
+                        ? kit.travel_month
+                        : `${formatTravelDate(kit.departure_date)} – ${formatTravelDate(kit.return_date)}`}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="rounded-full px-2 py-0.5 text-xs font-semibold bg-green/20 text-green">
+                      Upcoming
+                    </span>
+                    <Link
+                      href={`/travel?kit=${kit.id}`}
+                      className="text-xs text-bronze2 underline underline-offset-2 hover:text-dark"
+                    >
+                      View kit →
+                    </Link>
+                  </div>
+                </li>
+              ))}
             </ul>
             <Link
               href="/travel?new=true"
