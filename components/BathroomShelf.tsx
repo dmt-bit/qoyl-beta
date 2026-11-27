@@ -538,6 +538,7 @@ export default function BathroomShelf({
   const [items, setItems]         = useState(initialItems);
   const [openPanel, setOpenPanel] = useState<"shower" | "vanity" | "dashboard" | null>(null);
   const [cartCount, setCartCount] = useState(0);
+  const [shelfOpen, setShelfOpen] = useState(false);
 
   // Sync cart count from localStorage on mount and after adds
   useEffect(() => { setCartCount(storeCart.count()); }, []);
@@ -595,8 +596,62 @@ export default function BathroomShelf({
     <>
       <style dangerouslySetInnerHTML={{ __html: GLOBAL_CSS }} />
 
-      {/* ═══ 3D ROOM — full page ═══ */}
-      <div style={{
+      {/* ═══ COLLAPSED SHELF CARD — shown when shelfOpen is false ═══ */}
+      {!shelfOpen && (
+        <button
+          type="button"
+          onClick={() => setShelfOpen(true)}
+          style={{
+            display: "block",
+            width: "100%",
+            border: "none",
+            padding: 0,
+            background: "none",
+            cursor: "pointer",
+            textAlign: "left",
+          }}
+        >
+          <div style={{
+            position: "relative",
+            width: "100%",
+            height: 220,
+            borderRadius: 12,
+            overflow: "hidden",
+            background: "#1A1510",
+          }}>
+            <img
+              src="/bathroom-bg.jpg"
+              alt="My Shelf"
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center", display: "block" }}
+            />
+            <div style={{
+              position: "absolute", inset: 0,
+              background: "linear-gradient(to top, rgba(20,16,12,0.72) 0%, rgba(20,16,12,0.1) 60%)",
+            }} />
+            <div style={{ position: "absolute", bottom: 20, left: 20, right: 20 }}>
+              <p style={{ margin: 0, color: "#F5EDE0", fontFamily: "serif", fontSize: 22, fontWeight: 600, lineHeight: 1.2 }}>
+                My Shelf
+              </p>
+              <p style={{ margin: "4px 0 0", color: "rgba(245,237,224,0.7)", fontSize: 13 }}>
+                {purchasable.length > 0
+                  ? `${purchasable.length} products · tap to open your bathroom`
+                  : "Tap to open your bathroom shelf"}
+              </p>
+            </div>
+            <div style={{
+              position: "absolute", top: 16, right: 16,
+              background: "rgba(245,237,224,0.15)", backdropFilter: "blur(6px)",
+              borderRadius: 20, padding: "6px 14px",
+              color: "#F5EDE0", fontSize: 12, fontWeight: 600,
+            }}>
+              Open →
+            </div>
+          </div>
+        </button>
+      )}
+
+      {/* ═══ 3D ROOM — full page, only when shelfOpen ═══ */}
+      {shelfOpen && <div style={{
         position: "fixed", inset: 0,
         width: "100%", height: "100%",
         overflow: "hidden",
@@ -604,7 +659,7 @@ export default function BathroomShelf({
       }}>
         <BathroomScene3D
           onHotspot={(id) => setOpenPanel(id)}
-          onExit={() => router.push("/dashboard")}
+          onExit={() => { setShelfOpen(false); setOpenPanel(null); }}
           fullViewport
           wallInfo={wallInfo}
           hud={purchasable.length > 0 ? {
@@ -616,84 +671,86 @@ export default function BathroomShelf({
             onShopAll: handleShopAll,
           } : undefined}
         />
-      </div>
+      </div>}
 
-      {/* ═══ PANELS (sit above the fixed room) ═══ */}
-      <ShelfPanel
-        open={openPanel === "shower"}
-        title="In the shower"
-        subtitle="shampoo · conditioner · treatments"
-        icon={
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.3">
-            <path d="M4 16 Q4 8 10 6 Q16 4 16 10"/>
-            <line x1="4" y1="16" x2="16" y2="16"/>
-            <circle cx="10" cy="4" r="1.5"/>
-          </svg>
-        }
-        items={showerItems}
-        purchasedIds={purchasedIds}
-        onToggle={toggleItem}
-        onClose={() => setOpenPanel(null)}
-        onAddToCart={handleAddToCart}
-        cartCount={cartCount}
-      />
-      <ShelfPanel
-        open={openPanel === "vanity"}
-        title="At the vanity"
-        subtitle="leave-in · stylers · oils"
-        icon={
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.3">
-            <rect x="3" y="10" width="14" height="7" rx="1"/>
-            <rect x="6" y="3" width="8" height="7" rx="0.5"/>
-          </svg>
-        }
-        items={vanityItems}
-        purchasedIds={purchasedIds}
-        onToggle={toggleItem}
-        onClose={() => setOpenPanel(null)}
-        onAddToCart={handleAddToCart}
-        cartCount={cartCount}
-      />
-      <DashboardPanel
-        open={openPanel === "dashboard"}
-        greeting={greeting ?? "Your routine"}
-        chips={profileChips ?? []}
-        routineSteps={routineSteps ?? []}
-        onClose={() => setOpenPanel(null)}
-      />
+      {/* ═══ PANELS + TOAST — only when shelf is open ═══ */}
+      {shelfOpen && <>
+        <ShelfPanel
+          open={openPanel === "shower"}
+          title="In the shower"
+          subtitle="shampoo · conditioner · treatments"
+          icon={
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.3">
+              <path d="M4 16 Q4 8 10 6 Q16 4 16 10"/>
+              <line x1="4" y1="16" x2="16" y2="16"/>
+              <circle cx="10" cy="4" r="1.5"/>
+            </svg>
+          }
+          items={showerItems}
+          purchasedIds={purchasedIds}
+          onToggle={toggleItem}
+          onClose={() => setOpenPanel(null)}
+          onAddToCart={handleAddToCart}
+          cartCount={cartCount}
+        />
+        <ShelfPanel
+          open={openPanel === "vanity"}
+          title="At the vanity"
+          subtitle="leave-in · stylers · oils"
+          icon={
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.3">
+              <rect x="3" y="10" width="14" height="7" rx="1"/>
+              <rect x="6" y="3" width="8" height="7" rx="0.5"/>
+            </svg>
+          }
+          items={vanityItems}
+          purchasedIds={purchasedIds}
+          onToggle={toggleItem}
+          onClose={() => setOpenPanel(null)}
+          onAddToCart={handleAddToCart}
+          cartCount={cartCount}
+        />
+        <DashboardPanel
+          open={openPanel === "dashboard"}
+          greeting={greeting ?? "Your routine"}
+          chips={profileChips ?? []}
+          routineSteps={routineSteps ?? []}
+          onClose={() => setOpenPanel(null)}
+        />
 
-      {/* Share toast */}
-      {shareToast && (
-        <div
-          style={{
-            position: "fixed",
-            bottom: 100,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 200,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "11px 20px",
-            borderRadius: 100,
-            background: "rgba(14,10,6,0.88)",
-            backdropFilter: "blur(16px)",
-            border: "1px solid rgba(200,168,106,0.35)",
-            color: "#F8F3EC",
-            fontSize: 12,
-            fontWeight: 500,
-            letterSpacing: "0.06em",
-            fontFamily: "'DM Sans', sans-serif",
-            whiteSpace: "nowrap",
-            pointerEvents: "none",
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="rgba(200,168,106,0.9)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M2.5 7.5l3 3 6-6" />
-          </svg>
-          Link copied
-        </div>
-      )}
+        {/* Share toast */}
+        {shareToast && (
+          <div
+            style={{
+              position: "fixed",
+              bottom: 100,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 200,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "11px 20px",
+              borderRadius: 100,
+              background: "rgba(14,10,6,0.88)",
+              backdropFilter: "blur(16px)",
+              border: "1px solid rgba(200,168,106,0.35)",
+              color: "#F8F3EC",
+              fontSize: 12,
+              fontWeight: 500,
+              letterSpacing: "0.06em",
+              fontFamily: "'DM Sans', sans-serif",
+              whiteSpace: "nowrap",
+              pointerEvents: "none",
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="rgba(200,168,106,0.9)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2.5 7.5l3 3 6-6" />
+            </svg>
+            Link copied
+          </div>
+        )}
+      </>}
     </>
   );
 }
