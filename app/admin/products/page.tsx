@@ -1710,6 +1710,209 @@ type ImagesTabProduct = {
   processed_image_url: string | null;
 };
 
+// ---- ToolsTab ---------------------------------------------------------------
+
+type AdminTool = {
+  id: string;
+  name: string;
+  category: string;
+  priority: string;
+  price_range: string;
+  amazon_search: string;
+  image_url: string | null;
+};
+
+function ToolsTab({ password }: { password: string }) {
+  const [tools, setTools] = useState<AdminTool[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [edits, setEdits] = useState<Record<string, { image_url: string; amazon_search: string }>>({});
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [setupSql, setSetupSql] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/admin/tools", {
+      headers: { "x-admin-password": password },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) {
+          setError(data.error);
+        } else {
+          const toolList: AdminTool[] = data.tools ?? [];
+          setTools(toolList);
+          const initial: Record<string, { image_url: string; amazon_search: string }> = {};
+          for (const t of toolList) {
+            initial[t.id] = { image_url: t.image_url ?? "", amazon_search: t.amazon_search ?? "" };
+          }
+          setEdits(initial);
+        }
+        setLoading(false);
+      })
+      .catch((e) => {
+        setError(String(e));
+        setLoading(false);
+      });
+  }, [password]);
+
+  async function saveTool(toolId: string) {
+    setSaving(toolId);
+    setError(null);
+    const { image_url, amazon_search } = edits[toolId] ?? {};
+    const res = await fetch("/api/admin/tools", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-admin-password": password },
+      body: JSON.stringify({ tool_id: toolId, image_url: image_url || null, amazon_search: amazon_search || null }),
+    });
+    const data = await res.json();
+    if (data.error) {
+      // Check if this is the "table doesn't exist" error with SQL
+      if (data.error.includes("create table")) {
+        setSetupSql(data.error.split(":\n\n")[1] ?? data.error);
+      }
+      setError(data.error.split(":\n\n")[0]);
+    } else {
+      setSaved((prev) => ({ ...prev, [toolId]: true }));
+      setTimeout(() => setSaved((prev) => ({ ...prev, [toolId]: false })), 2000);
+      // Update local tool list
+      setTools((prev) =>
+        prev.map((t) =>
+          t.id === toolId
+            ? { ...t, image_url: image_url || null, amazon_search: amazon_search || "" }
+            : t
+        )
+      );
+    }
+    setSaving(null);
+  }
+
+  const CATEGORY_LABEL: Record<string, string> = {
+    heat: "Heat",
+    detangling: "Detangling",
+    drying: "Drying",
+    styling: "Styling",
+    protective: "Protective",
+    accessories: "Accessories",
+    application: "Application",
+  };
+
+  if (loading) {
+    return <p className="mt-8 text-sm text-dark/50">Loading tools...</p>;
+  }
+
+  return (
+    <div className="mt-8 space-y-2">
+      <p className="text-sm text-dark/60">
+        Set an image URL and Amazon search link for each tool. These are saved to Supabase and override the defaults in code.
+      </p>
+
+      {setupSql && (
+        <div className="rounded border border-amber-300 bg-amber-50 p-4">
+          <p className="text-sm font-semibold text-amber-900">One-time setup needed</p>
+          <p className="mt-1 text-xs text-amber-800">Run this SQL in your Supabase SQL editor:</p>
+          <pre className="mt-2 overflow-x-auto rounded bg-amber-100 p-3 text-xs text-amber-900">{setupSql}</pre>
+        </div>
+      )}
+
+      {error && !setupSql && (
+        <p className="rounded border border-red/30 bg-red/5 px-3 py-2 text-sm text-red">{error}</p>
+      )}
+
+      <div className="mt-4 space-y-4">
+        {tools.map((tool) => {
+          const e = edits[tool.id] ?? { image_url: tool.image_url ?? "", amazon_search: tool.amazon_search ?? "" };
+          const isSaving = saving === tool.id;
+          const isSaved = saved[tool.id];
+          const hasImage = Boolean(e.image_url);
+
+          return (
+            <div key={tool.id} className="rounded-lg border border-bronze/20 p-4">
+              <div className="flex items-start gap-4">
+                {/* Image preview */}
+                <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded border border-bronze/20 bg-warm/20">
+                  {hasImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={e.image_url}
+                      alt={tool.name}
+                      className="h-full w-full object-contain"
+                      onError={(ev) => {
+                        (ev.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center">
+                      <span className="text-xs text-dark/30">No img</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tool info + fields */}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-sans text-sm font-semibold text-dark">{tool.name}</span>
+                    <span className="rounded bg-bronze/10 px-1.5 py-0.5 text-xs text-bronze2">
+                      {CATEGORY_LABEL[tool.category] ?? tool.category}
+                    </span>
+                    <span className="text-xs text-dark/40">{tool.priority}</span>
+                  </div>
+
+                  <div className="mt-2 space-y-2">
+                    <div>
+                      <label className="block text-xs text-dark/50">Image URL</label>
+                      <input
+                        type="url"
+                        value={e.image_url}
+                        placeholder="https://..."
+                        onChange={(ev) =>
+                          setEdits((prev) => ({
+                            ...prev,
+                            [tool.id]: { ...prev[tool.id], image_url: ev.target.value },
+                          }))
+                        }
+                        className="mt-0.5 w-full border border-bronze/30 bg-white px-2 py-1.5 font-sans text-xs text-dark focus:border-bronze focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-dark/50">Amazon search term</label>
+                      <input
+                        type="text"
+                        value={e.amazon_search}
+                        placeholder="e.g. ionic blow dryer 1875 watt"
+                        onChange={(ev) =>
+                          setEdits((prev) => ({
+                            ...prev,
+                            [tool.id]: { ...prev[tool.id], amazon_search: ev.target.value },
+                          }))
+                        }
+                        className="mt-0.5 w-full border border-bronze/30 bg-white px-2 py-1.5 font-sans text-xs text-dark focus:border-bronze focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Save button */}
+                <button
+                  type="button"
+                  onClick={() => saveTool(tool.id)}
+                  disabled={isSaving}
+                  className="flex-shrink-0 rounded bg-bronze px-3 py-1.5 text-xs font-semibold text-cream transition-colors hover:bg-bronze2 disabled:opacity-50"
+                >
+                  {isSaving ? "Saving..." : isSaved ? "Saved!" : "Save"}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ---- ImagesTab --------------------------------------------------------------
+
 type ImagesTab2 = "missing" | "all" | "needs_bg";
 
 function ImagesTab({ password }: { password: string }) {
@@ -2038,7 +2241,7 @@ function ImagesBulkCard({
 }
 
 export default function AdminProductsPage() {
-  const [activeTab, setActiveTab] = useState<"products" | "coverage" | "brands" | "images">("products");
+  const [activeTab, setActiveTab] = useState<"products" | "coverage" | "brands" | "images" | "tools">("products");
   const [password, setPassword] = useState("");
   const [authorized, setAuthorized] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -2305,7 +2508,7 @@ export default function AdminProductsPage() {
         </h1>
 
         <div className="mt-6 flex gap-6 border-b border-bronze/20">
-          {(["products", "images", "coverage", "brands"] as const).map((tab) => (
+          {(["products", "images", "coverage", "brands", "tools"] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -2316,7 +2519,7 @@ export default function AdminProductsPage() {
                   : "text-dark/50 hover:text-dark/80"
               }`}
             >
-              {tab === "products" ? "Products" : tab === "images" ? "Images" : tab === "coverage" ? "Coverage" : "Brands"}
+              {tab === "products" ? "Products" : tab === "images" ? "Images" : tab === "coverage" ? "Coverage" : tab === "brands" ? "Brands" : "Tools"}
             </button>
           ))}
         </div>
@@ -2326,6 +2529,8 @@ export default function AdminProductsPage() {
         {activeTab === "brands" && <BrandsTab password={password} />}
 
         {activeTab === "images" && <ImagesTab password={password} />}
+
+        {activeTab === "tools" && <ToolsTab password={password} />}
 
         {activeTab === "products" && (
         <>
