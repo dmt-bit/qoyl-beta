@@ -302,7 +302,7 @@ export async function POST(request: Request) {
       compat_score: null,
       quantity: 1,
       status: "pending",
-      image_url: null,
+      image_url: tool.image_url ?? null,
       secondary_category_labels: [tool.category === "heat" ? "Heat Tools" : tool.category === "detangling" ? "Detangling Tools" : "Tools"],
     });
   }

@@ -29,6 +29,9 @@ export interface HairTool {
   amazon_search: string;
   // e.g. "low porosity hair — can cause protein buildup"
   avoid_if: string | null;
+  // Static product photo for the shelf — hosted on CDN or Supabase storage.
+  // null until an image is uploaded for this tool.
+  image_url: string | null;
 }
 
 export const TOOLS_CATALOG: HairTool[] = [
@@ -47,6 +50,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$25-200",
     amazon_search: "ionic blow dryer 1875 watt professional",
     avoid_if: null,
+    image_url: null,
   },
   {
     id: "diffuser",
@@ -63,6 +67,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$10-40",
     amazon_search: "universal blow dryer diffuser attachment curly hair",
     avoid_if: null,
+    image_url: null,
   },
   {
     id: "flat-iron",
@@ -78,6 +83,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$30-250",
     amazon_search: "titanium flat iron adjustable temperature natural hair",
     avoid_if: null,
+    image_url: null,
   },
   {
     id: "curling-iron",
@@ -93,6 +99,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$20-150",
     amazon_search: "curling wand 1.5 inch beach waves ceramic",
     avoid_if: "coily hair — a curling iron on natural 4c hair without straightening first is unlikely to hold the curl pattern",
+    image_url: null,
   },
   {
     id: "hooded-dryer",
@@ -108,6 +115,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$30-200",
     amazon_search: "hooded bonnet dryer natural hair deep conditioning",
     avoid_if: null,
+    image_url: null,
   },
   {
     id: "heated-cap",
@@ -123,6 +131,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$20-60",
     amazon_search: "heated cap deep conditioning natural hair rechargeable",
     avoid_if: null,
+    image_url: null,
   },
   {
     id: "steamer",
@@ -138,6 +147,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$40-200",
     amazon_search: "hair steamer natural hair deep conditioning tabletop",
     avoid_if: null,
+    image_url: null,
   },
   {
     id: "blow-dryer-comb",
@@ -153,6 +163,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$15-60",
     amazon_search: "blow dryer comb attachment 4c natural hair blowout",
     avoid_if: "high porosity damaged hair — the combination of heat and tension increases breakage risk",
+    image_url: null,
   },
 
   // ---- DETANGLING TOOLS -------------------------------------------------
@@ -170,6 +181,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$3-15",
     amazon_search: "seamless wide tooth comb natural hair detangling",
     avoid_if: null,
+    image_url: null,
   },
   {
     id: "detangling-brush",
@@ -185,6 +197,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$8-25",
     amazon_search: "denman brush natural hair curl definition detangling",
     avoid_if: "straight or fine hair — too aggressive for delicate straight strands",
+    image_url: null,
   },
   {
     id: "rat-tail-comb",
@@ -200,6 +213,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$3-10",
     amazon_search: "rat tail comb metal pintail natural hair braiding",
     avoid_if: null,
+    image_url: null,
   },
 
   // ---- APPLICATION TOOLS -------------------------------------------------
@@ -217,6 +231,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$5-15",
     amazon_search: "fine mist spray bottle hair 16oz",
     avoid_if: null,
+    image_url: null,
   },
   {
     id: "applicator-bottle",
@@ -232,6 +247,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$5-15",
     amazon_search: "applicator bottle nozzle tip hair scalp natural hair",
     avoid_if: null,
+    image_url: null,
   },
 
   // ---- DRYING AND PROTECTIVE -------------------------------------------
@@ -249,6 +265,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$8-20",
     amazon_search: "microfiber hair towel turban wavy curly hair",
     avoid_if: null,
+    image_url: null,
   },
   {
     id: "satin-bonnet",
@@ -264,6 +281,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$8-25",
     amazon_search: "satin bonnet double layer natural hair large",
     avoid_if: null,
+    image_url: null,
   },
   {
     id: "sectioning-clips",
@@ -279,6 +297,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$5-12",
     amazon_search: "large sectioning clips duck bill natural hair styling",
     avoid_if: null,
+    image_url: null,
   },
   {
     id: "wig-stand",
@@ -294,6 +313,7 @@ export const TOOLS_CATALOG: HairTool[] = [
     price_range: "$10-30",
     amazon_search: "wig stand mannequin head canvas styling",
     avoid_if: null,
+    image_url: null,
   },
 ];
 
