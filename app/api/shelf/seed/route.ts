@@ -1,25 +1,128 @@
 import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { amazonSearch } from "@/lib/styleShoppingList";
+import { curlFamily } from "@/lib/compatibility";
+import { getToolsForProfile } from "@/lib/getToolsForProfile";
 import type { CartItem } from "@/lib/styleCart";
 
 // Seeds the user's standalone shelf with their routine product picks.
 // Called on first visit to /dashboard when the shelf is empty.
-// Idempotent: if the shelf already has items, this is a no-op.
-//
-// Strategy: query catalog_products directly for each core category,
-// ordered by average_score DESC (NULLs last). This is fast, reliable,
-// and guaranteed to return products as long as the catalog has them.
-// No dependency on the scoring pipeline (which can time out on cold starts).
+// Profile-aware: uses the same curl-family slot logic as the /routine page,
+// so the shelf always reflects the user's actual routine categories
+// (prepoo, detangler, curl cream, tools, etc.) rather than a generic 6-item list.
 
-const CORE_SLUGS = [
-  { slug: "shampoo",          label: "Shampoo" },
-  { slug: "conditioner",      label: "Conditioner" },
-  { slug: "deep-conditioner", label: "Deep Conditioner" },
-  { slug: "leave-in",         label: "Leave-In" },
-  { slug: "styler",           label: "Styler" },
-  { slug: "oil",              label: "Oil" },
-];
+// Core category slugs per curl family — mirrors FAMILY_ROUTINE_CATEGORIES
+// in lib/routineProducts.ts without pulling in the heavyweight scoring engine.
+// Order reflects the wash-day sequence (prepoo → cleanse → condition → style).
+function routineSlugsForProfile(params: {
+  curlType: string | null;
+  porosity: string | null;
+  extensions: string | null;
+  routineFocus: string | null;
+  extensionType: string[] | null;
+}): Array<{ slug: string; label: string }> {
+  const family = curlFamily(params.curlType);
+  const porosity = params.porosity ?? "medium";
+
+  // Build the slot list by family, matching the same logic as
+  // FAMILY_ROUTINE_CATEGORIES in lib/routineProducts.ts so the shelf
+  // categories align with what the /routine page actually recommends.
+  const slots: Array<{ slug: string; label: string }> = [];
+
+  // Pre-shampoo (all families)
+  slots.push({ slug: "pre-shampoo", label: "Pre-Shampoo" });
+
+  // Shampoo (all families)
+  slots.push({ slug: "shampoo", label: "Shampoo" });
+
+  // Dry shampoo (straight + wavy between-wash days)
+  if (family === "straight" || family === "wavy") {
+    slots.push({ slug: "dry-shampoo", label: "Dry Shampoo" });
+  }
+
+  // Co-wash (wavy between-wash days)
+  if (family === "wavy") {
+    slots.push({ slug: "co-wash", label: "Co-Wash" });
+  }
+
+  // Conditioner (all families)
+  slots.push({ slug: "conditioner", label: "Conditioner" });
+
+  // Detangler (wavy optional, curly + coily essential)
+  if (family === "wavy" || family === "curly" || family === "coily" || !family) {
+    slots.push({ slug: "detangler", label: "Detangler" });
+  }
+
+  // Deep conditioner (all families)
+  slots.push({ slug: "deep-conditioner", label: "Deep Conditioner" });
+
+  // Hair mask (all families)
+  slots.push({ slug: "hair-mask", label: "Hair Mask" });
+
+  // Protein treatment (all families)
+  slots.push({ slug: "treatment", label: "Protein Treatment" });
+
+  // Leave-in (curly, coily, fallback; wavy uses lighter alternatives)
+  if (family === "curly" || family === "coily" || !family) {
+    slots.push({ slug: "leave-in", label: "Leave-In Conditioner" });
+  } else {
+    // Straight/wavy still benefit from a light leave-in
+    slots.push({ slug: "leave-in", label: "Leave-In" });
+  }
+
+  // Stylers — family-specific
+  if (family === "straight") {
+    slots.push({ slug: "heat-protectant", label: "Heat Protectant" });
+    slots.push({ slug: "oil", label: "Finishing Serum" });
+    slots.push({ slug: "hairspray", label: "Hairspray" });
+  } else if (family === "wavy") {
+    slots.push({ slug: "mousse", label: "Mousse" });
+    slots.push({ slug: "heat-protectant", label: "Heat Protectant" });
+    slots.push({ slug: "oil", label: "Finishing Serum" });
+    slots.push({ slug: "hairspray", label: "Hairspray" });
+  } else if (family === "curly") {
+    slots.push({ slug: "curl-cream", label: "Curl Cream" });
+    slots.push({ slug: "oil", label: "Oil" });
+    slots.push({ slug: "gel", label: "Gel" });
+  } else {
+    // coily + fallback
+    slots.push({ slug: "curl-cream", label: "Curl Cream" });
+    slots.push({ slug: "gel", label: "Gel" });
+    slots.push({ slug: "oil", label: "Sealing Oil" });
+    // Butter only for high-porosity coily
+    if (porosity === "high") {
+      slots.push({ slug: "butter", label: "Butter" });
+    }
+  }
+
+  // Scalp treatment — added for anyone with a scalp concern or thinning concern
+  // (the seed doesn't have concern data, but we can still add it as a slot
+  // since the catalog lookup will just return a product if one exists)
+  slots.push({ slug: "scalp-treatment", label: "Scalp Treatment" });
+
+  return slots;
+}
+
+// The old generic seed used exactly these 6 slugs. We re-seed any shelf
+// whose items only cover this exact set, since it means it was seeded
+// before profile-awareness was added.
+const OLD_GENERIC_SLUGS = new Set([
+  "shampoo", "conditioner", "deep-conditioner", "leave-in", "styler", "oil",
+]);
+
+function isOldGenericShelf(items: CartItem[]): boolean {
+  if (items.length === 0 || items.length > 8) return false;
+  const slugsInShelf = new Set(
+    items.flatMap((i) => i.secondary_category_labels ?? []).map((l) => l.toLowerCase())
+  );
+  // If the shelf has items but they all come from the old 6-category set
+  // (by label), treat it as the old generic seed and re-seed.
+  const oldLabels = new Set(["Shampoo", "Conditioner", "Deep Conditioner", "Leave-In", "Styler", "Oil"]);
+  const allOld = items.every((i) =>
+    (i.secondary_category_labels ?? []).every((l) => oldLabels.has(l))
+  );
+  return allOld && slugsInShelf.size <= 6;
+}
 
 type CatalogRow = {
   id: string;
@@ -42,7 +145,7 @@ export async function POST(request: Request) {
 
   const admin = getSupabaseAdmin();
 
-  // If the shelf already has items, return them immediately (idempotent)
+  // Fetch the existing shelf (if any)
   const { data: existing } = await admin
     .from("style_cart")
     .select("id, items")
@@ -52,17 +155,41 @@ export async function POST(request: Request) {
     .limit(1)
     .maybeSingle();
 
-  if (existing && Array.isArray(existing.items) && (existing.items as unknown[]).length > 0) {
-    console.log(`[shelf/seed] Shelf already populated for user ${userId}: ${(existing.items as unknown[]).length} items`);
-    return NextResponse.json({ cart_id: existing.id, items: existing.items, seeded: false });
+  const existingItems: CartItem[] = Array.isArray(existing?.items)
+    ? (existing!.items as CartItem[])
+    : [];
+
+  // If the shelf is already populated with a non-generic seed, return early.
+  if (existingItems.length > 0 && !isOldGenericShelf(existingItems)) {
+    console.log(`[shelf/seed] Shelf already populated (profile-aware) for user ${userId}: ${existingItems.length} items`);
+    return NextResponse.json({ cart_id: existing!.id, items: existingItems, seeded: false });
   }
 
-  // Look up all core category IDs in one query
-  const coreSlugs = CORE_SLUGS.map((s) => s.slug);
+  // Fetch the user's hair profile so we can pick the right categories
+  const { data: profile } = await admin
+    .from("hair_profiles")
+    .select("curl_type, porosity, extensions, routine_focus, extension_type")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  const curlType = profile?.curl_type ?? null;
+  const porosity = profile?.porosity ?? null;
+  const extensions = profile?.extensions ?? null;
+  const routineFocus = profile?.routine_focus ?? null;
+  const extensionType = profile?.extension_type ?? null;
+
+  console.log(`[shelf/seed] Profile for ${userId}: curl_type=${curlType}, porosity=${porosity}, extensions=${extensions}`);
+
+  const slots = routineSlugsForProfile({ curlType, porosity, extensions, routineFocus, extensionType });
+  const slugs = Array.from(new Set(slots.map((s) => s.slug)));
+
+  console.log(`[shelf/seed] Slots (${slots.length}): ${slots.map((s) => s.slug).join(", ")}`);
+
+  // Look up all relevant category IDs in one query
   const { data: catRows, error: catError } = await admin
     .from("categories")
     .select("id, slug")
-    .in("slug", coreSlugs);
+    .in("slug", slugs);
 
   if (catError) {
     console.error("[shelf/seed] Failed to fetch categories:", catError.message);
@@ -73,29 +200,23 @@ export async function POST(request: Request) {
     (catRows ?? []).map((r) => [r.slug as string, r.id as string])
   );
 
-  console.log(`[shelf/seed] Found ${catIdBySlug.size}/${coreSlugs.length} core categories`);
+  console.log(`[shelf/seed] Found ${catIdBySlug.size}/${slugs.length} categories`);
 
-  if (catIdBySlug.size === 0) {
-    console.error("[shelf/seed] No categories found — catalog may be empty");
-    return NextResponse.json({ cart_id: null, items: [], seeded: false });
-  }
-
-  const categoryIds = Array.from(catIdBySlug.values());
-
-  // Check whether average_score column exists (it was added in a migration
-  // and may not exist in all environments yet - mirrors the same guard in
-  // app/search/page.tsx to avoid a hard failure on the select).
+  // Check whether average_score column exists
   const { error: scoreColCheckErr } = await admin
     .from("catalog_products")
     .select("average_score")
     .limit(1);
   const hasAverageScore = !scoreColCheckErr;
 
-  console.log(`[shelf/seed] average_score column exists: ${hasAverageScore}`);
+  const categoryIds = Array.from(catIdBySlug.values());
 
-  // Fetch the top products per category in one query.
-  // Order: products with average_score first (descending), then NULLs.
-  // Fetch enough to guarantee coverage across all 6 core categories.
+  if (categoryIds.length === 0) {
+    console.error("[shelf/seed] No categories found — catalog may be empty");
+    return NextResponse.json({ cart_id: null, items: [], seeded: false });
+  }
+
+  // Fetch top products across all relevant categories in one query
   const selectFields = hasAverageScore
     ? "id, name, category_id, processed_image_url, image_url, price_usd, average_score, catalog_brands(name)"
     : "id, name, category_id, processed_image_url, image_url, price_usd, catalog_brands(name)";
@@ -104,7 +225,7 @@ export async function POST(request: Request) {
     .from("catalog_products")
     .select(selectFields)
     .in("category_id", categoryIds)
-    .limit(300);
+    .limit(500);
 
   if (hasAverageScore) {
     productQuery = productQuery.order("average_score", { ascending: false, nullsFirst: false });
@@ -119,61 +240,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ cart_id: null, items: [], seeded: false });
   }
 
-  console.log(`[shelf/seed] Fetched ${products?.length ?? 0} catalog products across ${categoryIds.length} categories`);
-
   if (!products || products.length === 0) {
     console.error("[shelf/seed] Catalog returned 0 products");
     return NextResponse.json({ cart_id: null, items: [], seeded: false });
   }
 
-  // Also fetch a fallback pool of any catalog products (not restricted to core
-  // categories) so slots that have no matching category can still be filled.
-  const fallbackSelectFields = hasAverageScore
-    ? "id, name, category_id, processed_image_url, image_url, price_usd, average_score, catalog_brands(name)"
-    : "id, name, category_id, processed_image_url, image_url, price_usd, catalog_brands(name)";
+  const allProducts = products as unknown as CatalogRow[];
 
-  let fallbackQuery = admin
-    .from("catalog_products")
-    .select(fallbackSelectFields)
-    .limit(50);
-
-  if (hasAverageScore) {
-    fallbackQuery = fallbackQuery.order("average_score", { ascending: false, nullsFirst: false });
-  } else {
-    fallbackQuery = fallbackQuery.order("created_at", { ascending: false });
-  }
-
-  const { data: fallbackProducts } = await fallbackQuery;
-  const allProducts = (products as unknown as CatalogRow[]).concat(
-    ((fallbackProducts ?? []) as unknown as CatalogRow[]).filter(
-      (fp) => !(products as unknown as CatalogRow[]).some((p) => p.id === fp.id)
-    )
-  );
-
-  // Pick the best product per category slug (in CORE_SLUGS order for consistent ordering)
+  // Pick the best product per slot, in routine order, deduplicating
   const usedProductIds = new Set<string>();
   const items: CartItem[] = [];
 
-  for (const slugEntry of CORE_SLUGS) {
-    const catId = catIdBySlug.get(slugEntry.slug);
+  for (const slot of slots) {
+    const catId = catIdBySlug.get(slot.slug);
 
-    // Find best product in this category, or fall back to any unused product
-    const best = allProducts.find(
-      (p) => p.category_id === catId && !usedProductIds.has(p.id)
-    ) ?? allProducts.find(
-      (p) => !usedProductIds.has(p.id)
-    );
+    // Find the best product in this category not already used
+    const best = catId
+      ? allProducts.find((p) => p.category_id === catId && !usedProductIds.has(p.id))
+      : null;
 
     if (!best) {
-      console.log(`[shelf/seed] No product available for slot: ${slugEntry.slug}`);
+      console.log(`[shelf/seed] No product for slot: ${slot.slug} (${slot.label})`);
       continue;
     }
 
-    if (!catId) {
-      console.log(`[shelf/seed] No category ID for slug ${slugEntry.slug} — using fallback product ${best.id}`);
-    }
-
     usedProductIds.add(best.id);
+
     const brandObj = Array.isArray(best.catalog_brands)
       ? best.catalog_brands[0]
       : best.catalog_brands;
@@ -188,32 +280,58 @@ export async function POST(request: Request) {
       seller_url: amazonUrl,
       affiliate_url: amazonUrl,
       price_estimate: best.price_usd ?? null,
-      compat_score: best.average_score ?? null,
+      compat_score: (hasAverageScore ? (best as CatalogRow & { average_score?: number | null }).average_score : null) ?? null,
       quantity: 1,
       status: "pending",
       image_url: best.processed_image_url ?? best.image_url ?? null,
-      secondary_category_labels: [slugEntry.label],
+      secondary_category_labels: [slot.label],
     });
   }
 
-  console.log(`[shelf/seed] Built ${items.length} shelf items for user ${userId}`);
+  // Add essential + recommended tools for this profile as shelf items
+  // (tools live in lib/toolsData.ts, not the DB catalog — no image available,
+  // so they link out to Amazon searches instead)
+  const { essential: essentialTools, recommended: recommendedTools } = getToolsForProfile({
+    curlType,
+    routineFocus,
+    hasExtensions: extensions === "yes",
+  });
+
+  for (const tool of [...essentialTools, ...recommendedTools]) {
+    items.push({
+      product_id: `tool:${tool.id}`,
+      product_name: tool.name,
+      product_type: "tool",
+      seller_type: "amazon",
+      seller_url: amazonSearch(tool.amazon_search),
+      affiliate_url: amazonSearch(tool.amazon_search),
+      price_estimate: null,
+      compat_score: null,
+      quantity: 1,
+      status: "pending",
+      image_url: null,
+      secondary_category_labels: [tool.category === "heat" ? "Heat Tools" : tool.category === "detangling" ? "Detangling Tools" : "Tools"],
+    });
+  }
+
+  console.log(`[shelf/seed] Built ${items.length} shelf items (${items.filter(i => i.product_type !== "tool").length} products + ${items.filter(i => i.product_type === "tool").length} tools) for user ${userId}`);
 
   if (items.length === 0) {
-    console.error("[shelf/seed] No items produced — catalog appears to be empty");
+    console.error("[shelf/seed] No items produced");
     return NextResponse.json({ cart_id: null, items: [], seeded: false });
   }
 
-  // Update existing empty shelf or create a new one
+  // Update existing shelf (including old generic shelves we're re-seeding) or create a new one
   if (existing) {
     const { error: updateError } = await admin
       .from("style_cart")
       .update({ items })
       .eq("id", existing.id);
     if (updateError) {
-      console.error("[shelf/seed] Failed to update existing shelf:", updateError.message);
+      console.error("[shelf/seed] Failed to update shelf:", updateError.message);
       return NextResponse.json({ cart_id: null, items: [], seeded: false });
     }
-    console.log(`[shelf/seed] Updated existing shelf ${existing.id} with ${items.length} items`);
+    console.log(`[shelf/seed] Updated shelf ${existing.id} with ${items.length} items`);
     return NextResponse.json({ cart_id: existing.id, items, seeded: true });
   }
 
@@ -236,6 +354,6 @@ export async function POST(request: Request) {
     );
   }
 
-  console.log(`[shelf/seed] Created new shelf ${created.id} with ${items.length} items`);
+  console.log(`[shelf/seed] Created shelf ${created.id} with ${items.length} items`);
   return NextResponse.json({ cart_id: created.id, items, seeded: true });
 }
