@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabaseAdmin";
 import { amazonSearch } from "@/lib/styleShoppingList";
 import { curlFamily } from "@/lib/compatibility";
-import { getToolsForProfile } from "@/lib/getToolsForProfile";
 import type { CartItem } from "@/lib/styleCart";
 
 // Seeds the user's standalone shelf with their routine product picks.
@@ -281,33 +280,7 @@ export async function POST(request: Request) {
     });
   }
 
-  // Add essential + recommended tools for this profile as shelf items
-  // (tools live in lib/toolsData.ts, not the DB catalog — no image available,
-  // so they link out to Amazon searches instead)
-  const { essential: essentialTools, recommended: recommendedTools } = getToolsForProfile({
-    curlType,
-    routineFocus,
-    hasExtensions: extensions === "yes",
-  });
-
-  for (const tool of [...essentialTools, ...recommendedTools]) {
-    items.push({
-      product_id: `tool:${tool.id}`,
-      product_name: tool.name,
-      product_type: "tool",
-      seller_type: "amazon",
-      seller_url: amazonSearch(tool.amazon_search),
-      affiliate_url: amazonSearch(tool.amazon_search),
-      price_estimate: null,
-      compat_score: null,
-      quantity: 1,
-      status: "pending",
-      image_url: tool.image_url ?? null,
-      secondary_category_labels: [tool.category === "heat" ? "Heat Tools" : tool.category === "detangling" ? "Detangling Tools" : "Tools"],
-    });
-  }
-
-  console.log(`[shelf/seed] Built ${items.length} shelf items (${items.filter(i => i.product_type !== "tool").length} products + ${items.filter(i => i.product_type === "tool").length} tools) for user ${userId}`);
+  console.log(`[shelf/seed] Built ${items.length} shelf items for user ${userId}`);
 
   if (items.length === 0) {
     console.error("[shelf/seed] No items produced");
