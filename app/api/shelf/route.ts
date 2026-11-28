@@ -29,9 +29,50 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  let items: CartItem[] = (data?.items as CartItem[]) ?? [];
+
+  // Backfill image_url for any items missing it by looking up catalog_products.
+  // This fixes shelf items added before processed_image_url was preferred.
+  const missingImageIds = items
+    .filter((item) => !item.image_url && item.product_id)
+    .map((item) => item.product_id as string);
+
+  if (missingImageIds.length > 0) {
+    const { data: productRows } = await admin
+      .from("catalog_products")
+      .select("id, processed_image_url, image_url")
+      .in("id", missingImageIds);
+
+    if (productRows && productRows.length > 0) {
+      const imageMap = new Map(
+        productRows.map((r) => [
+          r.id as string,
+          ((r.processed_image_url as string | null) ?? (r.image_url as string | null)) ?? null,
+        ])
+      );
+
+      let didUpdate = false;
+      items = items.map((item) => {
+        if (!item.image_url && item.product_id && imageMap.has(item.product_id)) {
+          const url = imageMap.get(item.product_id) ?? null;
+          if (url) { didUpdate = true; return { ...item, image_url: url }; }
+        }
+        return item;
+      });
+
+      // Persist the enriched items so future loads are fast.
+      if (didUpdate && data?.id) {
+        await admin
+          .from("style_cart")
+          .update({ items })
+          .eq("id", data.id);
+      }
+    }
+  }
+
   return NextResponse.json({
     cart_id: data?.id ?? null,
-    items: (data?.items as CartItem[]) ?? [],
+    items,
   });
 }
 
