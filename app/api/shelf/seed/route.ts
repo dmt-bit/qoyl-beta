@@ -103,13 +103,6 @@ function routineSlugsForProfile(params: {
   return slots;
 }
 
-// The old generic seed used exactly these 6 slugs. We re-seed any shelf
-// whose items only cover this exact set, since it means it was seeded
-// before profile-awareness was added.
-const OLD_GENERIC_SLUGS = new Set([
-  "shampoo", "conditioner", "deep-conditioner", "leave-in", "styler", "oil",
-]);
-
 function isOldGenericShelf(items: CartItem[]): boolean {
   if (items.length === 0 || items.length > 8) return false;
   const slugsInShelf = new Set(
